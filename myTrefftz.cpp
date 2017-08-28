@@ -13,6 +13,7 @@ namespace ngfem
         for (int i = 0; i < BinCoeff (D + 1 + order, order);
              i++) // loop over indices
           {
+            shape (l) += 1;
           }
       }
   }
