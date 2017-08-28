@@ -38,6 +38,14 @@ namespace ngfem
 		void MakeIndices_inner(int dim, array<int, D+1> & numbers, int maxes, vector< array<int, D+1> > &result);
 
 		int BinCoeff(int n,int k) const;
+
+		constexpr int ipow_ar(array<int, D+1> base, array<int, D+1> exp) {
+			int result = 1;
+			for(int i=0;i<D+1;i++){
+				result *= ipow(base[i],exp[i]);
+			}
+			return result;
+		}
   };
 }
 
