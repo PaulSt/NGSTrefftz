@@ -22,6 +22,7 @@ namespace ngfem
   void MyTrefftz<D> :: CalcDShape (const IntegrationPoint & ip,
                                    SliceMatrix<> dshape) const
   {
+
   }
 
 	template <int D>
