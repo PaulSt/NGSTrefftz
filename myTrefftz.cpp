@@ -34,8 +34,7 @@ namespace ngfem
 					else
 					{
 						tempexp = indices[i];
-						coeff = tempexp[d]--;
-						dshape(l,d) += coeff * basisFunctions[l].get(indices[i]) * ipow_ar(ip,tempexp);
+						dshape(l,d) += tempexp[d]-- * basisFunctions[l].get(indices[i]) * ipow_ar(ip,tempexp);
 					}
 				}
 			}
