@@ -16,14 +16,31 @@ namespace ngfem
 				shape(l) += basisFunctions[l].get(indices[i]) * ipow_ar(ip,indices[i]);
 			}
 		}
-  }
+	}
 
 	template <int D>
-  void MyTrefftz<D> :: CalcDShape (const IntegrationPoint & ip,
-                                   SliceMatrix<> dshape) const
-  {
-
-  }
+	void MyTrefftz<D> :: CalcDShape (const IntegrationPoint & ip,
+																		SliceMatrix<> dshape) const
+	{
+		array<int, D+1> tempexp;
+		int coeff;
+		for(int l=0;l<nbasis;l++) //loop over basis functions
+		{
+			for(int d=0;d<D;d++)  //loop over derivatives/dimensions
+			{
+				for(int i=0;i<BinCoeff(D+1 + order, order);i++)//loop over indices
+				{
+					if(indices[i][d+1] == 0) continue;
+					else
+					{
+						tempexp = indices[i];
+						coeff = tempexp[d]--;
+						dshape(l,d) += coeff * basisFunctions[l].get(indices[i]) * ipow_ar(ip,tempexp);
+					}
+				}
+			}
+		}
+	}
 
 	template <int D>
 	void MyTrefftz<D> :: TrefftzBasis()
