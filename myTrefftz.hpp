@@ -11,6 +11,7 @@ namespace ngfem
     const int order;
     vector<MultiArray<float, D + 1>> basisFunctions;
     int nbasis;
+    vector<array<int, D + 1>> indices;
 
   public:
     // constructor
@@ -41,17 +42,7 @@ namespace ngfem
     void MakeIndices_inner (int dim, array<int, D + 1> &numbers, int maxes,
                             vector<array<int, D + 1>> &result);
 
-    int BinCoeff (int n, int k) const;
-
-    constexpr int ipow_ar (array<int, D + 1> base, array<int, D + 1> exp)
-    {
-      int result = 1;
-      for (int i = 0; i < D + 1; i++)
-        {
-          result *= ipow (base[i], exp[i]);
-        }
-      return result;
-    }
+    float ipow_ar (IntegrationPoint base, array<int, D + 1> exp) const;
   };
 }
 

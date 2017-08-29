@@ -36,7 +36,7 @@ namespace ngfem
   }
 
   template <class T, int depth>
-  T MultiArray<T, depth>::get (array<int, depth> indices)
+  T MultiArray<T, depth>::get (array<int, depth> indices) const
   {
     int index = 0;
     int dimension_counter = 1;

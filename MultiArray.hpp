@@ -8,15 +8,10 @@
 // using namespace std;
 #include <vector>
 
+#include "helpers.cpp"
+
 namespace ngfem
 {
-  constexpr int ipow (int base, int exp, int result = 1)
-  {
-    return exp < 1 ? result
-                   : ipow (base * base, exp / 2,
-                           (exp % 2) ? result * base : result);
-  }
-
   template <class T, int depth> class MultiArray
   {
   private:
@@ -36,7 +31,7 @@ namespace ngfem
 
     void put (array<int, depth> indices, T thing_to_put);
 
-    T get (array<int, depth> indices);
+    T get (array<int, depth> indices) const;
 
     T operator[] (const std::initializer_list<int> indices);
   };

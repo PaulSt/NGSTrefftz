@@ -1,6 +1,7 @@
 #include <fem.hpp>
 #include "myTrefftz.hpp"
 #include "MultiArray.hpp"
+//#include "helpers.cpp"
 
 namespace ngfem
 {
@@ -13,7 +14,8 @@ namespace ngfem
         for (int i = 0; i < BinCoeff (D + 1 + order, order);
              i++) // loop over indices
           {
-            shape (l) += 1;
+            shape (l) += basisFunctions[l].get (indices[i])
+                         * ipow_ar (ip, indices[i]);
           }
       }
   }
@@ -28,7 +30,6 @@ namespace ngfem
   {
     cout << "\n nbasis: " << nbasis << "\n";
 
-    vector<array<int, D + 1>> indices;
     indices.reserve (BinCoeff (D + 1 + order, order));
     MakeIndices (order, indices);
     // MakeIndices(order-1, indices);
@@ -110,9 +111,16 @@ namespace ngfem
       }
   }
 
-  template <int D> int MyTrefftz<D>::BinCoeff (int n, int k) const
+  template <int D>
+  float
+  MyTrefftz<D>::ipow_ar (IntegrationPoint base, array<int, D + 1> exp) const
   {
-    return round (tgamma (n + 1) / (tgamma (k + 1) * tgamma (n - k + 1)));
+    int result = 1;
+    for (int i = 0; i < D + 1; i++)
+      {
+        result *= pow (base (i), exp[i]);
+      }
+    return result;
   }
 }
 
