@@ -30,7 +30,7 @@ namespace ngfem
 		}
 		this->multiArray[index] = thing_to_put;
 		//cout << "\n At index " << index << " I put: " << this->multiArray[index] << endl;
-		cout << "\n At index " << indices[0] << " " << indices[1] << " " << indices[2] << " " << " I put: " << this->multiArray[index] << endl;
+		//cout << "\n At index " << indices[0] << " " << indices[1] << " " << indices[2] << " " << " I put: " << this->multiArray[index] << endl;
 	}
 
 	template <class T, int depth>
