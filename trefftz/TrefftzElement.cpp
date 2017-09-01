@@ -5,6 +5,7 @@
 
 namespace ngfem
 {
+
   template <int D, int order>
   void TrefftzElement<D, order>::CalcShape (const IntegrationPoint &ip,
                                             BareSliceVector<> shape) const
@@ -15,7 +16,7 @@ namespace ngfem
              i++) // loop over indices
           {
             shape (l) += basisFunctions[l].get (indices[i])
-                         * ipow_ar (ip, indices[i]);
+                         * ipow_ar (ip, indices[i], 1, D + 1);
           }
       }
   }
@@ -40,7 +41,7 @@ namespace ngfem
                     tempexp = indices[i];
                     dshape (l, d) += tempexp[d + 1]--
                                      * basisFunctions[l].get (indices[i])
-                                     * ipow_ar (ip, tempexp);
+                                     * ipow_ar (ip, tempexp, 1, D + 1);
                   }
               }
           }
@@ -52,15 +53,21 @@ namespace ngfem
   TrefftzElement<D, order>::CalcShape (const BaseMappedIntegrationPoint &mip,
                                        BareSliceVector<> shape) const
   {
+
     for (int l = 0; l < nbasis; l++) // loop over basis functions
       {
         for (int i = 0; i < BinCoeff (D + 1 + order, order);
              i++) // loop over indices
           {
             shape (l) += basisFunctions[l].get (indices[i])
-                         * ipow_ar (mip.GetPoint (), indices[i]);
+                         * ipow_ar (mip.GetPoint (), indices[i], 1, D + 1);
           }
       }
+
+    // array<int,D+1> test {3,0,0};
+    // cout << " x coord " << mip.GetPoint()(0) << " y coord " <<
+    // mip.GetPoint()(1) << " z coord " << mip.GetPoint()(2) << endl; shape(0)
+    // = ipow_ar(mip.GetPoint(),test,1,D+1);
   }
 
   template <int D, int order>
@@ -82,9 +89,10 @@ namespace ngfem
                 else
                   {
                     tempexp = indices[i];
-                    dshape (l, d) += tempexp[d + 1]--
-                                     * basisFunctions[l].get (indices[i])
-                                     * ipow_ar (mip.GetPoint (), tempexp);
+                    dshape (l, d)
+                        += tempexp[d + 1]--
+                           * basisFunctions[l].get (indices[i])
+                           * ipow_ar (mip.GetPoint (), tempexp, 1, D + 1);
                   }
               }
           }
@@ -153,40 +161,42 @@ namespace ngfem
           {
             indices.push_back (numbers);
 
-            for (int i = 0; i < numbers.size (); i++)
-              {
-                cout << numbers[i] << " ";
-              }
-            cout << "\n";
+            // for(int i=0;i<numbers.size();i++)
+            //{
+            //	cout <<numbers[i]<<" ";
+            // }
+            // cout << "\n";
           }
       }
   }
 
   template <int D, int order>
   float TrefftzElement<D, order>::ipow_ar (IntegrationPoint base,
-                                           array<int, D + 1> exp) const
+                                           array<int, D + 1> ex, float result,
+                                           int count) const
   {
-    int result = 1;
-    for (int i = 0; i < D + 1; i++)
-      {
-        result *= pow (base (i), exp[i]);
-      }
-    return result;
+    return count == 0
+               ? result * pow (base (count), ex[count])
+               : ipow_ar (base, ex, result * pow (base (count), ex[count]),
+                          count - 1);
   }
 
   template <int D, int order>
-  float TrefftzElement<D, order>::ipow_ar (FlatVector<double> base,
-                                           array<int, D + 1> exp) const
+  double TrefftzElement<D, order>::ipow_ar (FlatVector<double> base,
+                                            array<int, D + 1> ex, float result,
+                                            int count) const
   {
-    int result = 1;
-    for (int i = 0; i < D + 1; i++)
-      {
-        result *= pow (base (i), exp[i]);
-      }
-    return result;
+    // cout << "run: " << count << " result: "<< result << " calc: " <<
+    // base(count-1) << " hoch " << ex[count-1] << " berechnung: " <<
+    // pow(base(count-1),ex[count-1]) * result << endl;
+    return count == 0
+               ? result
+               : ipow_ar (base, ex,
+                          pow (base (count - 1), ex[count - 1]) * result,
+                          count - 1);
   }
 
-  template <int D, int order> int TrefftzElement<D, order>::GetNBasis ()
+  template <int D, int order> int TrefftzElement<D, order>::GetNBasis () const
   {
     return nbasis;
   }
