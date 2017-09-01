@@ -9,10 +9,12 @@ from netgen.csg import unit_cube
 mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.2))
 
 #mesh = Mesh(unit_square.GenerateMesh(maxh=0.2))
-
+cf = TrefftzCoefficient(0)
+Draw(cf,mesh,"trefftzCoefficient")
 i=1
 while (i<16):
+	print("drawing..")
 	cf = TrefftzCoefficient(i)
-	Draw(cf,mesh,"trefftzCoefficient")
+	Redraw()
 	i=i+1
-	input("Press Enter to continue...")
+	input("..finished -  Press Enter")

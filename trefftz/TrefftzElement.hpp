@@ -54,10 +54,10 @@ namespace ngfem
 
 		void MakeIndices(int dim, array<int, D+1> &numbers, vector< array<int, D+1> > &indices);
 
-		float ipow_ar(IntegrationPoint base, array<int, D+1> exp) const;
-		float ipow_ar(FlatVector<double> base, array<int, D+1> exp) const;
+		float ipow_ar(IntegrationPoint base, array<int, D+1> ex, float result = 1, int count = D+1) const;
+		double ipow_ar(FlatVector<double> base, array<int, D+1> ex, float result = 1, int count = D+1) const;
 
-		int GetNBasis();
+		int GetNBasis() const;
 
   };
 }

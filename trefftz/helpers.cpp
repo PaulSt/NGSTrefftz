@@ -8,4 +8,5 @@ namespace ngfem
 	{
 		return round( tgamma(n+1) / (tgamma(k+1)*tgamma(n-k+1)) );
 	}
+
 }
