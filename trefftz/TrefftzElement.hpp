@@ -3,6 +3,7 @@
 
 #include <fem.hpp>
 #include <l2hofefo.hpp>
+#include "helpers.cpp"
 // using namespace ngfem;
 
 namespace ngfem
