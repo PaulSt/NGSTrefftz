@@ -16,7 +16,6 @@ PYBIND11_PLUGIN(trefftzngs) {
     Finally we export all the other classes and functions we created in this tutorial
    */
 	ExportTrefftzElement(m);
-	ExportMultiArray(m);
 	ExportTrefftzFESpace(m);
 	ExportTrefftzCoefficient(m);
 
