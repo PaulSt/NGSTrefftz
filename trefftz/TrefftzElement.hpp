@@ -1,7 +1,6 @@
 #ifndef FILE_TREFFTZELEMENT_HPP
 #define FILE_TREFFTZELEMENT_HPP
 
-#include "MultiArray.hpp"
 #include <fem.hpp>
 #include <l2hofefo.hpp>
 //using namespace ngfem;
@@ -12,24 +11,27 @@ namespace ngfem
   class TrefftzElement : public ScalarFiniteElement<D>
   {
 	private:
-		vector<MultiArray<float,D+1> > basisFunctions;
-		//Matrix<double> basis;
-		int nbasis;
-		vector<array<int, D+1> > indices;
+		//vector<MultiArray<float,D+1> > basisFunctions;
+
+		const int nbasis = BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1);
+		array<array<int, D+1>, BinCoeff(D+1 + order, order)> indices;
+		Matrix<double> basis;
 	public:
 		// constructor
-		TrefftzElement() : ScalarFiniteElement<D>()
+		TrefftzElement() : ScalarFiniteElement<D>(), basis(nbasis, BinCoeff(D+1 + order, order))//, npol(BinCoeff(D + order, order))
 		{
-			nbasis = BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1);
-			basisFunctions = vector<MultiArray<float,D+1> >(nbasis, order+1); //nbasis MultiArrays of depth order+1
-			//cout << "order: " + to_string(order) + ", dimension: " + to_string(D) + ", number of basis functions: " << nbasis << endl;
+			//basisFunctions = vector<MultiArray<float,D+1> >(nbasis, order+1); //nbasis MultiArrays of depth order+1
+			cout << "order: " + to_string(order) + ", dimension: " + to_string(D) + ", number of basis functions: " << nbasis << endl;
 
 			//cout << "\n ===== exponentials: \n";
-			indices.reserve( BinCoeff(D+1+order,order) );
-			array<int, D+1>  numbers;
-			MakeIndices(D+1,numbers, indices);
+			//indices.reserve( BinCoeff(D+1+order,order) );
 
-			//cout << "constructing basis" << endl;
+			array<int, D+1>  numbers;
+
+			int count = 0;
+			MakeIndices(numbers, count);
+			~count;
+			cout << "constructing basis" << endl;
 			TrefftzBasis();
 		}
 
@@ -52,13 +54,14 @@ namespace ngfem
 
 		void TrefftzBasis();
 
-		void MakeIndices(int dim, array<int, D+1> &numbers, vector< array<int, D+1> > &indices);
+		void MakeIndices(array<int, D+1> &numbers, int &count, int dim = D+1);//(int dim, array<int, D+1> &numbers, vector< array<int, D+1> > &indices);
 
 		float ipow_ar(IntegrationPoint base, array<int, D+1> ex, float result = 1, int count = D+1) const;
 		double ipow_ar(FlatVector<double> base, array<int, D+1> ex, float result = 1, int count = D+1) const;
 
 		int GetNBasis() const;
 
+		int IndexMap(array<int, D+1> index);
   };
 }
 
