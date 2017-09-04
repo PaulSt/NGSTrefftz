@@ -18,7 +18,6 @@ PYBIND11_PLUGIN (trefftzngs)
     tutorial
    */
   ExportTrefftzElement (m);
-  ExportMultiArray (m);
   ExportTrefftzFESpace (m);
   ExportTrefftzCoefficient (m);
 
