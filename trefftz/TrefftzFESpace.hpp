@@ -7,9 +7,9 @@ namespace ngcomp
   class TrefftzFESpace : public FESpace
   {
     bool secondorder = 0;
+    int D;
     int order;
     int ndof, nvert;
-    int D;
 
   public:
     /*

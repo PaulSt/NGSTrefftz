@@ -3,7 +3,6 @@ using namespace ngsolve;
 #include <python_ngstd.hpp>
 #include "trefftz/TrefftzElement.hpp"
 #include "trefftz/TrefftzFESpace.hpp"
-#include "trefftz/MultiArray.hpp"
 #include "trefftz/TrefftzCoefficient.hpp"
 
 PYBIND11_PLUGIN (trefftzngs)
@@ -18,7 +17,6 @@ PYBIND11_PLUGIN (trefftzngs)
     tutorial
    */
   ExportTrefftzElement (m);
-  ExportMultiArray (m);
   ExportTrefftzFESpace (m);
   ExportTrefftzCoefficient (m);
 

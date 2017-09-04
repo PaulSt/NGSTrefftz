@@ -1,6 +1,5 @@
 #include <fem.hpp>
 #include "TrefftzElement.hpp"
-#include "MultiArray.hpp"
 //#include "helpers.cpp"
 
 namespace ngfem
@@ -10,42 +9,12 @@ namespace ngfem
   void TrefftzElement<D, order>::CalcShape (const IntegrationPoint &ip,
                                             BareSliceVector<> shape) const
   {
-    for (int l = 0; l < nbasis; l++) // loop over basis functions
-      {
-        for (int i = 0; i < BinCoeff (D + 1 + order, order);
-             i++) // loop over indices
-          {
-            shape (l) += basisFunctions[l].get (indices[i])
-                         * ipow_ar (ip, indices[i], 1, D + 1);
-          }
-      }
   }
 
   template <int D, int order>
   void TrefftzElement<D, order>::CalcDShape (const IntegrationPoint &ip,
                                              SliceMatrix<> dshape) const
   {
-    array<int, D + 1> tempexp;
-    int coeff;
-    for (int l = 0; l < nbasis; l++) // loop over basis functions
-      {
-        for (int d = 0; d < D; d++) // loop over derivatives/dimensions
-          {
-            for (int i = 0; i < BinCoeff (D + 1 + order, order);
-                 i++) // loop over indices
-              {
-                if (indices[i][d + 1] == 0)
-                  continue;
-                else
-                  {
-                    tempexp = indices[i];
-                    dshape (l, d) += tempexp[d + 1]--
-                                     * basisFunctions[l].get (indices[i])
-                                     * ipow_ar (ip, tempexp, 1, D + 1);
-                  }
-              }
-          }
-      }
   }
 
   template <int D, int order>
@@ -53,21 +22,23 @@ namespace ngfem
   TrefftzElement<D, order>::CalcShape (const BaseMappedIntegrationPoint &mip,
                                        BareSliceVector<> shape) const
   {
+    cout << "using calc global shape with mip";
+    Vector<float> polynomial (BinCoeff (D + 1 + order, order));
 
-    for (int l = 0; l < nbasis; l++) // loop over basis functions
+    for (int i = 0; i < BinCoeff (D + 1 + order, order);
+         i++) // loop over indices
       {
-        for (int i = 0; i < BinCoeff (D + 1 + order, order);
-             i++) // loop over indices
-          {
-            shape (l) += basisFunctions[l].get (indices[i])
-                         * ipow_ar (mip.GetPoint (), indices[i], 1, D + 1);
-          }
+        polynomial (i) = ipow_ar (mip.GetPoint (), indices[i]);
       }
 
-    // array<int,D+1> test {3,0,0};
+    Vector<float> result = basis * polynomial;
+
     // cout << " x coord " << mip.GetPoint()(0) << " y coord " <<
-    // mip.GetPoint()(1) << " z coord " << mip.GetPoint()(2) << endl; shape(0)
-    // = ipow_ar(mip.GetPoint(),test,1,D+1);
+    // mip.GetPoint()(1) << " z coord " << mip.GetPoint()(2) << endl; for(int i
+    // = 0; i<nbasis;i++) 	shape(i) =
+    // ipow_ar(mip.GetPoint(),indices[i],1,D+1); shape(0) =
+    // ipow_ar(mip.GetPoint(),indices[30],1,D+1); FlatVector<double> point =
+    // mip.GetPoint(); shape(0) = 5*point(0)* 5*point(0);
   }
 
   template <int D, int order>
@@ -75,28 +46,27 @@ namespace ngfem
   TrefftzElement<D, order>::CalcDShape (const BaseMappedIntegrationPoint &mip,
                                         SliceMatrix<> dshape) const
   {
-    array<int, D + 1> tempexp;
+    /*
+    array<int, D+1> tempexp;
     int coeff;
-    for (int l = 0; l < nbasis; l++) // loop over basis functions
-      {
-        for (int d = 0; d < D; d++) // loop over derivatives/dimensions
-          {
-            for (int i = 0; i < BinCoeff (D + 1 + order, order);
-                 i++) // loop over indices
-              {
-                if (indices[i][d + 1] == 0)
-                  continue;
-                else
-                  {
-                    tempexp = indices[i];
-                    dshape (l, d)
-                        += tempexp[d + 1]--
-                           * basisFunctions[l].get (indices[i])
-                           * ipow_ar (mip.GetPoint (), tempexp, 1, D + 1);
-                  }
-              }
-          }
-      }
+    for(int l=0;l<nbasis;l++) //loop over basis functions
+    {
+            for(int d=0;d<D;d++)  //loop over derivatives/dimensions
+            {
+                    for(int i=0;i<BinCoeff(D+1 + order, order);i++)//loop over
+    indices
+                    {
+                            if(indices[i][d+1] == 0) continue;
+                            else
+                            {
+                                    tempexp = indices[i];
+                                    dshape(l,d) += tempexp[d+1]-- *
+    basisFunctions[l].get(indices[i]) * ipow_ar(mip.GetPoint(),tempexp,1,D+1);
+                            }
+                    }
+            }
+    }
+    */
   }
 
   template <int D, int order> void TrefftzElement<D, order>::TrefftzBasis ()
@@ -105,10 +75,10 @@ namespace ngfem
       {
         // cout << "======= basis: " << l << endl;
 
-        for (int i = 0; i < BinCoeff (D + 1 + order, order);
-             i++) // loop over indices
+        for (int i = 0; i < indices.size ();
+             i++) // loop over indices BinCoeff(D+1 + order, order)
           {
-            float k = (float)indices[i][0];
+            int k = indices[i][0];
             if (k > 1)
               {
                 // cout << "===== rekursion";
@@ -119,17 +89,21 @@ namespace ngfem
                     array<int, D + 1> get_coeff = indices[i];
                     get_coeff[0] = get_coeff[0] - 2;
                     get_coeff[m] = get_coeff[m] + 2;
-                    temp += (indices[i][m] + 1) * (indices[i][m] + 2)
-                            * basisFunctions[l].get (get_coeff);
+                    // temp += (indices[i][m]+1) * (indices[i][m]+2) *
+                    // basisFunctions[l].get(get_coeff);
+                    basis (l, IndexMap (indices[i]))
+                        += (indices[i][m] + 1) * (indices[i][m] + 2)
+                           * basis (l, IndexMap (get_coeff));
                   }
-
-                temp = 1 / (k * (k - 1)) * temp;
-                basisFunctions[l].put (indices[i], temp);
+                basis (l, IndexMap (indices[i])) *= 1 / (k * (k - 1));
+                // temp = 1/(k * (k-1)) * temp;
+                // basisFunctions[l].put(indices[i],temp);
               }
             else if (k == 0) // time=0
               {
-                basisFunctions[l].put (
-                    indices[l], 1.0); // set coeff at time=0 to monomial basis
+                // basisFunctions[l].put(indices[l],1.0); //set coeff at time=0
+                // to monomial basis
+                basis (l, IndexMap (indices[l])) = 1.0;
                 i += BinCoeff (D + order, order)
                      + BinCoeff (D + order - 1, order - 1);
               }
@@ -138,16 +112,15 @@ namespace ngfem
   }
 
   template <int D, int order>
-  void
-  TrefftzElement<D, order>::MakeIndices (int dim, array<int, D + 1> &numbers,
-                                         vector<array<int, D + 1>> &indices)
+  void TrefftzElement<D, order>::MakeIndices (array<int, D + 1> &numbers,
+                                              int &count, int dim)
   {
     if (dim > 0)
       {
         for (int i = 0; i <= order; i++)
           {
             numbers[numbers.size () - dim] = i;
-            MakeIndices (dim - 1, numbers, indices);
+            MakeIndices (numbers, count, dim - 1);
           }
       }
     else
@@ -159,13 +132,15 @@ namespace ngfem
           }
         if (sum <= order)
           {
-            indices.push_back (numbers);
-
-            // for(int i=0;i<numbers.size();i++)
-            //{
-            //	cout <<numbers[i]<<" ";
-            // }
-            // cout << "\n";
+            indices[count++] = numbers;
+            /*
+            cout << IndexMap(indices[count-1]) << ": ";
+            for(int i=0;i<numbers.size();i++)
+            {
+                    cout << indices[count-1][i] <<" ";
+            }
+            cout << "\n";
+            */
           }
       }
   }
@@ -199,6 +174,23 @@ namespace ngfem
   template <int D, int order> int TrefftzElement<D, order>::GetNBasis () const
   {
     return nbasis;
+  }
+
+  template <int D, int order>
+  inline int TrefftzElement<D, order>::IndexMap (array<int, D + 1> index)
+  {
+    int sum = 0;
+    int temp_size = 0;
+    for (int d = 0; d < D + 1; d++)
+      {
+        for (int p = 0; p < index[d]; p++)
+          {
+            sum += BinCoeff (D - d + order - p - temp_size,
+                             order - p - temp_size);
+          }
+        temp_size += index[d];
+      }
+    return sum;
   }
 
 }

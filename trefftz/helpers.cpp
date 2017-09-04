@@ -7,7 +7,7 @@ namespace ngfem
                            (exp % 2) ? result * base : result);
   }
 
-  constexpr int BinCoeff (int n, int k)
+  inline constexpr int BinCoeff (int n, int k)
   {
     return round (tgamma (n + 1) / (tgamma (k + 1) * tgamma (n - k + 1)));
   }
