@@ -41,6 +41,7 @@ namespace ngfem
       MakeIndices (numbers, count);
       ~count;
       cout << "constructing basis" << endl;
+      basis = 0;
       TrefftzBasis ();
     }
 
@@ -53,7 +54,7 @@ namespace ngfem
     CalcDShape (const IntegrationPoint &ip, SliceMatrix<> dshape) const;
 
     virtual void CalcShape (const BaseMappedIntegrationPoint &mip,
-                            BareSliceVector<> shape) const;
+                            Vector<double> &shape) const;
 
     virtual void CalcDShape (const BaseMappedIntegrationPoint &mip,
                              SliceMatrix<> dshape) const;

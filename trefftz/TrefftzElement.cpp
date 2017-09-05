@@ -20,9 +20,8 @@ namespace ngfem
   template <int D, int order>
   void
   TrefftzElement<D, order>::CalcShape (const BaseMappedIntegrationPoint &mip,
-                                       BareSliceVector<> shape) const
+                                       Vector<double> &shape) const
   {
-    cout << "using calc global shape with mip";
     Vector<float> polynomial (BinCoeff (D + 1 + order, order));
 
     for (int i = 0; i < BinCoeff (D + 1 + order, order);
@@ -30,8 +29,7 @@ namespace ngfem
       {
         polynomial (i) = ipow_ar (mip.GetPoint (), indices[i]);
       }
-
-    Vector<float> result = basis * polynomial;
+    shape = basis * polynomial;
 
     // cout << " x coord " << mip.GetPoint()(0) << " y coord " <<
     // mip.GetPoint()(1) << " z coord " << mip.GetPoint()(2) << endl; for(int i
@@ -109,6 +107,7 @@ namespace ngfem
               }
           }
       }
+    cout << "basis: \n" << basis << endl;
   }
 
   template <int D, int order>
@@ -199,13 +198,13 @@ namespace ngfem
 void ExportTrefftzElement (py::module m)
 {
   using namespace ngfem;
-  py::class_<TrefftzElement<2, 4>, shared_ptr<TrefftzElement<2, 4>>,
+  py::class_<TrefftzElement<2, 2>, shared_ptr<TrefftzElement<2, 2>>,
              BaseScalarFiniteElement> (m, "TrefftzElement",
                                        "Trefftz space for wave eq")
       //.def(py::init<>())
       .def (py::init<> ())
-      .def ("TrefftzBasis", &TrefftzElement<2, 4>::TrefftzBasis)
+      .def ("TrefftzBasis", &TrefftzElement<2, 2>::TrefftzBasis)
       //.def("CalcShape", &TrefftzElement<2>::CalcShape)
-      .def ("GetNBasis", &TrefftzElement<2, 4>::GetNBasis);
+      .def ("GetNBasis", &TrefftzElement<2, 2>::GetNBasis);
 }
 #endif // NGS_PYTHON

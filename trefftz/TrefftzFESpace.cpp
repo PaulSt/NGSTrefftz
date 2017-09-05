@@ -66,7 +66,7 @@ namespace ngcomp
 
   FiniteElement &TrefftzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
   {
-    return *new (alloc) TrefftzElement<2, 4>;
+    return *new (alloc) TrefftzElement<2, 2>;
   }
 
   /*

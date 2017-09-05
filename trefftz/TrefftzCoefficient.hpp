@@ -7,7 +7,7 @@ namespace ngfem
   class TrefftzCoefficientFunction : public CoefficientFunction
   {
     int basisfunction;
-    TrefftzElement<2, 4> treff;
+    TrefftzElement<2, 2> treff;
 
   public:
     TrefftzCoefficientFunction () : CoefficientFunction (1) { ; }
@@ -24,11 +24,10 @@ namespace ngfem
 
       int ndof = treff.GetNBasis ();
 
-      Vector<> shape (ndof);
+      Vector<double> shape (ndof);
 
       treff.CalcShape (mip, shape);
-
-      return shape (basisfunction); // shape(basisfunction);
+      return shape (basisfunction);
     }
   };
 }
