@@ -33,7 +33,6 @@ namespace ngfem
 			MakeIndices(numbers, count);
 			~count;
 			cout << "constructing basis" << endl;
-			basis = 0;
 			TrefftzBasis();
 		}
 

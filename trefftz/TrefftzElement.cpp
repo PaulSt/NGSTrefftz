@@ -31,12 +31,8 @@ namespace ngfem
 		}
 		shape = basis * polynomial;
 
-
-		//cout << " x coord " << mip.GetPoint()(0) << " y coord " << mip.GetPoint()(1) << " z coord " << mip.GetPoint()(2) << endl;
-		//for(int i = 0; i<nbasis;i++) 	shape(i) = ipow_ar(mip.GetPoint(),indices[i],1,D+1);
-		//shape(0) = ipow_ar(mip.GetPoint(),indices[30],1,D+1);
 		//FlatVector<double> point = mip.GetPoint();
-		//shape(0) = 5*point(0)* 5*point(0);
+		//shape(0) = point(0) * point(1);
 	}
 
 	template <int D, int order>
@@ -65,45 +61,34 @@ namespace ngfem
 	}
 
 
-
-
-
 	template <int D, int order>
 	void TrefftzElement<D,order> :: TrefftzBasis()
 	{
+		basis = 0;
 		for(int l=0;l<nbasis;l++) //loop over basis functions
 		{
-			//cout << "======= basis: " << l << endl;
-
 			for(int i=0;i<indices.size();i++)//loop over indices BinCoeff(D+1 + order, order)
 			{
 				int k = indices[i][0];
 				if(k > 1 )
 				{
-					//cout << "===== rekursion";
-					float temp = 0.0;
-
 					for(int m=1;m<=D;m++) //rekursive sum
 					{
 						array<int, D+1> get_coeff = indices[i];
 						get_coeff[0] = get_coeff[0] - 2;
 						get_coeff[m] = get_coeff[m] + 2;
-						//temp += (indices[i][m]+1) * (indices[i][m]+2) * basisFunctions[l].get(get_coeff);
 						basis( l, IndexMap(indices[i]) ) += (indices[i][m]+1) * (indices[i][m]+2) * basis(l,IndexMap(get_coeff) );
 					}
-					basis( l, IndexMap(indices[i]) ) *= 1/(k * (k-1));
-					//temp = 1/(k * (k-1)) * temp;
-					//basisFunctions[l].put(indices[i],temp);
+					basis( l, IndexMap(indices[i]) ) *= 1.0/(k * (k-1));
 				}
 				else if(k == 0 ) //time=0
 				{
-					//basisFunctions[l].put(indices[l],1.0); //set coeff at time=0 to monomial basis
 					basis( l, IndexMap(indices[l]) ) = 1.0;
 					i += BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1);
 				}
 			}
 		}
-		cout << "basis: \n" << basis << endl;
+		//cout << "basis: \n" << basis << endl;
 	}
 
 
@@ -181,13 +166,13 @@ namespace ngfem
 void ExportTrefftzElement(py::module m)
 {
   using namespace ngfem;
-  py::class_<TrefftzElement<2,2>, shared_ptr<TrefftzElement<2,2>>, BaseScalarFiniteElement>
+  py::class_<TrefftzElement<2,3>, shared_ptr<TrefftzElement<2,3>>, BaseScalarFiniteElement>
     (m, "TrefftzElement", "Trefftz space for wave eq")
     //.def(py::init<>())
 		.def(py::init<>())
-		.def("TrefftzBasis", &TrefftzElement<2,2>::TrefftzBasis)
+		.def("TrefftzBasis", &TrefftzElement<2,3>::TrefftzBasis)
 		//.def("CalcShape", &TrefftzElement<2>::CalcShape)
-		.def("GetNBasis", &TrefftzElement<2,2>::GetNBasis)
+		.def("GetNBasis", &TrefftzElement<2,3>::GetNBasis)
 		;
 }
 #endif // NGS_PYTHON
