@@ -6,10 +6,12 @@ namespace ngcomp
 
   class TrefftzFESpace : public FESpace
   {
-    bool secondorder = 0;
     int D;
     int order;
-    int ndof, nvert;
+    int ndof;
+    int nvert;
+    Array<int> first_edge_dof;
+    Array<int> first_cell_dof;
 
   public:
     /*
