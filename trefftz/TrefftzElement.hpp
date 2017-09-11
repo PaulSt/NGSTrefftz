@@ -27,12 +27,9 @@ namespace ngfem
                                    order)) //, npol(BinCoeff(D + order, order))
     {
       // basisFunctions = vector<MultiArray<float,D+1> >(nbasis, order+1);
-      // //nbasis MultiArrays of depth order+1
-      cout << "order: " + to_string (order) + ", dimension: " + to_string (D)
-                  + ", number of basis functions: "
-           << nbasis << endl;
-
-      // cout << "\n ===== exponentials: \n";
+      // //nbasis MultiArrays of depth order+1 cout << "order: " +
+      // to_string(order) + ", dimension: " + to_string(D) + ", number of basis
+      // functions: " << nbasis << endl; cout << "\n ===== exponentials: \n";
       // indices.reserve( BinCoeff(D+1+order,order) );
 
       array<int, D + 1> numbers;
@@ -40,7 +37,7 @@ namespace ngfem
       int count = 0;
       MakeIndices (numbers, count);
       ~count;
-      cout << "constructing basis" << endl;
+      // cout << "constructing basis" << endl;
       TrefftzBasis ();
     }
 
