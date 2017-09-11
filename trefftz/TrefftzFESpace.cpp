@@ -12,6 +12,9 @@ namespace ngcomp
   TrefftzFESpace :: TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags)
     : FESpace (ama, flags)
   {
+				this->D = 2;
+				//int nel = ma->GetNE();
+				//ndof = (BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1)) * nel;
     cout << "======== Constructor of TrefftzFESpace =========" << endl;
     cout << "Flags = " << flags << endl;
 
@@ -32,34 +35,66 @@ namespace ngcomp
 
   void TrefftzFESpace :: Update(LocalHeap & lh)
   {
-    // some global update:
-    cout << "Update TrefftzFESpace, #vert = " << ma->GetNV()
-         << ", #edge = " << ma->GetNEdges() << ", dim: " << ma->GetDimension() << endl;
 
-		this->D = 2;
-		int nel = ma->GetNE();
-		cout << "================= NEL" << nel <<endl;
-		ndof = (BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1)) * nel;
-		cout << "#dof: " << ndof<<endl;
-  }
+		// some global update:
+
+		int n_vert = ma->GetNV();
+		int n_edge = ma->GetNEdges();
+		int n_cell = ma->GetNE();
+
+		first_edge_dof.SetSize(n_edge+1);
+
+		int ii = n_vert;
+		for (int i = 0; i < n_edge; i++, ii+=order-1)
+			first_edge_dof[i] = ii;
+		first_edge_dof[n_edge] = ii;
+
+		first_cell_dof.SetSize (n_cell+1);
+		for (int i = 0; i < n_cell; i++, ii+=(order-1)*(order-2)/2)
+			first_cell_dof[i] = ii;
+		first_cell_dof[n_cell] = ii;
+
+		// cout << "first_edge_dof = " << endl << first_edge_dof << endl;
+		// cout << "first_cell_dof = " << endl << first_cell_dof << endl;
+/*
+		ndof = ii;
+*/
+ndof = (BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1)) * n_cell;
+	}
 
   void TrefftzFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) const
   {
     // returns dofs of element ei
     // may be a volume triangle or boundary segment
-
 		int locndof = BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1);
-		//cout << locndof;
-    dnums.SetSize(0);
-/*
-    // first dofs are vertex numbers:
-    for (auto v : ma->GetElVertices(ei))
-      dnums.Append (v);
 
-  	for (auto e : ma->GetElEdges(ei))
-      dnums.Append (nvert+e);
-			*/
-  }
+		// returns dofs of element number elnr
+		dnums.SetSize(0);
+
+		Ngs_Element ngel = ma->GetElement (ei);
+
+		// vertex dofs
+		for (auto v : ngel.Vertices())
+			dnums.Append(v);
+
+		// edge dofs
+		for (auto e : ngel.Edges())
+			{
+				int first = first_edge_dof[e];
+				int next  = first_edge_dof[e+1];
+				for (int j = first; j < next; j++)
+					dnums.Append (j);
+			}
+		if (ei.IsVolume())
+			{
+				int first = first_cell_dof[ei.Nr()];
+				int next  = first_cell_dof[ei.Nr()+1];
+				for (int j = first; j < next; j++)
+					dnums.Append (j);
+			}
+
+	}
+
 
   FiniteElement & TrefftzFESpace :: GetFE (ElementId ei, Allocator & alloc) const
   {
