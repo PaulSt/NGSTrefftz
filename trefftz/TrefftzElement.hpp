@@ -62,6 +62,9 @@ namespace ngfem
 		int GetNBasis() const;
 
 		int IndexMap(array<int, D+1> index);
+
+		using ScalarFiniteElement<2>::CalcShape;
+		using ScalarFiniteElement<2>::CalcDShape;
   };
 }
 
