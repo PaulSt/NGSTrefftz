@@ -9,6 +9,20 @@ namespace ngfem
   void TrefftzElement<D, order>::CalcShape (const IntegrationPoint &ip,
                                             BareSliceVector<> shape) const
   {
+    Vector<float> polynomial (BinCoeff (D + 1 + order, order));
+    Vector<float> result (BinCoeff (D + 1 + order, order));
+
+    for (int i = 0; i < BinCoeff (D + 1 + order, order);
+         i++) // loop over indices
+      {
+        polynomial (i) = ipow_ar (ip, indices[i]);
+      }
+    result = basis * polynomial;
+    for (int i = 0; i < BinCoeff (D + 1 + order, order); i++)
+      {
+        shape (i) = result (i);
+      }
+    cout << shape;
   }
 
   template <int D, int order>
