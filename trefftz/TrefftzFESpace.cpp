@@ -37,7 +37,9 @@ namespace ngcomp
 
   void TrefftzFESpace ::Update (LocalHeap &lh)
   {
-    ndof = (BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1));
+    int n_cell = ma->GetNE ();
+    ndof = (BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1))
+           * n_cell;
     cout << "update: order = " << order << " ndof = " << ndof << endl;
   }
 
@@ -53,22 +55,30 @@ namespace ngcomp
     dnums.SetSize (0);
 
     Ngs_Element ngel = ma->GetElement (ei);
+    int local_ndof
+        = (BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1));
 
     // vertex dofs
+    /*
     int local_nvert = 0;
-    for (auto v : ngel.Vertices ())
-      {
-        dnums.Append (v);
-        local_nvert++;
-      }
-    // edge dofs
-    for (int j = ei.Nr () * ndof + local_nvert; j - (ei.Nr () * ndof) < ndof;
-         j++)
+    for (auto v : ngel.Vertices())
+    {
+            dnums.Append(v);
+            local_nvert++;
+    }
+
+    for (int j = ei.Nr()*local_ndof+local_nvert;
+    j-(ei.Nr()*local_ndof)<local_ndof; j++)
+            {
+                            dnums.Append (j);
+            }
+*/
+    for (int j = ei.Nr () * local_ndof;
+         j - (ei.Nr () * local_ndof) < local_ndof; j++)
       {
         dnums.Append (j);
       }
-
-    // cout<<dnums<<endl;
+    // cout << dnums;
   }
 
   FiniteElement &TrefftzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
