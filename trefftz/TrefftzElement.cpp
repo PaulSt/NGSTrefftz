@@ -4,6 +4,7 @@
 
 namespace ngfem
 {
+
   template <int D, int ord>
   const Mat<TrefftzElement<D, ord>::npoly, D + 1, int>
       TrefftzElement<D, ord>::indices = MakeIndices ();
@@ -12,19 +13,6 @@ namespace ngfem
   const Mat<TrefftzElement<D, ord>::nbasis, TrefftzElement<D, ord>::npoly,
             double>
       TrefftzElement<D, ord>::basis = TrefftzBasis ();
-
-  template <int D, int ord>
-  TrefftzElement<D, ord>::TrefftzElement () : FiniteElement ()
-  {
-    // basisFunctions = vector<MultiArray<float,D+1> >(nbasis, ord+1); //nbasis
-    // MultiArrays of depth ord+1 cout << "ord: " + to_string(ord) + ",
-    // dimension: " + to_string(D) + ", number of basis functions: " << nbasis
-    // << endl; cout << "\n ===== exponentials: \n"; indices.reserve(
-    // BinCoeff(D+1+ord,ord) );
-
-    // indices = MakeIndices();
-    // basis = TrefftzBasis();
-  }
 
   template <int D, int ord>
   void
@@ -39,9 +27,10 @@ namespace ngfem
       }
 
     shape = basis * polynomial;
-
-    // FlatVector<double> point = mip.GetPoint();
-    // shape(0) = point(0) * point(1);
+    /*
+                    FlatVector<double> point = mip.GetPoint();
+                    shape(0) = point(0) * point(1);
+    */
   }
 
   template <int D, int ord>
