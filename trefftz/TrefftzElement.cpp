@@ -4,25 +4,12 @@
 
 namespace ngfem
 {
-template<int D, int ord>
-const Mat<TrefftzElement<D,ord>::npoly, D+1, int> TrefftzElement<D,ord> :: indices = MakeIndices();
-
-template<int D, int ord>
-const Mat<TrefftzElement<D,ord>::nbasis, TrefftzElement<D,ord>::npoly,double> TrefftzElement<D,ord> :: basis = TrefftzBasis();
-
 
 	template<int D, int ord>
-	TrefftzElement<D,ord> :: TrefftzElement() : FiniteElement()
-	{
-		//basisFunctions = vector<MultiArray<float,D+1> >(nbasis, ord+1); //nbasis MultiArrays of depth ord+1
-		//cout << "ord: " + to_string(ord) + ", dimension: " + to_string(D) + ", number of basis functions: " << nbasis << endl;
-		//cout << "\n ===== exponentials: \n";
-		//indices.reserve( BinCoeff(D+1+ord,ord) );
+	const Mat<TrefftzElement<D,ord>::npoly, D+1, int> TrefftzElement<D,ord> :: indices = MakeIndices();
 
-		//indices = MakeIndices();
-		//basis = TrefftzBasis();
-
-	}
+	template<int D, int ord>
+	const Mat<TrefftzElement<D,ord>::nbasis, TrefftzElement<D,ord>::npoly,double> TrefftzElement<D,ord> :: basis = TrefftzBasis();
 
 
 	template <int D, int ord>
@@ -35,12 +22,12 @@ const Mat<TrefftzElement<D,ord>::nbasis, TrefftzElement<D,ord>::npoly,double> Tr
 		{
 			polynomial(i) = ipow_ar(mip.GetPoint(),indices.Row(i));
 		}
-		
 
 		shape = basis * polynomial;
-
-		//FlatVector<double> point = mip.GetPoint();
-		//shape(0) = point(0) * point(1);
+/*
+		FlatVector<double> point = mip.GetPoint();
+		shape(0) = point(0) * point(1);
+*/
 	}
 
 	template <int D, int ord>
@@ -69,15 +56,11 @@ const Mat<TrefftzElement<D,ord>::nbasis, TrefftzElement<D,ord>::npoly,double> Tr
 	}
 
 
-
-
-
 	template <int D, int ord>
 	double TrefftzElement<D,ord> :: ipow_ar(FlatVector<double> base, Vec<D+1, int> ex, float result, int count) const
 	{
 		return count == 0 ? result : ipow_ar( base, ex, pow(base(count-1),ex(count-1)) * result, count-1 );
 	}
-
 
 	template <int D, int ord>
 	int TrefftzElement<D,ord> :: GetNBasis() const

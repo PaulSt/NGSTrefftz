@@ -69,7 +69,7 @@ namespace ngcomp
 */
 		for (int j = ei.Nr()*local_ndof; j-(ei.Nr()*local_ndof)<local_ndof; j++)
 		{
-				dnums.Append (j);
+			dnums.Append (j);
 		}
 		//cout << dnums;
 	}
