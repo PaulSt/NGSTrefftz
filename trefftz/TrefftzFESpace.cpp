@@ -23,11 +23,11 @@ namespace ngcomp
         flags.GetNumFlag ("order", 2)); // flags.GetDefineFlag ("order");
 
     // needed for symbolic integrators and to draw solution
-    evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpId<2>>> ();
+    evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpId<3>>> ();
     flux_evaluator[VOL]
-        = make_shared<T_DifferentialOperator<DiffOpGradient<2>>> ();
+        = make_shared<T_DifferentialOperator<DiffOpGradient<3>>> ();
     evaluator[BND]
-        = make_shared<T_DifferentialOperator<DiffOpIdBoundary<2>>> ();
+        = make_shared<T_DifferentialOperator<DiffOpIdBoundary<3>>> ();
 
     // (still) needed to draw solution
     integrator[VOL] = GetIntegrators ().CreateBFI (
