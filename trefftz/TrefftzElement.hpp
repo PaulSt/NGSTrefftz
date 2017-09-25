@@ -4,25 +4,28 @@
 #include <fem.hpp>
 #include <l2hofefo.hpp>
 #include "helpers.cpp"
+#include "MappedElement.hpp"
 // using namespace ngfem;
 
 namespace ngfem
 {
-  template <int D, int ord> class TrefftzElement : public FiniteElement
+  template <int D, int ord> class TrefftzElement : public MappedElement
   {
   private:
     constexpr static int nbasis
-        = BinCoeff (D + ord, ord) + BinCoeff (D + ord - 1, ord - 1);
+        = BinCoeff (D - 1 + ord, ord) + BinCoeff (D - 1 + ord - 1, ord - 1);
 
-    constexpr static int npoly = BinCoeff (D + 1 + ord, ord);
+    constexpr static int npoly = BinCoeff (D + ord, ord);
 
-    static const Mat<npoly, D + 1, int> indices;
+    static const Mat<npoly, D, int> indices;
 
-    static const Mat<nbasis, npoly, double> basis;
+    // static const Mat<nbasis, npoly,double> basis;
+    Matrix<double> basis;
 
   public:
-    TrefftzElement () : FiniteElement ()
+    TrefftzElement () : MappedElement (), basis (npoly, D)
     {
+      basis = TrefftzBasis ();
       // cout << "ord: " + to_string(ord) + ", dimension: " + to_string(D) + ",
       // number of basis functions: " << nbasis << endl;
     }
@@ -30,32 +33,32 @@ namespace ngfem
     virtual ELEMENT_TYPE ElementType () const { return ET_TRIG; }
 
     virtual void CalcShape (const BaseMappedIntegrationPoint &mip,
-                            Vector<double> &shape) const;
+                            BareSliceVector<> shape) const;
 
     virtual void CalcDShape (const BaseMappedIntegrationPoint &mip,
                              SliceMatrix<> dshape) const;
 
-    double ipow_ar (FlatVector<double> base, Vec<D + 1, int> ex,
-                    float result = 1, int count = D + 1) const;
+    double ipow_ar (FlatVector<double> base, Vec<D, int> ex, float result = 1,
+                    int count = D) const;
 
     int GetNBasis () const;
 
-    void static MakeIndices_inner (Mat<npoly, D + 1, int> &indice,
-                                   Vec<D + 1, int> &numbers, int &count,
-                                   int dim = D + 1)
+    void static MakeIndices_inner (Mat<npoly, D, int> &indice,
+                                   Vec<D, int> &numbers, int &count,
+                                   int dim = D)
     {
       if (dim > 0)
         {
           for (int i = 0; i <= ord; i++)
             {
-              numbers (D + 1 - dim) = i;
+              numbers (D - dim) = i;
               MakeIndices_inner (indice, numbers, count, dim - 1);
             }
         }
       else
         {
           int sum = 0;
-          for (int i = 0; i < D + 1; i++)
+          for (int i = 0; i < D; i++)
             {
               sum += numbers (i);
             }
@@ -68,24 +71,24 @@ namespace ngfem
         }
     }
 
-    constexpr static Mat<npoly, D + 1, int> MakeIndices ()
+    constexpr static Mat<npoly, D, int> MakeIndices ()
     {
-      Mat<npoly, D + 1, int> indice = 0;
-      Vec<D + 1, int> numbers = 0;
+      Mat<npoly, D, int> indice = 0;
+      Vec<D, int> numbers = 0;
       int count = 0;
       MakeIndices_inner (indice, numbers, count);
       return indice;
     }
 
-    constexpr static int IndexMap (Vec<D + 1, int> index)
+    constexpr static int IndexMap (Vec<D, int> index)
     {
       int sum = 0;
       int temp_size = 0;
-      for (int d = 0; d < D + 1; d++)
+      for (int d = 0; d < D; d++)
         {
           for (int p = 0; p < index (d); p++)
             {
-              sum += BinCoeff (D - d + ord - p - temp_size,
+              sum += BinCoeff (D - 1 - d + ord - p - temp_size,
                                ord - p - temp_size);
             }
           temp_size += index (d);
@@ -99,14 +102,14 @@ namespace ngfem
       for (int l = 0; l < nbasis; l++) // loop over basis functions
         {
           for (int i = 0; i < npoly;
-               i++) // loop over indices BinCoeff(D+1 + ord, ord)
+               i++) // loop over indices BinCoeff(D + ord, ord)
             {
               int k = indices (i, 0);
               if (k > 1)
                 {
-                  for (int m = 1; m <= D; m++) // rekursive sum
+                  for (int m = 1; m <= D - 1; m++) // rekursive sum
                     {
-                      Vec<D + 1, int> get_coeff = indices.Row (i);
+                      Vec<D, int> get_coeff = indices.Row (i);
                       get_coeff[0] = get_coeff[0] - 2;
                       get_coeff[m] = get_coeff[m] + 2;
                       temp_basis (l, IndexMap (indices.Row (i)))
@@ -127,8 +130,8 @@ namespace ngfem
       // cout << "basis: \n" << basis << endl;
     }
 
-    // using ScalarFiniteElement<2>::CalcShape;
-    // using ScalarFiniteElement<2>::CalcDShape;
+    using MappedElement::CalcDShape;
+    using MappedElement::CalcShape;
   };
 }
 

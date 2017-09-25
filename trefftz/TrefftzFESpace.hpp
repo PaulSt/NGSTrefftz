@@ -10,6 +10,7 @@ namespace ngcomp
     int order;
     int ndof;
     int nvert;
+    int local_ndof;
     Array<int> first_edge_dof;
     Array<int> first_cell_dof;
 
@@ -21,7 +22,6 @@ namespace ngcomp
     */
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
 
-    // a name for our new fe-space
     virtual string GetClassName () const { return "TrefftzFESpace"; }
 
     virtual void Update (LocalHeap &lh);
@@ -30,8 +30,7 @@ namespace ngcomp
     virtual void GetDofNrs (ElementId ei, Array<DofId> &dnums) const;
     virtual FiniteElement &GetFE (ElementId ei, Allocator &alloc) const;
 
-    // some new functionality our space should have in Python
-    int GetNVert () { return nvert; }
+    int GetDim () { return local_ndof; }
   };
 
 }

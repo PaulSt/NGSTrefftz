@@ -4,6 +4,8 @@ using namespace ngsolve;
 #include "trefftz/TrefftzElement.hpp"
 #include "trefftz/TrefftzFESpace.hpp"
 #include "trefftz/TrefftzCoefficient.hpp"
+#include "trefftz/DiffOpMapped.hpp"
+#include "trefftz/MappedElement.hpp"
 
 PYBIND11_PLUGIN (trefftzngs)
 {

@@ -4,6 +4,7 @@
 
 #include "TrefftzElement.hpp"
 #include "TrefftzFESpace.hpp"
+#include "DiffOpMapped.hpp"
 
 namespace ngcomp
 {
@@ -12,34 +13,37 @@ namespace ngcomp
                                    const Flags &flags)
       : FESpace (ama, flags)
   {
-    D = 2;
-    // int nel = ma->GetNE();
-    // ndof = (BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1)) *
-    // nel;
+
     cout << "======== Constructor of TrefftzFESpace =========" << endl;
     cout << "Flags = " << flags << endl;
 
+    D = 3;
     order = int (
         flags.GetNumFlag ("order", 2)); // flags.GetDefineFlag ("order");
+    local_ndof = (BinCoeff (D - 1 + order, order)
+                  + BinCoeff (D - 1 + order - 1, order - 1));
+
+    int nel = ma->GetNE ();
+    ndof = local_ndof * nel;
 
     // needed for symbolic integrators and to draw solution
-    evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpId<3>>> ();
-    flux_evaluator[VOL]
-        = make_shared<T_DifferentialOperator<DiffOpGradient<3>>> ();
+    evaluator[VOL]
+        = make_shared<T_DifferentialOperator<DiffOpMapped<3, 3>>> ();
+    // flux_evaluator[VOL] =
+    // make_shared<T_DifferentialOperator<DiffOpGradient<3>>>();
     evaluator[BND]
-        = make_shared<T_DifferentialOperator<DiffOpIdBoundary<3>>> ();
+        = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<3, 3>>> ();
 
     // (still) needed to draw solution
-    integrator[VOL] = GetIntegrators ().CreateBFI (
-        "mass", ma->GetDimension (),
-        make_shared<ConstantCoefficientFunction> (1));
+    // integrator[VOL] = GetIntegrators().CreateBFI("mass", ma->GetDimension(),
+    //                                             make_shared<ConstantCoefficientFunction>(1));
   }
 
   void TrefftzFESpace ::Update (LocalHeap &lh)
   {
-    int n_cell = ma->GetNE ();
-    ndof = (BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1))
-           * n_cell;
+    // int n_cell = ma->GetNE();
+    // ndof = (BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1)) *
+    // n_cell;
     cout << "update: order = " << order << " ndof = " << ndof << endl;
   }
 
@@ -55,8 +59,6 @@ namespace ngcomp
     dnums.SetSize (0);
 
     Ngs_Element ngel = ma->GetElement (ei);
-    int local_ndof
-        = (BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1));
 
     // vertex dofs
     /*
@@ -83,7 +85,7 @@ namespace ngcomp
 
   FiniteElement &TrefftzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
   {
-    return *new (alloc) TrefftzElement<2, 3>;
+    return *new (alloc) TrefftzElement<3, 3>;
   }
 
   /*
@@ -107,8 +109,7 @@ void ExportTrefftzFESpace (py::module m)
    */
   py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>, FESpace> (
       m, "TrefftzFESpace",
-      "FESpace with first order and second order trigs on 2d mesh")
-      .def ("GetNVert", &TrefftzFESpace::GetNVert);
+      "FESpace with first order and second order trigs on 2d mesh");
 }
 
 #endif // NGS_PYTHON
