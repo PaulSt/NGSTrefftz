@@ -12,8 +12,6 @@ namespace ngcomp
   TrefftzFESpace :: TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags)
     : FESpace (ama, flags)
   {
-
-
     cout << "======== Constructor of TrefftzFESpace =========" << endl;
     cout << "Flags = " << flags << endl;
 

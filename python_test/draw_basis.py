@@ -10,7 +10,6 @@ mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.2))
 
 i=0
 while (i<16):
-	print("drawing..")
 	cf = TrefftzCoefficient(i)
 	Draw(cf,mesh,"trefftzCoefficient")
 	i=i+1
