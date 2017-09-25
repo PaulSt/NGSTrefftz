@@ -69,6 +69,22 @@ namespace ngfem
       HeapReset hr (lh);
       mat.Row (0) = Cast (fel).GetShape (mip, lh);
     }
+
+    template <typename MIP, class TVX, class TVY>
+    static void Apply (const FiniteElement &fel, const MIP &mip, const TVX &x,
+                       TVY &y, LocalHeap &lh)
+    {
+      HeapReset hr (lh);
+      y = Trans (Cast (fel).GetShape (mip, lh)) * x;
+    }
+
+    static void
+    Apply (const FiniteElement &fel, const MappedIntegrationPoint<D, D> &mip,
+           const FlatVector<double> &x, FlatVector<double> &y, LocalHeap &lh)
+    {
+      y (0) = Cast (fel).Evaluate (mip, x);
+    }
+
     /*
                     // using DiffOp<DiffOpId<D, FEL> > :: GenerateMatrixIR;
                     template <typename MAT>
@@ -86,24 +102,8 @@ namespace ngfem
                             Cast(fel).CalcShape (mir.IR(), mat);
                     }
 
-                    template <typename MIP, class TVX, class TVY>
-                    static void Apply (const FiniteElement & fel, const MIP &
-       mip, const TVX & x, TVY & y, LocalHeap & lh)
-                    {
-                            HeapReset hr(lh);
-                            y = Trans (Cast(fel).GetShape (mip.IP(), lh)) * x;
-                    }
-
-                    static void Apply (const FiniteElement & fel, const
-       MappedIntegrationPoint<D,D> & mip, const FlatVector<double> & x,
-       FlatVector<double> & y, LocalHeap & lh)
-                    {
-                            y(0) = Cast(fel).Evaluate(mip.IP(), x);
-                    }
-
 
                     // using DiffOp<DiffOpId<D, FEL> >::ApplyIR;
-
                     template <class MIR, class TMY>
                     static void ApplyIR (const FiniteElement & fel, const MIR &
        mir, FlatVector<double> x, TMY y, LocalHeap & lh)
@@ -230,15 +230,17 @@ namespace ngfem
       y (0) = static_cast<const FEL &> (fel).Evaluate (mip, x);
     }
 
-    template <typename AFEL, typename MIP, class TVX, class TVY>
-    static void ApplyTrans (const AFEL &fel, const MIP &mip, const TVX &x,
-                            TVY &y, LocalHeap &lh)
-    {
-      HeapReset hr (lh);
-      y = static_cast<const FEL &> (fel).GetShape (mip, lh) * x;
-    }
-
     /*
+        template <typename AFEL, typename MIP, class TVX, class TVY>
+        static void ApplyTrans (const AFEL & fel, const MIP & mip,
+                                const TVX & x, TVY & y,
+                                LocalHeap & lh)
+        {
+          HeapReset hr(lh);
+          y = static_cast<const FEL&>(fel).GetShape (mip, lh) * x;
+        }
+
+
         // using DiffOp<DiffOpIdBoundary<D, FEL> >::ApplyTransIR;
         template <class MIR>
         static void ApplyTransIR (const FiniteElement & fel, const MIR & mir,

@@ -13,7 +13,6 @@ namespace ngcomp
                                    const Flags &flags)
       : FESpace (ama, flags)
   {
-
     cout << "======== Constructor of TrefftzFESpace =========" << endl;
     cout << "Flags = " << flags << endl;
 

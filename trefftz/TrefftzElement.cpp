@@ -26,10 +26,11 @@ namespace ngfem
         polynomial (i) = ipow_ar (mip.GetPoint (), indices.Row (i));
       }
 
-    Vec<nbasis, double> tempshape = basis * polynomial;
+    // Vec<nbasis,double> tempshape;
+    Vector<double> tempshape (nbasis);
+    tempshape = basis * polynomial;
     for (int i = 0; i < nbasis; i++)
       shape (i) = tempshape (i);
-
     /*
                     FlatVector<double> point = mip.GetPoint();
                     shape(0) = point(0) * point(1);

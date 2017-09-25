@@ -26,6 +26,7 @@ namespace ngfem
     TrefftzElement () : MappedElement (), basis (npoly, D)
     {
       basis = TrefftzBasis ();
+      ndof = nbasis;
       // cout << "ord: " + to_string(ord) + ", dimension: " + to_string(D) + ",
       // number of basis functions: " << nbasis << endl;
     }
