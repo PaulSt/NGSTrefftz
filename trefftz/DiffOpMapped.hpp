@@ -1,5 +1,7 @@
-#ifndef FILE_BDBEQUATIONS
-#define FILE_BDBEQUATIONS
+#ifndef FILE_DIFFOPMAPPED
+#define FILE_DIFFOPMAPPED
+
+#include "TrefftzElement.hpp"
 
 namespace ngfem
 {
@@ -11,8 +13,8 @@ namespace ngfem
   */
 
 	/// Identity
-	template <int D, typename FEL = TrefftzFESpace>
-	class DiffOpTrefftz : public DiffOp<DiffOpTrefftz<D, FEL> >
+	template <int D, int order, typename FEL = TrefftzElement<D,order>>
+	class DiffOpMapped : public DiffOp<	DiffOpMapped<D, order, FEL> >
 	{
 	public:
 		enum { DIM = 1 };
@@ -27,28 +29,29 @@ namespace ngfem
 		static const FEL & Cast (const FiniteElement & fel)
 		{ return static_cast<const FEL&> (fel); }
 
-		template <typename MIP, typename MAT>
-		static void GenerateMatrix (const FiniteElement & fel, const MIP & mip,
-				MAT && mat, LocalHeap & lh)
-		{
-			HeapReset hr(lh);
-			mat.Row(0) = Cast(fel).GetShape(mip.IP(), lh);
-		}
 
 		static void GenerateMatrix (const FiniteElement & fel,
 				const BaseMappedIntegrationPoint & mip,
 				FlatMatrixFixHeight<1> & mat, LocalHeap & lh)
 		{
-			Cast(fel).CalcShape (mip.IP(), mat.Row(0)); // FlatVector<> (fel.GetNDof(), &mat(0,0)));
+			Cast(fel).CalcShape (mip, mat.Row(0)); // FlatVector<> (fel.GetNDof(), &mat(0,0)));
 		}
 
 		static void GenerateMatrix (const FiniteElement & fel,
 				const BaseMappedIntegrationPoint & mip,
 				SliceMatrix<double,ColMajor> mat, LocalHeap & lh)
 		{
-			Cast(fel).CalcShape (mip.IP(), mat.Row(0));
+			Cast(fel).CalcShape (mip, mat.Row(0));
 		}
 
+		template <typename MIP, typename MAT>
+		static void GenerateMatrix (const FiniteElement & fel, const MIP & mip,
+				MAT && mat, LocalHeap & lh)
+		{
+			HeapReset hr(lh);
+			mat.Row(0) = Cast(fel).GetShape(mip, lh);
+		}
+/*
 		// using DiffOp<DiffOpId<D, FEL> > :: GenerateMatrixIR;
 		template <typename MAT>
 		static void GenerateMatrixIR (const FiniteElement & fel,
@@ -147,5 +150,98 @@ namespace ngfem
 		{
 			Cast(fel).AddTrans (mir.IR(), y.Row(0), x);
 		}
+	*/
 	};
+
+	/// Identity on boundary
+	template <int D, int order, typename FEL = TrefftzElement<D,order>>
+  class DiffOpMappedBoundary : public DiffOp<DiffOpMappedBoundary<D, order, FEL> >
+  {
+  public:
+    enum { DIM = 1 };
+    enum { DIM_SPACE = D };
+    enum { DIM_ELEMENT = D-1 };
+    enum { DIM_DMAT = 1 };
+    enum { DIFFORDER = 0 };
+
+    static const FEL & Cast (const FiniteElement & fel)
+    { return static_cast<const FEL&> (fel); }
+
+    template <typename AFEL, typename MIP, typename MAT>
+    static void GenerateMatrix (const AFEL & fel, const MIP & mip,
+				MAT & mat, LocalHeap & lh)
+    {
+      HeapReset hr(lh);
+      mat.Row(0) = static_cast<const FEL&>(fel).GetShape(mip, lh);
+    }
+
+    template <typename AFEL, typename MIP, class TVX, class TVY>
+    static void Apply (const AFEL & fel, const MIP & mip,
+		       const TVX & x, TVY & y,
+		       LocalHeap & lh)
+    {
+      HeapReset hr(lh);
+      y = Trans (static_cast<const FEL&>(fel).GetShape (mip, lh)) * x;
+      // y(0) = InnerProduct (x, static_cast<const FEL&>(fel).GetShape (mip.IP(), lh));
+    }
+
+    static void Apply (const ScalarFiniteElement<D-1> & fel, const MappedIntegrationPoint<D-1,D> & mip,
+		       const FlatVector<double> & x, FlatVector<double> & y,
+		       LocalHeap & lh)
+    {
+      y(0) = static_cast<const FEL&>(fel).Evaluate(mip, x);
+    }
+
+
+    template <typename AFEL, typename MIP, class TVX, class TVY>
+    static void ApplyTrans (const AFEL & fel, const MIP & mip,
+			    const TVX & x, TVY & y,
+			    LocalHeap & lh)
+    {
+      HeapReset hr(lh);
+      y = static_cast<const FEL&>(fel).GetShape (mip, lh) * x;
+    }
+
+/*
+    // using DiffOp<DiffOpIdBoundary<D, FEL> >::ApplyTransIR;
+    template <class MIR>
+    static void ApplyTransIR (const FiniteElement & fel, const MIR & mir,
+			      FlatMatrix<double> x, FlatVector<double> y,
+			      LocalHeap & lh)
+    {
+      // static Timer t("applytransir - bnd");
+      // RegionTimer reg(t);
+
+      static_cast<const FEL&>(fel).
+	EvaluateTrans (mir.IR(), FlatVector<> (mir.Size(), &x(0,0)), y);
+    }
+
+    template <class MIR>
+    static void ApplyTransIR (const FiniteElement & fel, const MIR & mir,
+			      FlatMatrix<Complex> x, FlatVector<Complex> y,
+			      LocalHeap & lh)
+    {
+      DiffOp<DiffOpIdBoundary<D, FEL> > :: ApplyTransIR (fel, mir, x, y, lh);
+      // static_cast<const FEL&>(fel).
+      // EvaluateTrans (mir.IR(), FlatVector<> (mir.Size(), &x(0,0)), y);
+    }
+
+    using DiffOp<DiffOpIdBoundary<D, FEL> >::ApplySIMDIR;
+    static void ApplySIMDIR (const FiniteElement & fel, const SIMD_BaseMappedIntegrationRule & mir,
+                             BareSliceVector<double> x, BareSliceMatrix<SIMD<double>> y)
+    {
+      Cast(fel).Evaluate (mir.IR(), x, y.Row(0));
+    }
+
+    using DiffOp<DiffOpIdBoundary<D, FEL> >::AddTransSIMDIR;
+    static void AddTransSIMDIR (const FiniteElement & fel, const SIMD_BaseMappedIntegrationRule & mir,
+                                BareSliceMatrix<SIMD<double>> y, BareSliceVector<double> x)
+    {
+      Cast(fel).AddTrans (mir.IR(), y.Row(0), x);
+    }
+*/
+  };
+
+
 }
+#endif
