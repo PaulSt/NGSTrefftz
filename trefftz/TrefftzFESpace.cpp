@@ -42,7 +42,8 @@ namespace ngcomp
     // int n_cell = ma->GetNE();
     // ndof = (BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1)) *
     // n_cell;
-    cout << "update: order = " << order << " ndof = " << ndof << endl;
+    cout << "update: order = " << order << " ndof = " << ndof
+         << " local_ndof:" << local_ndof << endl;
   }
 
   void TrefftzFESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
@@ -50,29 +51,8 @@ namespace ngcomp
     int n_vert = ma->GetNV ();
     int n_edge = ma->GetNEdges ();
     int n_cell = ma->GetNE ();
-    // returns dofs of element ei
-    // may be a volume triangle or boundary segment
-
-    // returns dofs of element number elnr
     dnums.SetSize (0);
-
     Ngs_Element ngel = ma->GetElement (ei);
-
-    // vertex dofs
-    /*
-    int local_nvert = 0;
-    for (auto v : ngel.Vertices())
-    {
-            dnums.Append(v);
-            local_nvert++;
-    }
-
-    for (int j = ei.Nr()*local_ndof+local_nvert;
-    j-(ei.Nr()*local_ndof)<local_ndof; j++)
-            {
-                            dnums.Append (j);
-            }
-*/
     for (int j = ei.Nr () * local_ndof;
          j - (ei.Nr () * local_ndof) < local_ndof; j++)
       {
