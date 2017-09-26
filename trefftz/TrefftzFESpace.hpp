@@ -6,7 +6,7 @@ namespace ngcomp
 
   class TrefftzFESpace : public FESpace
   {
-    int D;
+    int D = 3;
     int order;
     int ndof;
     int nvert;
@@ -30,7 +30,8 @@ namespace ngcomp
     virtual void GetDofNrs (ElementId ei, Array<DofId> &dnums) const;
     virtual FiniteElement &GetFE (ElementId ei, Allocator &alloc) const;
 
-    int GetDim () { return local_ndof; }
+    int GetDim () const { return local_ndof; }
+    int Getndof () const { return ndof; }
   };
 
 }
