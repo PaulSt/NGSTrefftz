@@ -15,12 +15,21 @@ u = GridFunction(fes,"shapes")
 
 Draw(u)
 
-def printshape(i):
+#def printshape(i):
+#    print("Draw basis function ", i)
+#    u.vec[:] = 0
+#    u.vec[i] = 1
+#    Redraw()
+
+#print("ndof = ", fes.ndof)
+#for i in range(len(u.vec)):
+#    printshape(int(input("enter number of shapefunction to print:")))
+
+
+# we can use the additionally exported function here
+for i in range(fes.Getndof()):
     print("Draw basis function ", i)
     u.vec[:] = 0
     u.vec[i] = 1
     Redraw()
-
-print("ndof = ", fes.ndof)
-for i in range(len(u.vec)):
-    printshape(int(input("enter number of shapefunction to print:")))
+    input("press key to draw next shape function")

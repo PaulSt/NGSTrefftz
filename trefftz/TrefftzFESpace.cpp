@@ -15,7 +15,6 @@ namespace ngcomp
     cout << "======== Constructor of TrefftzFESpace =========" << endl;
     cout << "Flags = " << flags << endl;
 
-		D = 3;
     order = int(flags.GetNumFlag ("order", 2));//flags.GetDefineFlag ("order");
 		local_ndof = (BinCoeff(D-1 + order, order) + BinCoeff(D-1 + order-1, order-1));
 
@@ -82,8 +81,6 @@ namespace ngcomp
 		return * new (alloc) TrefftzElement<3,3>;
   }
 
-
-
   /*
     register fe-spaces
     Object of type TrefftzFESpace can be defined in the pde-file via
@@ -106,7 +103,7 @@ void ExportTrefftzFESpace(py::module m)
    */
   py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>, FESpace>
     (m, "TrefftzFESpace", "FESpace with first order and second order trigs on 2d mesh")
-    ;
+    .def("Getndof", &TrefftzFESpace::Getndof);
 }
 
 #endif // NGS_PYTHON
