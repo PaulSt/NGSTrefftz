@@ -22,6 +22,15 @@ namespace ngfem
     // static const Mat<nbasis, npoly,double> basis;
     Matrix<double> basis;
 
+  protected:
+    void static MakeIndices_inner (Mat<npoly, D, int> &indice,
+                                   Vec<D, int> &numbers, int &count,
+                                   int dim = D);
+
+    constexpr static Mat<npoly, D, int> MakeIndices ();
+
+    constexpr static int IndexMap (Vec<D, int> index);
+
   public:
     TrefftzElement ();
 
@@ -33,23 +42,16 @@ namespace ngfem
     virtual void CalcDShape (const BaseMappedIntegrationPoint &mip,
                              SliceMatrix<> dshape) const;
 
+    using MappedElement::CalcShape;
+
+    using MappedElement::CalcDShape;
+
     double ipow_ar (FlatVector<double> base, Vec<D, int> ex, float result = 1,
                     int count = D) const;
 
     int GetNBasis () const;
 
-    void static MakeIndices_inner (Mat<npoly, D, int> &indice,
-                                   Vec<D, int> &numbers, int &count,
-                                   int dim = D);
-
-    constexpr static Mat<npoly, D, int> MakeIndices ();
-
-    constexpr static int IndexMap (Vec<D, int> index);
-
     constexpr static Mat<nbasis, npoly, double> TrefftzBasis ();
-
-    using MappedElement::CalcDShape;
-    using MappedElement::CalcShape;
   };
 }
 

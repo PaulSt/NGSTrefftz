@@ -73,6 +73,7 @@ namespace ngcomp
                             dnums.Append (j);
             }
 */
+    ///////// TODO replace this by method from l2hofemspace
     for (int j = ei.Nr () * local_ndof;
          j - (ei.Nr () * local_ndof) < local_ndof; j++)
       {
