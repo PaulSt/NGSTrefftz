@@ -13,4 +13,4 @@ gfu = GridFunction(fes)
 #uex = sin(kx*x+ky*y - c*t)
 uex = x
 gfu.Set(uex)
-Draw(gfu)
+Draw(uex)
