@@ -58,6 +58,13 @@ namespace ngcomp
 
   FiniteElement & TrefftzFESpace :: GetFE (ElementId ei, Allocator & alloc) const
   {
+
+		static int testcount = 0;
+		if(testcount <20 ){
+			auto bla = ma->GetElVertices(ei);
+			cout << "element vertices: " << bla << endl; testcount++;
+		}
+		//TODO pass element center so TrefftzElement to shift basis functions
 		return * new (alloc) TrefftzElement<3,3>;
   }
 
