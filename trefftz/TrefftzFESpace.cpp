@@ -48,34 +48,11 @@ namespace ngcomp
 		int n_cell = ma->GetNE();
 		dnums.SetSize(0);
 		Ngs_Element ngel = ma->GetElement (ei);
-<<<<<<< HEAD
-=======
-
-		// vertex dofs
-		/*
-		int local_nvert = 0;
-		for (auto v : ngel.Vertices())
-		{
-			dnums.Append(v);
-			local_nvert++;
-		}
-
-		for (int j = ei.Nr()*local_ndof+local_nvert; j-(ei.Nr()*local_ndof)<local_ndof; j++)
-			{
-					dnums.Append (j);
-			}
-*/
-///////// TODO replace this by method from l2hofemspace
->>>>>>> 859c89ae1886b8b09867bd0efd6b1a1338f4bdcb
 		for (int j = ei.Nr()*local_ndof; j-(ei.Nr()*local_ndof)<local_ndof; j++)
 		{
 			dnums.Append (j);
 		}
 	//cout << dnums;
-<<<<<<< HEAD
-=======
-
->>>>>>> 859c89ae1886b8b09867bd0efd6b1a1338f4bdcb
 	}
 
 
