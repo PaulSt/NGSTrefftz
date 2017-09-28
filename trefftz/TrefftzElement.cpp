@@ -31,9 +31,13 @@ namespace ngfem
   {
     Vec<npoly, float> polynomial;
 
+    FlatVector<double> point = mip.GetPoint ();
+    // cout << "elcenter: " << elcenter << endl;
+    // for(int d=0;d<D;d++) point(d) = point(d) - elcenter(d);
+
     for (int i = 0; i < npoly; i++) // loop over indices
       {
-        polynomial (i) = ipow_ar (mip.GetPoint (), indices.Row (i));
+        polynomial (i) = ipow_ar (point, indices.Row (i));
       }
 
     // Vec<nbasis,double> tempshape;
@@ -193,11 +197,18 @@ void ExportTrefftzElement (py::module m)
 {
   using namespace ngfem;
   py::class_<TrefftzElement<3, 3>, shared_ptr<TrefftzElement<3, 3>>,
-             FiniteElement> (m, "TrefftzElement", "Trefftz space for wave eq")
+             FiniteElement> (m, "TrefftzElement3", "Trefftz space for wave eq")
       //.def(py::init<>())
       .def (py::init<> ())
       .def ("TrefftzBasis", &TrefftzElement<3, 3>::TrefftzBasis)
       //.def("CalcShape", &TrefftzElement<2>::CalcShape)
       .def ("GetNBasis", &TrefftzElement<3, 3>::GetNBasis);
+  py::class_<TrefftzElement<2, 3>, shared_ptr<TrefftzElement<2, 3>>,
+             FiniteElement> (m, "TrefftzElement2", "Trefftz space for wave eq")
+      //.def(py::init<>())
+      .def (py::init<> ())
+      .def ("TrefftzBasis", &TrefftzElement<2, 3>::TrefftzBasis)
+      //.def("CalcShape", &TrefftzElement<2>::CalcShape)
+      .def ("GetNBasis", &TrefftzElement<2, 3>::GetNBasis);
 }
 #endif // NGS_PYTHON
