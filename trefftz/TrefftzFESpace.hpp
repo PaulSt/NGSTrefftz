@@ -6,7 +6,7 @@ namespace ngcomp
 
   class TrefftzFESpace : public FESpace
   {
-    int D = 3;
+    int D;
     int order;
     int ndof;
     int nvert;

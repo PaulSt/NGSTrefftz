@@ -16,6 +16,8 @@ namespace ngcomp
     cout << "======== Constructor of TrefftzFESpace =========" << endl;
     cout << "Flags = " << flags << endl;
 
+    D = ma->GetDimension ();
+
     order = int (
         flags.GetNumFlag ("order", 2)); // flags.GetDefineFlag ("order");
     local_ndof = (BinCoeff (D - 1 + order, order)
@@ -24,17 +26,32 @@ namespace ngcomp
     int nel = ma->GetNE ();
     ndof = local_ndof * nel;
 
-    // needed for symbolic integrators and to draw solution
-    evaluator[VOL]
-        = make_shared<T_DifferentialOperator<DiffOpMapped<3, 3>>> ();
-    // flux_evaluator[VOL] =
-    // make_shared<T_DifferentialOperator<DiffOpGradient<3>>>();
-    evaluator[BND]
-        = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<3, 3>>> ();
-
-    // (still) needed to draw solution
-    // integrator[VOL] = GetIntegrators().CreateBFI("mass", ma->GetDimension(),
-    //                                             make_shared<ConstantCoefficientFunction>(1));
+    switch (D)
+      {
+      case 2:
+        {
+          evaluator[VOL]
+              = make_shared<T_DifferentialOperator<DiffOpMapped<2, 3>>> ();
+          evaluator[BND] = make_shared<
+              T_DifferentialOperator<DiffOpMappedBoundary<2, 3>>> ();
+          break;
+        }
+      case 3:
+        {
+          // needed for symbolic integrators and to draw solution
+          evaluator[VOL]
+              = make_shared<T_DifferentialOperator<DiffOpMapped<3, 3>>> ();
+          // flux_evaluator[VOL] =
+          // make_shared<T_DifferentialOperator<DiffOpGradient<3>>>();
+          evaluator[BND] = make_shared<
+              T_DifferentialOperator<DiffOpMappedBoundary<3, 3>>> ();
+          // (still) needed to draw solution
+          // integrator[VOL] = GetIntegrators().CreateBFI("mass",
+          // ma->GetDimension(),
+          //                                             make_shared<ConstantCoefficientFunction>(1));
+          break;
+        }
+      }
   }
 
   void TrefftzFESpace ::Update (LocalHeap &lh)
@@ -63,16 +80,32 @@ namespace ngcomp
 
   FiniteElement &TrefftzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
   {
+    auto vertices_index = ma->GetElVertices (ei);
+    // cout << "element vectice coord: \n"  << ma->GetPoint<3>(bla[0]) <<
+    // endl<< ma->GetPoint<3>(bla[1])
+    // <<endl<<ma->GetPoint<3>(bla[2])<<endl<<ma->GetPoint<3>(bla[3])<<endl;
 
-    static int testcount = 0;
-    if (testcount < 20)
+    switch (D)
       {
-        auto bla = ma->GetElVertices (ei);
-        cout << "element vertices: " << bla << endl;
-        testcount++;
+      case 2:
+        {
+          Vec<2> center = 0;
+          for (int d = 0; d < 2; d++)
+            center += ma->GetPoint<2> (vertices_index[d]);
+          center *= 0.25;
+          return *(new (alloc) TrefftzElement<2, 3>)->SetCenter (center);
+          break;
+        }
+      case 3:
+        {
+          Vec<3> center = 0;
+          for (int d = 0; d < D; d++)
+            center += ma->GetPoint<3> (vertices_index[d]);
+          center *= 0.25;
+          return *(new (alloc) TrefftzElement<3, 3>)->SetCenter (center);
+          break;
+        }
       }
-    // TODO pass element center so TrefftzElement to shift basis functions
-    return *new (alloc) TrefftzElement<3, 3>;
   }
 
   /*
