@@ -20,6 +20,8 @@ namespace ngfem
 
 			static const Mat<npoly, D, int> indices;
 
+			Vec<D> elcenter;
+
 			//static const Mat<nbasis, npoly,double> basis;
 			Matrix<double> basis;
 
@@ -34,6 +36,8 @@ namespace ngfem
 		public:
 
 			TrefftzElement();
+
+			TrefftzElement(Vec<D> aelcenter);
 
 			virtual ELEMENT_TYPE ElementType() const { return ET_TRIG; }
 
@@ -50,6 +54,8 @@ namespace ngfem
 			int GetNBasis() const;
 
 			constexpr static Mat<nbasis, npoly,double> TrefftzBasis();
+
+			TrefftzElement<D,ord> * SetCenter(Vec<D> acenter) {elcenter = acenter; return this;}
 
 	};
 }
