@@ -81,25 +81,27 @@ namespace ngcomp
   FiniteElement &TrefftzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
   {
     auto vertices_index = ma->GetElVertices (ei);
-    // cout << "element vectice coord: \n"  << ma->GetPoint<3>(bla[0]) <<
-    // endl<< ma->GetPoint<3>(bla[1])
-    // <<endl<<ma->GetPoint<3>(bla[2])<<endl<<ma->GetPoint<3>(bla[3])<<endl;
+    // cout << "element vectice coord: \n"  <<
+    // ma->GetPoint<3>(vertices_index[0]) << endl<<
+    // ma->GetPoint<3>(vertices_index[1])
+    // <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
 
     switch (D)
       {
       case 2:
         {
           Vec<2> center = 0;
-          for (int d = 0; d < 2; d++)
+          for (int d = 0; d < 3; d++)
             center += ma->GetPoint<2> (vertices_index[d]);
-          center *= 0.25;
+          center *= (1.0 / 3.0);
+          cout << "center: " << center << endl;
           return *(new (alloc) TrefftzElement<2, 3>)->SetCenter (center);
           break;
         }
       case 3:
         {
           Vec<3> center = 0;
-          for (int d = 0; d < D; d++)
+          for (int d = 0; d < 4; d++)
             center += ma->GetPoint<3> (vertices_index[d]);
           center *= 0.25;
           return *(new (alloc) TrefftzElement<3, 3>)->SetCenter (center);
