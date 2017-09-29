@@ -3,7 +3,7 @@ from ngsolve import *
 from trefftzngs import *
 
 
-mesh = Mesh(unit_square.GenerateMesh(maxh=0.2))
+mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 
 #Draw(mesh)
 fes = FESpace("trefftzfespace", mesh, order = 3) #, flags = {"wavespeed":17})

@@ -27,9 +27,8 @@ namespace ngfem
 		Vec<npoly,float> polynomial;
 
 		FlatVector<double> point = mip.GetPoint();
-		//cout << "elcenter: " << elcenter << endl;
-		//for(int d=0;d<D;d++) point(d) = point(d) - elcenter(d);
-
+		//cout << "point: " << point << "elcenter: " << elcenter << endl << "point shift: " << point - elcenter << endl << endl;
+		//point = point - elcenter;
 		for(int i=0; i<npoly; i++)//loop over indices
 		{
 			polynomial(i) = ipow_ar(point,indices.Row(i));

@@ -2,10 +2,6 @@
 
 from netgen.geom2d import unit_square
 from ngsolve import *
-<<<<<<< HEAD
-=======
-from myngspy import *
->>>>>>> 1a1dd424c2ff0381ce84c6a4471e77d3a273f153
 from trefftzngs import *
 
 

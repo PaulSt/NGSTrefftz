@@ -6,7 +6,7 @@ from ngsolve import *
 from trefftzngs import *
 
 
-mesh = Mesh(unit_square.GenerateMesh(maxh=0.2))
+mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
 
 #fes = FESpace("trefftzfespace", mesh, flags = { "dgjumps" : True, "order" : 3 })
 fes = FESpace("trefftzfespace", mesh, order= 3)
