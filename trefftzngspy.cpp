@@ -14,10 +14,6 @@ PYBIND11_PLUGIN (trefftzngs)
 
   py::module m ("trefftzngs", "trefftzngs doc-string");
 
-  /*
-    Finally we export all the other classes and functions we created in this
-    tutorial
-   */
   ExportTrefftzElement (m);
   ExportTrefftzFESpace (m);
   ExportTrefftzCoefficient (m);
