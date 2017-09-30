@@ -117,7 +117,8 @@ void ExportTrefftzFESpace(py::module m)
    */
   py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>, FESpace>
     (m, "TrefftzFESpace", "FESpace with first order and second order trigs on 2d mesh")
-    .def("Getndof", &TrefftzFESpace::Getndof);
+    .def("GetNDof", &TrefftzFESpace::GetNDof)
+		;
 }
 
 #endif // NGS_PYTHON

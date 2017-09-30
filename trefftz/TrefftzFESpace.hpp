@@ -9,7 +9,7 @@ namespace ngcomp
   {
 		int D;
     int order;
-    int ndof;
+    size_t ndof;
 		int nvert;
 		int local_ndof;
 		Array<int> first_edge_dof;
@@ -32,7 +32,7 @@ namespace ngcomp
     virtual FiniteElement & GetFE (ElementId ei, Allocator & alloc) const;
 
     int GetDim() const { return local_ndof; }
-		int Getndof() const {return ndof;}
+		// size_t GetNDof() const {return ndof;}
 
   };
 
