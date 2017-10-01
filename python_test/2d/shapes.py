@@ -27,7 +27,7 @@ Draw(u)
 
 
 # we can use the additionally exported function here
-for i in range(fes.GetNDof()):
+for i in range(126):#fes.GetNDof()):
     print("Draw basis function ", i)
     u.vec[:] = 0
     u.vec[i] = 1

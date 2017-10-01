@@ -10,6 +10,6 @@ fes = FESpace("trefftzfespace", mesh, order = 3) #, flags = {"wavespeed":17})
 gfu = GridFunction(fes)
 #kx
 #uex = sin(kx*x+ky*y - c*t)
-uex = x
+uex = sin(x+y)
 gfu.Set(uex)
 Draw(gfu)
