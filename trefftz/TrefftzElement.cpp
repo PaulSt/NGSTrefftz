@@ -164,7 +164,7 @@ namespace ngfem
             else if (k == 0) // time=0
               {
                 temp_basis (l, IndexMap (indices.Row (l))) = 1.0;
-                i += nbasis;
+                i += nbasis - 1;
               }
           }
       }

@@ -59,7 +59,7 @@ namespace ngcomp
     // int n_cell = ma->GetNE();
     // ndof = (BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1)) *
     // n_cell;
-    cout << "update: order = " << order << " ndof = " << ndof
+    cout << "update: order = " << order << " D: " << D << " ndof = " << ndof
          << " local_ndof:" << local_ndof << endl;
   }
 
@@ -85,25 +85,25 @@ namespace ngcomp
     // ma->GetPoint<3>(vertices_index[0]) << endl<<
     // ma->GetPoint<3>(vertices_index[1])
     // <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
-
+    if (order != 3)
+      {
+        cout << "wrong order" << endl;
+      }
     switch (D)
       {
       case 2:
         {
           Vec<2> center = 0;
-          for (int d = 0; d < 3; d++)
-            center += ma->GetPoint<2> (vertices_index[d]);
-          center *= (1.0 / 3.0);
-          cout << "center: " << center << endl;
+          // for(int d=0;d<3;d++) center += ma->GetPoint<2>(vertices_index[d]);
+          // center *= (1.0/3.0);
           return *(new (alloc) TrefftzElement<2, 3>)->SetCenter (center);
           break;
         }
       case 3:
         {
           Vec<3> center = 0;
-          for (int d = 0; d < 4; d++)
-            center += ma->GetPoint<3> (vertices_index[d]);
-          center *= 0.25;
+          // for(int d=0;d<4;d++) center += ma->GetPoint<3>(vertices_index[d]);
+          // center *= 0.25;
           return *(new (alloc) TrefftzElement<3, 3>)->SetCenter (center);
           break;
         }

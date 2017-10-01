@@ -85,16 +85,15 @@ namespace ngfem
       y (0) = Cast (fel).Evaluate (mip, x);
     }
 
+    // using DiffOp<DiffOpId<D, FEL> > :: GenerateMatrixIR;
+    template <typename MAT>
+    static void GenerateMatrixIR (const FiniteElement &fel,
+                                  const BaseMappedIntegrationRule &mir,
+                                  MAT &mat, LocalHeap &lh)
+    {
+      Cast (fel).CalcShape (mir, Trans (mat));
+    }
     /*
-                    // using DiffOp<DiffOpId<D, FEL> > :: GenerateMatrixIR;
-                    template <typename MAT>
-                    static void GenerateMatrixIR (const FiniteElement & fel,
-                                                                                                                                            const BaseMappedIntegrationRule & mir,
-                                                                                                                                            MAT & mat, LocalHeap & lh)
-                    {
-                            Cast(fel).CalcShape (mir.IR(), Trans(mat));
-                    }
-
                     static void GenerateMatrixSIMDIR (const FiniteElement &
        fel, const SIMD_BaseMappedIntegrationRule & mir,
                                                                                                                                                             BareSliceMatrix<SIMD<double>> mat)
