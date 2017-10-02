@@ -16,7 +16,7 @@ namespace ngfem
 
   template <int D, int ord>
   TrefftzElement<D, ord>::TrefftzElement ()
-      : MappedElement (), basis (npoly, D)
+      : MappedElement (), basis (nbasis, npoly)
   {
     basis = TrefftzBasis ();
     ndof = nbasis;
