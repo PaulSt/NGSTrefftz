@@ -71,24 +71,25 @@ namespace ngfem
        Evaluate function in points of integrationrule ir.
        Vector x provides coefficient vector.
      */
-    //HD NGS_DLL_HEADER virtual void Evaluate (const IntegrationRule & ir, BareSliceVector<> coefs, FlatVector<> values) const;
-    //HD NGS_DLL_HEADER virtual void Evaluate (const SIMD_IntegrationRule & ir, BareSliceVector<> coefs, BareVector<SIMD<double>> values) const;
-    //HD NGS_DLL_HEADER virtual void Evaluate (const SIMD_IntegrationRule & ir, SliceMatrix<> coefs, BareSliceMatrix<SIMD<double>> values) const;
+    HD NGS_DLL_HEADER virtual void Evaluate (const BaseMappedIntegrationRule & mir, BareSliceVector<> coefs, FlatVector<> values) const;
+    HD NGS_DLL_HEADER virtual void Evaluate (const SIMD_BaseMappedIntegrationRule & mir, BareSliceVector<> coefs, BareVector<SIMD<double>> values) const;
+    HD NGS_DLL_HEADER virtual void Evaluate (const SIMD_BaseMappedIntegrationRule & mir, SliceMatrix<> coefs, BareSliceMatrix<SIMD<double>> values) const;
 
     /**
        Each column a vector ...
      */
-    //HD NGS_DLL_HEADER virtual void Evaluate (const IntegrationRule & ir, SliceMatrix<> coefs, SliceMatrix<> values) const;
+    HD NGS_DLL_HEADER virtual void Evaluate (const  BaseMappedIntegrationRule & mir, SliceMatrix<> coefs, SliceMatrix<> values) const;
 
     /**
        Evaluate function in points of integrationrule ir, transpose operation.
        Vector x provides coefficient vector.
      */
-/*
-    HD NGS_DLL_HEADER virtual void EvaluateTrans (const IntegrationRule & ir, FlatVector<> values, BareSliceVector<> coefs) const;
-    HD NGS_DLL_HEADER virtual void AddTrans (const SIMD_IntegrationRule & ir, BareVector<SIMD<double>> values, BareSliceVector<> coefs) const;
-    HD NGS_DLL_HEADER virtual void AddTrans (const SIMD_IntegrationRule & ir, BareSliceMatrix<SIMD<double>> values, SliceMatrix<> coefs) const;
 
+    HD NGS_DLL_HEADER virtual void EvaluateTrans (const BaseMappedIntegrationRule & mir, FlatVector<double> values, BareSliceVector<double> coefs) const;
+		HD NGS_DLL_HEADER virtual void AddTrans (const SIMD_BaseMappedIntegrationRule & mir, BareVector<SIMD<double>> values, BareSliceVector<> coefs) const;
+		HD NGS_DLL_HEADER virtual void AddTrans (const SIMD_BaseMappedIntegrationRule & mir, BareSliceMatrix<SIMD<double>> values, SliceMatrix<> coefs) const;
+
+/*
     HD NGS_DLL_HEADER virtual void EvaluateGrad (const SIMD_BaseMappedIntegrationRule & ir, BareSliceVector<> coefs, BareSliceMatrix<SIMD<double>> values) const;
     // needed for ALE-trafo
     HD NGS_DLL_HEADER virtual void EvaluateGrad (const SIMD_IntegrationRule & ir, BareSliceVector<> coefs, BareSliceMatrix<SIMD<double>> values) const;

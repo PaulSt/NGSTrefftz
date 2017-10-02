@@ -40,6 +40,63 @@ namespace ngfem
     return InnerProduct (shape, x);
   }
 
+	void MappedElement ::
+	Evaluate (const BaseMappedIntegrationRule & mir, BareSliceVector<double> coefs, FlatVector<double> vals) const
+	{
+		for (size_t i = 0; i < mir.Size();i++) //.GetNIP(); i++)
+			vals(i) = Evaluate (mir[i], coefs);
+	}
+
+	void MappedElement ::
+	Evaluate (const SIMD_BaseMappedIntegrationRule & mir, BareSliceVector<> coefs, BareVector<SIMD<double>> values) const
+	{
+		throw ExceptionNOSIMD (string("Evaluate (simd) not implemented for class ")+typeid(*this).name());
+	}
+
+	void MappedElement ::
+	Evaluate (const SIMD_BaseMappedIntegrationRule & mir, SliceMatrix<> coefs, BareSliceMatrix<SIMD<double>> values) const
+	{
+		for (size_t i = 0; i < coefs.Width(); i++)
+			Evaluate (mir, coefs.Col(i), values.Row(i));
+	}
+
+	void MappedElement ::
+	Evaluate (const BaseMappedIntegrationRule & mir, SliceMatrix<> coefs, SliceMatrix<> values) const
+	{
+		VectorMem<100> shapes(coefs.Height());
+		for (size_t i = 0; i < mir.Size(); i++)
+			{
+				CalcShape (mir[i], shapes);
+				values.Row(i) = Trans(coefs) * shapes;
+			}
+	}
+
+	void MappedElement ::
+  EvaluateTrans (const BaseMappedIntegrationRule & mir, FlatVector<double> vals, BareSliceVector<double> coefs) const
+  {
+    VectorMem<20, double> shape(ndof);
+    coefs.AddSize(ndof) = 0.0;
+    for (int i = 0; i < mir.Size(); i++) //GetNIP()
+    {
+			CalcShape (mir[i], shape);
+			coefs.AddSize(ndof) += vals(i) * shape;
+    }
+  }
+
+	void MappedElement ::
+	AddTrans (const SIMD_BaseMappedIntegrationRule & mir, BareVector<SIMD<double>> values, BareSliceVector<> coefs) const
+	{
+		throw ExceptionNOSIMD (string("AddTrans (simd) not implemented for class ")+typeid(*this).name());
+	}
+
+	void MappedElement ::
+	AddTrans (const SIMD_BaseMappedIntegrationRule & mir, BareSliceMatrix<SIMD<double>> values, SliceMatrix<> coefs) const
+	{
+		for (int i = 0; i < coefs.Width(); i++)
+			AddTrans (mir, values.Row(i), coefs.Col(i));
+	}
+
+
 
 /*
   void MappedElement ::
@@ -47,37 +104,6 @@ namespace ngfem
                     BareSliceMatrix<SIMD<double>> dshapes) const
   {
     throw ExceptionNOSIMD("SIMD - CalcDShape not overloaded");
-  }
-
-  void MappedElement ::
-  Evaluate (const IntegrationRule & ir, BareSliceVector<double> coefs, FlatVector<double> vals) const
-  {
-    for (size_t i = 0; i < ir.GetNIP(); i++)
-      vals(i) = Evaluate (ir[i], coefs);
-  }
-
-  void MappedElement ::
-  Evaluate (const SIMD_IntegrationRule & ir, BareSliceVector<> coefs, BareVector<SIMD<double>> values) const
-  {
-    throw ExceptionNOSIMD (string("Evaluate (simd) not implemented for class ")+typeid(*this).name());
-  }
-
-  void MappedElement ::
-  Evaluate (const SIMD_IntegrationRule & ir, SliceMatrix<> coefs, BareSliceMatrix<SIMD<double>> values) const
-  {
-    for (size_t i = 0; i < coefs.Width(); i++)
-      Evaluate (ir, coefs.Col(i), values.Row(i));
-  }
-
-  void MappedElement ::
-  Evaluate (const IntegrationRule & ir, SliceMatrix<> coefs, SliceMatrix<> values) const
-  {
-    VectorMem<100> shapes(coefs.Height());
-    for (size_t i = 0; i < ir.Size(); i++)
-      {
-        CalcShape (ir[i], shapes);
-        values.Row(i) = Trans(coefs) * shapes;
-      }
   }
 
   void MappedElement ::
@@ -91,32 +117,6 @@ namespace ngfem
   {
     throw ExceptionNOSIMD (string("EvaluateGrad (simd) not implemented for class ")+typeid(*this).name());
   }
-
-  void MappedElement ::
-  EvaluateTrans (const IntegrationRule & ir, FlatVector<double> vals, BareSliceVector<double> coefs) const
-  {
-    VectorMem<20, double> shape(ndof);
-    coefs.AddSize(ndof) = 0.0;
-    for (int i = 0; i < ir.GetNIP(); i++)
-      {
-	CalcShape (ir[i], shape);
-	coefs.AddSize(ndof) += vals(i) * shape;
-      }
-  }
-
-  void MappedElement ::
-  AddTrans (const SIMD_IntegrationRule & ir, BareVector<SIMD<double>> values, BareSliceVector<> coefs) const
-  {
-    throw ExceptionNOSIMD (string("AddTrans (simd) not implemented for class ")+typeid(*this).name());
-  }
-
-  void MappedElement ::
-  AddTrans (const SIMD_IntegrationRule & ir, BareSliceMatrix<SIMD<double>> values, SliceMatrix<> coefs) const
-  {
-    for (int i = 0; i < coefs.Width(); i++)
-      AddTrans (ir, values.Row(i), coefs.Col(i));
-  }
-
 
   void MappedElement ::
   AddGradTrans (const SIMD_BaseMappedIntegrationRule & ir, BareSliceMatrix<SIMD<double>> values,

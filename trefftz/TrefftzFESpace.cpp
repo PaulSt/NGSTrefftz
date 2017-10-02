@@ -42,7 +42,6 @@ namespace ngcomp
 				break;
 			}
 		}
-
   }
 
 
