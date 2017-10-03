@@ -36,7 +36,9 @@ namespace ngfem
   {
     VectorMem<20, double> shape(ndof);
     CalcShape (mip, shape);
-		//cout << InnerProduct (shape, x) << endl;
+		//cout << "shape: " << shape << endl;
+		//cout << "x: " << x(0) << x(1) << endl;
+		//cout << "innter prod: " << InnerProduct (shape, x) << endl;
     return InnerProduct (shape, x);
   }
 
