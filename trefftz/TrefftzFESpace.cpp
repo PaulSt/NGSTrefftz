@@ -19,7 +19,6 @@ namespace ngcomp
 
     order = int(flags.GetNumFlag ("order", 2));//flags.GetDefineFlag ("order");
 		local_ndof = (BinCoeff(D-1 + order, order) + BinCoeff(D-1 + order-1, order-1));
-
 		int nel = ma->GetNE();
 		ndof = local_ndof * nel;
 
@@ -50,6 +49,9 @@ namespace ngcomp
   {
 		//int n_cell = ma->GetNE();
 		//ndof = (BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1)) * n_cell;
+		local_ndof = (BinCoeff(D-1 + order, order) + BinCoeff(D-1 + order-1, order-1));
+		int nel = ma->GetNE();
+		ndof = local_ndof * nel;
 		cout << "update: order = " << order << " D: " << D << " ndof = " <<  ndof << " local_ndof:" << local_ndof << endl;
 	}
 

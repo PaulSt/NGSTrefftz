@@ -29,6 +29,13 @@ namespace ngfem
 		static const FEL & Cast (const FiniteElement & fel)
 		{ return static_cast<const FEL&> (fel); }
 
+		template <typename MIP, typename MAT>
+		static void GenerateMatrix (const FiniteElement & fel, const MIP & mip,
+				MAT && mat, LocalHeap & lh)
+		{
+			HeapReset hr(lh);
+			mat.Row(0) = Cast(fel).GetShape(mip, lh);
+		}
 
 		static void GenerateMatrix (const FiniteElement & fel,
 				const BaseMappedIntegrationPoint & mip,
@@ -44,20 +51,12 @@ namespace ngfem
 			Cast(fel).CalcShape (mip, mat.Row(0));
 		}
 
-		template <typename MIP, typename MAT>
-		static void GenerateMatrix (const FiniteElement & fel, const MIP & mip,
-				MAT && mat, LocalHeap & lh)
-		{
-			HeapReset hr(lh);
-			mat.Row(0) = Cast(fel).GetShape(mip, lh);
-		}
-
 		// using DiffOp<DiffOpId<D, FEL> > :: GenerateMatrixIR;
 		template <typename MAT>
 		static void GenerateMatrixIR (const FiniteElement & fel,
 																	const BaseMappedIntegrationRule & mir,
 																	MAT & mat, LocalHeap & lh)
-		{cout << "pre mat: " << mat << endl;
+		{cout << "pre mat 4: " << mat << endl;
 			Cast(fel).CalcShape (mir, Trans(mat));
 			cout << "gen mat 4:" << mat << endl;
 			//TODO this should be a matrix??
