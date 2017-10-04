@@ -20,6 +20,7 @@ namespace ngfem
   {
     basis = TrefftzBasis ();
     ndof = nbasis;
+    order = nbasis;
     // cout << "ord: " + to_string(ord) + ", dimension: " + to_string(D) + ",
     // number of basis functions: " << nbasis << endl;
   }
