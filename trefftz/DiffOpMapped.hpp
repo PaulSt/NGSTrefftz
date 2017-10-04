@@ -56,10 +56,9 @@ namespace ngfem
 		static void GenerateMatrixIR (const FiniteElement & fel,
 																	const BaseMappedIntegrationRule & mir,
 																	MAT & mat, LocalHeap & lh)
-		{cout << "pre mat 4: " << mat << endl;
+		{ //cout << "pre mat 4: " << mat << endl;
 			Cast(fel).CalcShape (mir, Trans(mat));
-			cout << "gen mat 4:" << mat << endl;
-			//TODO this should be a matrix??
+			//cout << "gen mat 4:" << mat << endl;
 		}
 
 		static void GenerateMatrixSIMDIR (const FiniteElement & fel,
@@ -67,7 +66,6 @@ namespace ngfem
 																			BareSliceMatrix<SIMD<double>> mat)
 		{
 			Cast(fel).CalcShape (mir, mat);
-			cout << "gen mat 5:" << mat << endl;
 		}
 
 		template <typename MIP, class TVX, class TVY>
@@ -93,7 +91,6 @@ namespace ngfem
 												 FlatVector<double> x, TMY y,
 			 								 	 LocalHeap & lh)
 		{
-			//cout << "" <<endl;
 			Cast(fel).Evaluate (mir, x, FlatVector<> (mir.Size(), &y(0,0)));
 		}
 
