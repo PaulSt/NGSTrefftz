@@ -15,10 +15,12 @@ namespace ngfem
   // TrefftzBasis();
 
   template <int D, int ord>
+  const Matrix<double> TrefftzElement<D, ord>::basis = TrefftzBasis ();
+
+  template <int D, int ord>
   TrefftzElement<D, ord>::TrefftzElement ()
-      : MappedElement (), basis (nbasis, npoly)
+      : MappedElement () //, basis(nbasis, npoly)
   {
-    basis = TrefftzBasis ();
     ndof = nbasis;
     order = nbasis;
     // cout << "ord: " + to_string(ord) + ", dimension: " + to_string(D) + ",

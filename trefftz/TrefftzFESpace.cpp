@@ -20,6 +20,9 @@ namespace ngcomp
 
     order = int (
         flags.GetNumFlag ("order", 2)); // flags.GetDefineFlag ("order");
+    float wavespeed = flags.GetDefineFlag ("wavespeed");
+    cout << "wavespeed" << wavespeed;
+
     local_ndof = (BinCoeff (D - 1 + order, order)
                   + BinCoeff (D - 1 + order - 1, order - 1));
     int nel = ma->GetNE ();
@@ -90,7 +93,7 @@ namespace ngcomp
     // <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
     if (order != 3)
       {
-        cout << "wrong order" << endl;
+        cout << "order not yet supported" << endl;
       }
     switch (D)
       {
