@@ -6,7 +6,8 @@ from trefftzngs import *
 
 from netgen.csg import unit_cube
 
-mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
+mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
+#mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 
 #fes = FESpace("trefftzfespace", mesh, flags = { "dgjumps" : True, "order" : 3 })
 fes = FESpace("trefftzfespace", mesh, order= 3)
@@ -27,7 +28,7 @@ Draw(u)
 
 
 # we can use the additionally exported function here
-for i in range(2624): #fes.GetNDof()):
+for i in range(2624): #126 #fes.GetNDof()):
     print("Draw basis function ", i)
     u.vec[:] = 0
     u.vec[i] = 1

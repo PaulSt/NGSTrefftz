@@ -18,6 +18,9 @@ namespace ngcomp
 		D = ma->GetDimension();
 
     order = int(flags.GetNumFlag ("order", 2));//flags.GetDefineFlag ("order");
+		float wavespeed = flags.GetDefineFlag ("wavespeed");
+		cout << "wavespeed" << wavespeed;
+
 		local_ndof = (BinCoeff(D-1 + order, order) + BinCoeff(D-1 + order-1, order-1));
 		int nel = ma->GetNE();
 		ndof = local_ndof * nel;
@@ -74,7 +77,7 @@ namespace ngcomp
   {
 		auto vertices_index = ma->GetElVertices(ei);
 		//cout << "element vectice coord: \n"  << ma->GetPoint<3>(vertices_index[0]) << endl<< ma->GetPoint<3>(vertices_index[1]) <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
-		if(order != 3){cout << "wrong order"<<endl;}
+		if(order != 3){cout << "order not yet supported"<<endl;}
 		switch (D) {
 			case 2:
 			{

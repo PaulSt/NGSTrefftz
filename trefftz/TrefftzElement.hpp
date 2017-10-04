@@ -23,7 +23,7 @@ namespace ngfem
 			Vec<D> elcenter;
 
 			//static const Mat<nbasis, npoly,double> basis;
-			Matrix<double> basis;
+			static const Matrix<double> basis;
 
 		protected:
 

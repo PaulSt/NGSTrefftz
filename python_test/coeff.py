@@ -7,6 +7,7 @@ from trefftzngs import *
 from netgen.csg import unit_cube
 
 mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.2))
+#mesh = Mesh(unit_square.GenerateMesh(maxh=0.2))
 
 i=0
 while (i<16):
