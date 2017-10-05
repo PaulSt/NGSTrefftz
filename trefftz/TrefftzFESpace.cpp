@@ -82,8 +82,8 @@ namespace ngcomp
 			case 2:
 			{
 				Vec<2> center = 0;
-				//for(int d=0;d<3;d++) center += ma->GetPoint<2>(vertices_index[d]);
-				//center *= (1.0/3.0);
+				for(int d=0;d<3;d++) center += ma->GetPoint<2>(vertices_index[d]);
+				center *= (1.0/3.0);
 				return *(new (alloc) TrefftzElement<2,3>) ->SetCenter(center);
 				break;
 			}

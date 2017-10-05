@@ -15,7 +15,7 @@ namespace ngfem
 	const Matrix<double> TrefftzElement<D,ord> :: basis = TrefftzBasis();
 
 	template <int D, int ord>
-	TrefftzElement<D,ord> :: TrefftzElement() : MappedElement()//, basis(nbasis, npoly)
+	TrefftzElement<D,ord> :: TrefftzElement() : BaseScalarMappedElement()//, basis(nbasis, npoly)
 	{
 		ndof = nbasis;
 		order = nbasis;
@@ -39,7 +39,7 @@ namespace ngfem
 		//Vec<nbasis,double> tempshape;
 		Vector<double> tempshape(nbasis);
 		tempshape = basis * polynomial;
-		for(int i = 0; i< nbasis; i++) shape(i) = tempshape(i);
+		for(int b = 0; b< nbasis; b++) shape(b) = tempshape(b); //loop over basis TODO replace this by correct way of filling  BareSliceVector
 /*
 		FlatVector<double> point = mip.GetPoint();
 		shape(0) = point(0) * point(1);
@@ -50,25 +50,20 @@ namespace ngfem
 	void TrefftzElement<D,ord> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
 																		SliceMatrix<> dshape) const
 	{
-		/*
-		array<int, D> tempexp;
-		int coeff;
-		for(int l=0;l<nbasis;l++) //loop over basis functions
+		FlatVector<double> point = mip.GetPoint();
+		Vec<npoly,float> polynomial;
+		Vector<double> tempshape(nbasis);
+		Mat<npoly, D, int>  derindices;
+		for(int d=0;d<D;d++)  //loop over derivatives/dimensions
 		{
-			for(int d=0;d<D;d++)  //loop over derivatives/dimensions
+			derindices = MakeIndices();
+			for(int i=0;i<npoly;i++)//loop over indices
 			{
-				for(int i=0;i<BinCoeff(D + ord, ord);i++)//loop over indices
-				{
-					if(indices[i][d+1] == 0) continue;
-					else
-					{
-						tempexp = indices[i];
-						dshape(l,d) += tempexp[d+1]-- * basisFunctions[l].get(indices[i]) * ipow_ar(mip.GetPoint(),tempexp,1,D+1);
-					}
-				}
+				derindices(i,d) = derindices(i,d) - 1;
+				polynomial(i) = ipowD_ar(d,point,derindices.Row(i));
 			}
+			dshape.Col(d) = basis * polynomial;
 		}
-		*/
 	}
 
 	template <int D, int ord>
@@ -156,13 +151,15 @@ namespace ngfem
 	template <int D, int ord>
 	double TrefftzElement<D,ord> :: ipow_ar(FlatVector<double> base, Vec<D, int> ex, float result, int count) const
 	{
-		return count == 0 ? result : ipow_ar( base, ex, pow(base(count-1),ex(count-1)) * result, count-1 );
+		return count < 0 ? result : ipow_ar( base, ex, pow(base(count),ex(count)) * result, count-1 );
 	}
 
 	template <int D, int ord>
-	int TrefftzElement<D,ord> :: GetNBasis() const
+	double TrefftzElement<D,ord> :: ipowD_ar(int der, FlatVector<double> base, Vec<D, int> ex, float result, int count) const
 	{
-		return nbasis;
+		return ex(der) < 0 ? 0.0 :
+		 count == der ? ipowD_ar(der, base, ex, (ex(count)+1) * pow(base(count),ex(count)) * result, count-1 ) :
+		 count < 0 ? result : ipowD_ar(der, base, ex, pow(base(count),ex(count)) * result, count-1 );
 	}
 
 }

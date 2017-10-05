@@ -10,7 +10,7 @@
 namespace ngfem
 {
 	template <int D, int ord>
-	class TrefftzElement : public MappedElement
+	class TrefftzElement : public BaseScalarMappedElement
 	{
 		private:
 
@@ -41,21 +41,21 @@ namespace ngfem
 
 			virtual ELEMENT_TYPE ElementType() const { return ET_TRIG; }
 
+			using BaseScalarMappedElement::CalcShape;
 			virtual void CalcShape (const BaseMappedIntegrationPoint & mip, BareSliceVector<> shape) const;
 
+			using BaseScalarMappedElement::CalcDShape;
 			virtual void CalcDShape (const BaseMappedIntegrationPoint & mip, SliceMatrix<> dshape) const;
-
-			using MappedElement::CalcShape;
-
-			using MappedElement::CalcDShape;
-
-			double ipow_ar(FlatVector<double> base, Vec<D, int> ex, float result = 1, int count = D) const;
-
-			int GetNBasis() const;
 
 			constexpr static Mat<nbasis, npoly,double> TrefftzBasis();
 
+			int GetNBasis() const { return nbasis; }
+
 			TrefftzElement<D,ord> * SetCenter(Vec<D> acenter) {elcenter = acenter; return this;}
+
+			double ipow_ar(FlatVector<double> base, Vec<D, int> ex, float result = 1, int count = D-1) const;
+
+			double ipowD_ar(int der, FlatVector<double> base, Vec<D, int> ex, float result = 1, int count = D-1) const;
 
 	};
 }
