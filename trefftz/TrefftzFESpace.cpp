@@ -13,15 +13,15 @@ namespace ngcomp
                                    const Flags &flags)
       : FESpace (ama, flags)
   {
+    DefineNumFlag ("wavespeed");
     cout << "======== Constructor of TrefftzFESpace =========" << endl;
-    cout << "Flags = " << flags << endl;
+    cout << "Flags = " << flags;
 
     D = ma->GetDimension ();
 
     order = int (
         flags.GetNumFlag ("order", 2)); // flags.GetDefineFlag ("order");
-    float wavespeed = flags.GetDefineFlag ("wavespeed");
-    cout << "wavespeed" << wavespeed;
+    float wavespeed = flags.GetNumFlag ("wavespeed", 2);
 
     local_ndof = (BinCoeff (D - 1 + order, order)
                   + BinCoeff (D - 1 + order - 1, order - 1));
@@ -32,21 +32,25 @@ namespace ngcomp
       {
       case 2:
         {
-          evaluator[VOL]
-              = make_shared<T_DifferentialOperator<DiffOpMapped<2, 3>>> ();
-          evaluator[BND] = make_shared<
-              T_DifferentialOperator<DiffOpMappedBoundary<2, 3>>> ();
+          evaluator[VOL] = make_shared<T_DifferentialOperator<
+              DiffOpMapped<2, TrefftzElement<2, 3>>>> ();
+          // flux_evaluator[VOL] =
+          // make_shared<T_DifferentialOperator<DiffOpMappedGradient<2,
+          // TrefftzElement<2,3>>>>();
+          evaluator[BND] = make_shared<T_DifferentialOperator<
+              DiffOpMappedBoundary<2, TrefftzElement<2, 3>>>> ();
           break;
         }
       case 3:
         {
           // needed for symbolic integrators and to draw solution
-          evaluator[VOL]
-              = make_shared<T_DifferentialOperator<DiffOpMapped<3, 3>>> ();
+          evaluator[VOL] = make_shared<T_DifferentialOperator<
+              DiffOpMapped<3, TrefftzElement<3, 3>>>> ();
           // flux_evaluator[VOL] =
-          // make_shared<T_DifferentialOperator<DiffOpGradient<3>>>();
-          evaluator[BND] = make_shared<
-              T_DifferentialOperator<DiffOpMappedBoundary<3, 3>>> ();
+          // make_shared<T_DifferentialOperator<DiffOpMappedGradient<3,
+          // TrefftzElement<3,3>>>>();
+          evaluator[BND] = make_shared<T_DifferentialOperator<
+              DiffOpMappedBoundary<3, TrefftzElement<3, 3>>>> ();
           // (still) needed to draw solution
           // integrator[VOL] = GetIntegrators().CreateBFI("mass",
           // ma->GetDimension(),
@@ -58,15 +62,14 @@ namespace ngcomp
 
   void TrefftzFESpace ::Update (LocalHeap &lh)
   {
-    // int n_cell = ma->GetNE();
-    // ndof = (BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1)) *
-    // n_cell;
     local_ndof = (BinCoeff (D - 1 + order, order)
                   + BinCoeff (D - 1 + order - 1, order - 1));
     int nel = ma->GetNE ();
     ndof = local_ndof * nel;
+
     cout << "update: order = " << order << " D: " << D << " ndof = " << ndof
-         << " local_ndof:" << local_ndof << endl;
+         << " local_ndof:" << local_ndof << endl
+         << "================================================" << endl;
   }
 
   void TrefftzFESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
@@ -109,8 +112,9 @@ namespace ngcomp
       case 3:
         {
           Vec<3> center = 0;
-          // for(int d=0;d<4;d++) center += ma->GetPoint<3>(vertices_index[d]);
-          // center *= 0.25;
+          for (int d = 0; d < 4; d++)
+            center += ma->GetPoint<3> (vertices_index[d]);
+          center *= 0.25;
           return *(new (alloc) TrefftzElement<3, 3>)->SetCenter (center);
           break;
         }

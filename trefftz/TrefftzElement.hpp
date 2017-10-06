@@ -35,9 +35,7 @@ namespace ngfem
     constexpr static int IndexMap (Vec<D, int> index);
 
   public:
-    TrefftzElement ();
-
-    TrefftzElement (Vec<D> aelcenter);
+    TrefftzElement () : BaseScalarMappedElement (nbasis, ord) { ; }
 
     virtual ELEMENT_TYPE ElementType () const { return ET_TRIG; }
 
