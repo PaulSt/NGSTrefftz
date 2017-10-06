@@ -39,7 +39,8 @@ namespace ngfem
 		//Vec<nbasis,double> tempshape;
 		Vector<double> tempshape(nbasis);
 		tempshape = basis * polynomial;
-		for(int b = 0; b< nbasis; b++) shape(b) = tempshape(b); //loop over basis TODO replace this by correct way of filling  BareSliceVector
+		//for(int b = 0; b< nbasis; b++) shape(b) = tempshape(b); //loop over basis TODO replace this by correct way of filling  BareSliceVector
+		FlatVec<nbasis> (&shape(0)) = tempshape;
 /*
 		FlatVector<double> point = mip.GetPoint();
 		shape(0) = point(0) * point(1);

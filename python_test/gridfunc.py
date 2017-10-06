@@ -11,7 +11,7 @@ mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 #Draw(mesh)
 
 c = 1;
-fes = FESpace("trefftzfespace", mesh, order = 3, flags = {"wavespeed":17})
+fes = FESpace("trefftzfespace", mesh, order = 3, flags = {"wavespeed":c})
 gfu = GridFunction(fes)
 #kx
 #uex = sin(kx*x+ky*y - c*t)

@@ -142,12 +142,14 @@ namespace ngfem
   CalcMappedDShape (const MappedIntegrationPoint<D,D> & mip,
                     SliceMatrix<> dshape) const
   {
-    CalcDShape (mip.IP(), dshape);
+    CalcDShape (mip, dshape);
+		/* no mapping - no inner derivative
     for (int i = 0; i < dshape.Height(); i++)
       {
         Vec<D> hv = dshape.Row(i);
         FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
       }
+		*/
   }
 
 
