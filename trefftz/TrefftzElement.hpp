@@ -3,7 +3,7 @@
 
 #include <fem.hpp>
 #include <l2hofefo.hpp>
-#include"helpers.cpp"
+#include "helpers.cpp"
 #include "MappedElement.hpp"
 //using namespace ngfem;
 
@@ -35,9 +35,7 @@ namespace ngfem
 
 		public:
 
-			TrefftzElement();
-
-			TrefftzElement(Vec<D> aelcenter);
+			TrefftzElement(): BaseScalarMappedElement(nbasis,ord) { ;	}
 
 			virtual ELEMENT_TYPE ElementType() const { return ET_TRIG; }
 

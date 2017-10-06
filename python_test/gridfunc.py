@@ -1,7 +1,6 @@
 
 #from netgen.geom2d import unit_square
 from ngsolve import *
-from myngspy import *
 from trefftzngs import *
 from netgen.csg import unit_cube
 from netgen.geom2d import unit_square
@@ -11,7 +10,7 @@ mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 #Draw(mesh)
 
 c = 1;
-fes = FESpace("trefftzfespace", mesh, order = 3, flags = {"wavespeed":c})
+fes = FESpace("trefftzfespace", mesh, order = 3, wavespeed = c)
 gfu = GridFunction(fes)
 #kx
 #uex = sin(kx*x+ky*y - c*t)

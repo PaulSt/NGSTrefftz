@@ -15,21 +15,12 @@ namespace ngfem
 	const Matrix<double> TrefftzElement<D,ord> :: basis = TrefftzBasis();
 
 	template <int D, int ord>
-	TrefftzElement<D,ord> :: TrefftzElement() : BaseScalarMappedElement()//, basis(nbasis, npoly)
-	{
-		ndof = nbasis;
-		order = nbasis;
-		//cout << "ord: " + to_string(ord) + ", dimension: " + to_string(D) + ", number of basis functions: " << nbasis << endl;
-	}
-
-	template <int D, int ord>
   void TrefftzElement<D,ord> :: CalcShape (const BaseMappedIntegrationPoint & mip,
                                   BareSliceVector<> shape) const
   {
 		Vec<npoly,float> polynomial;
 
 		FlatVector<double> point = mip.GetPoint();
-		//cout << "point: " << point << "elcenter: " << elcenter << endl << "point shift: " << point - elcenter << endl << endl;
 		//point = point - elcenter;
 		for(int i=0; i<npoly; i++)//loop over indices
 		{
@@ -39,12 +30,9 @@ namespace ngfem
 		//Vec<nbasis,double> tempshape;
 		Vector<double> tempshape(nbasis);
 		tempshape = basis * polynomial;
-		//for(int b = 0; b< nbasis; b++) shape(b) = tempshape(b); //loop over basis TODO replace this by correct way of filling  BareSliceVector
-		FlatVec<nbasis> (&shape(0)) = tempshape;
-/*
-		FlatVector<double> point = mip.GetPoint();
-		shape(0) = point(0) * point(1);
-*/
+		for(int b = 0; b< nbasis; b++) shape(b) = tempshape(b); //loop over basis TODO replace this by correct way of filling  BareSliceVector
+		//FlatVec<nbasis> (&shape(0)) = tempshape;
+		//FlatVector<> (nbasis,&shape(0)) = tempshape;
 	}
 
 	template <int D, int ord>
@@ -172,7 +160,6 @@ void ExportTrefftzElement(py::module m)
   using namespace ngfem;
   py::class_<TrefftzElement<3,3>, shared_ptr<TrefftzElement<3,3>>, FiniteElement>
     (m, "TrefftzElement3", "Trefftz space for wave eq")
-    //.def(py::init<>())
 		.def(py::init<>())
 		.def("TrefftzBasis", &TrefftzElement<3,3>::TrefftzBasis)
 		//.def("CalcShape", &TrefftzElement<2>::CalcShape)
@@ -180,7 +167,6 @@ void ExportTrefftzElement(py::module m)
 		;
 	py::class_<TrefftzElement<2,3>, shared_ptr<TrefftzElement<2,3>>, FiniteElement>
     (m, "TrefftzElement2", "Trefftz space for wave eq")
-    //.def(py::init<>())
 		.def(py::init<>())
 		.def("TrefftzBasis", &TrefftzElement<2,3>::TrefftzBasis)
 		//.def("CalcShape", &TrefftzElement<2>::CalcShape)

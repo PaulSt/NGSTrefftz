@@ -152,8 +152,6 @@ namespace ngfem
 		*/
   }
 
-
-
   template<int D>
   void ScalarFiniteElement<D> ::
   CalcMappedDShape (const MappedIntegrationRule<D,D> & mir,
@@ -165,6 +163,7 @@ namespace ngfem
 
 
 
+
 	template<int D>
 	void ScalarMappedElement<D> ::
 	EvaluateGradTrans (const IntegrationRule & ir, FlatMatrixFixWidth<D,double> vals,
@@ -173,10 +172,10 @@ namespace ngfem
 		MatrixFixWidth<D> dshape(ndof);
 		coefs.AddSize(ndof) = 0.0;
 		for (int i = 0; i < ir.GetNIP(); i++)
-			{
-	CalcDShape (ir[i], dshape);
-	coefs.AddSize(ndof) += dshape * vals.Row(i);
-			}
+		{
+			CalcDShape (ir[i], dshape);
+			coefs.AddSize(ndof) += dshape * vals.Row(i);
+		}
 	}
 
 
