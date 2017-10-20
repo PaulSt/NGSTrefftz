@@ -1,3 +1,5 @@
+#include <cmath>
+
 namespace ngfem
 {
   constexpr int ipow (int base, int exp, int result = 1)

@@ -1,11 +1,11 @@
 #include <solve.hpp>
 using namespace ngsolve;
 #include <python_ngstd.hpp>
-#include "trefftz/TrefftzElement.hpp"
+//#include "trefftz/TrefftzElement.hpp"
 #include "trefftz/TrefftzFESpace.hpp"
 #include "trefftz/TrefftzCoefficient.hpp"
 #include "trefftz/DiffOpMapped.hpp"
-#include "trefftz/MappedElement.hpp"
+//#include "trefftz/MappedElement.hpp"
 
 PYBIND11_PLUGIN (trefftzngs)
 {
@@ -14,7 +14,7 @@ PYBIND11_PLUGIN (trefftzngs)
 
   py::module m ("trefftzngs", "trefftzngs doc-string");
 
-  ExportTrefftzElement (m);
+  // ExportMappedElement(m);
   ExportTrefftzFESpace (m);
   ExportTrefftzCoefficient (m);
 

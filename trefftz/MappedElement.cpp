@@ -1,7 +1,6 @@
 #define FILE_MAPPEDELEMENT_CPP
 
 #include "MappedElement.hpp"
-#include <fem.hpp>
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
 
@@ -290,3 +289,16 @@ namespace ngfem
           }
   **/
 }
+
+/*
+#ifdef NGS_PYTHON
+void ExportMappedElement(py::module m)
+{
+  using namespace ngfem;
+  py::class_<BaseScalarMappedElement, shared_ptr<BaseScalarMappedElement>,
+FiniteElement> (m, "MappedElement", "Base Scalar Mapped Element")
+                //.def(py::init<>())
+                ;
+}
+#endif // NGS_PYTHON
+*/

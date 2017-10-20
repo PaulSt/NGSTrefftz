@@ -228,4 +228,10 @@ Vector x provides coefficient vector.
   };
 }
 
+/*
+#ifdef NGS_PYTHON
+#include <python_ngstd.hpp>
+void ExportMappedElement(py::module m);
+#endif // NGS_PYTHON
+*/
 #endif
