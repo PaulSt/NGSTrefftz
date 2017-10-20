@@ -125,93 +125,106 @@ Vector x provides coefficient vector.
   public:
     using BaseScalarMappedElement::BaseScalarMappedElement;
 
+    NGS_DLL_HEADER void test ();
+
     /// the name
-    NGS_DLL_HEADER virtual string ClassName () const;
-
-    HD NGS_DLL_HEADER virtual int Dim () const { return D; }
+    /**
+                    NGS_DLL_HEADER virtual string ClassName() const;
 
     /**
-             returns derivatives in point ip.
+                    HD NGS_DLL_HEADER virtual int Dim () const { return D; }
+
+
+                    /**
+                             returns derivatives in point ip.
+                    */
+    /**
+                    INLINE const FlatMatrixFixWidth<D>
+                    GetDShape (const BaseMappedIntegrationPoint & mip,
+       LocalHeap & lh) const
+                    {
+                            FlatMatrixFixWidth<D> dshape(ndof, lh);
+                            CalcDShape (mip, dshape);
+                            return dshape;
+                    }
+
+                    using BaseScalarMappedElement::CalcShape;
+                    using BaseScalarMappedElement::CalcDShape;
+                    using BaseScalarMappedElement::CalcMappedDShape;
+
+
+                    /// compute dshape, matrix: ndof x spacedim
+                    HD NGS_DLL_HEADER
+                    virtual void CalcMappedDShape (const
+       MappedIntegrationPoint<D,D> & mip, SliceMatrix<> dshape) const;
+
+
+                    HD NGS_DLL_HEADER
+                    virtual void CalcMappedDShape (const
+       MappedIntegrationRule<D,D> & mir, SliceMatrix<> dshapes) const;
+
+                    /**
+                             returns second derivatives in point ip.
+                             returns stored values for valid ip.IPNr(), else
+       computes values
+                    */
+    /**
+                    const FlatMatrix<> GetDDShape (const IntegrationPoint & ip,
+       LocalHeap & lh) const
+                    {
+                            FlatMatrix<> ddshape(ndof, D*D, lh);
+                            CalcDDShape (ip, ddshape);
+                            return ddshape;
+                    }
+
+                    /// compute dshape, matrix: ndof x (spacedim spacedim)
+                    NGS_DLL_HEADER virtual void CalcDDShape (const
+       IntegrationPoint & ip, FlatMatrix<> ddshape) const;
+
+                    /// compute dshape, matrix: ndof x (spacedim spacedim)
+                    NGS_DLL_HEADER virtual void CalcMappedDDShape (const
+       MappedIntegrationPoint<D,D> & mip, SliceMatrix<> ddshape) const;
+
+                    /**
+                             Evaluates gradient in integration point ip.
+                             Vector x provides coefficient vector.
+                     */
+    /**
+                    HD NGS_DLL_HEADER virtual Vec<D> EvaluateGrad (const
+       IntegrationPoint & ip, BareSliceVector<> x) const;
+
+                    using BaseScalarMappedElement::Evaluate;
+                    using BaseScalarMappedElement::EvaluateGrad;
+                    using BaseScalarMappedElement::AddGradTrans;
+
+                    /**
+                             Evaluate gradient in points of integrationrule ir.
+                             Vector x provides coefficient vector.
+                     */
+    /**
+                    HD NGS_DLL_HEADER virtual void EvaluateGrad (const
+       IntegrationRule & ir, BareSliceVector<> coefs, FlatMatrixFixWidth<D>
+       values) const;
+
+                    /**
+                             Evaluate gradient in points of integrationrule ir,
+       transpose operation. Vector x provides coefficient vector.
+                     */
+    /**
+                    HD NGS_DLL_HEADER virtual void EvaluateGradTrans (const
+       IntegrationRule & ir, FlatMatrixFixWidth<D> values, BareSliceVector<>
+       coefs) const;
+
+                    HD NGS_DLL_HEADER virtual void EvaluateGradTrans (const
+       IntegrationRule & ir, SliceMatrix<> values, SliceMatrix<> coefs) const;
+
+                    HD NGS_DLL_HEADER virtual void GetPolOrders
+       (FlatArray<PolOrder<D> > orders) const;
+
+            //public:
+            //	NGS_DLL_HEADER virtual
+       std::list<std::tuple<std::string,double>> Timing () const;
     */
-    INLINE const FlatMatrixFixWidth<D>
-    GetDShape (const BaseMappedIntegrationPoint &mip, LocalHeap &lh) const
-    {
-      FlatMatrixFixWidth<D> dshape (ndof, lh);
-      CalcDShape (mip, dshape);
-      return dshape;
-    }
-
-    using BaseScalarMappedElement::CalcDShape;
-    using BaseScalarMappedElement::CalcMappedDShape;
-    using BaseScalarMappedElement::CalcShape;
-
-    /// compute dshape, matrix: ndof x spacedim
-    HD NGS_DLL_HEADER virtual void
-    CalcMappedDShape (const MappedIntegrationPoint<D, D> &mip,
-                      SliceMatrix<> dshape) const;
-
-    HD NGS_DLL_HEADER virtual void
-    CalcMappedDShape (const MappedIntegrationRule<D, D> &mir,
-                      SliceMatrix<> dshapes) const;
-
-    /**
-             returns second derivatives in point ip.
-             returns stored values for valid ip.IPNr(), else computes values
-    */
-    const FlatMatrix<>
-    GetDDShape (const IntegrationPoint &ip, LocalHeap &lh) const
-    {
-      FlatMatrix<> ddshape (ndof, D * D, lh);
-      CalcDDShape (ip, ddshape);
-      return ddshape;
-    }
-
-    /// compute dshape, matrix: ndof x (spacedim spacedim)
-    NGS_DLL_HEADER virtual void
-    CalcDDShape (const IntegrationPoint &ip, FlatMatrix<> ddshape) const;
-
-    /// compute dshape, matrix: ndof x (spacedim spacedim)
-    NGS_DLL_HEADER virtual void
-    CalcMappedDDShape (const MappedIntegrationPoint<D, D> &mip,
-                       SliceMatrix<> ddshape) const;
-
-    /**
-             Evaluates gradient in integration point ip.
-             Vector x provides coefficient vector.
-     */
-    HD NGS_DLL_HEADER virtual Vec<D>
-    EvaluateGrad (const IntegrationPoint &ip, BareSliceVector<> x) const;
-
-    using BaseScalarMappedElement::AddGradTrans;
-    using BaseScalarMappedElement::Evaluate;
-    using BaseScalarMappedElement::EvaluateGrad;
-
-    /**
-             Evaluate gradient in points of integrationrule ir.
-             Vector x provides coefficient vector.
-     */
-    HD NGS_DLL_HEADER virtual void
-    EvaluateGrad (const IntegrationRule &ir, BareSliceVector<> coefs,
-                  FlatMatrixFixWidth<D> values) const;
-
-    /**
-             Evaluate gradient in points of integrationrule ir, transpose
-       operation. Vector x provides coefficient vector.
-     */
-    HD NGS_DLL_HEADER virtual void
-    EvaluateGradTrans (const IntegrationRule &ir, FlatMatrixFixWidth<D> values,
-                       BareSliceVector<> coefs) const;
-
-    HD NGS_DLL_HEADER virtual void
-    EvaluateGradTrans (const IntegrationRule &ir, SliceMatrix<> values,
-                       SliceMatrix<> coefs) const;
-
-    HD NGS_DLL_HEADER virtual void
-    GetPolOrders (FlatArray<PolOrder<D>> orders) const;
-
-    // public:
-    //	NGS_DLL_HEADER virtual std::list<std::tuple<std::string,double>> Timing
-    //() const;
   };
 }
 

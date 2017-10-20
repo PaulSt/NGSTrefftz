@@ -1,6 +1,9 @@
 #define FILE_MAPPEDELEMENT_CPP
 
 #include "MappedElement.hpp"
+#include <fem.hpp>
+#include "h1lofe.hpp"
+#include "l2hofe.hpp"
 
 namespace ngfem
 {
@@ -149,121 +152,141 @@ namespace ngfem
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  template <int D> string ScalarMappedElement<D>::ClassName () const
-  {
-    return "ScalarMappedElement";
-  }
+  template <int D> void ScalarMappedElement<D>::test () { cout << "hello"; }
 
-  template <int D>
-  void ScalarFiniteElement<D>::CalcMappedDShape (
-      const MappedIntegrationPoint<D, D> &mip, SliceMatrix<> dshape) const
-  {
-    CalcDShape (mip, dshape);
-    /* no mapping - no inner derivative
-for (int i = 0; i < dshape.Height(); i++)
-{
-Vec<D> hv = dshape.Row(i);
-FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
-}
-    */
-  }
+  /**
+          template <int D>
+          string ScalarMappedElement<D> :: ClassName() const
+          {
+                  return "ScalarMappedElement";
+          }
 
-  template <int D>
-  void ScalarFiniteElement<D>::CalcMappedDShape (
-      const MappedIntegrationRule<D, D> &mir, SliceMatrix<> dshapes) const
-  {
-    for (int i = 0; i < mir.Size (); i++)
-      CalcMappedDShape (mir[i], dshapes.Cols (i * D, (i + 1) * D));
-  }
 
-  template <int D>
-  void ScalarMappedElement<D>::EvaluateGradTrans (
-      const IntegrationRule &ir, FlatMatrixFixWidth<D, double> vals,
-      BareSliceVector<double> coefs) const
-  {
-    MatrixFixWidth<D> dshape (ndof);
-    coefs.AddSize (ndof) = 0.0;
-    for (int i = 0; i < ir.GetNIP (); i++)
-      {
-        CalcDShape (ir[i], dshape);
-        coefs.AddSize (ndof) += dshape * vals.Row (i);
-      }
-  }
+          template<int D>
+    void ScalarFiniteElement<D> ::
+    CalcMappedDShape (const MappedIntegrationPoint<D,D> & mip,
+                      SliceMatrix<> dshape) const
+    {
+      CalcDShape (mip, dshape);
+                  /* no mapping - no inner derivative
+      for (int i = 0; i < dshape.Height(); i++)
+        {
+          Vec<D> hv = dshape.Row(i);
+          FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
+        }
+                  */
+  /**
+    }
 
-  template <int D>
-  void ScalarMappedElement<D>::EvaluateGradTrans (const IntegrationRule &ir,
-                                                  SliceMatrix<> values,
-                                                  SliceMatrix<> coefs) const
-  {
-#ifndef __CUDA_ARCH__
-    cout << "EvalGradTrans not overloaded" << endl;
-#endif
-  }
+    template<int D>
+    void ScalarFiniteElement<D> ::
+    CalcMappedDShape (const MappedIntegrationRule<D,D> & mir,
+                      SliceMatrix<> dshapes) const
+    {
+      for (int i = 0; i < mir.Size(); i++)
+        CalcMappedDShape (mir[i], dshapes.Cols(i*D,(i+1)*D));
+    }
 
-  template <int D>
-  void ScalarMappedElement<D>::CalcDDShape (const IntegrationPoint &ip,
-                                            FlatMatrix<> ddshape) const
-  {
-    int nd = GetNDof ();
-    int sdim = D;
 
-    double eps = 1e-7;
-    Matrix<> dshape1 (nd, sdim), dshape2 (nd, sdim);
 
-    for (int i = 0; i < sdim; i++)
-      {
-        IntegrationPoint ip1 = ip;
-        IntegrationPoint ip2 = ip;
 
-        ip1 (i) -= eps;
-        ip2 (i) += eps;
+          template<int D>
+          void ScalarMappedElement<D> ::
+          EvaluateGradTrans (const IntegrationRule & ir,
+  FlatMatrixFixWidth<D,double> vals, BareSliceVector<double> coefs) const
+          {
+                  MatrixFixWidth<D> dshape(ndof);
+                  coefs.AddSize(ndof) = 0.0;
+                  for (int i = 0; i < ir.GetNIP(); i++)
+                  {
+                          CalcDShape (ir[i], dshape);
+                          coefs.AddSize(ndof) += dshape * vals.Row(i);
+                  }
+          }
 
-        CalcDShape (ip1, dshape1);
-        CalcDShape (ip2, dshape2);
-        dshape2 -= dshape1;
-        dshape2 *= (0.5 / eps);
-        for (int j = 0; j < nd; j++)
-          for (int k = 0; k < sdim; k++)
-            ddshape (j, sdim * i + k) = dshape2 (j, k);
-      }
-  }
 
-  template <int D>
-  void ScalarMappedElement<D>::CalcMappedDDShape (
-      const MappedIntegrationPoint<D, D> &mip, SliceMatrix<> ddshape) const
-  {
-    int nd = GetNDof ();
+          template<int D>
+          void ScalarMappedElement<D> ::
+          EvaluateGradTrans (const IntegrationRule & ir, SliceMatrix<> values,
+  SliceMatrix<> coefs) const
+          {
+  #ifndef __CUDA_ARCH__
+                  cout << "EvalGradTrans not overloaded" << endl;
+  #endif
+          }
 
-    double eps = 1e-7;
-    MatrixFixWidth<D> dshape1 (nd), dshape2 (nd);
-    const ElementTransformation &eltrans = mip.GetTransformation ();
 
-    for (int i = 0; i < D; i++)
-      {
-        IntegrationPoint ip1 = mip.IP ();
-        IntegrationPoint ip2 = mip.IP ();
-        ip1 (i) -= eps;
-        ip2 (i) += eps;
-        MappedIntegrationPoint<D, D> mip1 (ip1, eltrans);
-        MappedIntegrationPoint<D, D> mip2 (ip2, eltrans);
+          template<int D>
+          void ScalarMappedElement<D> :: CalcDDShape (const IntegrationPoint &
+  ip, FlatMatrix<> ddshape) const
+          {
+                  int nd = GetNDof();
+                  int sdim = D;
 
-        CalcMappedDShape (mip1, dshape1);
-        CalcMappedDShape (mip2, dshape2);
+                  double eps = 1e-7;
+                  Matrix<> dshape1(nd, sdim), dshape2(nd, sdim);
 
-        ddshape.Cols (D * i, D * (i + 1)) = (0.5 / eps) * (dshape2 - dshape1);
-      }
+                  for (int i = 0; i < sdim; i++)
+                          {
+          IntegrationPoint ip1 = ip;
+          IntegrationPoint ip2 = ip;
 
-    for (int j = 0; j < D; j++)
-      {
-        for (int k = 0; k < nd; k++)
-          for (int l = 0; l < D; l++)
-            dshape1 (k, l) = ddshape (k, l * D + j);
+                                  ip1(i) -= eps;
+                                  ip2(i) += eps;
 
-        dshape2 = dshape1 * mip.GetJacobianInverse ();
+          CalcDShape (ip1, dshape1);
+          CalcDShape (ip2, dshape2);
+          dshape2 -= dshape1;
+          dshape2 *= (0.5 / eps);
+          for (int j = 0; j < nd; j++)
+                  for (int k = 0; k < sdim; k++)
+                          ddshape(j,sdim*i+k) = dshape2(j,k);
+                          }
+          }
 
-        for (int k = 0; k < nd; k++)
-          for (int l = 0; l < D; l++)
-            ddshape (k, l * D + j) = dshape2 (k, l);
-      }
-  }
+
+          template<int D>
+          void ScalarMappedElement<D> :: CalcMappedDDShape (const
+  MappedIntegrationPoint<D,D> & mip, SliceMatrix<> ddshape) const
+          {
+                  int nd = GetNDof();
+
+                  double eps = 1e-7;
+                  MatrixFixWidth<D> dshape1(nd), dshape2(nd);
+                  const ElementTransformation & eltrans =
+  mip.GetTransformation();
+
+                  for (int i = 0; i < D; i++)
+                          {
+          IntegrationPoint ip1 = mip.IP();
+          IntegrationPoint ip2 = mip.IP();
+                                  ip1(i) -= eps;
+                                  ip2(i) += eps;
+                                  MappedIntegrationPoint<D,D> mip1(ip1,
+  eltrans); MappedIntegrationPoint<D,D> mip2(ip2, eltrans);
+
+          CalcMappedDShape (mip1, dshape1);
+          CalcMappedDShape (mip2, dshape2);
+
+                                  ddshape.Cols(D*i,D*(i+1)) = (0.5/eps) *
+  (dshape2-dshape1);
+                          }
+
+                  for (int j = 0; j < D; j++)
+                          {
+                                  for (int k = 0; k < nd; k++)
+                                          for (int l = 0; l < D; l++)
+                                                  dshape1(k,l) = ddshape(k,
+  l*D+j);
+
+                                  dshape2 = dshape1 * mip.GetJacobianInverse();
+
+                                  for (int k = 0; k < nd; k++)
+                                          for (int l = 0; l < D; l++)
+                                                  ddshape(k, l*D+j) =
+  dshape2(k,l);
+                          }
+
+          }
+  **/
 }
