@@ -106,15 +106,20 @@ namespace ngfem
 	public:
 		using BaseScalarMappedElement::BaseScalarMappedElement;
 
+		 NGS_DLL_HEADER void test();
+
 		/// the name
+/**
 		NGS_DLL_HEADER virtual string ClassName() const;
 
+/**
 		HD NGS_DLL_HEADER virtual int Dim () const { return D; }
 
 
 		/**
 			 returns derivatives in point ip.
 		*/
+/**
 		INLINE const FlatMatrixFixWidth<D>
 		GetDShape (const BaseMappedIntegrationPoint & mip, LocalHeap & lh) const
 		{
@@ -142,6 +147,7 @@ namespace ngfem
 			 returns second derivatives in point ip.
 			 returns stored values for valid ip.IPNr(), else computes values
 		*/
+/**
 		const FlatMatrix<> GetDDShape (const IntegrationPoint & ip, LocalHeap & lh) const
 		{
 			FlatMatrix<> ddshape(ndof, D*D, lh);
@@ -161,6 +167,7 @@ namespace ngfem
 			 Evaluates gradient in integration point ip.
 			 Vector x provides coefficient vector.
 		 */
+/**
 		HD NGS_DLL_HEADER virtual Vec<D> EvaluateGrad (const IntegrationPoint & ip, BareSliceVector<> x) const;
 
 		using BaseScalarMappedElement::Evaluate;
@@ -171,12 +178,14 @@ namespace ngfem
 			 Evaluate gradient in points of integrationrule ir.
 			 Vector x provides coefficient vector.
 		 */
+/**
 		HD NGS_DLL_HEADER virtual void EvaluateGrad (const IntegrationRule & ir, BareSliceVector<> coefs, FlatMatrixFixWidth<D> values) const;
 
 		/**
 			 Evaluate gradient in points of integrationrule ir, transpose operation.
 			 Vector x provides coefficient vector.
 		 */
+/**
 		HD NGS_DLL_HEADER virtual void EvaluateGradTrans (const IntegrationRule & ir, FlatMatrixFixWidth<D> values, BareSliceVector<> coefs) const;
 
 		HD NGS_DLL_HEADER virtual void EvaluateGradTrans (const IntegrationRule & ir, SliceMatrix<> values, SliceMatrix<> coefs) const;
@@ -185,6 +194,7 @@ namespace ngfem
 
 	//public:
 	//	NGS_DLL_HEADER virtual std::list<std::tuple<std::string,double>> Timing () const;
+*/
 	};
 }
 

@@ -1,7 +1,9 @@
 #define FILE_MAPPEDELEMENT_CPP
 
-
 #include "MappedElement.hpp"
+#include <fem.hpp>
+#include "h1lofe.hpp"
+#include "l2hofe.hpp"
 
 
 namespace ngfem
@@ -129,12 +131,16 @@ namespace ngfem
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+	template<int D>
+	void ScalarMappedElement<D> :: test()
+	{ cout << "hello";}
 
+/**
 	template <int D>
-  string ScalarMappedElement<D> :: ClassName() const
-  {
-    return "ScalarMappedElement";
-  }
+	string ScalarMappedElement<D> :: ClassName() const
+	{
+		return "ScalarMappedElement";
+	}
 
 
 	template<int D>
@@ -150,6 +156,7 @@ namespace ngfem
         FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
       }
 		*/
+/**
   }
 
   template<int D>
@@ -257,4 +264,5 @@ namespace ngfem
 			}
 
 	}
+**/
 }

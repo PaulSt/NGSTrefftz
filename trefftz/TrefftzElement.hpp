@@ -10,7 +10,7 @@
 namespace ngfem
 {
 	template <int D, int ord>
-	class TrefftzElement : public BaseScalarMappedElement
+	class TrefftzElement : public ScalarMappedElement<D>
 	{
 		private:
 
@@ -35,7 +35,7 @@ namespace ngfem
 
 		public:
 
-			TrefftzElement(): BaseScalarMappedElement(nbasis,ord) { ;	}
+			TrefftzElement(): ScalarMappedElement<D>(nbasis,ord) { ;	} //BaseScalarMappedElement(nbasis,ord) { ;	}
 
 			virtual ELEMENT_TYPE ElementType() const { return ET_TRIG; }
 
