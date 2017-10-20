@@ -6,6 +6,9 @@
 #include "TrefftzFESpace.hpp"
 #include "DiffOpMapped.hpp"
 
+using namespace ngfem;
+#include <fem.hpp>
+
 namespace ngcomp
 {
 
@@ -114,6 +117,7 @@ namespace ngcomp
 void ExportTrefftzFESpace(py::module m)
 {
   using namespace ngcomp;
+	using namespace ngfem;
   /*
     We just export the class here and use the FESpace constructor to create our space.
     This has the advantage, that we do not need to specify all the flags to parse (like

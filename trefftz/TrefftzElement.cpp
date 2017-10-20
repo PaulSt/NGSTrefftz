@@ -1,6 +1,4 @@
-#include <fem.hpp>
 #include "TrefftzElement.hpp"
-//#include "helpers.cpp"
 
 namespace ngfem
 {
@@ -157,19 +155,17 @@ namespace ngfem
 #ifdef NGS_PYTHON
 void ExportTrefftzElement(py::module m)
 {
-  using namespace ngfem;
-  py::class_<TrefftzElement<3,3>, shared_ptr<TrefftzElement<3,3>>, FiniteElement>
+	using namespace ngfem;
+	py::class_<TrefftzElement<3,3>, shared_ptr<TrefftzElement<3,3>>, FiniteElement>
     (m, "TrefftzElement3", "Trefftz space for wave eq")
 		.def(py::init<>())
 		.def("TrefftzBasis", &TrefftzElement<3,3>::TrefftzBasis)
-		//.def("CalcShape", &TrefftzElement<2>::CalcShape)
 		.def("GetNBasis", &TrefftzElement<3,3>::GetNBasis)
 		;
 	py::class_<TrefftzElement<2,3>, shared_ptr<TrefftzElement<2,3>>, FiniteElement>
     (m, "TrefftzElement2", "Trefftz space for wave eq")
 		.def(py::init<>())
 		.def("TrefftzBasis", &TrefftzElement<2,3>::TrefftzBasis)
-		//.def("CalcShape", &TrefftzElement<2>::CalcShape)
 		.def("GetNBasis", &TrefftzElement<2,3>::GetNBasis)
 		;
 }

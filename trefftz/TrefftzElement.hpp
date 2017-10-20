@@ -2,10 +2,8 @@
 #define FILE_TREFFTZELEMENT_HPP
 
 #include <fem.hpp>
-#include <l2hofefo.hpp>
-#include "helpers.cpp"
 #include "MappedElement.hpp"
-//using namespace ngfem;
+#include "helpers.cpp"
 
 namespace ngfem
 {
@@ -58,9 +56,13 @@ namespace ngfem
 	};
 }
 
+
+
+
 #ifdef NGS_PYTHON
 #include <python_ngstd.hpp>
 void ExportTrefftzElement(py::module m);
 #endif // NGS_PYTHON
+
 
 #endif // FILE_TrefftzElement_HPP
