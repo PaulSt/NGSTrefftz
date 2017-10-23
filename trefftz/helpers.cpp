@@ -1,3 +1,5 @@
+#ifndef FILE_HELPERS
+#define FILE_HELPERS
 #include <cmath>
 
 namespace ngfem
@@ -15,3 +17,5 @@ namespace ngfem
   }
 
 }
+
+#endif

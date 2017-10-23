@@ -295,10 +295,11 @@ namespace ngfem
 void ExportMappedElement(py::module m)
 {
   using namespace ngfem;
-  py::class_<BaseScalarMappedElement, shared_ptr<BaseScalarMappedElement>,
-FiniteElement> (m, "MappedElement", "Base Scalar Mapped Element")
-                //.def(py::init<>())
+        py::class_<BaseScalarMappedElement,
+shared_ptr<BaseScalarMappedElement>, FiniteElement> (m, "MappedElement", "Base
+Scalar Mapped Element") .def(py::init<>())
                 ;
+
 }
 #endif // NGS_PYTHON
 */
