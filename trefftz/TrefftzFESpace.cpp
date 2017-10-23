@@ -35,9 +35,8 @@ namespace ngcomp
         {
           evaluator[VOL] = make_shared<T_DifferentialOperator<
               DiffOpMapped<2, TrefftzElement<2, 3>>>> ();
-          // flux_evaluator[VOL] =
-          // make_shared<T_DifferentialOperator<DiffOpMappedGradient<2,
-          // TrefftzElement<2,3>>>>();
+          flux_evaluator[VOL] = make_shared<T_DifferentialOperator<
+              DiffOpMappedGradient<2, TrefftzElement<2, 3>>>> ();
           evaluator[BND] = make_shared<T_DifferentialOperator<
               DiffOpMappedBoundary<2, TrefftzElement<2, 3>>>> ();
           break;
@@ -47,9 +46,8 @@ namespace ngcomp
           // needed for symbolic integrators and to draw solution
           evaluator[VOL] = make_shared<T_DifferentialOperator<
               DiffOpMapped<3, TrefftzElement<3, 3>>>> ();
-          // flux_evaluator[VOL] =
-          // make_shared<T_DifferentialOperator<DiffOpMappedGradient<3,
-          // TrefftzElement<3,3>>>>();
+          flux_evaluator[VOL] = make_shared<T_DifferentialOperator<
+              DiffOpMappedGradient<3, TrefftzElement<3, 3>>>> ();
           evaluator[BND] = make_shared<T_DifferentialOperator<
               DiffOpMappedBoundary<3, TrefftzElement<3, 3>>>> ();
           // (still) needed to draw solution
