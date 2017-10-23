@@ -33,7 +33,7 @@ namespace ngfem
 
 		public:
 
-			TrefftzElement(): ScalarMappedElement<D>(nbasis,ord) { ;	} //BaseScalarMappedElement(nbasis,ord) { ;	}
+			TrefftzElement(): ScalarMappedElement<D>(nbasis,ord) { ;	} //BaseScalarMappedElement(nbasis,ord) { ;	}//
 
 			virtual ELEMENT_TYPE ElementType() const { return ET_TRIG; }
 

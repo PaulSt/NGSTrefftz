@@ -11,8 +11,7 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX ${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON} CACHE PATH "Install dir" FORCE)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
-add_ngsolve_python_module(trefftzngs
-	trefftzngspy.cpp
+add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
 	trefftz/helpers.cpp
 	trefftz/MappedElement.cpp
 	trefftz/TrefftzElement.cpp

@@ -1,13 +1,12 @@
 #include <comp.hpp>    // provides FESpace, ...
 #include <h1lofe.hpp>
 #include <regex>
+#include <fem.hpp>
 
 #include "TrefftzElement.hpp"
 #include "TrefftzFESpace.hpp"
 #include "DiffOpMapped.hpp"
 
-using namespace ngfem;
-#include <fem.hpp>
 
 namespace ngcomp
 {

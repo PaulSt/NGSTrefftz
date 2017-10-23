@@ -159,14 +159,10 @@ void ExportTrefftzElement(py::module m)
 	py::class_<TrefftzElement<3,3>, shared_ptr<TrefftzElement<3,3>>, FiniteElement>
     (m, "TrefftzElement3", "Trefftz space for wave eq")
 		.def(py::init<>())
-		.def("TrefftzBasis", &TrefftzElement<3,3>::TrefftzBasis)
-		.def("GetNBasis", &TrefftzElement<3,3>::GetNBasis)
 		;
 	py::class_<TrefftzElement<2,3>, shared_ptr<TrefftzElement<2,3>>, FiniteElement>
     (m, "TrefftzElement2", "Trefftz space for wave eq")
 		.def(py::init<>())
-		.def("TrefftzBasis", &TrefftzElement<2,3>::TrefftzBasis)
-		.def("GetNBasis", &TrefftzElement<2,3>::GetNBasis)
 		;
 }
 #endif // NGS_PYTHON
