@@ -13,7 +13,6 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
 	trefftz/helpers.cpp
-	trefftz/MappedElement.cpp
 	trefftz/TrefftzElement.cpp
 	trefftz/DiffOpMapped.hpp
 	trefftz/TrefftzFESpace.cpp

@@ -244,7 +244,7 @@ namespace ngfem
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-/*
+
 	/// Gradient operator of dimension D
 	template <int D, typename FEL = ScalarMappedElement<D> >
 	class DiffOpMappedGradient : public DiffOp<DiffOpMappedGradient<D, FEL> >
@@ -262,7 +262,7 @@ namespace ngfem
 		static const FEL & Cast (const FiniteElement & fel)
 		{ return static_cast<const FEL&> (fel); }
 
-
+/*
 		static void GenerateMatrix (const FiniteElement & fel,
 																const MappedIntegrationPoint<D,D> & mip,
 																SliceMatrix<double,ColMajor> mat, LocalHeap & lh)
@@ -357,9 +357,9 @@ namespace ngfem
 		{
 			Cast(fel).AddGradTrans (mir, y, x);
 		}
-
+*/
 	};
-	*/
+
 
 
 
