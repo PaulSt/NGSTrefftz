@@ -315,104 +315,106 @@ namespace ngfem
       return static_cast<const FEL &> (fel);
     }
 
-    /*
-                    static void GenerateMatrix (const FiniteElement & fel,
-                                                                                                                                    const MappedIntegrationPoint<D,D> & mip,
-                                                                                                                                    SliceMatrix<double,ColMajor> mat, LocalHeap & lh)
-                    {
-                            Cast(fel).CalcMappedDShape (mip, Trans(mat));
-                    }
+    static void
+    GenerateMatrix (const FiniteElement &fel,
+                    const MappedIntegrationPoint<D, D> &mip,
+                    SliceMatrix<double, ColMajor> mat, LocalHeap &lh)
+    {
+      Cast (fel).CalcMappedDShape (mip, Trans (mat));
+    }
 
-                    template <typename MAT>
-                    static void GenerateMatrix (const FiniteElement & fel,
-                                                                                                                                    const MappedIntegrationPoint<D,D,Complex> & mip,
-                                                                                                                                    MAT && mat, LocalHeap & lh)
-                    {
-                            HeapReset hr(lh);
-                            mat = Trans (Cast(fel).GetDShape(mip,lh)); //*
-       mip.GetJacobianInverse ());
-                    }
+    template <typename MAT>
+    static void
+    GenerateMatrix (const FiniteElement &fel,
+                    const MappedIntegrationPoint<D, D, Complex> &mip,
+                    MAT &&mat, LocalHeap &lh)
+    {
+      HeapReset hr (lh);
+      mat = Trans (
+          Cast (fel).GetDShape (mip, lh)); //* mip.GetJacobianInverse ());
+    }
 
+    static void
+    GenerateMatrixIR (const FiniteElement &fel,
+                      const MappedIntegrationRule<D, D> &mir,
+                      SliceMatrix<double, ColMajor> mat, LocalHeap &lh)
+    {
+      Cast (fel).CalcMappedDShape (mir, Trans (mat));
+    }
 
-                    static void GenerateMatrixIR (const FiniteElement & fel,
-                                                                                                                                            const MappedIntegrationRule<D,D> & mir,
-                                                                                                                                            SliceMatrix<double,ColMajor> mat, LocalHeap & lh)
-                    {
-                            Cast(fel).CalcMappedDShape (mir, Trans(mat));
-                    }
+    static void
+    GenerateMatrixSIMDIR (const FiniteElement &fel,
+                          const SIMD_BaseMappedIntegrationRule &mir,
+                          BareSliceMatrix<SIMD<double>> mat)
+    {
+      Cast (fel).CalcMappedDShape (mir, mat);
+    }
 
-                    static void GenerateMatrixSIMDIR (const FiniteElement &
-       fel, const SIMD_BaseMappedIntegrationRule & mir,
-                                                                                                                                                            BareSliceMatrix<SIMD<double>> mat)
-                    {
-                            Cast(fel).CalcMappedDShape (mir, mat);
-                    }
+    template <typename MIP, class TVX, class TVY>
+    static void Apply (const FiniteElement &fel, const MIP &mip, const TVX &x,
+                       TVY &&y, LocalHeap &lh)
+    {
+      HeapReset hr (lh);
+      typedef typename TVX::TSCAL TSCAL;
+      Vec<D, TSCAL> hv = Trans (Cast (fel).GetDShape (mip, lh)) * x;
+      // y = Trans (mip.GetJacobianInverse()) * hv;
+    }
 
-                    ///
-                    template <typename MIP, class TVX, class TVY>
-                    static void Apply (const FiniteElement & fel, const MIP &
-       mip, const TVX & x, TVY && y, LocalHeap & lh)
-                    {
-                            HeapReset hr(lh);
-                            typedef typename TVX::TSCAL TSCAL;
-                            Vec<D,TSCAL> hv = Trans
-       (Cast(fel).GetDShape(mip.IP(), lh)) * x; y = Trans
-       (mip.GetJacobianInverse()) * hv;
-                    }
+    template <class TVY>
+    static void
+    Apply (const FiniteElement &fel, const MappedIntegrationPoint<D, D> &mip,
+           const FlatVector<> &x, TVY &&y, LocalHeap &lh)
+    {
+      Vec<D> hv = Cast (fel).EvaluateGrad (mip, x);
+      // y = Trans (mip.GetJacobianInverse()) * hv;
+    }
 
-                    template <class TVY>
-                    static void Apply (const FiniteElement & fel, const
-       MappedIntegrationPoint<D,D> & mip, const FlatVector<> & x, TVY && y,
-                                             LocalHeap & lh)
-                    {
-                            Vec<D> hv = Cast(fel).EvaluateGrad(mip.IP(), x);
-                            y = Trans (mip.GetJacobianInverse()) * hv;
-                    }
+    using DiffOp<DiffOpMappedGradient<D, FEL>>::ApplyIR;
 
-                    using DiffOp<DiffOpGradient<D, FEL> >::ApplyIR;
+    template <class MIR>
+    static void ApplyIR (const FiniteElement &fel, const MIR &mir,
+                         const FlatVector<double> x,
+                         FlatMatrixFixWidth<D, double> y, LocalHeap &lh)
+    {
+      FlatMatrixFixWidth<D> grad (mir.Size (), &y (0));
+      Cast (fel).EvaluateGrad (mir, x, grad);
+      /*
+      for (int i = 0; i < mir.Size(); i++)
+      {
+              Vec<D> hv = grad.Row(i);
+              grad.Row(i) = Trans (mir[i].GetJacobianInverse()) * hv;
+      }
+      */
+    }
 
-                    template <class MIR>
-                    static void ApplyIR (const FiniteElement & fel, const MIR &
-       mir, const FlatVector<double> x, FlatMatrixFixWidth<D,double> y,
-                             LocalHeap & lh)
-                    {
-                            FlatMatrixFixWidth<D> grad(mir.Size(), &y(0));
-                            Cast(fel).EvaluateGrad (mir.IR(), x, grad);
-                            for (int i = 0; i < mir.Size(); i++)
-            {
-                    Vec<D> hv = grad.Row(i);
-                    grad.Row(i) = Trans (mir[i].GetJacobianInverse()) * hv;
-            }
-                    }
+    using DiffOp<DiffOpMappedGradient<D, FEL>>::ApplySIMDIR;
+    static void
+    ApplySIMDIR (const FiniteElement &fel,
+                 const SIMD_BaseMappedIntegrationRule &mir,
+                 BareSliceVector<double> x, BareSliceMatrix<SIMD<double>> y)
+    {
+      Cast (fel).EvaluateGrad (mir, x, y);
+    }
 
-                    using DiffOp<DiffOpGradient<D, FEL> >::ApplySIMDIR;
-                    static void ApplySIMDIR (const FiniteElement & fel, const
-       SIMD_BaseMappedIntegrationRule & mir, BareSliceVector<double> x,
-       BareSliceMatrix<SIMD<double>> y)
-                    {
-                            Cast(fel).EvaluateGrad (mir, x, y);
-                    }
+    ///
+    template <typename MIP, class TVX, class TVY>
+    static void ApplyTrans (const FiniteElement &fel, const MIP &mip,
+                            const TVX &x, TVY &y, LocalHeap &lh)
+    {
+      typedef typename TVX::TSCAL TSCAL;
+      Vec<D, TSCAL> vx = x;
+      // auto hv = mip.GetJacobianInverse() * vx;
+      y = Cast (fel).GetDShape (mip, lh) * vx; //* hv;
+    }
 
-
-                    ///
-                    template <typename MIP, class TVX, class TVY>
-                    static void ApplyTrans (const FiniteElement & fel, const
-       MIP & mip, const TVX & x, TVY & y, LocalHeap & lh)
-                    {
-                            typedef typename TVX::TSCAL TSCAL;
-                            Vec<D,TSCAL> vx = x;
-                            auto hv = mip.GetJacobianInverse() * vx;
-                            y = Cast(fel).GetDShape(mip.IP(),lh) * hv;
-                    }
-
-                    using DiffOp<DiffOpGradient<D, FEL> >::AddTransSIMDIR;
-                    static void AddTransSIMDIR (const FiniteElement & fel,
-       const SIMD_BaseMappedIntegrationRule & mir,
-                                                                                                                                    BareSliceMatrix<SIMD<double>> y, BareSliceVector<double> x)
-                    {
-                            Cast(fel).AddGradTrans (mir, y, x);
-                    }
-    */
+    using DiffOp<DiffOpMappedGradient<D, FEL>>::AddTransSIMDIR;
+    static void
+    AddTransSIMDIR (const FiniteElement &fel,
+                    const SIMD_BaseMappedIntegrationRule &mir,
+                    BareSliceMatrix<SIMD<double>> y, BareSliceVector<double> x)
+    {
+      Cast (fel).AddGradTrans (mir, y, x);
+    }
   };
 
 }

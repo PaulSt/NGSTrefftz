@@ -182,38 +182,41 @@ Vector x provides coefficient vector.
              Evaluates gradient in integration point ip.
              Vector x provides coefficient vector.
      */
-    /*
-                    HD NGS_DLL_HEADER virtual Vec<D> EvaluateGrad (const
-       IntegrationPoint & ip, BareSliceVector<> x) const;
 
-                    using BaseScalarMappedElement::Evaluate;
-                    using BaseScalarMappedElement::EvaluateGrad;
-                    using BaseScalarMappedElement::AddGradTrans;
+    HD NGS_DLL_HEADER virtual Vec<D>
+    EvaluateGrad (const BaseMappedIntegrationPoint &ip,
+                  BareSliceVector<> x) const;
 
-                    /**
-                             Evaluate gradient in points of integrationrule ir.
-                             Vector x provides coefficient vector.
-                     */
-    /*
-                    HD NGS_DLL_HEADER virtual void EvaluateGrad (const
-       IntegrationRule & ir, BareSliceVector<> coefs, FlatMatrixFixWidth<D>
-       values) const;
+    using BaseScalarMappedElement::AddGradTrans;
+    using BaseScalarMappedElement::Evaluate;
+    using BaseScalarMappedElement::EvaluateGrad;
 
-                    /**
-                             Evaluate gradient in points of integrationrule ir,
-       transpose operation. Vector x provides coefficient vector.
-                     */
-    /*
-                    HD NGS_DLL_HEADER virtual void EvaluateGradTrans (const
-       IntegrationRule & ir, FlatMatrixFixWidth<D> values, BareSliceVector<>
-       coefs) const;
+    /**
+             Evaluate gradient in points of integrationrule ir.
+             Vector x provides coefficient vector.
+     */
 
-                    HD NGS_DLL_HEADER virtual void EvaluateGradTrans (const
-       IntegrationRule & ir, SliceMatrix<> values, SliceMatrix<> coefs) const;
+    HD NGS_DLL_HEADER virtual void
+    EvaluateGrad (const BaseMappedIntegrationRule &ir, BareSliceVector<> coefs,
+                  FlatMatrixFixWidth<D> values) const;
 
-                    HD NGS_DLL_HEADER virtual void GetPolOrders
-       (FlatArray<PolOrder<D> > orders) const;
-    */
+    /**
+             Evaluate gradient in points of integrationrule ir, transpose
+       operation. Vector x provides coefficient vector.
+     */
+
+    HD NGS_DLL_HEADER virtual void
+    EvaluateGradTrans (const BaseMappedIntegrationRule &ir,
+                       FlatMatrixFixWidth<D> values,
+                       BareSliceVector<> coefs) const;
+
+    HD NGS_DLL_HEADER virtual void
+    EvaluateGradTrans (const BaseMappedIntegrationRule &ir,
+                       SliceMatrix<> values, SliceMatrix<> coefs) const;
+
+    HD NGS_DLL_HEADER virtual void
+    GetPolOrders (FlatArray<PolOrder<D>> orders) const;
+
     // public:
     //	NGS_DLL_HEADER virtual std::list<std::tuple<std::string,double>> Timing
     //() const;

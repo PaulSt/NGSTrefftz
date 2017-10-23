@@ -24,10 +24,10 @@ namespace ngfem
 
       int ndof = treff.GetNBasis ();
 
-      // Vector<double> shape(ndof);
-      Matrix<double> shape (ndof, 2);
-      treff.CalcDShape (mip, shape);
-      return shape (basisfunction, 0);
+      Vector<double> shape (ndof);
+      // Matrix<double> shape(ndof,2);
+      treff.CalcShape (mip, shape);
+      return shape (basisfunction);
     }
   };
 }
