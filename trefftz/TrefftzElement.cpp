@@ -165,15 +165,35 @@ namespace ngfem
 	  }
 
 
-/*
+		template<int D>
+		Vec<D> ScalarMappedElement<D> ::
+		EvaluateGrad (const BaseMappedIntegrationPoint & ip, BareSliceVector<double> x) const
+		{
+			MatrixFixWidth<D> dshape(ndof);
+			CalcDShape (ip, dshape);
+			Vec<D> grad = Trans (dshape) * x;
+			return grad;
+		}
+
+
+		template<int D>
+	  void ScalarMappedElement<D> ::
+	  EvaluateGrad (const BaseMappedIntegrationRule & ir, BareSliceVector<double> coefs, FlatMatrixFixWidth<D,double> vals) const
+	  {
+	    for (size_t i = 0; i < ir.Size(); i++)
+	      vals.Row(i) = EvaluateGrad (ir[i], coefs);
+	  }
+
+
+
 		template<int D>
 		void ScalarMappedElement<D> ::
-		EvaluateGradTrans (const IntegrationRule & ir, FlatMatrixFixWidth<D,double> vals,
+		EvaluateGradTrans (const BaseMappedIntegrationRule & ir, FlatMatrixFixWidth<D,double> vals,
 											 BareSliceVector<double> coefs) const
 		{
 			MatrixFixWidth<D> dshape(ndof);
 			coefs.AddSize(ndof) = 0.0;
-			for (int i = 0; i < ir.GetNIP(); i++)
+			for (int i = 0; i < ir.Size(); i++)
 			{
 				CalcDShape (ir[i], dshape);
 				coefs.AddSize(ndof) += dshape * vals.Row(i);
@@ -183,14 +203,23 @@ namespace ngfem
 
 		template<int D>
 		void ScalarMappedElement<D> ::
-		EvaluateGradTrans (const IntegrationRule & ir, SliceMatrix<> values, SliceMatrix<> coefs) const
+		EvaluateGradTrans (const BaseMappedIntegrationRule & ir, SliceMatrix<> values, SliceMatrix<> coefs) const
 		{
 	#ifndef __CUDA_ARCH__
 			cout << "EvalGradTrans not overloaded" << endl;
 	#endif
 		}
 
+		template <int D>
+		void ScalarMappedElement<D> :: 
+		GetPolOrders (FlatArray<PolOrder<D> > orders) const
+		{
+	#ifndef __CUDA_ARCH__
+			throw Exception (string ("GetPolOrders not implemnted for element") + ClassName());
+	#endif
+		}
 
+/*
 		template<int D>
 		void ScalarMappedElement<D> :: CalcDDShape (const IntegrationPoint & ip,
 																								FlatMatrix<> ddshape) const

@@ -262,7 +262,7 @@ namespace ngfem
 		static const FEL & Cast (const FiniteElement & fel)
 		{ return static_cast<const FEL&> (fel); }
 
-/*
+
 		static void GenerateMatrix (const FiniteElement & fel,
 																const MappedIntegrationPoint<D,D> & mip,
 																SliceMatrix<double,ColMajor> mat, LocalHeap & lh)
@@ -294,7 +294,7 @@ namespace ngfem
 			Cast(fel).CalcMappedDShape (mir, mat);
 		}
 
-		///
+
 		template <typename MIP, class TVX, class TVY>
 		static void Apply (const FiniteElement & fel, const MIP & mip,
 					 const TVX & x, TVY && y,
@@ -302,8 +302,8 @@ namespace ngfem
 		{
 			HeapReset hr(lh);
 			typedef typename TVX::TSCAL TSCAL;
-			Vec<D,TSCAL> hv = Trans (Cast(fel).GetDShape(mip.IP(), lh)) * x;
-			y = Trans (mip.GetJacobianInverse()) * hv;
+			Vec<D,TSCAL> hv = Trans (Cast(fel).GetDShape(mip, lh)) * x;
+			//y = Trans (mip.GetJacobianInverse()) * hv;
 		}
 
 		template <class TVY>
@@ -311,11 +311,11 @@ namespace ngfem
 					 const FlatVector<> & x, TVY && y,
 					 LocalHeap & lh)
 		{
-			Vec<D> hv = Cast(fel).EvaluateGrad(mip.IP(), x);
-			y = Trans (mip.GetJacobianInverse()) * hv;
+			Vec<D> hv = Cast(fel).EvaluateGrad(mip, x);
+			//y = Trans (mip.GetJacobianInverse()) * hv;
 		}
 
-		using DiffOp<DiffOpGradient<D, FEL> >::ApplyIR;
+		using DiffOp<DiffOpMappedGradient<D, FEL> >::ApplyIR;
 
 		template <class MIR>
 		static void ApplyIR (const FiniteElement & fel, const MIR & mir,
@@ -323,15 +323,17 @@ namespace ngfem
 			 LocalHeap & lh)
 		{
 			FlatMatrixFixWidth<D> grad(mir.Size(), &y(0));
-			Cast(fel).EvaluateGrad (mir.IR(), x, grad);
+			Cast(fel).EvaluateGrad (mir, x, grad);
+			/*
 			for (int i = 0; i < mir.Size(); i++)
-	{
-		Vec<D> hv = grad.Row(i);
-		grad.Row(i) = Trans (mir[i].GetJacobianInverse()) * hv;
-	}
+			{
+				Vec<D> hv = grad.Row(i);
+				grad.Row(i) = Trans (mir[i].GetJacobianInverse()) * hv;
+			}
+			*/
 		}
 
-		using DiffOp<DiffOpGradient<D, FEL> >::ApplySIMDIR;
+		using DiffOp<DiffOpMappedGradient<D, FEL> >::ApplySIMDIR;
 		static void ApplySIMDIR (const FiniteElement & fel, const SIMD_BaseMappedIntegrationRule & mir,
 														 BareSliceVector<double> x, BareSliceMatrix<SIMD<double>> y)
 		{
@@ -347,17 +349,17 @@ namespace ngfem
 		{
 			typedef typename TVX::TSCAL TSCAL;
 			Vec<D,TSCAL> vx = x;
-			auto hv = mip.GetJacobianInverse() * vx;
-			y = Cast(fel).GetDShape(mip.IP(),lh) * hv;
+			//auto hv = mip.GetJacobianInverse() * vx;
+			y = Cast(fel).GetDShape(mip,lh) * vx; //* hv;
 		}
 
-		using DiffOp<DiffOpGradient<D, FEL> >::AddTransSIMDIR;
+		using DiffOp<DiffOpMappedGradient<D, FEL> >::AddTransSIMDIR;
 		static void AddTransSIMDIR (const FiniteElement & fel, const SIMD_BaseMappedIntegrationRule & mir,
 																BareSliceMatrix<SIMD<double>> y, BareSliceVector<double> x)
 		{
 			Cast(fel).AddGradTrans (mir, y, x);
 		}
-*/
+
 	};
 
 
