@@ -342,6 +342,7 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
                                  // correct way of filling  BareSliceVector
     // FlatVec<nbasis> (&shape(0)) = tempshape;
     // FlatVector<> (nbasis,&shape(0)) = tempshape;
+    cout << "fun:" << endl << tempshape << endl;
   }
 
   template <int D, int ord>
@@ -363,6 +364,7 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
           }
         dshape.Col (d) = basis * polynomial;
       }
+    cout << "deriv:" << endl << dshape << endl;
   }
 
   template <int D, int ord>
