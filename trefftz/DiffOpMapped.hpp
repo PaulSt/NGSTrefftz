@@ -23,7 +23,7 @@ namespace ngfem
 		enum { DIM_DMAT = 1 };
 		enum { DIFFORDER = 0 };
 
-		static string Name() { return "mapped"; }
+		static string Name() { return "Id"; }
 		static constexpr bool SUPPORT_PML = true;
 
 		static const FEL & Cast (const FiniteElement & fel)
@@ -256,7 +256,7 @@ namespace ngfem
 		enum { DIM_DMAT = D };
 		enum { DIFFORDER = 1 };
 
-		static string Name() { return "mappedgrad"; }
+		static string Name() { return "grad"; }
 		static constexpr bool SUPPORT_PML = true;
 
 		static const FEL & Cast (const FiniteElement & fel)
@@ -279,7 +279,6 @@ namespace ngfem
 			mat = Trans (Cast(fel).GetDShape(mip,lh)); //* mip.GetJacobianInverse ());
 		}
 
-
 		static void GenerateMatrixIR (const FiniteElement & fel,
 																	const MappedIntegrationRule<D,D> & mir,
 																	SliceMatrix<double,ColMajor> mat, LocalHeap & lh)
@@ -294,7 +293,7 @@ namespace ngfem
 			Cast(fel).CalcMappedDShape (mir, mat);
 		}
 
-
+		///
 		template <typename MIP, class TVX, class TVY>
 		static void Apply (const FiniteElement & fel, const MIP & mip,
 					 const TVX & x, TVY && y,
@@ -303,6 +302,7 @@ namespace ngfem
 			HeapReset hr(lh);
 			typedef typename TVX::TSCAL TSCAL;
 			Vec<D,TSCAL> hv = Trans (Cast(fel).GetDShape(mip, lh)) * x;
+			y = hv;
 			//y = Trans (mip.GetJacobianInverse()) * hv;
 		}
 
@@ -313,6 +313,7 @@ namespace ngfem
 		{
 			Vec<D> hv = Cast(fel).EvaluateGrad(mip, x);
 			//y = Trans (mip.GetJacobianInverse()) * hv;
+			y = hv;
 		}
 
 		using DiffOp<DiffOpMappedGradient<D, FEL> >::ApplyIR;

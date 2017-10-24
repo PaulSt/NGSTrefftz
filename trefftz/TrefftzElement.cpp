@@ -211,7 +211,7 @@ namespace ngfem
 		}
 
 		template <int D>
-		void ScalarMappedElement<D> :: 
+		void ScalarMappedElement<D> ::
 		GetPolOrders (FlatArray<PolOrder<D> > orders) const
 		{
 	#ifndef __CUDA_ARCH__
@@ -322,6 +322,8 @@ namespace ngfem
 		for(int b = 0; b< nbasis; b++) shape(b) = tempshape(b); //loop over basis TODO replace this by correct way of filling  BareSliceVector
 		//FlatVec<nbasis> (&shape(0)) = tempshape;
 		//FlatVector<> (nbasis,&shape(0)) = tempshape;
+		cout << "fun:" << endl << tempshape << endl;
+
 	}
 
 	template <int D, int ord>
@@ -342,6 +344,7 @@ namespace ngfem
 			}
 			dshape.Col(d) = basis * polynomial;
 		}
+		cout << "deriv:" << endl << dshape << endl;
 	}
 
 	template <int D, int ord>

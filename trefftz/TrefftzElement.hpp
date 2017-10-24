@@ -230,10 +230,10 @@ namespace ngfem
 
 			virtual ELEMENT_TYPE ElementType() const { return ET_TRIG; }
 
-			using BaseScalarMappedElement::CalcShape;
+			using ScalarMappedElement<D>::CalcShape;
 			virtual void CalcShape (const BaseMappedIntegrationPoint & mip, BareSliceVector<> shape) const;
 
-			using BaseScalarMappedElement::CalcDShape;
+			using ScalarMappedElement<D>::CalcDShape;
 			virtual void CalcDShape (const BaseMappedIntegrationPoint & mip, SliceMatrix<> dshape) const;
 
 			constexpr static Mat<nbasis, npoly,double> TrefftzBasis();
