@@ -230,23 +230,19 @@ Vector x provides coefficient vector.
   private:
     constexpr static int nbasis
         = BinCoeff (D - 1 + ord, ord) + BinCoeff (D - 1 + ord - 1, ord - 1);
-
     constexpr static int npoly = BinCoeff (D + ord, ord);
-
     static const Mat<npoly, D, int> indices;
-
-    Vec<D> elcenter;
-
     // static const Mat<nbasis, npoly,double> basis;
     static const Matrix<double> basis;
+    Vec<D> elcenter;
+    float elsize;
+    float c;
 
   protected:
     void static MakeIndices_inner (Mat<npoly, D, int> &indice,
                                    Vec<D, int> &numbers, int &count,
                                    int dim = D);
-
     constexpr static Mat<npoly, D, int> MakeIndices ();
-
     constexpr static int IndexMap (Vec<D, int> index);
 
   public:
@@ -274,6 +270,18 @@ Vector x provides coefficient vector.
       elcenter = acenter;
       return this;
     }
+    TrefftzElement<D, ord> *SetElSize (float aelsize)
+    {
+      elsize = aelsize;
+      return this;
+    }
+    TrefftzElement<D, ord> *SetWavespeed (float ac)
+    {
+      c = ac;
+      return this;
+    }
+
+    FlatVector<double> ShiftPoint (FlatVector<double> point) const;
 
     double ipow_ar (FlatVector<double> base, Vec<D, int> ex, float result = 1,
                     int count = D - 1) const;

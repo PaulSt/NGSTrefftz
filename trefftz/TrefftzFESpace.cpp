@@ -21,8 +21,8 @@ namespace ngcomp
     D = ma->GetDimension ();
 
     order = int (
-        flags.GetNumFlag ("order", 2)); // flags.GetDefineFlag ("order");
-    float wavespeed = flags.GetNumFlag ("wavespeed", 2);
+        flags.GetNumFlag ("order", 3)); // flags.GetDefineFlag ("order");
+    c = flags.GetNumFlag ("wavespeed", 1);
 
     local_ndof = (BinCoeff (D - 1 + order, order)
                   + BinCoeff (D - 1 + order - 1, order - 1));
@@ -105,7 +105,10 @@ namespace ngcomp
           for (int d = 0; d < 3; d++)
             center += ma->GetPoint<2> (vertices_index[d]);
           center *= (1.0 / 3.0);
-          return *(new (alloc) TrefftzElement<2, 3>)->SetCenter (center);
+          return *(new (alloc) TrefftzElement<2, 3>)
+                      ->SetCenter (center)
+                      ->SetWavespeed (c)
+                      ->SetElSize (1);
           break;
         }
       case 3:
@@ -114,7 +117,10 @@ namespace ngcomp
           for (int d = 0; d < 4; d++)
             center += ma->GetPoint<3> (vertices_index[d]);
           center *= 0.25;
-          return *(new (alloc) TrefftzElement<3, 3>)->SetCenter (center);
+          return *(new (alloc) TrefftzElement<3, 3>)
+                      ->SetCenter (center)
+                      ->SetWavespeed (c)
+                      ->SetElSize (1);
           break;
         }
       }

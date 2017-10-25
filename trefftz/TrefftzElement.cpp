@@ -325,10 +325,9 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
   TrefftzElement<D, ord>::CalcShape (const BaseMappedIntegrationPoint &mip,
                                      BareSliceVector<> shape) const
   {
+    FlatVector<double> point = ShiftPoint (mip.GetPoint ());
     Vec<npoly, float> polynomial;
 
-    FlatVector<double> point = mip.GetPoint ();
-    // point = point - elcenter;
     for (int i = 0; i < npoly; i++) // loop over indices
       {
         polynomial (i) = ipow_ar (point, indices.Row (i));
@@ -342,7 +341,6 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
                                  // correct way of filling  BareSliceVector
     // FlatVec<nbasis> (&shape(0)) = tempshape;
     // FlatVector<> (nbasis,&shape(0)) = tempshape;
-    cout << "fun:" << endl << tempshape << endl;
   }
 
   template <int D, int ord>
@@ -350,10 +348,11 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
   TrefftzElement<D, ord>::CalcDShape (const BaseMappedIntegrationPoint &mip,
                                       SliceMatrix<> dshape) const
   {
-    FlatVector<double> point = mip.GetPoint ();
+    FlatVector<double> point = ShiftPoint (mip.GetPoint ());
     Vec<npoly, float> polynomial;
     Vector<double> tempshape (nbasis);
     Mat<npoly, D, int> derindices;
+
     for (int d = 0; d < D; d++) // loop over derivatives/dimensions
       {
         derindices = MakeIndices ();
@@ -364,7 +363,6 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
           }
         dshape.Col (d) = basis * polynomial;
       }
-    cout << "deriv:" << endl << dshape << endl;
   }
 
   template <int D, int ord>
@@ -459,6 +457,16 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
       }
     return temp_basis;
     // cout << "basis: \n" << basis << endl;
+  }
+
+  template <int D, int ord>
+  FlatVector<double>
+  TrefftzElement<D, ord>::ShiftPoint (FlatVector<double> point) const
+  {
+    point = point - elcenter;
+    point *= (1.0 / elsize);
+    point (0) = point (0) * c;
+    return point;
   }
 
   template <int D, int ord>
