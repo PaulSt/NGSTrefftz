@@ -14,6 +14,7 @@ namespace ngcomp
 		int local_ndof;
 		Array<int> first_edge_dof;
     Array<int> first_cell_dof;
+		float c;
 
   public:
     /*

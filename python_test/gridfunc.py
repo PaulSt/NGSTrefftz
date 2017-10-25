@@ -9,13 +9,13 @@ mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 #mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 #Draw(mesh)
 
-c = 1;
+c = 10;
 fes = FESpace("trefftzfespace", mesh, order = 3, wavespeed = c)
 gfu = GridFunction(fes)
 #kx
 #uex = sin(kx*x+ky*y - c*t)
-uex = sin(c*x+y)
+uex = sin(c*x)
 gfu.Set(uex)
 gradu = grad(gfu)
-#Draw(gfu)
+Draw(gfu, mesh, 'gfu')
 Draw(gradu, mesh, 'fun')

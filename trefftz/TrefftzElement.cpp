@@ -307,10 +307,9 @@ namespace ngfem
   void TrefftzElement<D,ord> :: CalcShape (const BaseMappedIntegrationPoint & mip,
                                   BareSliceVector<> shape) const
   {
+		FlatVector<double> point = ShiftPoint(mip.GetPoint());
 		Vec<npoly,float> polynomial;
 
-		FlatVector<double> point = mip.GetPoint();
-		//point = point - elcenter;
 		for(int i=0; i<npoly; i++)//loop over indices
 		{
 			polynomial(i) = ipow_ar(point,indices.Row(i));
@@ -322,18 +321,17 @@ namespace ngfem
 		for(int b = 0; b< nbasis; b++) shape(b) = tempshape(b); //loop over basis TODO replace this by correct way of filling  BareSliceVector
 		//FlatVec<nbasis> (&shape(0)) = tempshape;
 		//FlatVector<> (nbasis,&shape(0)) = tempshape;
-		cout << "fun:" << endl << tempshape << endl;
-
 	}
 
 	template <int D, int ord>
 	void TrefftzElement<D,ord> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
 																		SliceMatrix<> dshape) const
 	{
-		FlatVector<double> point = mip.GetPoint();
+		FlatVector<double> point = ShiftPoint(mip.GetPoint());
 		Vec<npoly,float> polynomial;
 		Vector<double> tempshape(nbasis);
 		Mat<npoly, D, int>  derindices;
+
 		for(int d=0;d<D;d++)  //loop over derivatives/dimensions
 		{
 			derindices = MakeIndices();
@@ -344,7 +342,6 @@ namespace ngfem
 			}
 			dshape.Col(d) = basis * polynomial;
 		}
-		cout << "deriv:" << endl << dshape << endl;
 	}
 
 	template <int D, int ord>
@@ -428,6 +425,14 @@ namespace ngfem
 		//cout << "basis: \n" << basis << endl;
 	}
 
+
+
+	template <int D, int ord>
+	FlatVector<double> TrefftzElement<D,ord> :: ShiftPoint(FlatVector<double> point) const
+	{
+		point = point - elcenter; point *= (1.0/elsize); point(0) = point(0) * c;
+		return point;
+	}
 
 	template <int D, int ord>
 	double TrefftzElement<D,ord> :: ipow_ar(FlatVector<double> base, Vec<D, int> ex, float result, int count) const
