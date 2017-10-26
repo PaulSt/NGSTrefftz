@@ -209,7 +209,7 @@ namespace ngfem
 			static const Mat<npoly, D, int> indices;
 			//static const Mat<nbasis, npoly,double> basis;
 			static const Matrix<double> basis;
-			Vec<D> elcenter; float elsize; float c;
+			Vec<D> elcenter=0; float elsize=1; float c=1;
 
 		protected:
 			void static MakeIndices_inner(Mat<npoly, D, int> &indice, Vec<D, int> &numbers, int &count, int dim = D);
@@ -217,7 +217,7 @@ namespace ngfem
 			constexpr static int IndexMap(Vec<D, int> index);
 
 		public:
-			TrefftzElement(): ScalarMappedElement<D>(nbasis,ord) { ;	} //BaseScalarMappedElement(nbasis,ord) { ;	}//
+			TrefftzElement(): ScalarMappedElement<D>(nbasis,ord) { ;} //BaseScalarMappedElement(nbasis,ord) { ;	}//
 
 			virtual ELEMENT_TYPE ElementType() const { return ET_TRIG; }
 
@@ -235,7 +235,9 @@ namespace ngfem
 			TrefftzElement<D,ord> * SetElSize(float aelsize) {elsize = aelsize; return this;}
 			TrefftzElement<D,ord> * SetWavespeed(float ac) {c = ac; return this;}
 
-			FlatVector<double> ShiftPoint(FlatVector<double> point) const;
+			FlatVector<double> ShiftPoint(FlatVector<double> point) const
+			{ point -= elcenter; point *= (1.0/elsize); point(0) *= c; 
+				return point; }
 
 			double ipow_ar(FlatVector<double> base, Vec<D, int> ex, float result = 1, int count = D-1) const;
 
