@@ -234,9 +234,9 @@ Vector x provides coefficient vector.
     static const Mat<npoly, D, int> indices;
     // static const Mat<nbasis, npoly,double> basis;
     static const Matrix<double> basis;
-    Vec<D> elcenter;
-    float elsize;
-    float c;
+    Vec<D> elcenter = 0;
+    float elsize = 1;
+    float c = 1;
 
   protected:
     void static MakeIndices_inner (Mat<npoly, D, int> &indice,
@@ -281,7 +281,13 @@ Vector x provides coefficient vector.
       return this;
     }
 
-    FlatVector<double> ShiftPoint (FlatVector<double> point) const;
+    FlatVector<double> ShiftPoint (FlatVector<double> point) const
+    {
+      point -= elcenter;
+      point *= (1.0 / elsize);
+      point (0) *= c;
+      return point;
+    }
 
     double ipow_ar (FlatVector<double> base, Vec<D, int> ex, float result = 1,
                     int count = D - 1) const;
