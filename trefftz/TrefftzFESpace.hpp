@@ -33,6 +33,8 @@ namespace ngcomp
 
     int GetDim () const { return local_ndof; }
     // size_t GetNDof() const {return ndof;}
+
+    float Adiam (ElementId ei) const;
   };
 
 }

@@ -361,7 +361,6 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
             derindices (i, d) = derindices (i, d) - 1;
             polynomial (i) = ipowD_ar (d, point, derindices.Row (i));
           }
-
         dshape.Col (d) = basis * polynomial;
         if (d == 0)
           dshape.Col (d) *= c; // inner derivative
