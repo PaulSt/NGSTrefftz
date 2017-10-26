@@ -340,12 +340,10 @@ namespace ngfem
 				derindices(i,d) = derindices(i,d) - 1;
 				polynomial(i) = ipowD_ar(d,point,derindices.Row(i));
 			}
-
 			dshape.Col(d) = basis * polynomial;
 			if(d==0) dshape.Col(d) *= c; //inner derivative
 		}
 		dshape *= (1.0/elsize); //inner derivative
-
 	}
 
 	template <int D, int ord>

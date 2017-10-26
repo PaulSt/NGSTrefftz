@@ -101,6 +101,16 @@ namespace ngcomp
 		}
   }
 
+
+	float TrefftzFESpace :: Adiam(ElementId ei) const
+	{
+		float anisotropicdiam;
+		auto vertices_index = ma->GetElVertices(ei);
+		//for(int d=0;d<3;d++) center += ma->GetPoint<2>(vertices_index[d]); tomorrow~~~
+		return anisotropicdiam;
+	}
+
+
   /*
     register fe-spaces
     Object of type TrefftzFESpace can be defined in the pde-file via
