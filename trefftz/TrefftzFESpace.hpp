@@ -13,7 +13,7 @@ namespace ngcomp
     int local_ndof;
     Array<int> first_edge_dof;
     Array<int> first_cell_dof;
-    float c;
+    float c = 1;
 
   public:
     /*
@@ -34,7 +34,7 @@ namespace ngcomp
     int GetDim () const { return local_ndof; }
     // size_t GetNDof() const {return ndof;}
 
-    float Adiam (ElementId ei) const;
+    template <int D> double Adiam (ElementId ei) const;
   };
 
 }

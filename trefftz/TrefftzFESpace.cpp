@@ -102,36 +102,47 @@ namespace ngcomp
       case 2:
         {
           Vec<2> center = 0;
-          for (int d = 0; d < 3; d++)
-            center += ma->GetPoint<2> (vertices_index[d]);
+          for (auto vertex : vertices_index)
+            center += ma->GetPoint<2> (vertex);
           center *= (1.0 / 3.0);
           return *(new (alloc) TrefftzElement<2, 3>)
                       ->SetCenter (center)
                       ->SetWavespeed (c)
-                      ->SetElSize (1);
+                      ->SetElSize (Adiam<2> (ei));
           break;
         }
       case 3:
         {
           Vec<3> center = 0;
-          for (int d = 0; d < 4; d++)
-            center += ma->GetPoint<3> (vertices_index[d]);
+          for (auto vertex : vertices_index)
+            center += ma->GetPoint<3> (vertex);
           center *= 0.25;
           return *(new (alloc) TrefftzElement<3, 3>)
                       ->SetCenter (center)
                       ->SetWavespeed (c)
-                      ->SetElSize (1);
+                      ->SetElSize (Adiam<3> (ei));
           break;
         }
       }
   }
 
-  float TrefftzFESpace ::Adiam (ElementId ei) const
+  template <int D> double TrefftzFESpace ::Adiam (ElementId ei) const
   {
-    float anisotropicdiam;
+    double anisotropicdiam = 0.0;
     auto vertices_index = ma->GetElVertices (ei);
-    // for(int d=0;d<3;d++) center += ma->GetPoint<2>(vertices_index[d]);
-    // tomorrow~~~
+    for (auto vertex1 : vertices_index)
+      {
+        for (auto vertex2 : vertices_index)
+          {
+            Vec<D> v1 = ma->GetPoint<D> (vertex1);
+            Vec<D> v2 = ma->GetPoint<D> (vertex2);
+            // cout << "v1: " << v1 << " v1 part: " << v1(1,D-1) << "norm " <<
+            // L2Norm(v1) << endl ;
+            anisotropicdiam = max (
+                anisotropicdiam, sqrt (L2Norm2 (v1 (1, D - 1) - v2 (1, D - 1))
+                                       + pow (c * (v1 (0) - v2 (0)), 2)));
+          }
+      }
     return anisotropicdiam;
   }
 
