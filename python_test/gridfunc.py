@@ -14,7 +14,7 @@ fes = FESpace("trefftzfespace", mesh, order = 3, wavespeed = c)
 gfu = GridFunction(fes)
 #kx
 #uex = sin(kx*x+ky*y - c*t)
-uex = sin(c*x+c*y)
+uex = sin(c*x+y)
 gfu.Set(uex)
 gradu = grad(gfu)
 Draw(gfu, mesh, 'gfu')
