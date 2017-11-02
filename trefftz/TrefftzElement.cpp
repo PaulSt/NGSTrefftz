@@ -6,10 +6,6 @@
 namespace ngfem
 {
 
-
-
-
-
 	  void BaseScalarMappedElement ::
 	  CalcShape (const BaseMappedIntegrationPoint & mip,
 	             BareSliceVector<Complex> shape) const
@@ -442,7 +438,29 @@ namespace ngfem
 		 count < 0 ? result : ipowD_ar(der, base, ex, pow(base(count),ex(count)) * result, count-1 );
 	}
 
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	template <int D, int ord>
+	void TrefftzHelmholtzElement<D,ord> :: CalcShape (const BaseMappedIntegrationPoint & mip,
+																	BareSliceVector<> shape) const
+	{
+
+	}
+
+	template <int D, int ord>
+	void TrefftzHelmholtzElement<D,ord> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
+																		SliceMatrix<> dshape) const
+	{
+
+	}
+
+
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 #ifdef NGS_PYTHON
@@ -457,5 +475,14 @@ void ExportTrefftzElement(py::module m)
     (m, "TrefftzElement2", "Trefftz space for wave eq")
 		.def(py::init<>())
 		;
+
+	py::class_<TrefftzHelmholtzElement<3,3>, shared_ptr<TrefftzHelmholtzElement<3,3>>, FiniteElement>
+    (m, "TrefftzHelmholtzElement3", "Trefftz space for Helmholtz eq")
+		.def(py::init<>())
+		;
+	py::class_<TrefftzHelmholtzElement<2,3>, shared_ptr<TrefftzHelmholtzElement<2,3>>, FiniteElement>
+    (m, "TrefftzHelmholtzElement2", "Trefftz space for Helmholtz eq")
+		.def(py::init<>())
+			;
 }
 #endif // NGS_PYTHON
