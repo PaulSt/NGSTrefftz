@@ -37,6 +37,38 @@ namespace ngcomp
     template <int D> double Adiam (ElementId ei) const;
   };
 
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  class TrefftzHelmholtzFESpace : public FESpace
+  {
+    int D;
+    int order;
+    size_t ndof;
+    int nvert;
+    int local_ndof;
+    Array<int> first_edge_dof;
+    Array<int> first_cell_dof;
+    float c = 1;
+
+  public:
+    /*
+            constructor.
+            Arguments are the access to the mesh data structure,
+            and the flags from the define command in the pde-file
+    */
+    TrefftzHelmholtzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
+
+    virtual string GetClassName () const { return "TrefftzHelmholtz"; }
+
+    virtual void Update (LocalHeap &lh);
+    virtual size_t GetNDof () const { return ndof; }
+
+    virtual void GetDofNrs (ElementId ei, Array<DofId> &dnums) const;
+    virtual FiniteElement &GetFE (ElementId ei, Allocator &alloc) const;
+
+    int GetDim () const { return local_ndof; }
+  };
+
 }
 
 #ifdef NGS_PYTHON

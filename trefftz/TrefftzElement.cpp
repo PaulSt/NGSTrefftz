@@ -489,7 +489,23 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
                            pow (base (count), ex (count)) * result, count - 1);
   }
 
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  template <int D, int ord>
+  void TrefftzHelmholtzElement<D, ord>::CalcShape (
+      const BaseMappedIntegrationPoint &mip, BareSliceVector<> shape) const
+  {
+  }
+
+  template <int D, int ord>
+  void TrefftzHelmholtzElement<D, ord>::CalcDShape (
+      const BaseMappedIntegrationPoint &mip, SliceMatrix<> dshape) const
+  {
+  }
+
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef NGS_PYTHON
 void ExportTrefftzElement (py::module m)
@@ -500,6 +516,15 @@ void ExportTrefftzElement (py::module m)
       .def (py::init<> ());
   py::class_<TrefftzElement<2, 3>, shared_ptr<TrefftzElement<2, 3>>,
              FiniteElement> (m, "TrefftzElement2", "Trefftz space for wave eq")
+      .def (py::init<> ());
+
+  py::class_<TrefftzHelmholtzElement<3, 3>,
+             shared_ptr<TrefftzHelmholtzElement<3, 3>>, FiniteElement> (
+      m, "TrefftzHelmholtzElement3", "Trefftz space for Helmholtz eq")
+      .def (py::init<> ());
+  py::class_<TrefftzHelmholtzElement<2, 3>,
+             shared_ptr<TrefftzHelmholtzElement<2, 3>>, FiniteElement> (
+      m, "TrefftzHelmholtzElement2", "Trefftz space for Helmholtz eq")
       .def (py::init<> ());
 }
 #endif // NGS_PYTHON
