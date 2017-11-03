@@ -251,12 +251,7 @@ namespace ngcomp
         }
       case 3:
         {
-          Vec<3> center = 0;
-          for (auto vertex : vertices_index)
-            center += ma->GetPoint<3> (vertex);
-          center *= 0.25;
-          return *(new (alloc) TrefftzHelmholtzElement<3, 3>)
-                      ->SetCenter (center);
+          cout << "only supported in 2-D so far" << endl;
           break;
         }
       }

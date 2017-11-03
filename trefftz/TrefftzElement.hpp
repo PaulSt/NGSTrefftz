@@ -307,6 +307,7 @@ Vector x provides coefficient vector.
     Vec<D> elcenter = 0;
     float elsize = 1;
     float c = 1;
+    static const Matrix<double> directions;
 
   public:
     TrefftzHelmholtzElement () : ScalarMappedElement<D> (nbasis, ord)
@@ -325,6 +326,8 @@ Vector x provides coefficient vector.
                              SliceMatrix<> dshape) const;
 
     int GetNBasis () const { return nbasis; }
+
+    constexpr static Mat<nbasis, D, double> MakeDirections ();
 
     TrefftzHelmholtzElement<D, ord> *SetCenter (Vec<D> acenter)
     {
