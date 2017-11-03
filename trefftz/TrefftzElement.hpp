@@ -255,6 +255,7 @@ namespace ngfem
 			constexpr static int nbasis = 2*ord+1;
 			// constexpr static int npoly = ;
 			Vec<D> elcenter=0; float elsize=1; float c=1;
+			static const Matrix<double> directions;
 
 		public:
 			TrefftzHelmholtzElement(): ScalarMappedElement<D>(nbasis,ord) { ; } //BaseScalarMappedElement(nbasis,ord) { ;	}//
@@ -268,6 +269,8 @@ namespace ngfem
 			virtual void CalcDShape (const BaseMappedIntegrationPoint & mip, SliceMatrix<> dshape) const;
 
 			int GetNBasis() const { return nbasis; }
+
+			constexpr static Mat<nbasis, D,double> MakeDirections();
 
 			TrefftzHelmholtzElement<D,ord> * SetCenter(Vec<D> acenter) {elcenter = acenter; return this;}
 	};

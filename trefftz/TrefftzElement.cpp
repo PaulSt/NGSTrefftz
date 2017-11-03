@@ -442,11 +442,18 @@ namespace ngfem
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+	template<int D, int ord>
+	const Matrix<double> TrefftzHelmholtzElement<D,ord> :: directions = MakeDirections();
+
 	template <int D, int ord>
 	void TrefftzHelmholtzElement<D,ord> :: CalcShape (const BaseMappedIntegrationPoint & mip,
 																	BareSliceVector<> shape) const
 	{
-
+			dcomp i = sqrt(-1);
+			for(int i=0;i<nbasis;i++)
+			{
+				cout << exp(i * InnerProduct(directions.Row(i),mip.GetPoint()) );
+			}
 	}
 
 	template <int D, int ord>
@@ -455,6 +462,21 @@ namespace ngfem
 	{
 
 	}
+
+	template <int D, int ord>
+	constexpr Mat<TrefftzHelmholtzElement<D,ord>::nbasis, D,double> TrefftzHelmholtzElement<D,ord> :: MakeDirections()
+	{
+		Mat<nbasis, D, double> dir = 0;
+		float theta = 0;
+		for(int i = 0; i<nbasis;i++){
+			theta= (2*M_PI/nbasis) * i;
+			dir(i,0) = cos(theta);
+			dir(i,1) = sin(theta);
+		}
+		return dir;
+		//cout << "basis: \n" << basis << endl;
+	}
+
 
 
 }
@@ -476,10 +498,6 @@ void ExportTrefftzElement(py::module m)
 		.def(py::init<>())
 		;
 
-	py::class_<TrefftzHelmholtzElement<3,3>, shared_ptr<TrefftzHelmholtzElement<3,3>>, FiniteElement>
-    (m, "TrefftzHelmholtzElement3", "Trefftz space for Helmholtz eq")
-		.def(py::init<>())
-		;
 	py::class_<TrefftzHelmholtzElement<2,3>, shared_ptr<TrefftzHelmholtzElement<2,3>>, FiniteElement>
     (m, "TrefftzHelmholtzElement2", "Trefftz space for Helmholtz eq")
 		.def(py::init<>())
