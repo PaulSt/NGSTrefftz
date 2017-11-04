@@ -130,7 +130,7 @@ namespace ngcomp
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-TrefftzHelmholtzFESpace :: TrefftzHelmholtzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags)
+TrefftzPWFESpace :: TrefftzPWFESpace (shared_ptr<MeshAccess> ama, const Flags & flags)
 	: FESpace (ama, flags)
 {
 	DefineNumFlag("wavespeed");
@@ -166,7 +166,7 @@ TrefftzHelmholtzFESpace :: TrefftzHelmholtzFESpace (shared_ptr<MeshAccess> ama, 
 
 
 
-void TrefftzHelmholtzFESpace :: Update(LocalHeap & lh)
+void TrefftzPWFESpace :: Update(LocalHeap & lh)
 {
 	local_ndof = 2*order + 1;
 	int nel = ma->GetNE();
@@ -176,7 +176,7 @@ void TrefftzHelmholtzFESpace :: Update(LocalHeap & lh)
 	"================================================" << endl ;
 }
 
-void TrefftzHelmholtzFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) const
+void TrefftzPWFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) const
 {
 	int n_vert = ma->GetNV();
 	int n_edge = ma->GetNEdges();
@@ -191,7 +191,7 @@ void TrefftzHelmholtzFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) c
 }
 
 
-FiniteElement & TrefftzHelmholtzFESpace :: GetFE (ElementId ei, Allocator & alloc) const
+FiniteElement & TrefftzPWFESpace :: GetFE (ElementId ei, Allocator & alloc) const
 {
 	auto vertices_index = ma->GetElVertices(ei);
 	//cout << "element vectice coord: \n"  << ma->GetPoint<3>(vertices_index[0]) << endl<< ma->GetPoint<3>(vertices_index[1]) <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
@@ -202,7 +202,7 @@ FiniteElement & TrefftzHelmholtzFESpace :: GetFE (ElementId ei, Allocator & allo
 			Vec<2> center = 0;
 			for(auto vertex : vertices_index) center += ma->GetPoint<2>(vertex);
 			center *= (1.0/3.0);
-			return *(new (alloc) TrefftzHelmholtzElement<2,3>) ->SetCenter(center);
+			return *(new (alloc) TrefftzPWElement<2,3>) ->SetCenter(center);
 			break;
 		}
 		case 3:
@@ -213,7 +213,7 @@ FiniteElement & TrefftzHelmholtzFESpace :: GetFE (ElementId ei, Allocator & allo
 	}
 }
 
-static RegisterFESpace<TrefftzHelmholtzFESpace> initi_trefftzhelmholtz ("trefftzhelmholtz");
+static RegisterFESpace<TrefftzPWFESpace> initi_trefftzhelmholtz ("trefftzpw");
 
 
 }

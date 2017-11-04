@@ -249,16 +249,16 @@ namespace ngfem
 
 
 	template <int D, int ord>
-	class TrefftzHelmholtzElement : public ScalarMappedElement<D>
+	class TrefftzPWElement : public ScalarMappedElement<D>
 	{
 		private:
 			constexpr static int nbasis = 2*ord+1;
 			// constexpr static int npoly = ;
-			Vec<D> elcenter=0; float elsize=1; float c=1;
+			Vec<D> elcenter=0; float c=1;
 			static const Matrix<double> directions;
 
 		public:
-			TrefftzHelmholtzElement(): ScalarMappedElement<D>(nbasis,ord) { ; } //BaseScalarMappedElement(nbasis,ord) { ;	}//
+			TrefftzPWElement(): ScalarMappedElement<D>(nbasis,ord) { ; } //BaseScalarMappedElement(nbasis,ord) { ;	}//
 
 			virtual ELEMENT_TYPE ElementType() const { return ET_TRIG; }
 
@@ -272,7 +272,9 @@ namespace ngfem
 
 			constexpr static Mat<nbasis, D,double> MakeDirections();
 
-			TrefftzHelmholtzElement<D,ord> * SetCenter(Vec<D> acenter) {elcenter = acenter; return this;}
+			TrefftzPWElement<D,ord> * SetCenter(Vec<D> acenter) {elcenter = acenter; return this;}
+			TrefftzPWElement<D,ord> * SetWavespeed(float ac) {c = ac; return this;}
+
 	};
 }
 

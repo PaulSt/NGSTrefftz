@@ -10,11 +10,12 @@ mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 #Draw(mesh)
 
 c = 10;
-fes = FESpace("trefftzhelmholtz", mesh, order = 3, wavespeed = c)
+fes = FESpace("trefftzpw", mesh, order = 3, wavespeed = c)
 gfu = GridFunction(fes)
-#kx
-#uex = sin(kx*x+ky*y - c*t)
-uex = sin(c*x+y)
+
+uex = exp(c*(x+y))
+Draw(uex,mesh,"func")
+
 gfu.Set(uex)
 gradu = grad(gfu)
 Draw(gfu, mesh, 'gfu')
