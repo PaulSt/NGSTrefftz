@@ -155,8 +155,8 @@ namespace ngcomp
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  TrefftzHelmholtzFESpace ::TrefftzHelmholtzFESpace (
-      shared_ptr<MeshAccess> ama, const Flags &flags)
+  TrefftzPWFESpace ::TrefftzPWFESpace (shared_ptr<MeshAccess> ama,
+                                       const Flags &flags)
       : FESpace (ama, flags)
   {
     DefineNumFlag ("wavespeed");
@@ -198,7 +198,7 @@ namespace ngcomp
       }
   }
 
-  void TrefftzHelmholtzFESpace ::Update (LocalHeap &lh)
+  void TrefftzPWFESpace ::Update (LocalHeap &lh)
   {
     local_ndof = 2 * order + 1;
     int nel = ma->GetNE ();
@@ -209,8 +209,7 @@ namespace ngcomp
          << "================================================" << endl;
   }
 
-  void
-  TrefftzHelmholtzFESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
+  void TrefftzPWFESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
   {
     int n_vert = ma->GetNV ();
     int n_edge = ma->GetNEdges ();
@@ -226,7 +225,7 @@ namespace ngcomp
   }
 
   FiniteElement &
-  TrefftzHelmholtzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
+  TrefftzPWFESpace ::GetFE (ElementId ei, Allocator &alloc) const
   {
     auto vertices_index = ma->GetElVertices (ei);
     // cout << "element vectice coord: \n"  <<
@@ -245,8 +244,7 @@ namespace ngcomp
           for (auto vertex : vertices_index)
             center += ma->GetPoint<2> (vertex);
           center *= (1.0 / 3.0);
-          return *(new (alloc) TrefftzHelmholtzElement<2, 3>)
-                      ->SetCenter (center);
+          return *(new (alloc) TrefftzPWElement<2, 3>)->SetCenter (center);
           break;
         }
       case 3:
@@ -257,8 +255,8 @@ namespace ngcomp
       }
   }
 
-  static RegisterFESpace<TrefftzHelmholtzFESpace>
-      initi_trefftzhelmholtz ("trefftzhelmholtz");
+  static RegisterFESpace<TrefftzPWFESpace>
+      initi_trefftzhelmholtz ("trefftzpw");
 
 }
 

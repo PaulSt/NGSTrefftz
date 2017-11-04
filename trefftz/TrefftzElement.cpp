@@ -493,28 +493,40 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
 
   template <int D, int ord>
   const Matrix<double>
-      TrefftzHelmholtzElement<D, ord>::directions = MakeDirections ();
+      TrefftzPWElement<D, ord>::directions = MakeDirections ();
 
   template <int D, int ord>
-  void TrefftzHelmholtzElement<D, ord>::CalcShape (
-      const BaseMappedIntegrationPoint &mip, BareSliceVector<> shape) const
+  void
+  TrefftzPWElement<D, ord>::CalcShape (const BaseMappedIntegrationPoint &mip,
+                                       BareSliceVector<> shape) const
   {
-    dcomp i = sqrt (-1);
     for (int i = 0; i < nbasis; i++)
       {
-        cout << exp (i * InnerProduct (directions.Row (i), mip.GetPoint ()));
+        shape (i) = exp (
+            c
+            * InnerProduct (directions.Row (i), (mip.GetPoint () - elcenter)));
       }
   }
 
   template <int D, int ord>
-  void TrefftzHelmholtzElement<D, ord>::CalcDShape (
-      const BaseMappedIntegrationPoint &mip, SliceMatrix<> dshape) const
+  void
+  TrefftzPWElement<D, ord>::CalcDShape (const BaseMappedIntegrationPoint &mip,
+                                        SliceMatrix<> dshape) const
   {
+    for (int i = 0; i < nbasis; i++)
+      {
+        dshape.Row (i) = directions.Row (i);
+        dshape.Row (i)
+            *= c
+               * exp (c
+                      * InnerProduct (directions.Row (i),
+                                      (mip.GetPoint () - elcenter)));
+      }
   }
 
   template <int D, int ord>
-  constexpr Mat<TrefftzHelmholtzElement<D, ord>::nbasis, D, double>
-  TrefftzHelmholtzElement<D, ord>::MakeDirections ()
+  constexpr Mat<TrefftzPWElement<D, ord>::nbasis, D, double>
+  TrefftzPWElement<D, ord>::MakeDirections ()
   {
     Mat<nbasis, D, double> dir = 0;
     float theta = 0;
@@ -543,9 +555,9 @@ void ExportTrefftzElement (py::module m)
              FiniteElement> (m, "TrefftzElement2", "Trefftz space for wave eq")
       .def (py::init<> ());
 
-  py::class_<TrefftzHelmholtzElement<2, 3>,
-             shared_ptr<TrefftzHelmholtzElement<2, 3>>, FiniteElement> (
-      m, "TrefftzHelmholtzElement2", "Trefftz space for Helmholtz eq")
+  py::class_<TrefftzPWElement<2, 3>, shared_ptr<TrefftzPWElement<2, 3>>,
+             FiniteElement> (m, "TrefftzPWElement2",
+                             "Trefftz space for Helmholtz eq")
       .def (py::init<> ());
 }
 #endif // NGS_PYTHON

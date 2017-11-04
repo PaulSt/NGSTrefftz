@@ -39,7 +39,7 @@ namespace ngcomp
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  class TrefftzHelmholtzFESpace : public FESpace
+  class TrefftzPWFESpace : public FESpace
   {
     int D;
     int order;
@@ -56,9 +56,9 @@ namespace ngcomp
             Arguments are the access to the mesh data structure,
             and the flags from the define command in the pde-file
     */
-    TrefftzHelmholtzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
+    TrefftzPWFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
 
-    virtual string GetClassName () const { return "TrefftzHelmholtz"; }
+    virtual string GetClassName () const { return "TrefftzPW"; }
 
     virtual void Update (LocalHeap &lh);
     virtual size_t GetNDof () const { return ndof; }
