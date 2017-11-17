@@ -289,11 +289,11 @@ Vector x provides coefficient vector.
       return point;
     }
 
-    double ipow_ar (FlatVector<double> base, Vec<D, int> ex, float result = 1,
+    double ipow_ar (FlatVector<double> base, Vec<D, int> ex, double result = 1,
                     int count = D - 1) const;
 
     double ipowD_ar (int der, FlatVector<double> base, Vec<D, int> ex,
-                     float result = 1, int count = D - 1) const;
+                     double result = 1, int count = D - 1) const;
   };
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -339,6 +339,8 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
     for (int b = 0; b < nbasis; b++)
       shape (b) = tempshape (b); // loop over basis TODO replace this by
                                  // correct way of filling  BareSliceVector
+    cout << "point:" << mip.GetPoint () << endl;
+    cout << "shape:" << tempshape << endl;
     // FlatVec<nbasis> (&shape(0)) = tempshape;
     // FlatVector<> (nbasis,&shape(0)) = tempshape;
   }
@@ -465,7 +467,7 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
   template <int D, int ord>
   double
   TrefftzElement<D, ord>::ipow_ar (FlatVector<double> base, Vec<D, int> ex,
-                                   float result, int count) const
+                                   double result, int count) const
   {
     return count < 0
                ? result
@@ -475,7 +477,7 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
 
   template <int D, int ord>
   double TrefftzElement<D, ord>::ipowD_ar (int der, FlatVector<double> base,
-                                           Vec<D, int> ex, float result,
+                                           Vec<D, int> ex, double result,
                                            int count) const
   {
     return ex (der) < 0   ? 0.0

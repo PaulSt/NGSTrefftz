@@ -43,17 +43,12 @@ namespace ngcomp
         }
       case 3:
         {
-          // needed for symbolic integrators and to draw solution
           evaluator[VOL] = make_shared<T_DifferentialOperator<
               DiffOpMapped<3, TrefftzElement<3, 3>>>> ();
           flux_evaluator[VOL] = make_shared<T_DifferentialOperator<
               DiffOpMappedGradient<3, TrefftzElement<3, 3>>>> ();
           evaluator[BND] = make_shared<T_DifferentialOperator<
               DiffOpMappedBoundary<3, TrefftzElement<3, 3>>>> ();
-          // (still) needed to draw solution
-          // integrator[VOL] = GetIntegrators().CreateBFI("mass",
-          // ma->GetDimension(),
-          //                                             make_shared<ConstantCoefficientFunction>(1));
           break;
         }
       }
