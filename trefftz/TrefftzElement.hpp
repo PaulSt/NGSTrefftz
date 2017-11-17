@@ -238,9 +238,9 @@ namespace ngfem
 			FlatVector<double> ShiftPoint(FlatVector<double> point) const
 			{ point -= elcenter; point *= (1.0/elsize); point(0) *= c; return point; }
 
-			double ipow_ar(FlatVector<double> base, Vec<D, int> ex, float result = 1, int count = D-1) const;
+			double ipow_ar(FlatVector<double> base, Vec<D, int> ex, double result = 1, int count = D-1) const;
 
-			double ipowD_ar(int der, FlatVector<double> base, Vec<D, int> ex, float result = 1, int count = D-1) const;
+			double ipowD_ar(int der, FlatVector<double> base, Vec<D, int> ex, double result = 1, int count = D-1) const;
 	};
 
 

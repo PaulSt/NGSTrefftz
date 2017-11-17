@@ -5,8 +5,8 @@ from trefftzngs import *
 from netgen.csg import unit_cube
 from netgen.geom2d import unit_square
 
-mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
-#mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
+#mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
+mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 #Draw(mesh)
 
 c = 10;
@@ -17,5 +17,6 @@ gfu = GridFunction(fes)
 uex = sin(c*x+y)
 gfu.Set(uex)
 gradu = grad(gfu)
+Draw(uex,mesh,'uex')
 Draw(gfu, mesh, 'gfu')
 Draw(gradu, mesh, 'fun')

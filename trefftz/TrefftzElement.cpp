@@ -314,7 +314,9 @@ namespace ngfem
 		//Vec<nbasis,double> tempshape;
 		Vector<double> tempshape(nbasis);
 		tempshape = basis * polynomial;
-		for(int b = 0; b< nbasis; b++) shape(b) = tempshape(b); //loop over basis TODO replace this by correct way of filling  BareSliceVector
+		for(int b = 0; b < nbasis; b++) shape(b) = tempshape(b); //loop over basis TODO replace this by correct way of filling  BareSliceVector
+		cout << "point:" << mip.GetPoint() << endl;
+		cout << "shape:" << tempshape << endl;
 		//FlatVec<nbasis> (&shape(0)) = tempshape;
 		//FlatVector<> (nbasis,&shape(0)) = tempshape;
 	}
@@ -425,13 +427,13 @@ namespace ngfem
 
 
 	template <int D, int ord>
-	double TrefftzElement<D,ord> :: ipow_ar(FlatVector<double> base, Vec<D, int> ex, float result, int count) const
+	double TrefftzElement<D,ord> :: ipow_ar(FlatVector<double> base, Vec<D, int> ex, double result, int count) const
 	{
 		return count < 0 ? result : ipow_ar( base, ex, pow(base(count),ex(count)) * result, count-1 );
 	}
 
 	template <int D, int ord>
-	double TrefftzElement<D,ord> :: ipowD_ar(int der, FlatVector<double> base, Vec<D, int> ex, float result, int count) const
+	double TrefftzElement<D,ord> :: ipowD_ar(int der, FlatVector<double> base, Vec<D, int> ex, double result, int count) const
 	{
 		return ex(der) < 0 ? 0.0 :
 		 count == der ? ipowD_ar(der, base, ex, (ex(count)+1) * pow(base(count),ex(count)) * result, count-1 ) :
