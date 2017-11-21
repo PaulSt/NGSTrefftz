@@ -5,7 +5,7 @@ from trefftzngs import *
 from netgen.csg import unit_cube
 from netgen.geom2d import unit_square
 
-#mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
+# mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 #Draw(mesh)
 

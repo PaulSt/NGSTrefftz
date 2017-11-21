@@ -59,23 +59,21 @@ namespace ngcomp
 
   void TrefftzFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) const
   {
-		int n_vert = ma->GetNV();
-		int n_edge = ma->GetNEdges();
-		int n_cell = ma->GetNE();
+		// int n_vert = ma->GetNV();		int n_edge = ma->GetNEdges();		int n_cell = ma->GetNE(); Ngs_Element ngel = ma->GetElement (ei);
 		dnums.SetSize(0);
-		Ngs_Element ngel = ma->GetElement (ei);
-		for (int j = ei.Nr()*local_ndof; j-(ei.Nr()*local_ndof)<local_ndof; j++)
+		for (int j = ei.Nr()*local_ndof; j<local_ndof*(ei.Nr()+1); j++)
 		{
 			dnums.Append (j);
 		}
-	//cout << dnums;
+		// cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " dnums: \n" << dnums << " local_ndof:" << local_ndof << endl <<
+		// "================================================" << endl ;
 	}
 
 
   FiniteElement & TrefftzFESpace :: GetFE (ElementId ei, Allocator & alloc) const
   {
 		auto vertices_index = ma->GetElVertices(ei);
-		//cout << "element vectice coord: \n"  << ma->GetPoint<3>(vertices_index[0]) << endl<< ma->GetPoint<3>(vertices_index[1]) <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
+		// cout << "element vectice coord: \n"  << ma->GetPoint<3>(vertices_index[0]) << endl<< ma->GetPoint<3>(vertices_index[1]) <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
 		if(order != 3){cout << "order not yet supported"<<endl;}
 		switch (D) {
 			case 2:
@@ -91,7 +89,7 @@ namespace ngcomp
 				Vec<3> center = 0;
 				for(auto vertex : vertices_index) center += ma->GetPoint<3>(vertex);
 				center *= 0.25;
-				return *(new (alloc) TrefftzElement<3,3>) ->SetCenter(center) ->SetWavespeed(c) ->SetElSize( Adiam<3>(ei) );
+				return *(new (alloc) TrefftzElement<3,3>) ->SetWavespeed(c);// ->SetCenter(center)  ->SetElSize( Adiam<3>(ei) );
 				break;
 			}
 		}
