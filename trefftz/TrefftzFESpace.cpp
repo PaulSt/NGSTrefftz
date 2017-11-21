@@ -68,17 +68,16 @@ namespace ngcomp
 
   void TrefftzFESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
   {
-    int n_vert = ma->GetNV ();
-    int n_edge = ma->GetNEdges ();
-    int n_cell = ma->GetNE ();
+    // int n_vert = ma->GetNV();		int n_edge = ma->GetNEdges();		int n_cell =
+    // ma->GetNE(); Ngs_Element ngel = ma->GetElement (ei);
     dnums.SetSize (0);
-    Ngs_Element ngel = ma->GetElement (ei);
-    for (int j = ei.Nr () * local_ndof;
-         j - (ei.Nr () * local_ndof) < local_ndof; j++)
+    for (int j = ei.Nr () * local_ndof; j < local_ndof * (ei.Nr () + 1); j++)
       {
         dnums.Append (j);
       }
-    // cout << dnums;
+    // cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " dnums: \n" << dnums << "
+    // local_ndof:" << local_ndof << endl <<
+    // "================================================" << endl ;
   }
 
   FiniteElement &TrefftzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
@@ -113,9 +112,8 @@ namespace ngcomp
             center += ma->GetPoint<3> (vertex);
           center *= 0.25;
           return *(new (alloc) TrefftzElement<3, 3>)
-                      ->SetCenter (center)
-                      ->SetWavespeed (c)
-                      ->SetElSize (Adiam<3> (ei));
+                      ->SetWavespeed (c); // ->SetCenter(center)  ->SetElSize(
+                                          // Adiam<3>(ei) );
           break;
         }
       }

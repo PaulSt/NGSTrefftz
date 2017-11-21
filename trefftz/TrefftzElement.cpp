@@ -339,8 +339,8 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
     for (int b = 0; b < nbasis; b++)
       shape (b) = tempshape (b); // loop over basis TODO replace this by
                                  // correct way of filling  BareSliceVector
-    cout << "point:" << mip.GetPoint () << endl;
-    cout << "shape:" << tempshape << endl;
+    // cout << "point:" << mip.GetPoint() << endl;
+    // cout << "shape:" << tempshape << endl;
     // FlatVec<nbasis> (&shape(0)) = tempshape;
     // FlatVector<> (nbasis,&shape(0)) = tempshape;
   }
