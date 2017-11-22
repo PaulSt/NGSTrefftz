@@ -251,7 +251,7 @@ Vector x provides coefficient vector.
       ;
     } // BaseScalarMappedElement(nbasis,ord) { ;	}//
 
-    virtual ELEMENT_TYPE ElementType () const { return ET_TET; }
+    virtual ELEMENT_TYPE ElementType () const { return ET_TRIG; }
 
     using ScalarMappedElement<D>::CalcShape;
     virtual void CalcShape (const BaseMappedIntegrationPoint &mip,

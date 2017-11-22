@@ -38,7 +38,7 @@ namespace ngcomp
           flux_evaluator[VOL] = make_shared<T_DifferentialOperator<
               DiffOpMappedGradient<2, TrefftzElement<2, 3>>>> ();
           evaluator[BND] = make_shared<T_DifferentialOperator<
-              DiffOpMappedBoundary<2, TrefftzElement<2, 3>>>> ();
+              DiffOpMappedBoundary<2, TrefftzElement<1, 3>>>> ();
           break;
         }
       case 3:
@@ -48,7 +48,7 @@ namespace ngcomp
           flux_evaluator[VOL] = make_shared<T_DifferentialOperator<
               DiffOpMappedGradient<3, TrefftzElement<3, 3>>>> ();
           evaluator[BND] = make_shared<T_DifferentialOperator<
-              DiffOpMappedBoundary<3, TrefftzElement<3, 3>>>> ();
+              DiffOpMappedBoundary<3, TrefftzElement<2, 3>>>> ();
           break;
         }
       }
@@ -175,7 +175,7 @@ namespace ngcomp
           flux_evaluator[VOL] = make_shared<T_DifferentialOperator<
               DiffOpMappedGradient<2, TrefftzElement<2, 3>>>> ();
           evaluator[BND] = make_shared<T_DifferentialOperator<
-              DiffOpMappedBoundary<2, TrefftzElement<2, 3>>>> ();
+              DiffOpMappedBoundary<2, TrefftzElement<1, 3>>>> ();
           break;
         }
       case 3:
@@ -185,7 +185,7 @@ namespace ngcomp
           flux_evaluator[VOL] = make_shared<T_DifferentialOperator<
               DiffOpMappedGradient<3, TrefftzElement<3, 3>>>> ();
           evaluator[BND] = make_shared<T_DifferentialOperator<
-              DiffOpMappedBoundary<3, TrefftzElement<3, 3>>>> ();
+              DiffOpMappedBoundary<3, TrefftzElement<2, 3>>>> ();
           break;
         }
       }
