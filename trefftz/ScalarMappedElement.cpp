@@ -214,7 +214,8 @@ namespace ngfem
 			throw Exception (string ("GetPolOrders not implemnted for element") + ClassName());
 	#endif
 		}
-
+		template class ScalarMappedElement<2>;
+		template class ScalarMappedElement<3>;
 /*
 		template<int D>
 		void ScalarMappedElement<D> :: CalcDDShape (const IntegrationPoint & ip,

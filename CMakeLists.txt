@@ -14,9 +14,10 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
 	trefftz/helpers.cpp
 	trefftz/TrefftzElement.cpp
-	trefftz/DiffOpMapped.hpp
+	# trefftz/DiffOpMapped.hpp
 	trefftz/TrefftzFESpace.cpp
-	trefftz/TrefftzCoefficient.hpp
+	# trefftz/TrefftzCoefficient.hpp
+	trefftz/ScalarMappedElement.cpp
   )
 
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
