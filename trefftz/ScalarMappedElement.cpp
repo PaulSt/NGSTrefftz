@@ -229,7 +229,8 @@ FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
                      + ClassName ());
 #endif
   }
-
+  template class ScalarMappedElement<2>;
+  template class ScalarMappedElement<3>;
   /*
                   template<int D>
                   void ScalarMappedElement<D> :: CalcDDShape (const
