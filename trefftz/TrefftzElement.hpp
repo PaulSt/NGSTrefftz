@@ -50,39 +50,6 @@ namespace ngfem
 			double ipowD_ar(int der, FlatVector<double> base, Vec<D, int> ex, double result = 1, int count = D-1) const;
 	};
 
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-	template <int D, int ord>
-	class TrefftzPWElement : public ScalarMappedElement<D>
-	{
-		private:
-			constexpr static int nbasis = 2*ord+1;
-			// constexpr static int npoly = ;
-			Vec<D> elcenter=0; float c=1;
-			static const Matrix<double> directions;
-
-		public:
-			TrefftzPWElement(): ScalarMappedElement<D>(nbasis,ord) { ; } //BaseScalarMappedElement(nbasis,ord) { ;	}//
-
-			virtual ELEMENT_TYPE ElementType() const { return ET_TRIG; }
-
-			using ScalarMappedElement<D>::CalcShape;
-			virtual void CalcShape (const BaseMappedIntegrationPoint & mip, BareSliceVector<> shape) const;
-
-			using ScalarMappedElement<D>::CalcDShape;
-			virtual void CalcDShape (const BaseMappedIntegrationPoint & mip, SliceMatrix<> dshape) const;
-
-			int GetNBasis() const { return nbasis; }
-
-			constexpr static Mat<nbasis, D,double> MakeDirections();
-
-			TrefftzPWElement<D,ord> * SetCenter(Vec<D> acenter) {elcenter = acenter; return this;}
-			TrefftzPWElement<D,ord> * SetWavespeed(float ac) {c = ac; return this;}
-
-	};
 }
 
 

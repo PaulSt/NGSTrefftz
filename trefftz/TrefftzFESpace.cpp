@@ -59,6 +59,7 @@ namespace ngcomp
 
   void TrefftzFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) const
   {
+		//if (ei.VB() != VOL) return;
 		// int n_vert = ma->GetNV();		int n_edge = ma->GetNEdges();		int n_cell = ma->GetNE(); Ngs_Element ngel = ma->GetElement (ei);
 		dnums.SetSize(0);
 		for (int j = ei.Nr()*local_ndof; j<local_ndof*(ei.Nr()+1); j++)
@@ -121,98 +122,6 @@ namespace ngcomp
   static RegisterFESpace<TrefftzFESpace> initi_trefftz ("trefftzfespace");
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-TrefftzPWFESpace :: TrefftzPWFESpace (shared_ptr<MeshAccess> ama, const Flags & flags)
-	: FESpace (ama, flags)
-{
-	DefineNumFlag("wavespeed");
-	cout << "======== Constructor of TrefftzFESpace =========" << endl;
-	cout << "Flags = " << flags;
-
-	D = ma->GetDimension();
-
-	order = int(flags.GetNumFlag ("order", 3));//flags.GetDefineFlag ("order");
-	c = flags.GetNumFlag ("wavespeed", 1);
-
-	local_ndof = 2*order + 1;
-	int nel = ma->GetNE();
-	ndof = local_ndof * nel;
-
-	switch (D) {
-		case 2:
-		{
-			evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<2,TrefftzElement<2,3>>>>();
-			flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<2, TrefftzElement<2,3>>>>();
-			evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<2,TrefftzElement<1,3>>>>();
-			break;
-		}
-		case 3:
-		{
-			evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<3,TrefftzElement<3,3>>>>();
-			flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<3, TrefftzElement<3,3>>>>();
-			evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<3, TrefftzElement<2,3>>>>();
-			break;
-		}
-	}
-}
-
-
-
-void TrefftzPWFESpace :: Update(LocalHeap & lh)
-{
-	local_ndof = 2*order + 1;
-	int nel = ma->GetNE();
-	ndof = local_ndof * nel;
-
-	cout << "update: order = " << order << " D: " << D << " ndof = " <<  ndof << " local_ndof:" << local_ndof << endl <<
-	"================================================" << endl ;
-}
-
-void TrefftzPWFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) const
-{
-	int n_vert = ma->GetNV();
-	int n_edge = ma->GetNEdges();
-	int n_cell = ma->GetNE();
-	dnums.SetSize(0);
-	Ngs_Element ngel = ma->GetElement (ei);
-	for (int j = ei.Nr()*local_ndof; j-(ei.Nr()*local_ndof)<local_ndof; j++)
-	{
-		dnums.Append (j);
-	}
-//cout << dnums;
-}
-
-
-FiniteElement & TrefftzPWFESpace :: GetFE (ElementId ei, Allocator & alloc) const
-{
-	auto vertices_index = ma->GetElVertices(ei);
-	//cout << "element vectice coord: \n"  << ma->GetPoint<3>(vertices_index[0]) << endl<< ma->GetPoint<3>(vertices_index[1]) <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
-	if(order != 3){cout << "order not yet supported"<<endl;}
-	switch (D) {
-		case 2:
-		{
-			Vec<2> center = 0;
-			for(auto vertex : vertices_index) center += ma->GetPoint<2>(vertex);
-			center *= (1.0/3.0);
-			return *(new (alloc) TrefftzPWElement<2,3>) ->SetCenter(center);
-			break;
-		}
-		case 3:
-		{
-			cout << "only supported in 2-D so far" << endl;
-			break;
-		}
-	}
-}
-
-static RegisterFESpace<TrefftzPWFESpace> initi_trefftzhelmholtz ("trefftzpw");
-
-
-}
-
-
 
 #ifdef NGS_PYTHON
 
@@ -229,6 +138,10 @@ void ExportTrefftzFESpace(py::module m)
     (m, "TrefftzFESpace", "FESpace with first order and second order trigs on 2d mesh")
     .def("GetNDof", &TrefftzFESpace::GetNDof)
 		;
+		m.def("GetNDof", [](shared_ptr<FESpace> fes) {
+			cout << typeid(*fes).name() << endl;
+			//fes->GetNDof();
+		});
 }
 
 #endif // NGS_PYTHON
