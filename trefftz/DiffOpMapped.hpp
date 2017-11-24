@@ -209,9 +209,6 @@ namespace ngfem
     {
       HeapReset hr (lh);
       mat.Row (0) = static_cast<const FEL &> (fel).GetShape (mip, lh);
-      cout << "mip.GetPoint(): " << mip.GetPoint () << endl
-           << "mat: " << endl
-           << mat.Row (0) << endl;
     }
 
     template <typename AFEL, typename MIP, class TVX, class TVY>
@@ -222,8 +219,6 @@ namespace ngfem
       y = Trans (static_cast<const FEL &> (fel).GetShape (mip, lh)) * x;
       // y(0) = InnerProduct (x, static_cast<const FEL&>(fel).GetShape
       // (mip.IP(), lh));
-      cout << "Apply.." << endl;
-      cout << "x " << endl << x << endl << endl;
     }
 
     static void
@@ -232,7 +227,6 @@ namespace ngfem
            const FlatVector<double> &x, FlatVector<double> &y, LocalHeap &lh)
     {
       y (0) = static_cast<const FEL &> (fel).Evaluate (mip, x);
-      cout << "3" << endl;
     }
 
     template <typename AFEL, typename MIP, class TVX, class TVY>
@@ -241,7 +235,6 @@ namespace ngfem
     {
       HeapReset hr (lh);
       y = static_cast<const FEL &> (fel).GetShape (mip, lh) * x;
-      cout << "4" << endl;
     }
 
     // using DiffOp<DiffOpIdBoundary<D, FEL> >::ApplyTransIR;
@@ -255,7 +248,6 @@ namespace ngfem
 
       static_cast<const FEL &> (fel).EvaluateTrans (
           mir, FlatVector<> (mir.Size (), &x (0, 0)), y);
-      cout << "5" << endl;
     }
 
     template <class MIR>
@@ -266,7 +258,6 @@ namespace ngfem
       DiffOp<DiffOpMappedBoundary<D, FEL>>::ApplyTransIR (fel, mir, x, y, lh);
       // static_cast<const FEL&>(fel).
       // EvaluateTrans (mir.IR(), FlatVector<> (mir.Size(), &x(0,0)), y);
-      cout << "6" << endl;
     }
 
     using DiffOp<DiffOpMappedBoundary<D, FEL>>::ApplySIMDIR;
@@ -276,7 +267,6 @@ namespace ngfem
                  BareSliceVector<double> x, BareSliceMatrix<SIMD<double>> y)
     {
       Cast (fel).Evaluate (mir, x, y.Row (0));
-      cout << "7" << endl;
     }
 
     using DiffOp<DiffOpMappedBoundary<D, FEL>>::AddTransSIMDIR;
@@ -286,7 +276,6 @@ namespace ngfem
                     BareSliceMatrix<SIMD<double>> y, BareSliceVector<double> x)
     {
       Cast (fel).AddTrans (mir, y.Row (0), x);
-      cout << "8" << endl;
     }
   };
 

@@ -189,73 +189,17 @@ namespace ngfem
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  template <int D, int ord>
-  const Matrix<double>
-      TrefftzPWElement<D, ord>::directions = MakeDirections ();
-
-  template <int D, int ord>
-  void
-  TrefftzPWElement<D, ord>::CalcShape (const BaseMappedIntegrationPoint &mip,
-                                       BareSliceVector<> shape) const
-  {
-    for (int i = 0; i < nbasis; i++)
-      {
-        shape (i) = exp (
-            c
-            * InnerProduct (directions.Row (i), (mip.GetPoint () - elcenter)));
-      }
-  }
-
-  template <int D, int ord>
-  void
-  TrefftzPWElement<D, ord>::CalcDShape (const BaseMappedIntegrationPoint &mip,
-                                        SliceMatrix<> dshape) const
-  {
-    for (int i = 0; i < nbasis; i++)
-      {
-        dshape.Row (i) = directions.Row (i);
-        dshape.Row (i)
-            *= c
-               * exp (c
-                      * InnerProduct (directions.Row (i),
-                                      (mip.GetPoint () - elcenter)));
-      }
-  }
-
-  template <int D, int ord>
-  constexpr Mat<TrefftzPWElement<D, ord>::nbasis, D, double>
-  TrefftzPWElement<D, ord>::MakeDirections ()
-  {
-    Mat<nbasis, D, double> dir = 0;
-    float theta = 0;
-    for (int i = 0; i < nbasis; i++)
-      {
-        theta = (2 * M_PI / nbasis) * i;
-        dir (i, 0) = cos (theta);
-        dir (i, 1) = sin (theta);
-      }
-    return dir;
-    // cout << "basis: \n" << basis << endl;
-  }
-
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #ifdef NGS_PYTHON
-void ExportTrefftzElement (py::module m)
-{
-  using namespace ngfem;
-  py::class_<TrefftzElement<3, 3>, shared_ptr<TrefftzElement<3, 3>>,
-             FiniteElement> (m, "TrefftzElement3", "Trefftz space for wave eq")
-      .def (py::init<> ());
-  py::class_<TrefftzElement<2, 3>, shared_ptr<TrefftzElement<2, 3>>,
-             FiniteElement> (m, "TrefftzElement2", "Trefftz space for wave eq")
-      .def (py::init<> ());
-
-  py::class_<TrefftzPWElement<2, 3>, shared_ptr<TrefftzPWElement<2, 3>>,
-             FiniteElement> (m, "TrefftzPWElement2",
-                             "Trefftz space for Helmholtz eq")
-      .def (py::init<> ());
-}
+  void ExportTrefftzElement (py::module m)
+  {
+    using namespace ngfem;
+    py::class_<TrefftzElement<3, 3>, shared_ptr<TrefftzElement<3, 3>>,
+               FiniteElement> (m, "TrefftzElement3",
+                               "Trefftz space for wave eq")
+        .def (py::init<> ());
+    py::class_<TrefftzElement<2, 3>, shared_ptr<TrefftzElement<2, 3>>,
+               FiniteElement> (m, "TrefftzElement2",
+                               "Trefftz space for wave eq")
+        .def (py::init<> ());
+  }
 #endif // NGS_PYTHON
