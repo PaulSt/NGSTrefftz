@@ -20,6 +20,7 @@ namespace ngfem
     Vec<D> elcenter = 0;
     float elsize = 1;
     float c = 1;
+    ELEMENT_TYPE eltype;
 
   protected:
     void static MakeIndices_inner (Mat<npoly, D, int> &indice,
@@ -31,10 +32,15 @@ namespace ngfem
   public:
     TrefftzElement () : ScalarMappedElement<D> (nbasis, ord)
     {
-      ;
+      eltype = ET_TRIG;
+    } // BaseScalarMappedElement(nbasis,ord) { ;	}//
+    TrefftzElement (ELEMENT_TYPE aeltype)
+        : ScalarMappedElement<D> (nbasis, ord)
+    {
+      eltype = aeltype;
     } // BaseScalarMappedElement(nbasis,ord) { ;	}//
 
-    virtual ELEMENT_TYPE ElementType () const { return ET_TRIG; }
+    virtual ELEMENT_TYPE ElementType () const { return eltype; }
 
     using ScalarMappedElement<D>::CalcShape;
     virtual void CalcShape (const BaseMappedIntegrationPoint &mip,

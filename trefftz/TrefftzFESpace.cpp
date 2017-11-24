@@ -68,12 +68,8 @@ namespace ngcomp
 
   void TrefftzFESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
   {
-<<<<<<< HEAD
-    // if (ei.VB() != VOL) return;
-=======
     if (ei.VB () != VOL)
       return;
->>>>>>> 7b56a870e7f851e4e14a591871dbc4c9bfee18e8
     // int n_vert = ma->GetNV();		int n_edge = ma->GetNEdges();		int n_cell =
     // ma->GetNE(); Ngs_Element ngel = ma->GetElement (ei);
     dnums.SetSize (0);
@@ -97,27 +93,48 @@ namespace ngcomp
       {
         cout << "order not yet supported" << endl;
       }
-    switch (D)
+
+    switch (ma->GetElType (ei))
       {
-      case 2:
+      case ET_SEGM:
+        {
+          return *(new (alloc) TrefftzElement<1, 3> (ET_SEGM))
+                      ->SetWavespeed (c);
+          break;
+        }
+      case ET_QUAD:
+        {
+          return *(new (alloc) TrefftzElement<2, 3> (ET_QUAD))
+                      ->SetWavespeed (c);
+          break;
+        }
+      case ET_TRIG:
         {
           Vec<2> center = 0;
           for (auto vertex : vertices_index)
             center += ma->GetPoint<2> (vertex);
           center *= (1.0 / 3.0);
-          return *(new (alloc) TrefftzElement<2, 3>)
-                      ->SetCenter (center)
+          return *(new (alloc) TrefftzElement<2, 3> (ET_TRIG))
                       ->SetWavespeed (c)
+                      ->SetCenter (center)
                       ->SetElSize (Adiam<2> (ei));
           break;
         }
-      case 3:
+      case ET_HEX:
+      case ET_PRISM:
+      case ET_PYRAMID:
+        {
+          return *(new (alloc) TrefftzElement<3, 3> (ma->GetElType (ei)))
+                      ->SetWavespeed (c);
+          break;
+        }
+      case ET_TET:
         {
           Vec<3> center = 0;
           for (auto vertex : vertices_index)
             center += ma->GetPoint<3> (vertex);
           center *= 0.25;
-          return *(new (alloc) TrefftzElement<3, 3>)
+          return *(new (alloc) TrefftzElement<3, 3> (ET_TET))
                       ->SetWavespeed (c); // ->SetCenter(center)  ->SetElSize(
                                           // Adiam<3>(ei) );
           break;
@@ -151,27 +168,28 @@ namespace ngcomp
     "define fespace v -type=trefftzfespace"
   */
   static RegisterFESpace<TrefftzFESpace> initi_trefftz ("trefftzfespace");
+}
 
 #ifdef NGS_PYTHON
 
-  void ExportTrefftzFESpace (py::module m)
-  {
-    using namespace ngcomp;
-    using namespace ngfem;
-    /*
-      We just export the class here and use the FESpace constructor to create
-      our space. This has the advantage, that we do not need to specify all the
-      flags to parse (like dirichlet, definedon,...), but we can still append
-      new functions only for that space.
-     */
-    py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>, FESpace> (
-        m, "TrefftzFESpace",
-        "FESpace with first order and second order trigs on 2d mesh")
-        .def ("GetNDof", &TrefftzFESpace::GetNDof);
-    m.def ("GetNDof", [] (shared_ptr<FESpace> fes) {
-      cout << typeid (*fes).name () << endl;
-      // fes->GetNDof();
-    });
-  }
+void ExportTrefftzFESpace (py::module m)
+{
+  using namespace ngcomp;
+  using namespace ngfem;
+  /*
+    We just export the class here and use the FESpace constructor to create our
+    space. This has the advantage, that we do not need to specify all the flags
+    to parse (like dirichlet, definedon,...), but we can still append new
+    functions only for that space.
+   */
+  py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>, FESpace> (
+      m, "TrefftzFESpace",
+      "FESpace with first order and second order trigs on 2d mesh")
+      .def ("GetNDof", &TrefftzFESpace::GetNDof);
+  m.def ("GetNDof", [] (shared_ptr<FESpace> fes) {
+    cout << typeid (*fes).name () << endl;
+    // fes->GetNDof();
+  });
+}
 
 #endif // NGS_PYTHON

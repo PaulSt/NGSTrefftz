@@ -28,17 +28,13 @@ namespace ngfem
       {
         polynomial (i) = ipow_ar (point, indices.Row (i));
       }
-
     // Vec<nbasis,double> tempshape;
     Vector<double> tempshape (nbasis);
     tempshape = basis * polynomial;
     for (int b = 0; b < nbasis; b++)
-      shape (b) = tempshape (b); // loop over basis TODO replace this by
-                                 // correct way of filling  BareSliceVector
+      shape (b) = tempshape (b);
     // cout << "point:" << mip.GetPoint() << endl;
     // cout << "shape:" << tempshape << endl;
-    // FlatVec<nbasis> (&shape(0)) = tempshape;
-    // FlatVector<> (nbasis,&shape(0)) = tempshape;
   }
 
   template <int D, int ord>
@@ -187,13 +183,7 @@ namespace ngfem
                            pow (base (count), ex (count)) * result, count - 1);
   }
 
-
-<<<<<<< HEAD
 }
-=======
-
-
->>>>>>> 7b56a870e7f851e4e14a591871dbc4c9bfee18e8
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -206,6 +196,9 @@ void ExportTrefftzElement (py::module m)
       .def (py::init<> ());
   py::class_<TrefftzElement<2, 3>, shared_ptr<TrefftzElement<2, 3>>,
              FiniteElement> (m, "TrefftzElement2", "Trefftz space for wave eq")
+      .def (py::init<> ());
+  py::class_<TrefftzElement<1, 3>, shared_ptr<TrefftzElement<1, 3>>,
+             FiniteElement> (m, "TrefftzElement1", "Trefftz space for wave eq")
       .def (py::init<> ());
 }
 #endif // NGS_PYTHON
