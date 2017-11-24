@@ -1,3 +1,5 @@
 .gitignore
 make/
 trefftz/debricated/
+pw/
+python_test/cone/
