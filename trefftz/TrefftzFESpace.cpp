@@ -59,11 +59,7 @@ namespace ngcomp
 
   void TrefftzFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) const
   {
-<<<<<<< HEAD
-		//if (ei.VB() != VOL) return;
-=======
 		if (ei.VB() != VOL) return;
->>>>>>> 7b56a870e7f851e4e14a591871dbc4c9bfee18e8
 		// int n_vert = ma->GetNV();		int n_edge = ma->GetNEdges();		int n_cell = ma->GetNE(); Ngs_Element ngel = ma->GetElement (ei);
 		dnums.SetSize(0);
 		for (int j = ei.Nr()*local_ndof; j<local_ndof*(ei.Nr()+1); j++)
@@ -80,25 +76,43 @@ namespace ngcomp
 		auto vertices_index = ma->GetElVertices(ei);
 		// cout << "element vectice coord: \n"  << ma->GetPoint<3>(vertices_index[0]) << endl<< ma->GetPoint<3>(vertices_index[1]) <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
 		if(order != 3){cout << "order not yet supported"<<endl;}
-		switch (D) {
-			case 2:
+
+		switch (ma->GetElType(ei)) {
+			case ET_SEGM:
+			{
+				return *(new (alloc) TrefftzElement<1,3>(ET_SEGM)) ->SetWavespeed(c);
+				break;
+			}
+			case ET_QUAD:
+			{
+				return *(new (alloc) TrefftzElement<2,3>(ET_QUAD)) ->SetWavespeed(c);
+				break;
+			}
+			case ET_TRIG:
 			{
 				Vec<2> center = 0;
 				for(auto vertex : vertices_index) center += ma->GetPoint<2>(vertex);
 				center *= (1.0/3.0);
-				return *(new (alloc) TrefftzElement<2,3>) ->SetCenter(center) ->SetWavespeed(c) ->SetElSize( Adiam<2>(ei) );
+				return *(new (alloc) TrefftzElement<2,3>(ET_TRIG)) ->SetWavespeed(c)->SetCenter(center)->SetElSize( Adiam<2>(ei) );
 				break;
 			}
-			case 3:
+			case ET_HEX:
+			case ET_PRISM:
+			case ET_PYRAMID:
+			{
+				return *(new (alloc) TrefftzElement<3,3>(ma->GetElType(ei))) ->SetWavespeed(c);
+				break;
+			}
+			case ET_TET:
 			{
 				Vec<3> center = 0;
 				for(auto vertex : vertices_index) center += ma->GetPoint<3>(vertex);
 				center *= 0.25;
-				return *(new (alloc) TrefftzElement<3,3>) ->SetWavespeed(c);// ->SetCenter(center)  ->SetElSize( Adiam<3>(ei) );
+				return *(new (alloc) TrefftzElement<3,3>(ET_TET)) ->SetWavespeed(c);// ->SetCenter(center)  ->SetElSize( Adiam<3>(ei) );
 				break;
 			}
 		}
-  }
+	}
 
 	template<int D>
 	double TrefftzFESpace :: Adiam(ElementId ei) const
@@ -124,6 +138,8 @@ namespace ngcomp
     "define fespace v -type=trefftzfespace"
   */
   static RegisterFESpace<TrefftzFESpace> initi_trefftz ("trefftzfespace");
+}
+
 
 
 
