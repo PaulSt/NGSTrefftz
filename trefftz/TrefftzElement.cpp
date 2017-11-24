@@ -156,7 +156,12 @@ namespace ngfem
 	}
 
 
+<<<<<<< HEAD
 }
+=======
+
+
+>>>>>>> 7b56a870e7f851e4e14a591871dbc4c9bfee18e8
 
 
 
