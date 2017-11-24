@@ -68,9 +68,14 @@ namespace ngcomp
 
   void TrefftzFESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
   {
+<<<<<<< HEAD
     // if (ei.VB() != VOL) return;
-    //  int n_vert = ma->GetNV();		int n_edge = ma->GetNEdges();
-    //  int n_cell = ma->GetNE(); Ngs_Element ngel = ma->GetElement (ei);
+=======
+    if (ei.VB () != VOL)
+      return;
+>>>>>>> 7b56a870e7f851e4e14a591871dbc4c9bfee18e8
+    // int n_vert = ma->GetNV();		int n_edge = ma->GetNEdges();		int n_cell =
+    // ma->GetNE(); Ngs_Element ngel = ma->GetElement (ei);
     dnums.SetSize (0);
     for (int j = ei.Nr () * local_ndof; j < local_ndof * (ei.Nr () + 1); j++)
       {
