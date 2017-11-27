@@ -2,6 +2,7 @@
 #include <h1lofe.hpp>
 #include <regex>
 #include <fem.hpp>
+#include <multigrid.hpp>
 
 #include "TrefftzElement.hpp"
 #include "TrefftzFESpace.hpp"

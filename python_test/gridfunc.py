@@ -10,8 +10,11 @@ from trefftzngs import *
 mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 Draw(mesh)
 
-c = 10;
-fes = FESpace("trefftzfespace", mesh, order = 3, wavespeed = c)
+c = 10
+order = 3
+fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c)
+# fes = L2(mesh, order=order, flags = { "dgjumps" : True })
+
 gfu = GridFunction(fes)
 
 

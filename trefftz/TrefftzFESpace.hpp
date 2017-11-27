@@ -38,6 +38,17 @@ namespace ngcomp
 		template<int D>
 		double Adiam(ElementId ei) const;
 
+		virtual const FiniteElement & GetFacetFE (int fnr, LocalHeap & lh) const {cout << "hello!!!!!!!!!";}
+		virtual void GetDofRanges (ElementId ei, Array<IntRange> & dranges) const {cout << "hello!!!!!!!!!";}
+		virtual shared_ptr<Table<int>> CreateSmoothingBlocks (const Flags & precflags) const override {cout << "hello!!!!!!!!!";}
+		virtual void GetVertexDofNrs (int vnr, Array<DofId> & dnums) const override {cout << "hello!!!!!!!!!";}
+		virtual void GetEdgeDofNrs (int ednr, Array<DofId> & dnums) const override {cout << "hello!!!!!!!!!";}
+		virtual void GetFaceDofNrs (int fanr, Array<DofId> & dnums) const override {cout << "hello!!!!!!!!!";}
+		virtual void GetInnerDofNrs (int elnr, Array<DofId> & dnums) const override {cout << "hello!!!!!!!!!";}
+		auto GetElementDofs (size_t nr) const {cout << "hello!!!!!!!!!";}
+		virtual void SolveM (CoefficientFunction & rho, BaseVector & vec,
+												 LocalHeap & lh) const override {cout << "hello!!!!!!!!!";}
+
   };
 }
 

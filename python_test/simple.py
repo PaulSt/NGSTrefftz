@@ -10,8 +10,11 @@ mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 #mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 #Draw(mesh)
 
-c = 1;
-fes = FESpace("trefftzfespace", mesh, dirichlet="top|bottom|right|left", order = 3, wavespeed = c, dgjumps = True)#mesh, order = 3, wavespeed = c)
+c = 1
+order = 3
+# fes = FESpace("trefftzfespace", mesh, dirichlet="top|bottom|right|left", order = order, wavespeed = c, dgjumps = True)#mesh, order = 3, wavespeed = c)
+fes = L2(mesh, order=order, flags = { "dgjumps" : True })
+
 
 print ("freedofs: ", fes.FreeDofs())
 
