@@ -59,7 +59,7 @@ namespace ngcomp
     ///
     virtual void UpdateDofTables();
     ///
-    virtual void UpdateCouplingDofArray();
+    // virtual void UpdateCouplingDofArray();
     ///
     virtual size_t GetNDof () const throw() override;
     ///
@@ -72,19 +72,19 @@ namespace ngcomp
     // ///
     // virtual const FiniteElement & GetSFE (int elnr, LocalHeap & lh) const override;
     ///
-    virtual const FiniteElement & GetFacetFE (int fnr, LocalHeap & lh) const;
+    // virtual const FiniteElement & GetFacetFE (int fnr, LocalHeap & lh) const;
 
-    virtual void GetDofRanges (ElementId ei, Array<IntRange> & dranges) const;
+    // virtual void GetDofRanges (ElementId ei, Array<IntRange> & dranges) const;
 
     virtual void GetDofNrs (ElementId ei, Array<DofId> & dnums) const override;
     ///
-    virtual shared_ptr<Table<int>> CreateSmoothingBlocks (const Flags & precflags) const override;
+    // virtual shared_ptr<Table<int>> CreateSmoothingBlocks (const Flags & precflags) const override;
     ///
 
-    virtual void GetVertexDofNrs (int vnr, Array<DofId> & dnums) const override;
-    virtual void GetEdgeDofNrs (int ednr, Array<DofId> & dnums) const override;
-    virtual void GetFaceDofNrs (int fanr, Array<DofId> & dnums) const override;
-    virtual void GetInnerDofNrs (int elnr, Array<DofId> & dnums) const override;
+    // virtual void GetVertexDofNrs (int vnr, Array<DofId> & dnums) const override;
+    // virtual void GetEdgeDofNrs (int ednr, Array<DofId> & dnums) const override;
+    // virtual void GetFaceDofNrs (int fanr, Array<DofId> & dnums) const override;
+    // virtual void GetInnerDofNrs (int elnr, Array<DofId> & dnums) const override;
 
 
     auto GetElementDofs (size_t nr) const
@@ -92,8 +92,8 @@ namespace ngcomp
       return Range (first_element_dof[nr], first_element_dof[nr+1]);
     }
 
-    virtual void SolveM (CoefficientFunction & rho, BaseVector & vec,
-                         LocalHeap & lh) const override;
+    // virtual void SolveM (CoefficientFunction & rho, BaseVector & vec,
+    //                      LocalHeap & lh) const override;
 
 
   protected:

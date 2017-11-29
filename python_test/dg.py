@@ -1,13 +1,16 @@
 from netgen.geom2d import unit_square
+from netgen.csg import unit_cube
+
 from ngsolve import *
 from trefftzngs import *
 
-mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
+mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
+# mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 
 c = 10
 order = 3
-# fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps = True)
-fes = FESpace("l22", mesh, order = order, dgjumps = True) #L2(mesh, order=order, flags = { "dgjumps" : True })
+fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps = True)
+# fes = FESpace("l22", mesh, order = order, dgjumps = True) #L2(mesh, order=order, flags = { "dgjumps" : True })
 u = fes.TrialFunction()
 v = fes.TestFunction()
 

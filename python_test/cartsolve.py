@@ -49,7 +49,7 @@ print("boundaries" + str(mesh.GetBoundaries()))
 
 
 c=10
-V = FESpace("trefftzfespace", mesh, order = 3, wavespeed = c, dirichlet="default")#H1(mesh, dirichlet="default")
+V = H1(mesh, dirichlet="default")# FESpace("l22", mesh, order = 3, wavespeed = c, dirichlet="default")#
 print(V.FreeDofs())
 gfu = GridFunction(V)
 g = x

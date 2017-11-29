@@ -10,10 +10,9 @@ namespace ngcomp
 		int D;
     int order;
     size_t ndof;
+		int nel;
 		int nvert;
 		int local_ndof;
-		Array<int> first_edge_dof;
-    Array<int> first_cell_dof;
 		float c=1;
 
   public:
@@ -27,27 +26,29 @@ namespace ngcomp
     virtual string GetClassName () const { return "TrefftzFESpace"; }
 
     virtual void Update(LocalHeap & lh);
-    virtual size_t GetNDof () const { return ndof; }
 
     virtual void GetDofNrs (ElementId ei, Array<DofId> & dnums) const;
     virtual FiniteElement & GetFE (ElementId ei, Allocator & alloc) const;
 
     int GetDim() const { return local_ndof; }
-		// size_t GetNDof() const {return ndof;}
 
 		template<int D>
 		double Adiam(ElementId ei) const;
 
-		virtual const FiniteElement & GetFacetFE (int fnr, LocalHeap & lh) const {cout << "hello!!!!!!!!!";}
-		virtual void GetDofRanges (ElementId ei, Array<IntRange> & dranges) const {cout << "hello!!!!!!!!!";}
-		virtual shared_ptr<Table<int>> CreateSmoothingBlocks (const Flags & precflags) const override {cout << "hello!!!!!!!!!";}
-		virtual void GetVertexDofNrs (int vnr, Array<DofId> & dnums) const override {cout << "hello!!!!!!!!!";}
-		virtual void GetEdgeDofNrs (int ednr, Array<DofId> & dnums) const override {cout << "hello!!!!!!!!!";}
-		virtual void GetFaceDofNrs (int fanr, Array<DofId> & dnums) const override {cout << "hello!!!!!!!!!";}
-		virtual void GetInnerDofNrs (int elnr, Array<DofId> & dnums) const override {cout << "hello!!!!!!!!!";}
-		auto GetElementDofs (size_t nr) const {cout << "hello!!!!!!!!!";}
-		virtual void SolveM (CoefficientFunction & rho, BaseVector & vec,
-												 LocalHeap & lh) const override {cout << "hello!!!!!!!!!";}
+		virtual size_t GetNDof () const throw() override {return ndof;}
+		virtual size_t GetNDofLevel (int level) const override 	{cout << "fuck" <<endl;	return 0;	}
+
+	protected:
+
+    template <ELEMENT_TYPE ET>
+      FiniteElement & T_GetFE (int elnr, Allocator & alloc) const;
+
+		auto GetElementDofs (size_t nr) const
+		{
+			cout << "fuck" << endl; return 0;
+		}
+
+
 
   };
 }

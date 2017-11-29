@@ -25,22 +25,29 @@ namespace ngcomp
 		c = flags.GetNumFlag ("wavespeed", 1);
 
 		local_ndof = (BinCoeff(D-1 + order, order) + BinCoeff(D-1 + order-1, order-1));
-		int nel = ma->GetNE();
+		nel = ma->GetNE();
 		ndof = local_ndof * nel;
 
 		switch (D) {
+			case 1:
+			{
+				evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<1,TrefftzElement<1,3>>>>();
+				flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<1, TrefftzElement<1,3>>>>();
+				// evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<2,TrefftzElement<1,3>>>>();
+				break;
+			}
 			case 2:
 			{
 		    evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<2,TrefftzElement<2,3>>>>();
 				flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<2, TrefftzElement<2,3>>>>();
-				evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<2,TrefftzElement<1,3>>>>();
+				// evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<2,TrefftzElement<1,3>>>>();
 				break;
 			}
 			case 3:
 			{
 				evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<3,TrefftzElement<3,3>>>>();
 		    flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<3, TrefftzElement<3,3>>>>();
-		    evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<3, TrefftzElement<2,3>>>>();
+		    // evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<3, TrefftzElement<2,3>>>>();
 				break;
 			}
 		}
@@ -50,69 +57,143 @@ namespace ngcomp
 
   void TrefftzFESpace :: Update(LocalHeap & lh)
   {
-		local_ndof = (BinCoeff(D-1 + order, order) + BinCoeff(D-1 + order-1, order-1));
-		int nel = ma->GetNE();
-		ndof = local_ndof * nel;
-
+		FESpace::Update(lh);
 		cout << "update: order = " << order << " D: " << D << " ndof = " <<  ndof << " local_ndof:" << local_ndof << endl <<
 		"================================================" << endl ;
 	}
 
   void TrefftzFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) const
   {
-		if (ei.VB() != VOL) return;
+		if (!DefinedOn (ei) || ei.VB() != VOL) return;
 		// int n_vert = ma->GetNV();		int n_edge = ma->GetNEdges();		int n_cell = ma->GetNE(); Ngs_Element ngel = ma->GetElement (ei);
 		dnums.SetSize(0);
 		for (int j = ei.Nr()*local_ndof; j<local_ndof*(ei.Nr()+1); j++)
 		{
 			dnums.Append (j);
 		}
-		// cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " dnums: \n" << dnums << " local_ndof:" << local_ndof << endl <<
-		// "================================================" << endl ;
+
+		cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " dnums: \n" << dnums << " local_ndof:" << local_ndof << endl <<
+		"================================================" << endl ;
 	}
 
 
   FiniteElement & TrefftzFESpace :: GetFE (ElementId ei, Allocator & alloc) const
   {
-		auto vertices_index = ma->GetElVertices(ei);
-		// cout << "element vectice coord: \n"  << ma->GetPoint<3>(vertices_index[0]) << endl<< ma->GetPoint<3>(vertices_index[1]) <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
-		if(order != 3){cout << "order not yet supported"<<endl;}
+		// auto vertices_index = ma->GetElVertices(ei);
+		// // cout << "element vectice coord: \n"  << ma->GetPoint<3>(vertices_index[0]) << endl<< ma->GetPoint<3>(vertices_index[1]) <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
+		// if(order != 3){cout << "order not yet supported"<<endl;}
+		//
+		// switch (ma->GetElType(ei)) {
+		// 	case ET_SEGM:
+		// 	{
+		// 		return *(new (alloc) TrefftzElement<1,3>(ET_SEGM)) ->SetWavespeed(c);
+		// 		break;
+		// 	}
+		// 	case ET_QUAD:
+		// 	{
+		// 		return *(new (alloc) TrefftzElement<2,3>(ET_QUAD)) ->SetWavespeed(c);
+		// 		break;
+		// 	}
+		// 	case ET_TRIG:
+		// 	{
+		// 		Vec<2> center = 0;
+		// 		for(auto vertex : vertices_index) center += ma->GetPoint<2>(vertex);
+		// 		center *= (1.0/3.0);
+		// 		return *(new (alloc) TrefftzElement<2,3>(ET_TRIG)) ->SetWavespeed(c)->SetCenter(center)->SetElSize( Adiam<2>(ei) );
+		// 		break;
+		// 	}
+		// 	case ET_HEX:
+		// 	case ET_PRISM:
+		// 	case ET_PYRAMID:
+		// 	{
+		// 		return *(new (alloc) TrefftzElement<3,3>(ma->GetElType(ei))) ->SetWavespeed(c);
+		// 		break;
+		// 	}
+		// 	case ET_TET:
+		// 	{
+		// 		Vec<3> center = 0;
+		// 		for(auto vertex : vertices_index) center += ma->GetPoint<3>(vertex);
+		// 		center *= 0.25;
+		// 		return *(new (alloc) TrefftzElement<3,3>(ET_TET)) ->SetWavespeed(c);// ->SetCenter(center)  ->SetElSize( Adiam<3>(ei) );
+		// 		break;
+		// 	}
+		// }
 
-		switch (ma->GetElType(ei)) {
-			case ET_SEGM:
+
+
+		if (ei.VB()==BBND) throw Exception ("BBND not available in L2HighOrderFESpace2");
+		if (ei.IsVolume())
+		{
+			int elnr = ei.Nr();
+			Ngs_Element ngel = ma->GetElement(ei);
+			ELEMENT_TYPE eltype = ngel.GetType();
+
+			if (!DefinedOn (ngel))
 			{
-				return *(new (alloc) TrefftzElement<1,3>(ET_SEGM)) ->SetWavespeed(c);
-				break;
+				switch (eltype)
+				{
+					case ET_POINT:   return * new (alloc) ScalarDummyFE<ET_POINT> (); break;
+					case ET_SEGM:    return * new (alloc) ScalarDummyFE<ET_SEGM> (); break;
+					case ET_TRIG:    return * new (alloc) ScalarDummyFE<ET_TRIG> (); break;
+					case ET_QUAD:    return * new (alloc) ScalarDummyFE<ET_QUAD> (); break;
+					case ET_TET:     return * new (alloc) ScalarDummyFE<ET_TET> (); break;
+					case ET_PYRAMID: return * new (alloc) ScalarDummyFE<ET_PYRAMID> (); break;
+					case ET_PRISM:   return * new (alloc) ScalarDummyFE<ET_PRISM> (); break;
+					case ET_HEX:     return * new (alloc) ScalarDummyFE<ET_HEX> (); break;
+				}
 			}
-			case ET_QUAD:
+
+			if (eltype == ET_TRIG)
 			{
-				return *(new (alloc) TrefftzElement<2,3>(ET_QUAD)) ->SetWavespeed(c);
-				break;
+				return *(new (alloc) TrefftzElement<2,3>(ET_TRIG)) ->SetWavespeed(c);
 			}
-			case ET_TRIG:
+
+			if (eltype == ET_TET)
+				return *(new (alloc) TrefftzElement<3,3>(ET_TET)) ->SetWavespeed(c);
+
+			switch (eltype)
 			{
-				Vec<2> center = 0;
-				for(auto vertex : vertices_index) center += ma->GetPoint<2>(vertex);
-				center *= (1.0/3.0);
-				return *(new (alloc) TrefftzElement<2,3>(ET_TRIG)) ->SetWavespeed(c)->SetCenter(center)->SetElSize( Adiam<2>(ei) );
-				break;
-			}
-			case ET_HEX:
-			case ET_PRISM:
-			case ET_PYRAMID:
-			{
-				return *(new (alloc) TrefftzElement<3,3>(ma->GetElType(ei))) ->SetWavespeed(c);
-				break;
-			}
-			case ET_TET:
-			{
-				Vec<3> center = 0;
-				for(auto vertex : vertices_index) center += ma->GetPoint<3>(vertex);
-				center *= 0.25;
-				return *(new (alloc) TrefftzElement<3,3>(ET_TET)) ->SetWavespeed(c);// ->SetCenter(center)  ->SetElSize( Adiam<3>(ei) );
-				break;
+				case ET_SEGM:    return T_GetFE<ET_SEGM> (elnr, alloc);
+
+				case ET_TRIG:    return T_GetFE<ET_TRIG> (elnr, alloc);
+				case ET_QUAD:    return T_GetFE<ET_QUAD> (elnr, alloc);
+
+				case ET_TET:     return T_GetFE<ET_TET> (elnr, alloc);
+				case ET_PRISM:   return T_GetFE<ET_PRISM> (elnr, alloc);
+				case ET_PYRAMID: return T_GetFE<ET_PYRAMID> (elnr, alloc);
+				case ET_HEX:     return T_GetFE<ET_HEX> (elnr, alloc);
+
+				default:
+					throw Exception ("illegal element in L2HoFeSpace::GetFE");
 			}
 		}
+		else
+		{
+			int elnr = ei.Nr();
+			switch (ma->GetElType(ei))
+			{
+				case ET_POINT: return *new (alloc) DummyFE<ET_POINT>;
+				case ET_SEGM:  return *new (alloc) DummyFE<ET_SEGM>; break;
+				case ET_TRIG:  return *new (alloc) DummyFE<ET_TRIG>; break;
+				case ET_QUAD:  return *new (alloc) DummyFE<ET_QUAD>; break;
+
+				default:
+					stringstream str;
+					str << "FESpace " << GetClassName()
+							<< ", undefined surface eltype " << ma->GetElType(ei)
+							<< ", order = " << order << endl;
+					throw Exception (str.str());
+			}
+		}
+	}
+
+	template <ELEMENT_TYPE ET>
+	FiniteElement & TrefftzFESpace :: T_GetFE (int elnr, Allocator & lh) const
+	{
+		TrefftzElement<3,3> * tref =  new (lh) TrefftzElement<3,3> (ET);
+		tref -> SetWavespeed(c);
+
+		return *tref;
 	}
 
 	template<int D>
