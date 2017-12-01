@@ -21,8 +21,8 @@ gfu = GridFunction(fes)
 u = fes.TestFunction()
 v = fes.TrialFunction()
 
-# bfi = SymbolicBFI(u*v)
-#
+bfi = SymbolicBFI(u*v)
+
 # gfu.vec[:] = 0
 # for id in mesh.Elements(VOL):
 # 	fe = fes.GetFE(id)
@@ -43,13 +43,13 @@ v = fes.TrialFunction()
 #print(gfu.vec)
 #kx
 #uex = sin(kx*x+ky*y - c*t)
-uex = sin(c*x+y)
-#gfu.Set(CoefficientFunction(0))
-gfu.Set(uex)
-
-#print(gfu.vec)
-# gradu = grad(gfu)
-Draw(uex,mesh,'uex')
-#Draw(gfu, mesh, 'gfu')
-Draw(gfu)
+# uex = sin(c*x+y)
+# #gfu.Set(CoefficientFunction(0))
+# gfu.Set(uex)
+#
+# #print(gfu.vec)
+# # gradu = grad(gfu)
+# Draw(uex,mesh,'uex')
+# #Draw(gfu, mesh, 'gfu')
+# Draw(gfu)
 # Draw(gradu, mesh, 'fun')

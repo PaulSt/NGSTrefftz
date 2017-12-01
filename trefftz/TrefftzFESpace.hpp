@@ -30,26 +30,17 @@ namespace ngcomp
     virtual void GetDofNrs (ElementId ei, Array<DofId> & dnums) const;
     virtual FiniteElement & GetFE (ElementId ei, Allocator & alloc) const;
 
-    int GetDim() const { return local_ndof; }
+    // int GetDim() const { return local_ndof; }
 
 		template<int D>
 		double Adiam(ElementId ei) const;
 
 		virtual size_t GetNDof () const throw() override {return ndof;}
-		virtual size_t GetNDofLevel (int level) const override 	{cout << "fuck" <<endl;	return 0;	}
 
 	protected:
 
     template <ELEMENT_TYPE ET>
       FiniteElement & T_GetFE (int elnr, Allocator & alloc) const;
-
-		auto GetElementDofs (size_t nr) const
-		{
-			cout << "fuck" << endl; return 0;
-		}
-
-
-
   };
 }
 

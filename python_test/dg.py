@@ -25,18 +25,22 @@ alpha = 4
 h = specialcf.mesh_size
 a = BilinearForm(fes)
 a += SymbolicBFI(grad(u)*grad(v))
-a += SymbolicBFI(alpha*order**2/h*jump_u*jump_v, skeleton=True)
-a += SymbolicBFI(alpha*order**2/h*u*v, BND, skeleton=True)
-a += SymbolicBFI(-mean_dudn*jump_v -mean_dvdn*jump_u, skeleton=True)
-a += SymbolicBFI(-n*grad(u)*v-n*grad(v)*u, BND, skeleton=True)
+# a += SymbolicBFI(alpha*order**2/h*jump_u*jump_v, skeleton=True)
+# a += SymbolicBFI(alpha*order**2/h*u*v, BND, skeleton=True)
+# a += SymbolicBFI(-mean_dudn*jump_v -mean_dvdn*jump_u, skeleton=True)
+# a += SymbolicBFI(-n*grad(u)*v-n*grad(v)*u, BND, skeleton=True)
 a.Assemble()
 
 f = LinearForm(fes)
-f += SymbolicLFI(1*v)
+f += SymbolicLFI((x+y)*v)
 f.Assemble()
 
 gfu = GridFunction(fes, name="uDG")
 gfu.vec.data = a.mat.Inverse() * f.vec
 Draw (gfu)
+#
+# funk = GridFunction(fes)
+# funk.Set(exp(-x*y))
+# Draw(funk)
 
 fes.FreeDofs()

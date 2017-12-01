@@ -96,7 +96,7 @@ namespace ngcomp
         }
       }
 
-    all_dofs_together = false;
+    all_dofs_together = true;
   }
 
 
@@ -185,7 +185,7 @@ namespace ngcomp
 				  ndof--; // subtract constant
       }
     first_element_dof[nel] = ndof;
-		cout << first_element_dof << endl;
+		// cout << first_element_dof << endl;
 
     if(print)
       *testout << " first_element dof (l2hofe) " << first_element_dof << endl;
@@ -195,69 +195,73 @@ namespace ngcomp
   {
     if (ei.VB()==BBND) throw Exception ("BBND not available in L2HighOrderFESpace2");
     if (ei.IsVolume())
+    {
+      int elnr = ei.Nr();
+      Ngs_Element ngel = ma->GetElement(ei);
+      ELEMENT_TYPE eltype = ngel.GetType();
+
+      if (!DefinedOn (ngel))
       {
-        int elnr = ei.Nr();
-        Ngs_Element ngel = ma->GetElement(ei);
-        ELEMENT_TYPE eltype = ngel.GetType();
-
-        if (!DefinedOn (ngel))
-          {
-            switch (eltype)
-              {
-              case ET_POINT:   return * new (alloc) ScalarDummyFE<ET_POINT> (); break;
-              case ET_SEGM:    return * new (alloc) ScalarDummyFE<ET_SEGM> (); break;
-              case ET_TRIG:    return * new (alloc) ScalarDummyFE<ET_TRIG> (); break;
-              case ET_QUAD:    return * new (alloc) ScalarDummyFE<ET_QUAD> (); break;
-              case ET_TET:     return * new (alloc) ScalarDummyFE<ET_TET> (); break;
-              case ET_PYRAMID: return * new (alloc) ScalarDummyFE<ET_PYRAMID> (); break;
-              case ET_PRISM:   return * new (alloc) ScalarDummyFE<ET_PRISM> (); break;
-              case ET_HEX:     return * new (alloc) ScalarDummyFE<ET_HEX> (); break;
-              }
-          }
-
-	if (eltype == ET_TRIG)
-	  {
-	    // return *CreateL2HighOrderFE<ET_TRIG> (order, vnums, alloc);
-            return *CreateL2HighOrderFE<ET_TRIG> (order, INT<3>(ngel.Vertices()), alloc);
-	  }
-
-        if (eltype == ET_TET)
-          return *CreateL2HighOrderFE<ET_TET> (order, INT<4>(ngel.Vertices()), alloc);
-
         switch (eltype)
-          {
-          case ET_SEGM:    return T_GetFE<ET_SEGM> (elnr, alloc);
-
-          case ET_TRIG:    return T_GetFE<ET_TRIG> (elnr, alloc);
-          case ET_QUAD:    return T_GetFE<ET_QUAD> (elnr, alloc);
-
-          case ET_TET:     return T_GetFE<ET_TET> (elnr, alloc);
-          case ET_PRISM:   return T_GetFE<ET_PRISM> (elnr, alloc);
-          case ET_PYRAMID: return T_GetFE<ET_PYRAMID> (elnr, alloc);
-          case ET_HEX:     return T_GetFE<ET_HEX> (elnr, alloc);
-
-          default:
-            throw Exception ("illegal element in L2HoFeSpace::GetFE");
-          }
+        {
+          case ET_POINT:   return * new (alloc) ScalarDummyFE<ET_POINT> (); break;
+          case ET_SEGM:    return * new (alloc) ScalarDummyFE<ET_SEGM> (); break;
+          case ET_TRIG:    return * new (alloc) ScalarDummyFE<ET_TRIG> (); break;
+          case ET_QUAD:    return * new (alloc) ScalarDummyFE<ET_QUAD> (); break;
+          case ET_TET:     return * new (alloc) ScalarDummyFE<ET_TET> (); break;
+          case ET_PYRAMID: return * new (alloc) ScalarDummyFE<ET_PYRAMID> (); break;
+          case ET_PRISM:   return * new (alloc) ScalarDummyFE<ET_PRISM> (); break;
+          case ET_HEX:     return * new (alloc) ScalarDummyFE<ET_HEX> (); break;
+        }
+				cout << "returning scalar dummy" << endl;
       }
-    else
+
+			if (eltype == ET_TRIG)
+		  {
+		    // return *CreateL2HighOrderFE<ET_TRIG> (order, vnums, alloc);
+				cout << "volume trig" << endl;
+        return *CreateL2HighOrderFE<ET_TRIG> (order, INT<3>(ngel.Vertices()), alloc);
+		  }
+
+      if (eltype == ET_TET)
+			{
+				cout << "volume tet" << endl;
+        return *CreateL2HighOrderFE<ET_TET> (order, INT<4>(ngel.Vertices()), alloc);
+			}
+
+      switch (eltype)
       {
-        int elnr = ei.Nr();
-        switch (ma->GetElType(ei))
-          {
-          case ET_POINT: return *new (alloc) DummyFE<ET_POINT>;
-          case ET_SEGM:  return *new (alloc) DummyFE<ET_SEGM>; break;
-          case ET_TRIG:  return *new (alloc) DummyFE<ET_TRIG>; break;
-          case ET_QUAD:  return *new (alloc) DummyFE<ET_QUAD>; break;
+				cout << "volume switch" << endl;
+        case ET_SEGM:    return T_GetFE<ET_SEGM> (elnr, alloc);
+        // case ET_TRIG:    return T_GetFE<ET_TRIG> (elnr, alloc);
+        case ET_QUAD:    return T_GetFE<ET_QUAD> (elnr, alloc);
+        // case ET_TET:     return T_GetFE<ET_TET> (elnr, alloc);
+        case ET_PRISM:   return T_GetFE<ET_PRISM> (elnr, alloc);
+        case ET_PYRAMID: return T_GetFE<ET_PYRAMID> (elnr, alloc);
+        case ET_HEX:     return T_GetFE<ET_HEX> (elnr, alloc);
+        default:
+          throw Exception ("illegal element in L2HoFeSpace::GetFE");
+			}
+    }
+    else
+    {
+      int elnr = ei.Nr();
+      switch (ma->GetElType(ei))
+      {
+				cout << "else dummy" << endl;
+        case ET_POINT: return *new (alloc) DummyFE<ET_POINT>;
+        case ET_SEGM:  return *new (alloc) DummyFE<ET_SEGM>; break;
+        case ET_TRIG:  return *new (alloc) DummyFE<ET_TRIG>; break;
+        case ET_QUAD:  return *new (alloc) DummyFE<ET_QUAD>; break;
 
-          default:
-            stringstream str;
-            str << "FESpace " << GetClassName()
-                << ", undefined surface eltype " << ma->GetElType(ei)
-                << ", order = " << order << endl;
-            throw Exception (str.str());
-          }
+        default:
+          stringstream str;
+          str << "FESpace " << GetClassName()
+              << ", undefined surface eltype " << ma->GetElType(ei)
+              << ", order = " << order << endl;
+          throw Exception (str.str());
       }
+    }
   }
 
 
@@ -278,11 +282,13 @@ namespace ngcomp
 
   size_t L2HighOrderFESpace2 :: GetNDof () const throw()
   {
+		cout << "ndof: " << ndof << endl;
     return ndof;
   }
 
   size_t L2HighOrderFESpace2 :: GetNDofLevel (int level) const
   {
+		cout << "ndof level: " << ndlevel[level] << endl;
     return ndlevel[level];
   }
 
@@ -297,10 +303,9 @@ namespace ngcomp
     size += base;
     dnums.SetSize(size);
     if (!all_dofs_together) dnums[0] = ei.Nr();
-		// cout << "element id "<<ei.Nr() << endl;
-		// cout << "dnums: "<<endl << eldofs << endl;
 		dnums.Range(base, size) = eldofs;
-		// cout << "dnums: "<<endl << dnums << endl;
+		// cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " ndof: " << ndof <<" dnums: \n" << dnums << endl <<
+		// "================================================" << endl ;
   }
 
   // register FESpaces
