@@ -106,7 +106,7 @@ namespace ngcomp
         }
       }
 
-    all_dofs_together = false;
+    all_dofs_together = true;
   }
 
   L2HighOrderFESpace2 ::~L2HighOrderFESpace2 () { ; }
@@ -192,7 +192,7 @@ namespace ngcomp
           ndof--; // subtract constant
       }
     first_element_dof[nel] = ndof;
-    cout << first_element_dof << endl;
+    // cout << first_element_dof << endl;
 
     if (print)
       *testout << " first_element dof (l2hofe) " << first_element_dof << endl;
@@ -238,38 +238,39 @@ namespace ngcomp
                 return *new (alloc) ScalarDummyFE<ET_HEX> ();
                 break;
               }
+            cout << "returning scalar dummy" << endl;
           }
 
         if (eltype == ET_TRIG)
           {
             // return *CreateL2HighOrderFE<ET_TRIG> (order, vnums, alloc);
+            cout << "volume trig" << endl;
             return *CreateL2HighOrderFE<ET_TRIG> (
                 order, INT<3> (ngel.Vertices ()), alloc);
           }
 
         if (eltype == ET_TET)
-          return *CreateL2HighOrderFE<ET_TET> (
-              order, INT<4> (ngel.Vertices ()), alloc);
+          {
+            cout << "volume tet" << endl;
+            return *CreateL2HighOrderFE<ET_TET> (
+                order, INT<4> (ngel.Vertices ()), alloc);
+          }
 
         switch (eltype)
           {
+            cout << "volume switch" << endl;
           case ET_SEGM:
             return T_GetFE<ET_SEGM> (elnr, alloc);
-
-          case ET_TRIG:
-            return T_GetFE<ET_TRIG> (elnr, alloc);
+          // case ET_TRIG:    return T_GetFE<ET_TRIG> (elnr, alloc);
           case ET_QUAD:
             return T_GetFE<ET_QUAD> (elnr, alloc);
-
-          case ET_TET:
-            return T_GetFE<ET_TET> (elnr, alloc);
+          // case ET_TET:     return T_GetFE<ET_TET> (elnr, alloc);
           case ET_PRISM:
             return T_GetFE<ET_PRISM> (elnr, alloc);
           case ET_PYRAMID:
             return T_GetFE<ET_PYRAMID> (elnr, alloc);
           case ET_HEX:
             return T_GetFE<ET_HEX> (elnr, alloc);
-
           default:
             throw Exception ("illegal element in L2HoFeSpace::GetFE");
           }
@@ -279,6 +280,7 @@ namespace ngcomp
         int elnr = ei.Nr ();
         switch (ma->GetElType (ei))
           {
+            cout << "else dummy" << endl;
           case ET_POINT:
             return *new (alloc) DummyFE<ET_POINT>;
           case ET_SEGM:
@@ -314,10 +316,15 @@ namespace ngcomp
     return *hofe;
   }
 
-  size_t L2HighOrderFESpace2 ::GetNDof () const throw () { return ndof; }
+  size_t L2HighOrderFESpace2 ::GetNDof () const throw ()
+  {
+    cout << "ndof: " << ndof << endl;
+    return ndof;
+  }
 
   size_t L2HighOrderFESpace2 ::GetNDofLevel (int level) const
   {
+    cout << "ndof level: " << ndlevel[level] << endl;
     return ndlevel[level];
   }
 
@@ -334,10 +341,10 @@ namespace ngcomp
     dnums.SetSize (size);
     if (!all_dofs_together)
       dnums[0] = ei.Nr ();
-    // cout << "element id "<<ei.Nr() << endl;
-    // cout << "dnums: "<<endl << eldofs << endl;
     dnums.Range (base, size) = eldofs;
-    // cout << "dnums: "<<endl << dnums << endl;
+    // cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " ndof: " << ndof <<"
+    // dnums: \n" << dnums << endl <<
+    // "================================================" << endl ;
   }
 
   // register FESpaces

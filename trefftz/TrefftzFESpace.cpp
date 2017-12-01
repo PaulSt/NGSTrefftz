@@ -85,10 +85,9 @@ namespace ngcomp
       {
         dnums.Append (j);
       }
-
-    cout << "GetDofNrs: ei.Nr() = " << ei.Nr () << " dnums: \n"
-         << dnums << " local_ndof:" << local_ndof << endl
-         << "================================================" << endl;
+    // cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " local_ndof:" <<
+    // local_ndof << " ndof: " << ndof << " dnums: \n" << dnums << endl <<
+    // "================================================" << endl ;
   }
 
   FiniteElement &TrefftzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
