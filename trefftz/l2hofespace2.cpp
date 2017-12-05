@@ -219,13 +219,13 @@ namespace ngcomp
 			if (eltype == ET_TRIG)
 		  {
 		    // return *CreateL2HighOrderFE<ET_TRIG> (order, vnums, alloc);
-				cout << "volume trig" << endl;
+				// cout << "volume trig" << endl;
         return *CreateL2HighOrderFE<ET_TRIG> (order, INT<3>(ngel.Vertices()), alloc);
 		  }
 
       if (eltype == ET_TET)
 			{
-				cout << "volume tet" << endl;
+				// cout << "volume tet" << endl;
         return *CreateL2HighOrderFE<ET_TET> (order, INT<4>(ngel.Vertices()), alloc);
 			}
 
@@ -282,7 +282,7 @@ namespace ngcomp
 
   size_t L2HighOrderFESpace2 :: GetNDof () const throw()
   {
-		cout << "ndof: " << ndof << endl;
+		// cout << "ndof: " << ndof << endl;
     return ndof;
   }
 

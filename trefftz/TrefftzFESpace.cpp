@@ -149,7 +149,7 @@ namespace ngcomp
 
 			if (eltype == ET_TET)
 				return *(new (alloc) TrefftzElement<3,3>(ET_TET)) ->SetWavespeed(c);
-
+				
 			switch (eltype)
 			{
 				case ET_SEGM:    return T_GetFE<ET_SEGM> (elnr, alloc);
