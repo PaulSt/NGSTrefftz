@@ -69,7 +69,7 @@ namespace ngcomp
     if (parseflags) CheckFlags(flags);
 
     var_order = 0;
-    order =  3;//int (flags.GetNumFlag("order",0));
+    order =  int (flags.GetNumFlag("order",0));
 
     switch (ma->GetDimension())
       {
@@ -189,6 +189,7 @@ namespace ngcomp
 
     if(print)
       *testout << " first_element dof (l2hofe) " << first_element_dof << endl;
+		cout << "===========================update ndof: " << ndof << " ndof/el: " << ndof/nel << endl ;
   }
 
   FiniteElement & L2HighOrderFESpace2 :: GetFE (ElementId ei, Allocator & alloc) const

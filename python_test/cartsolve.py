@@ -3,6 +3,8 @@ import netgen.meshing as ngm
 from netgen.geom2d import unit_square
 from ngsolve import *
 from trefftzngs import *
+import numpy as np
+
 
 
 # # Working with meshes
@@ -48,14 +50,101 @@ Draw(mesh)
 print("boundaries" + str(mesh.GetBoundaries()))
 
 
-c=10
-V = H1(mesh, dirichlet="default")# FESpace("l22", mesh, order = 3, wavespeed = c, dirichlet="default")#
-print(V.FreeDofs())
-gfu = GridFunction(V)
-g = x
-gfu.Set(g,BND)
+c=1
+order = 3
+
+# fes = L2(mesh, order = order, dgjumps=True)#  dirichlet="default "FESpace("l22", mesh, order = order, dgjumps = True) #
+fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True)
+
+
+incond = sin(x+y*np.pi)
+U0 = GridFunction(fes)
+U0.Set(incond)
+v0 = grad(U0)[0]
+sig0 = -grad(U0)[1]
+# Draw(U0,mesh,'U0')
+# Draw(sig0,mesh,'sig0')
+# Draw(v0,mesh,'v0')
+
+U = fes.TrialFunction()
+V = fes.TestFunction()
+
+v = grad(U)[0]
+sig = -grad(U)[1]
+w = grad(V)[0]
+tau = -grad(V)[1]
+
+vo = grad(U.Other())[0]
+sigo = -grad(U.Other())[1]
+wo = grad(V.Other())[0]
+tauo = -grad(V.Other())[1]
+
+h = specialcf.mesh_size
+n = specialcf.normal(2)
+n_t = n[0]
+n_x = n[1]
+
+mean_v = 0.5*(v+vo)
+mean_w = 0.5*(w+wo)
+mean_sig = 0.5*(sig+sigo)
+mean_tau = 0.5*(tau+tauo)
+
+jump_vx = ( v - vo ) * n_x
+jump_wx = ( w - wo ) * n_x
+jump_sigx = ( sig - sigo ) * n_x
+jump_taux = ( tau - tauo ) * n_x
+
+jump_vt = ( v - vo ) * n_t
+jump_wt = ( w - wo ) * n_t
+jump_sigt = ( sig - sigo ) * n_t
+jump_taut = ( tau - tauo ) * n_t
+
+
+a = BilinearForm(fes)
+a += SymbolicBFI( (n_t!=0) * ( pow(c,-2)*IfPos(n_t,v,vo)*(jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wt+jump_taux) ) , skeleton=True ) #space like faces
+a += SymbolicBFI( (n_x!=0) * ( mean_v*jump_taux + mean_sig*jump_wx + 0.5*jump_vx*jump_wx + 0.5*jump_sigx*jump_taux ) , skeleton=True ) #time like faces
+a += SymbolicBFI( (n_x!=0) * ( sig*n_x*w + 0.5*v*w ), BND, skeleton=True) #dirichlet boundary 'timelike'
+a += SymbolicBFI( IfPos(n_t, 1, 0) * ( pow(c,-2)*v*w + sig*tau ), BND, skeleton=True) #t=T
+a.Assemble()
+
+f = LinearForm(fes)
+f += SymbolicLFI( IfPos(-n_t, 1, 0) * ( pow(c,-2)*v0*w + sig0*tau ), BND, skeleton=True) #t=0
+f.Assemble()
+
+
+
+offset = 0
+nmat = np.zeros((a.mat.height-offset,a.mat.width-offset))
+nvec = np.zeros(a.mat.width-offset)
+for i in range(a.mat.width-offset):
+	nvec[i] = f.vec[i+offset]
+	for j in range(a.mat.height-offset):
+		nmat[j,i] = a.mat[j+offset,i+offset]
+
+nmatclean = nmat[:,nmat.any(axis=1)]
+nmatclean = nmatclean[nmat.any(axis=1),:]
+nvecclean = nvec[nmat.any(axis=1)]
+solclean = np.linalg.solve(nmatclean,nvecclean)
+sol = np.zeros(a.mat.height)
+sol[nmat.any(axis=1)] = solclean
+
+
+
+gfu = GridFunction(fes, name="uDG")
+for i in range(a.mat.height-offset):
+	gfu.vec[i+offset] = sol[i]
+# gfu.vec.data = a.mat.Inverse() * f.vec
+# gradu=grad(U0)
+# Draw(sig0,mesh,'fun')
 Draw(gfu)
 
-# a = BilinearForm ( V );
-# a += SymbolicBFI ( bn*IfPos(bn, u, u.Other()) * (v-v.Other()), VOL, skeleton=True)
-# a += SymbolicBFI ( bn*IfPos(bn, u, ubnd) * v, BND, skeleton=True)
+
+
+# u = GridFunction(fes,"shapes")
+# Draw(u)
+# for i in range(2624): #126 #fes.GetNDof()):
+#     print("Draw basis function ", i)
+#     u.vec[:] = 0
+#     u.vec[i] = 1
+#     Redraw()
+#     input("press key to draw next shape function")

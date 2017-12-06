@@ -10,7 +10,7 @@ mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 c = 10
 order = 3
 # fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps = True)
-fes = FESpace("l22", mesh, order = order, dgjumps = True) #L2(mesh, order=order, flags = { "dgjumps" : True })
+fes = FESpace("l2", mesh, order = order, dgjumps = True) #L2(mesh, order=order, flags = { "dgjumps" : True })
 u = fes.TrialFunction()
 v = fes.TestFunction()
 

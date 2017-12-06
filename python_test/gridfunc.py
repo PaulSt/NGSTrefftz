@@ -5,9 +5,9 @@ from netgen.csg import unit_cube
 from netgen.geom2d import unit_square
 from trefftzngs import *
 
-# mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
+mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 # mesh = Mesh("cone/cone.vol.gz")
-mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
+# mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 Draw(mesh)
 
 c = 10
@@ -43,13 +43,13 @@ bfi = SymbolicBFI(u*v)
 #print(gfu.vec)
 #kx
 #uex = sin(kx*x+ky*y - c*t)
-# uex = sin(c*x+y)
+uex = sin(c*x+y)
 # #gfu.Set(CoefficientFunction(0))
-# gfu.Set(uex)
+gfu.Set(uex)
 #
 # #print(gfu.vec)
-# # gradu = grad(gfu)
+gradu = grad(gfu)
 # Draw(uex,mesh,'uex')
 # #Draw(gfu, mesh, 'gfu')
-# Draw(gfu)
-# Draw(gradu, mesh, 'fun')
+Draw(gfu)
+Draw(gradu, mesh, 'fun')
