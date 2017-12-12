@@ -49,7 +49,7 @@ namespace ngfem
 
     for (int d = 0; d < D; d++) // loop over derivatives/dimensions
       {
-        derindices = MakeIndices ();
+        derindices = indices;
         for (int i = 0; i < npoly; i++) // loop over indices
           {
             derindices (i, d) = derindices (i, d) - 1;
@@ -183,6 +183,74 @@ namespace ngfem
                            pow (base (count), ex (count)) * result, count - 1);
   }
 
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  template <int D>
+  void T_TrefftzElement<D>::CalcShape (const BaseMappedIntegrationPoint &mip,
+                                       BareSliceVector<> shape) const
+  {
+    FlatVector<double> point = ShiftPoint (mip.GetPoint ());
+    Vector<float> polynomial;
+
+    for (int i = 0; i < npoly; i++) // loop over indices
+      {
+        polynomial (i) = ipow_ar (point, indices.Row (i));
+      }
+    Vector<double> tempshape (nbasis);
+    tempshape = basis * polynomial;
+    for (int b = 0; b < nbasis; b++)
+      shape (b) = tempshape (b);
+  }
+
+  template <int D>
+  void T_TrefftzElement<D>::CalcDShape (const BaseMappedIntegrationPoint &mip,
+                                        SliceMatrix<> dshape) const
+  {
+    FlatVector<double> point = ShiftPoint (mip.GetPoint ());
+    Vector<float> polynomial;
+    Vector<double> tempshape (nbasis);
+    Matrix<int> derindices;
+
+    for (int d = 0; d < D; d++) // loop over derivatives/dimensions
+      {
+        derindices = indices;
+        for (int i = 0; i < npoly; i++) // loop over indices
+          {
+            derindices (i, d) = derindices (i, d) - 1;
+            polynomial (i) = ipowD_ar (d, point, derindices.Row (i));
+          }
+        dshape.Col (d) = basis * polynomial;
+        if (d == 0)
+          dshape.Col (d) *= c; // inner derivative
+      }
+    dshape *= (1.0 / elsize); // inner derivative
+  }
+
+  template <int D>
+  double T_TrefftzElement<D>::ipow_ar (FlatVector<double> base, Vec<D, int> ex,
+                                       double result, int count) const
+  {
+    return count < 0
+               ? result
+               : ipow_ar (base, ex, pow (base (count), ex (count)) * result,
+                          count - 1);
+  }
+
+  template <int D>
+  double T_TrefftzElement<D>::ipowD_ar (int der, FlatVector<double> base,
+                                        Vec<D, int> ex, double result,
+                                        int count) const
+  {
+    return ex (der) < 0   ? 0.0
+           : count == der ? ipowD_ar (
+                 der, base, ex,
+                 (ex (count) + 1) * pow (base (count), ex (count)) * result,
+                 count - 1)
+           : count < 0
+               ? result
+               : ipowD_ar (der, base, ex,
+                           pow (base (count), ex (count)) * result, count - 1);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -199,6 +267,19 @@ void ExportTrefftzElement (py::module m)
       .def (py::init<> ());
   py::class_<TrefftzElement<1, 3>, shared_ptr<TrefftzElement<1, 3>>,
              FiniteElement> (m, "TrefftzElement1", "Trefftz space for wave eq")
+      .def (py::init<> ());
+
+  py::class_<T_TrefftzElement<3>, shared_ptr<T_TrefftzElement<3>>,
+             FiniteElement> (m, "T_TrefftzElement3",
+                             "Trefftz space for wave eq")
+      .def (py::init<> ());
+  py::class_<T_TrefftzElement<2>, shared_ptr<T_TrefftzElement<2>>,
+             FiniteElement> (m, "T_TrefftzElement2",
+                             "Trefftz space for wave eq")
+      .def (py::init<> ());
+  py::class_<T_TrefftzElement<1>, shared_ptr<T_TrefftzElement<1>>,
+             FiniteElement> (m, "T_TrefftzElement1",
+                             "Trefftz space for wave eq")
       .def (py::init<> ());
 }
 #endif // NGS_PYTHON
