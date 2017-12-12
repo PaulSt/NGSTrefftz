@@ -16,7 +16,7 @@ ngmesh = ngm.Mesh()
 ngmesh.SetGeometry(unit_square)
 ngmesh.dim = 2
 # and add all the `MeshPoint`'s we will need for the final mesh. Similar to the one-dimensional mesh we store the `PointId`'s in the `pnums` array.
-N = 5
+N = 2
 pnums = []
 for i in range(N + 1):
     for j in range(N + 1):
@@ -101,10 +101,11 @@ jump_taut = ( tau - tauo ) * n_t
 
 
 a = BilinearForm(fes)
-a += SymbolicBFI( (n_t!=0) * ( pow(c,-2)*IfPos(n_t,v,vo)*(jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wt+jump_taux) ) , skeleton=True ) #space like faces
-a += SymbolicBFI( (n_x!=0) * ( mean_v*jump_taux + mean_sig*jump_wx + 0.5*jump_vx*jump_wx + 0.5*jump_sigx*jump_taux ) , skeleton=True ) #time like faces
-a += SymbolicBFI( (n_x!=0) * ( sig*n_x*w + 0.5*v*w ), BND, skeleton=True) #dirichlet boundary 'timelike'
-a += SymbolicBFI( IfPos(n_t, 1, 0) * ( pow(c,-2)*v*w + sig*tau ), BND, skeleton=True) #t=T
+# a += SymbolicBFI( (n_t!=0) * ( pow(c,-2)*IfPos(n_t,v,vo)*(jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wt+jump_taux) ) , skeleton=True ) #space like faces
+# a += SymbolicBFI( (n_x!=0) * ( mean_v*jump_taux + mean_sig*jump_wx + 0.5*jump_vx*jump_wx + 0.5*jump_sigx*jump_taux ) , skeleton=True ) #time like faces
+a += SymbolicBFI( (n_x!=0) * (sig + 0.5*v*n_x)*(w*n_x+tau*n_t), BND, skeleton=True) #dirichlet boundary 'timelike' new
+# a += SymbolicBFI( (n_t==1) * ( pow(c,-2)*v*w + sig*tau ), BND, skeleton=True) #t=T
+# a += SymbolicBFI( (n_x!=0) * ( sig*n_x*w + 0.5*v*w ), BND, skeleton=True) #dirichlet boundary 'timelike'
 a.Assemble()
 
 f = LinearForm(fes)

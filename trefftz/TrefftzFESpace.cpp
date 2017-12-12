@@ -28,30 +28,56 @@ namespace ngcomp
 		nel = ma->GetNE();
 		ndof = local_ndof * nel;
 
-		switch (D) {
-			case 1:
-			{
-				evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<1,TrefftzElement<1,3>>>>();
-				flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<1, TrefftzElement<1,3>>>>();
-				// evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<2,TrefftzElement<1,3>>>>();
-				break;
+		if(order == 3)
+		{
+			switch (D) {
+				case 1:
+				{
+					evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<1>>>();
+					flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<1, TrefftzElement<1,3>>>>();
+					// evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<2,TrefftzElement<1,3>>>>();
+					break;
+				}
+				case 2:
+				{
+			    evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<2>>>();
+					flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<2>>>();
+					// evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<2,TrefftzElement<1,3>>>>();
+					break;
+				}
+				case 3:
+				{
+					evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<3,TrefftzElement<3,3>>>>();
+			    flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<3, TrefftzElement<3,3>>>>();
+			    // evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<3, TrefftzElement<2,3>>>>();
+					break;
+				}
 			}
-			case 2:
-			{
-		    evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<2,TrefftzElement<2,3>>>>();
-				flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<2, TrefftzElement<2,3>>>>();
-				// evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<2,TrefftzElement<1,3>>>>();
-				break;
-			}
-			case 3:
-			{
-				evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<3,TrefftzElement<3,3>>>>();
-		    flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<3, TrefftzElement<3,3>>>>();
-		    // evaluator[BND] = make_shared<T_DifferentialOperator<DiffOpMappedBoundary<3, TrefftzElement<2,3>>>>();
-				break;
+		} else	{
+			switch (D) {
+				case 1:
+				{
+					evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<1>>>();
+					flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<1>>>();
+					break;
+				}
+				case 2:
+				{
+					evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<2>>>();
+					flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<2>>>();
+					break;
+				}
+				case 3:
+				{
+					evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<3>>>();
+					flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<3>>>();
+					break;
+				}
+				cout << "this seemes to work" << endl;
 			}
 		}
   }
+
 
 
 
@@ -80,45 +106,80 @@ namespace ngcomp
   {
 		auto vertices_index = ma->GetElVertices(ei);
 		// cout << "element vectice coord: \n"  << ma->GetPoint<3>(vertices_index[0]) << endl<< ma->GetPoint<3>(vertices_index[1]) <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
-		if(order != 3){cout << "order not yet supported"<<endl;}
-
-		switch (ma->GetElType(ei)) {
-			case ET_SEGM:
-			{
-				return *(new (alloc) TrefftzElement<1,3>(ET_SEGM)) ->SetWavespeed(c);
-				break;
+		if(order == 3)
+		{
+			switch (ma->GetElType(ei)) {
+				case ET_SEGM:
+				{
+					return *(new (alloc) TrefftzElement<1,3>(ET_SEGM)) ->SetWavespeed(c);
+					break;
+				}
+				case ET_QUAD:
+				{
+					return *(new (alloc) TrefftzElement<2,3>(ET_QUAD)) ->SetWavespeed(c);
+					break;
+				}
+				case ET_TRIG:
+				{
+					Vec<2> center = 0;
+					for(auto vertex : vertices_index) center += ma->GetPoint<2>(vertex);
+					center *= (1.0/3.0);
+					return *(new (alloc) TrefftzElement<2,3>(ET_TRIG)) ->SetWavespeed(c)->SetCenter(center)->SetElSize( Adiam<2>(ei) );
+					break;
+				}
+				case ET_HEX:
+				case ET_PRISM:
+				case ET_PYRAMID:
+				{
+					return *(new (alloc) TrefftzElement<3,3>(ma->GetElType(ei))) ->SetWavespeed(c);
+					break;
+				}
+				case ET_TET:
+				{
+					Vec<3> center = 0;
+					for(auto vertex : vertices_index) center += ma->GetPoint<3>(vertex);
+					center *= 0.25;
+					return *(new (alloc) TrefftzElement<3,3>(ET_TET)) ->SetWavespeed(c);// ->SetCenter(center)  ->SetElSize( Adiam<3>(ei) );
+					break;
+				}
 			}
-			case ET_QUAD:
-			{
-				return *(new (alloc) TrefftzElement<2,3>(ET_QUAD)) ->SetWavespeed(c);
-				break;
-			}
-			case ET_TRIG:
-			{
-				Vec<2> center = 0;
-				for(auto vertex : vertices_index) center += ma->GetPoint<2>(vertex);
-				center *= (1.0/3.0);
-				return *(new (alloc) TrefftzElement<2,3>(ET_TRIG)) ->SetWavespeed(c)->SetCenter(center)->SetElSize( Adiam<2>(ei) );
-				break;
-			}
-			case ET_HEX:
-			case ET_PRISM:
-			case ET_PYRAMID:
-			{
-				return *(new (alloc) TrefftzElement<3,3>(ma->GetElType(ei))) ->SetWavespeed(c);
-				break;
-			}
-			case ET_TET:
-			{
-				Vec<3> center = 0;
-				for(auto vertex : vertices_index) center += ma->GetPoint<3>(vertex);
-				center *= 0.25;
-				return *(new (alloc) TrefftzElement<3,3>(ET_TET)) ->SetWavespeed(c);// ->SetCenter(center)  ->SetElSize( Adiam<3>(ei) );
-				break;
+		} else {
+			switch (ma->GetElType(ei)) {
+				case ET_SEGM:
+				{
+					return *(new (alloc) T_TrefftzElement<1>(order, ET_SEGM)) ->SetWavespeed(c);
+					break;
+				}
+				case ET_QUAD:
+				{
+					return *(new (alloc) T_TrefftzElement<2>(order, ET_QUAD)) ->SetWavespeed(c);
+					break;
+				}
+				case ET_TRIG:
+				{
+					Vec<2> center = 0;
+					for(auto vertex : vertices_index) center += ma->GetPoint<2>(vertex);
+					center *= (1.0/3.0);
+					return *(new (alloc) T_TrefftzElement<2>(order, ET_TRIG)) ->SetWavespeed(c)->SetCenter(center)->SetElSize( Adiam<2>(ei) );
+					break;
+				}
+				case ET_HEX:
+				case ET_PRISM:
+				case ET_PYRAMID:
+				{
+					return *(new (alloc) T_TrefftzElement<3>(order, ma->GetElType(ei)) ) ->SetWavespeed(c);
+					break;
+				}
+				case ET_TET:
+				{
+					Vec<3> center = 0;
+					for(auto vertex : vertices_index) center += ma->GetPoint<3>(vertex);
+					center *= 0.25;
+					return *(new (alloc) T_TrefftzElement<3>(order, ET_TET)) ->SetWavespeed(c);// ->SetCenter(center)  ->SetElSize( Adiam<3>(ei) );
+					break;
+				}
 			}
 		}
-
-
 
 		// if (ei.VB()==BBND) throw Exception ("BBND not available in L2HighOrderFESpace2");
 		// if (ei.IsVolume())

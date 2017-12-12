@@ -6,10 +6,10 @@ from trefftzngs import *
 
 from netgen.csg import unit_cube
 
-#mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
-mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
+mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
+# mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 
-order = 3
+order = 4
 #fes = FESpace("trefftzfespace", mesh, flags = { "dgjumps" : True, "order" : 3 })
 fes = FESpace("trefftzfespace", mesh, order= 3)
 # fes = FESpace("l22", mesh, order = order, dgjumps = True) #L2(mesh, order=order, flags = { "dgjumps" : True })
