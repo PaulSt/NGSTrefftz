@@ -11,7 +11,7 @@ mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
 
 order = 4
 #fes = FESpace("trefftzfespace", mesh, flags = { "dgjumps" : True, "order" : 3 })
-fes = FESpace("trefftzfespace", mesh, order= 3)
+fes = FESpace("trefftzfespace", mesh, order=order)
 # fes = FESpace("l22", mesh, order = order, dgjumps = True) #L2(mesh, order=order, flags = { "dgjumps" : True })
 
 u = GridFunction(fes,"shapes")
@@ -30,6 +30,11 @@ Draw(u)
 
 
 # we can use the additionally exported function here
+
+# for id in mesh.Elements(VOL):
+# 	fe = fes.GetFE(id)
+
+
 for i in range(2624): #126 #fes.GetNDof()):
     print("Draw basis function ", i)
     u.vec[:] = 0

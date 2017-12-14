@@ -207,6 +207,11 @@ namespace ngfem
 		 count == der ? ipowD_ar(der, base, ex, (ex(count)+1) * pow(base(count),ex(count)) * result, count-1 ) :
 		 count < 0 ? result : ipowD_ar(der, base, ex, pow(base(count),ex(count)) * result, count-1 );
 	}
+
+
+	template class T_TrefftzElement<1>;
+	template class T_TrefftzElement<2>;
+	template class T_TrefftzElement<3>;
 }
 
 
@@ -232,18 +237,18 @@ void ExportTrefftzElement(py::module m)
 		.def(py::init<>())
 		;
 
-	py::class_<T_TrefftzElement<3>, shared_ptr<T_TrefftzElement<3>>, FiniteElement>
-		(m, "T_TrefftzElement3", "Trefftz space for wave eq")
-		.def(py::init<>())
-		;
-	py::class_<T_TrefftzElement<2>, shared_ptr<T_TrefftzElement<2>>, FiniteElement>
-		(m, "T_TrefftzElement2", "Trefftz space for wave eq")
-		.def(py::init<>())
-		;
-	py::class_<T_TrefftzElement<1>, shared_ptr<T_TrefftzElement<1>>, FiniteElement>
-		(m, "T_TrefftzElement1", "Trefftz space for wave eq")
-		.def(py::init<>())
-		;
+	// py::class_<T_TrefftzElement<3>, shared_ptr<T_TrefftzElement<3>>, FiniteElement>
+	// 	(m, "T_TrefftzElement3", "Trefftz space for wave eq")
+	// 	.def(py::init<>())
+	// 	;
+	// py::class_<T_TrefftzElement<2>, shared_ptr<T_TrefftzElement<2>>, FiniteElement>
+	// 	(m, "T_TrefftzElement2", "Trefftz space for wave eq")
+	// 	.def(py::init<>())
+	// 	;
+	// py::class_<T_TrefftzElement<1>, shared_ptr<T_TrefftzElement<1>>, FiniteElement>
+	// 	(m, "T_TrefftzElement1", "Trefftz space for wave eq")
+	// 	.def(py::init<>())
+	// 	;
 
 }
 #endif // NGS_PYTHON
