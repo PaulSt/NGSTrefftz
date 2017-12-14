@@ -90,7 +90,7 @@ namespace ngfem
   template <int D> class T_TrefftzElement : public ScalarMappedElement<D>
   {
   private:
-    const int ord;
+    const int ord = 4;
     const int nbasis
         = BinCoeff (D - 1 + ord, ord) + BinCoeff (D - 1 + ord - 1, ord - 1);
     const int npoly = BinCoeff (D + ord, ord);
@@ -103,16 +103,20 @@ namespace ngfem
     ELEMENT_TYPE eltype;
 
   public:
-    T_TrefftzElement () : ScalarMappedElement<D> (nbasis, 1), ord (1) { ; }
-    T_TrefftzElement (int aord)
-        : ScalarMappedElement<D> (nbasis, aord), ord (aord)
+    T_TrefftzElement () : ScalarMappedElement<D> (nbasis, ord)
+    {
+      cout << "helloord1" << endl;
+    }
+    T_TrefftzElement (int aord) : ScalarMappedElement<D> (nbasis, ord)
     {
       eltype = ET_TRIG;
+      cout << "hello" << endl;
     }
     T_TrefftzElement (int aord, ELEMENT_TYPE aeltype)
-        : ScalarMappedElement<D> (nbasis, aord), ord (aord)
+        : ScalarMappedElement<D> (nbasis, ord)
     {
       eltype = aeltype;
+      cout << "hello" << endl;
     }
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
