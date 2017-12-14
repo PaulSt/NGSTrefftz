@@ -160,7 +160,7 @@ namespace ngfem
                                   BareSliceVector<> shape) const
   {
 		FlatVector<double> point = ShiftPoint(mip.GetPoint());
-		Vector<float> polynomial;
+		Vector<float> polynomial(npoly);
 
 		for(int i=0; i<npoly; i++)//loop over indices
 		{
@@ -176,7 +176,7 @@ namespace ngfem
 																		SliceMatrix<> dshape) const
 	{
 		FlatVector<double> point = ShiftPoint(mip.GetPoint());
-		Vector<float> polynomial;
+		Vector<float> polynomial(npoly);
 		Vector<double> tempshape(nbasis);
 		Matrix<int> derindices;
 

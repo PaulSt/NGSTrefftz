@@ -106,7 +106,6 @@ namespace ngcomp
   {
 		auto vertices_index = ma->GetElVertices(ei);
 		// cout << "element vectice coord: \n"  << ma->GetPoint<3>(vertices_index[0]) << endl<< ma->GetPoint<3>(vertices_index[1]) <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
-		cout << "order" << order << endl;
 		if(order == 3)
 		{
 			switch (ma->GetElType(ei)) {
@@ -146,7 +145,6 @@ namespace ngcomp
 			}
 		} else {
 			switch (ma->GetElType(ei)) {
-				cout << "hello" << endl;
 				case ET_SEGM:
 				{
 					return *(new (alloc) T_TrefftzElement<1>(order, ET_SEGM)) ->SetWavespeed(c);
