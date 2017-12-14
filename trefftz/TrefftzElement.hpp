@@ -90,33 +90,29 @@ namespace ngfem
   template <int D> class T_TrefftzElement : public ScalarMappedElement<D>
   {
   private:
-    const int ord = 4;
+    const int ord;
     const int nbasis
         = BinCoeff (D - 1 + ord, ord) + BinCoeff (D - 1 + ord - 1, ord - 1);
     const int npoly = BinCoeff (D + ord, ord);
     const Matrix<int> indices = MakeIndices ();
     const Matrix<double> basis = TrefftzBasis ();
-    ;
     Vec<D> elcenter = 0;
     float elsize = 1;
     float c = 1;
     ELEMENT_TYPE eltype;
 
   public:
-    T_TrefftzElement () : ScalarMappedElement<D> (nbasis, ord)
-    {
-      cout << "helloord1" << endl;
-    }
-    T_TrefftzElement (int aord) : ScalarMappedElement<D> (nbasis, ord)
-    {
-      eltype = ET_TRIG;
-      cout << "hello" << endl;
-    }
+    T_TrefftzElement () : ScalarMappedElement<D> (3, 1), ord (1) { ; }
+    // T_TrefftzElement(int aord) : ScalarMappedElement<D>(nbasis, ord) {
+    // eltype = ET_TRIG; cout << "hello" << endl; }
     T_TrefftzElement (int aord, ELEMENT_TYPE aeltype)
-        : ScalarMappedElement<D> (nbasis, ord)
+        : ord (aord), ScalarMappedElement<D> (
+                          BinCoeff (D - 1 + aord, aord)
+                              + BinCoeff (D - 1 + aord - 1, aord - 1),
+                          aord),
+          eltype (aeltype)
     {
-      eltype = aeltype;
-      cout << "hello" << endl;
+      ;
     }
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
@@ -163,7 +159,8 @@ namespace ngfem
 
     constexpr Matrix<double> TrefftzBasis () const
     {
-      Matrix<double> temp_basis = 0;
+      Matrix<double> temp_basis (nbasis, npoly);
+      temp_basis = 0;
       for (int l = 0; l < nbasis; l++) // loop over basis functions
         {
           for (int i = 0; i < npoly;
@@ -223,7 +220,7 @@ namespace ngfem
 
     constexpr Matrix<int> MakeIndices ()
     {
-      Matrix<int> indice = 0;
+      Matrix<int> indice (npoly, D);
       Vec<D, int> numbers = 0;
       int count = 0;
       MakeIndices_inner (indice, numbers, count);

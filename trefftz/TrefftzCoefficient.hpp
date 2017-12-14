@@ -7,7 +7,7 @@ namespace ngfem
   class TrefftzCoefficientFunction : public CoefficientFunction
   {
     int basisfunction;
-    TrefftzElement<3, 3> treff;
+    T_TrefftzElement<3> treff = T_TrefftzElement<3> (4, ET_TRIG);
 
   public:
     TrefftzCoefficientFunction () : CoefficientFunction (1) { ; }
