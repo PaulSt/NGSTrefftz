@@ -25,8 +25,12 @@ namespace ngfem
 			constexpr static int IndexMap(Vec<D, int> index);
 
 		public:
-			TrefftzElement() : ScalarMappedElement<D>(nbasis,ord) { eltype = ET_TRIG;} //BaseScalarMappedElement(nbasis,ord) { ;	}//
-			TrefftzElement(ELEMENT_TYPE aeltype) : ScalarMappedElement<D>(nbasis,ord) { eltype = aeltype;} //BaseScalarMappedElement(nbasis,ord) { ;	}//
+			TrefftzElement()
+				: ScalarMappedElement<D>(nbasis,ord), //BaseScalarMappedElement(nbasis,ord)
+					eltype(ET_TRIG) {;}
+			TrefftzElement(ELEMENT_TYPE aeltype)
+				: ScalarMappedElement<D>(nbasis,ord),
+					eltype(aeltype) {;}
 
 			virtual ELEMENT_TYPE ElementType() const { return eltype; }
 
@@ -67,10 +71,18 @@ namespace ngfem
 			ELEMENT_TYPE eltype;
 
 		public:
-			T_TrefftzElement() : ScalarMappedElement<D>(3, 1), ord(1)		{;}
-			// T_TrefftzElement(int aord) : ScalarMappedElement<D>(nbasis, ord) { eltype = ET_TRIG; cout << "hello" << endl; }
+			T_TrefftzElement()
+				: ord(1),
+					ScalarMappedElement<D>(3, 1),
+					eltype(ET_TRIG){;}
+			T_TrefftzElement(int aord)
+				:	ord(aord),
+					ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
+					eltype(ET_TRIG) {;}
 			T_TrefftzElement(int aord, ELEMENT_TYPE aeltype)
-			: ord(aord), ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord), eltype(aeltype) { ;}
+				: ord(aord),
+					ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
+					eltype(aeltype) { ;}
 
 			virtual ELEMENT_TYPE ElementType() const { return eltype; }
 
