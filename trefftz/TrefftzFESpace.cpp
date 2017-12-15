@@ -202,9 +202,10 @@ namespace ngcomp
               for (auto vertex : vertices_index)
                 center += ma->GetPoint<2> (vertex);
               center *= (1.0 / 3.0);
-              return *(new (alloc) T_TrefftzElement<2> (
-                  order, ET_TRIG)); //->SetWavespeed(c)->SetCenter(center)->SetElSize(
-                                    //Adiam<2>(ei) );
+              return *(new (alloc) T_TrefftzElement<2> (order, ET_TRIG))
+                          ->SetWavespeed (c)
+                          ->SetCenter (center)
+                          ->SetElSize (Adiam<2> (ei));
               break;
             }
           case ET_HEX:
