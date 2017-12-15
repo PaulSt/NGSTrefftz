@@ -76,7 +76,7 @@ namespace ngfem
 			}
 			if(sum<=ord){
 				indice.Row(count++) = numbers;
-				//cout << IndexMap(indices.Row(count-1)) << ": " << indices.Row(count-1) << endl;
+				//cout << IndexMap(indice.Row(count-1)) << ": " << indice.Row(count-1) << endl;
 			}
 		}
 	}

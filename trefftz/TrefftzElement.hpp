@@ -82,7 +82,7 @@ namespace ngfem
 			T_TrefftzElement(int aord, ELEMENT_TYPE aeltype)
 				: ord(aord),
 					ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
-					eltype(aeltype) { ;}
+					eltype(aeltype) {;}
 
 			virtual ELEMENT_TYPE ElementType() const { return eltype; }
 
