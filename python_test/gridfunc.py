@@ -11,7 +11,7 @@ mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 Draw(mesh)
 
 c = 10
-order = 3
+order = 4
 fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c)
 # fes = L2(mesh, order=order, flags = { "dgjumps" : True })
 

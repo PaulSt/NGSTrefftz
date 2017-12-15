@@ -178,7 +178,7 @@ namespace ngfem
 		FlatVector<double> point = ShiftPoint(mip.GetPoint());
 		Vector<float> polynomial(npoly);
 		Vector<double> tempshape(nbasis);
-		Matrix<int> derindices;
+		Matrix<int> derindices(npoly,D);
 
 		for(int d=0;d<D;d++)  //loop over derivatives/dimensions
 		{

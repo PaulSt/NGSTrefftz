@@ -51,7 +51,7 @@ print("boundaries" + str(mesh.GetBoundaries()))
 
 
 c=1
-order = 3
+order = 2
 
 # fes = L2(mesh, order = order, dgjumps=True)#  dirichlet="default "FESpace("l22", mesh, order = order, dgjumps = True) #
 fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True)
