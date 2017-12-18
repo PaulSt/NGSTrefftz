@@ -1,4 +1,8 @@
 #########################################################################################################################################
+N = 2
+c=1
+order = 1
+#########################################################################################################################################
 import netgen.meshing as ngm
 from netgen.geom2d import unit_square
 from ngsolve import *
@@ -11,7 +15,6 @@ ngmesh = ngm.Mesh()
 ngmesh.SetGeometry(unit_square)
 ngmesh.dim = 2
 # and add all the `MeshPoint`'s we will need for the final mesh. Similar to the one-dimensional mesh we store the `PointId`'s in the `pnums` array.
-N = 2
 pnums = []
 for i in range(N + 1):
     for j in range(N + 1):
@@ -42,17 +45,12 @@ mesh = Mesh(ngmesh)
 Draw(mesh)
 # print("boundaries" + str(mesh.GetBoundaries()))
 #########################################################################################################################################
-
 from ngsolve import *
 from trefftzngs import *
 import numpy as np
 
-c=1
-order = 1
-
 # fes = L2(mesh, order = order, dgjumps=True)#  dirichlet="default "FESpace("l22", mesh, order = order, dgjumps = True) #
 fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True)
-
 
 truesol = sin( c*x + y )
 U0 = GridFunction(fes)
@@ -81,23 +79,23 @@ n = specialcf.normal(2)
 n_t = n[0]
 n_x = n[1]
 
-mean_v = 0.5*(v+vo)
+mean_v = 0.5*(v+vo) 
 mean_w = 0.5*(w+wo)
 mean_sig = 0.5*(sig+sigo)
 mean_tau = 0.5*(tau+tauo)
 
-jump_vx = ( v - vo ) * n_x
-jump_wx = ( w - wo ) * n_x
-jump_sigx = ( sig - sigo ) * n_x
-jump_taux = ( tau - tauo ) * n_x
+jump_vx = ( v - vo ) #* n_x
+jump_wx = ( w - wo ) #* n_x
+jump_sigx = ( sig - sigo ) #* n_x
+jump_taux = ( tau - tauo ) #* n_x
 
-jump_vt = ( v - vo ) * n_t
-jump_wt = ( w - wo ) * n_t
-jump_sigt = ( sig - sigo ) * n_t
-jump_taut = ( tau - tauo ) * n_t
+jump_vt = ( v - vo ) #* n_t
+jump_wt = ( w - wo ) #* n_t
+jump_sigt = ( sig - sigo ) #* n_t
+jump_taut = ( tau - tauo ) #* n_t
 
-timelike = IfPos(n_t,0,IfPos(-n_t,0,1))
-spacelike = IfPos(n_x,0,IfPos(-n_x,0,1))
+timelike = IfPos(n_t,0,IfPos(-n_t,0,1)) # n_t=0
+spacelike = IfPos(n_x,0,IfPos(-n_x,0,1)) # n_x=0
 
 
 a = BilinearForm(fes)
@@ -126,7 +124,7 @@ nmatclean = nmat[:,nmat.any(axis=0)]
 nmatclean = nmatclean[nmat.any(axis=1),:]
 nvecclean = nvec[nmat.any(axis=1)]
 
-print(nmatclean)
+print(nmat)
 
 solclean = np.linalg.solve(nmatclean,nvecclean)
 sol = np.zeros(a.mat.height)
