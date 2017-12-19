@@ -1,5 +1,7 @@
 .gitignore
 make/
 trefftz/debricated/
+trefftz/l2hofespace2.cpp
+trefftz/l2hofespace2.hpp
 hpw/
 python_test/cone/
