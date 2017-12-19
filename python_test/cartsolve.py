@@ -79,7 +79,7 @@ n = specialcf.normal(2)
 n_t = n[0]
 n_x = n[1]
 
-mean_v = 0.5*(v+vo) 
+mean_v = 0.5*(v+vo)
 mean_w = 0.5*(w+wo)
 mean_sig = 0.5*(sig+sigo)
 mean_tau = 0.5*(tau+tauo)
@@ -99,7 +99,7 @@ spacelike = IfPos(n_x,0,IfPos(-n_x,0,1)) # n_x=0
 
 
 a = BilinearForm(fes)
-a += SymbolicBFI( spacelike * ( pow(c,-2)*IfPos(n_t,v,vo)*(jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ) , skeleton=True ) #space like faces
+a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ) , skeleton=True ) #space like faces
 a += SymbolicBFI( timelike 	* ( mean_v*jump_taux + mean_sig*jump_wx + 0.5*jump_vx*jump_wx + 0.5*jump_sigx*jump_taux ) , skeleton=True ) #time like faces
 a += SymbolicBFI( spacelike * IfPos(n_t,1,0) * ( pow(c,-2)*v*w + sig*tau ), BND, skeleton=True) #t=T
 a += SymbolicBFI( timelike 	* ( sig*n_x*w + 0.5*v*w ), BND, skeleton=True) #dirichlet boundary 'timelike'
@@ -109,7 +109,6 @@ f = LinearForm(fes)
 f += SymbolicLFI( spacelike * IfPos(-n_t,1,0) * ( pow(c,-2)*v0*w + sig0*tau ), BND, skeleton=True) #t=0
 f += SymbolicLFI( timelike 	* ( truesol*(0.5*w-tau*n_x) ), BND, skeleton=True) #dirichlet boundary 'timelike'
 f.Assemble()
-
 
 
 offset = 0
