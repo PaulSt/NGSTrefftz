@@ -17,7 +17,7 @@ add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
 	trefftz/DiffOpMapped.hpp
 	trefftz/TrefftzFESpace.cpp
 	trefftz/ScalarMappedElement.cpp
-	trefftz/l2hofespace2.cpp
+#	trefftz/l2hofespace2.cpp
   )
 
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
