@@ -41,7 +41,10 @@ for i in range(N):
    ngmesh.Add(ngm.Element1D([pnums[i], pnums[i + 1]], index=2))
    ngmesh.Add(ngm.Element1D([pnums[i + N * (N + 1)], pnums[i + 1 + N * (N + 1)]], index=2))
 
+
 mesh = Mesh(ngmesh)
+
+# mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
 Draw(mesh)
 # print("boundaries" + str(mesh.GetBoundaries()))
 #########################################################################################################################################
@@ -49,17 +52,20 @@ from ngsolve import *
 from trefftzngs import *
 import numpy as np
 
-# fes = L2(mesh, order = order, dgjumps=True)#  dirichlet="default "FESpace("l22", mesh, order = order, dgjumps = True) #
 fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True)
 
-truesol = sin( c*x + y )
+truesol = CoefficientFunction(sin( c*x + y ))
 U0 = GridFunction(fes)
 U0.Set(truesol)
+# Draw(U0,mesh,'truesol')
 v0 = grad(U0)[0]
 sig0 = -grad(U0)[1]
 # Draw(U0,mesh,'U0')
+# input()
 # Draw(sig0,mesh,'sig0')
+# input()
 # Draw(v0,mesh,'v0')
+# input()
 
 U = fes.TrialFunction()
 V = fes.TestFunction()
@@ -76,48 +82,46 @@ tauo = -grad(V.Other())[1]
 
 h = specialcf.mesh_size
 n = specialcf.normal(2)
-n_t = n[0]
-n_x = n[1]
+n_t = n[0]/Norm(n)
+n_x = n[1]/Norm(n)
 
 mean_v = 0.5*(v+vo)
 mean_w = 0.5*(w+wo)
 mean_sig = 0.5*(sig+sigo)
 mean_tau = 0.5*(tau+tauo)
 
-jump_vx = ( v - vo ) #* n_x
-jump_wx = ( w - wo ) #* n_x
-jump_sigx = ( sig - sigo ) #* n_x
-jump_taux = ( tau - tauo ) #* n_x
+jump_vx = ( v - vo ) * n_x
+jump_wx = ( w - wo ) * n_x
+jump_sigx = ( sig - sigo ) * n_x
+jump_taux = ( tau - tauo ) * n_x
 
-jump_vt = ( v - vo ) #* n_t
-jump_wt = ( w - wo ) #* n_t
-jump_sigt = ( sig - sigo ) #* n_t
-jump_taut = ( tau - tauo ) #* n_t
+jump_vt = ( v - vo ) * n_t
+jump_wt = ( w - wo ) * n_t
+jump_sigt = ( sig - sigo ) * n_t
+jump_taut = ( tau - tauo ) * n_t8
 
-timelike = IfPos(n_t,0,IfPos(-n_t,0,1)) # n_t=0
-spacelike = IfPos(n_x,0,IfPos(-n_x,0,1)) # n_x=0
-
+timelike = n_x**2 #IfPos(n_t,0,IfPos(-n_t,0,1)) # n_t=0
+spacelike = n_t**2 #IfPos(n_x,0,IfPos(-n_x,0,1)) # n_x=0
 
 a = BilinearForm(fes)
-a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ) , skeleton=True ) #space like faces
-a += SymbolicBFI( timelike 	* ( mean_v*jump_taux + mean_sig*jump_wx + 0.5*jump_vx*jump_wx + 0.5*jump_sigx*jump_taux ) , skeleton=True ) #time like faces
-a += SymbolicBFI( spacelike * IfPos(n_t,1,0) * ( pow(c,-2)*v*w + sig*tau ), BND, skeleton=True) #t=T
+a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ) ,VOL,  skeleton=True ) #space like faces
+a += SymbolicBFI( timelike 	* ( mean_v*jump_taux + mean_sig*jump_wx + 0.5*jump_vx*jump_wx + 0.5*jump_sigx*jump_taux ) ,VOL, skeleton=True ) #time like faces
+a += SymbolicBFI( spacelike * x * ( pow(c,-2)*v*w + sig*tau ), BND, skeleton=True) #t=T
 a += SymbolicBFI( timelike 	* ( sig*n_x*w + 0.5*v*w ), BND, skeleton=True) #dirichlet boundary 'timelike'
 a.Assemble()
 
 f = LinearForm(fes)
-f += SymbolicLFI( spacelike * IfPos(-n_t,1,0) * ( pow(c,-2)*v0*w + sig0*tau ), BND, skeleton=True) #t=0
+f += SymbolicLFI( spacelike * (1-x) * ( pow(c,-2)*v0*w + sig0*tau ), BND, skeleton=True) #t=0
 f += SymbolicLFI( timelike 	* ( truesol*(0.5*w-tau*n_x) ), BND, skeleton=True) #dirichlet boundary 'timelike'
 f.Assemble()
 
 
-offset = 0
-nmat = np.zeros((a.mat.height-offset,a.mat.width-offset))
-nvec = np.zeros(a.mat.width-offset)
-for i in range(a.mat.width-offset):
-	nvec[i] = f.vec[i+offset]
-	for j in range(a.mat.height-offset):
-		nmat[j,i] = a.mat[j+offset,i+offset]
+nmat = np.zeros((a.mat.height,a.mat.width))
+nvec = np.zeros(a.mat.width)
+for i in range(a.mat.width):
+	nvec[i] = f.vec[i]
+	for j in range(a.mat.height):
+		nmat[j,i] = a.mat[j,i]
 
 nmatclean = nmat[:,nmat.any(axis=0)]
 nmatclean = nmatclean[nmat.any(axis=1),:]
@@ -128,16 +132,16 @@ print(nmat)
 solclean = np.linalg.solve(nmatclean,nvecclean)
 sol = np.zeros(a.mat.height)
 sol[nmat.any(axis=1)] = solclean
-
+# print(nmat.any(axis=1))
 
 
 gfu = GridFunction(fes, name="uDG")
-for i in range(a.mat.height-offset):
-	gfu.vec[i+offset] = sol[i]
+for i in range(a.mat.height):
+	gfu.vec[i] = sol[i]
 # gfu.vec.data = a.mat.Inverse() * f.vec
 # gradu=grad(U0)
 # Draw(sig0,mesh,'fun')
-Draw(gfu)
+Draw(gfu,mesh,'sol')
 
 
 # u = GridFunction(fes,"shapes")

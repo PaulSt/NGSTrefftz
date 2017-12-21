@@ -90,9 +90,9 @@ namespace ngcomp
 
   void TrefftzFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) const
   {
+		dnums.SetSize(0);
 		if (!DefinedOn (ei) || ei.VB() != VOL) return;
 		// int n_vert = ma->GetNV();		int n_edge = ma->GetNEdges();		int n_cell = ma->GetNE(); Ngs_Element ngel = ma->GetElement (ei);
-		dnums.SetSize(0);
 		for (int j = ei.Nr()*local_ndof; j<local_ndof*(ei.Nr()+1); j++)
 		{
 			dnums.Append (j);
@@ -124,7 +124,7 @@ namespace ngcomp
 					Vec<2> center = 0;
 					for(auto vertex : vertices_index) center += ma->GetPoint<2>(vertex);
 					center *= (1.0/3.0);
-					return *(new (alloc) TrefftzElement<2,3>(ET_TRIG)) ->SetWavespeed(c)->SetCenter(center)->SetElSize( Adiam<2>(ei) );
+					return *(new (alloc) TrefftzElement<2,3>(ET_TRIG)) ->SetWavespeed(c);//->SetCenter(center)->SetElSize( Adiam<2>(ei) );
 					break;
 				}
 				case ET_HEX:
@@ -160,7 +160,7 @@ namespace ngcomp
 					Vec<2> center = 0;
 					for(auto vertex : vertices_index) center += ma->GetPoint<2>(vertex);
 					center *= (1.0/3.0);
-					return *(new (alloc) T_TrefftzElement<2>(order, ET_TRIG))->SetWavespeed(c)->SetCenter(center)->SetElSize( Adiam<2>(ei) );
+					return *(new (alloc) T_TrefftzElement<2>(order, ET_TRIG))->SetWavespeed(c);//->SetCenter(center)->SetElSize( Adiam<2>(ei) );
 					break;
 				}
 				case ET_HEX:
