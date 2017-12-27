@@ -1,7 +1,7 @@
 #########################################################################################################################################
-N = 10
+N = 2
 c=1
-order = 3
+order = 1
 #########################################################################################################################################
 import netgen.meshing as ngm
 from netgen.geom2d import unit_square
@@ -57,8 +57,8 @@ fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True
 truesol = CoefficientFunction(sin( c*x + y ))
 U0 = GridFunction(fes)
 U0.Set(truesol)
-v0 = grad(U0)[0]
-sig0 = -grad(U0)[1]
+v0 = cos(x+y)#grad(U0)[0]
+sig0 = -cos(x+y)#-grad(U0)[1]
 Draw(U0,mesh,'U0')
 input()
 # Draw(sig0,mesh,'sig0')
@@ -102,17 +102,20 @@ jump_taut = ( tau - tauo ) * n_t
 timelike = n_x**2 #IfPos(n_t,0,IfPos(-n_t,0,1)) # n_t=0
 spacelike = n_t**2 #IfPos(n_x,0,IfPos(-n_x,0,1)) # n_x=0
 
+alpha = 0.5
+beta = 0.5
+
 a = BilinearForm(fes)
 # a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ) ,VOL,  skeleton=True ) #space like faces
-a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ) ,VOL,  skeleton=True ) #space like faces
-a += SymbolicBFI( timelike 	* ( mean_v*jump_taux + mean_sig*jump_wx + 0.5*jump_vx*jump_wx + 0.5*jump_sigx*jump_taux ) ,VOL, skeleton=True ) #time like faces
+a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ) ,VOL,  skeleton=True ) #space like faces, no jump in x since horizontal
+a += SymbolicBFI( timelike 	* ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ) ,VOL, skeleton=True ) #time like faces
 a += SymbolicBFI( spacelike * IfPos(n_t,1,0) * ( pow(c,-2)*v*w + sig*tau ), BND, skeleton=True) #t=T (or *x)
-a += SymbolicBFI( timelike 	* ( sig*n_x*w + 0.5*v*w ), BND, skeleton=True) #dirichlet boundary 'timelike'
+a += SymbolicBFI( timelike 	* ( sig*n_x*w + alpha*v*w ), BND, skeleton=True) #dirichlet boundary 'timelike'
 a.Assemble()
 
 f = LinearForm(fes)
 f += SymbolicLFI( spacelike * IfPos(-n_t,1,0) *  ( pow(c,-2)*v0*w + sig0*tau ), BND, skeleton=True) #t=0 (or *(1-x))
-f += SymbolicLFI( timelike 	* ( v0 * (0.5*w-tau*n_x) ), BND, skeleton=True) #dirichlet boundary 'timelike'
+f += SymbolicLFI( timelike 	* ( v0 * (alpha*w - tau*n_x) ), BND, skeleton=True) #dirichlet boundary 'timelike'
 f.Assemble()
 
 
