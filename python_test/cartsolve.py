@@ -1,7 +1,7 @@
 #########################################################################################################################################
 N = 6
 c=1
-order = 4
+order = 3
 #########################################################################################################################################
 import netgen.meshing as ngm
 from netgen.geom2d import unit_square
@@ -130,8 +130,9 @@ nmatclean = nmat[nmat.any(axis=0),:]
 nmatclean = nmatclean[:,nmat.any(axis=1)]
 nvecclean = nvec[nmat.any(axis=1)]
 
-print(nmat)
-print(nvec)
+print("cond nmat: ", np.linalg.cond(nmatclean))
+# print(nmat)
+# print(nvec)
 
 solclean = np.linalg.solve(nmatclean,nvecclean)
 sol = np.zeros(a.mat.height)

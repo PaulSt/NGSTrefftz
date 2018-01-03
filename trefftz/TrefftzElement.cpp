@@ -6,6 +6,28 @@
 namespace ngfem
 {
 	template<int D>
+	T_TrefftzElement<D> ::T_TrefftzElement()
+		: ScalarMappedElement<D>(D+1, 1),
+			ord(1),
+			nbasis(D+1),
+			npoly(D+1),
+			indices(MakeIndices()),
+			basis(TrefftzBasis()),
+			eltype(ET_TRIG)
+			{;}
+
+	template<int D>
+  T_TrefftzElement<D> ::T_TrefftzElement(int aord)
+		: ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
+			ord(aord),
+			nbasis(BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1)),
+			npoly(BinCoeff(D + ord, ord)),
+			indices(MakeIndices()),
+			basis(TrefftzBasis()),
+			eltype(ET_TRIG)
+			{;}
+
+	template<int D>
   T_TrefftzElement<D> ::T_TrefftzElement(int aord, ELEMENT_TYPE aeltype)
 		: ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
 			ord(aord),
@@ -15,6 +37,7 @@ namespace ngfem
 			basis(TrefftzBasis()),
 			eltype(aeltype)
 			{;}
+
 
 
 	template<int D>
@@ -55,6 +78,10 @@ namespace ngfem
 		}
 		dshape *= (1.0/elsize); //inner derivative
 	}
+
+	template<int D>
+	FlatVector<double> T_TrefftzElement<D> :: ShiftPoint(FlatVector<double> point) const
+	{ point -= elcenter; point *= (1.0/elsize); point(0) *= c; return point; }
 
 
 
@@ -158,8 +185,6 @@ namespace ngfem
 }
 
 
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -178,6 +203,5 @@ void ExportTrefftzElement(py::module m)
 	// 	(m, "T_TrefftzElement1", "Trefftz space for wave eq")
 	// 	.def(py::init<>())
 	// 	;
-
 }
 #endif // NGS_PYTHON
