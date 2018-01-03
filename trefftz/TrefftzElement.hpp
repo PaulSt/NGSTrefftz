@@ -21,6 +21,8 @@ namespace ngfem
     ELEMENT_TYPE eltype;
 
   public:
+    T_TrefftzElement ();
+    T_TrefftzElement (int aord);
     T_TrefftzElement (int aord, ELEMENT_TYPE aeltype);
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
@@ -51,32 +53,21 @@ namespace ngfem
       return this;
     }
 
-    FlatVector<double> ShiftPoint (FlatVector<double> point) const
-    {
-      point -= elcenter;
-      point *= (1.0 / elsize);
-      point (0) *= c;
-      return point;
-    }
-
-    double ipow_ar (FlatVector<double> base, Vec<D, int> ex, double result = 1,
-                    int count = D - 1) const;
-
-    double ipowD_ar (int der, FlatVector<double> base, Vec<D, int> ex,
-                     double result = 1, int count = D - 1) const;
-
-    constexpr Matrix<double> TrefftzBasis () const;
-
   protected:
+    FlatVector<double> ShiftPoint (FlatVector<double> point) const;
+
     constexpr void
     MakeIndices_inner (Matrix<int> &indice, Vec<D, int> &numbers, int &count,
                        int dim = D);
-
     constexpr Matrix<int> MakeIndices ();
 
     constexpr int IndexMap (Vec<D, int> index) const;
+    double ipow_ar (FlatVector<double> base, Vec<D, int> ex, double result = 1,
+                    int count = D - 1) const;
+    double ipowD_ar (int der, FlatVector<double> base, Vec<D, int> ex,
+                     double result = 1, int count = D - 1) const;
+    constexpr Matrix<double> TrefftzBasis () const;
   };
-
 }
 
 #ifdef NGS_PYTHON
