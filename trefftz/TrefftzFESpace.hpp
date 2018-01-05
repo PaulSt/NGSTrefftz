@@ -13,6 +13,7 @@ namespace ngcomp
     int nvert;
     int local_ndof;
     float c = 1;
+    bool testshift = false;
 
   public:
     /*
@@ -29,15 +30,12 @@ namespace ngcomp
     virtual void GetDofNrs (ElementId ei, Array<DofId> &dnums) const;
     virtual FiniteElement &GetFE (ElementId ei, Allocator &alloc) const;
 
-    // int GetDim() const { return local_ndof; }
-
-    template <int D> double Adiam (ElementId ei) const;
-
     virtual size_t GetNDof () const throw () override { return ndof; }
 
   protected:
-    template <ELEMENT_TYPE ET>
-    FiniteElement &T_GetFE (int elnr, Allocator &alloc) const;
+    template <int D> double Adiam (ElementId ei) const;
+
+    template <int D> Vec<D> ElCenter (ElementId ei) const;
   };
 }
 
