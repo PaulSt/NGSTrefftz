@@ -24,6 +24,7 @@ namespace ngcomp
 
     order = int(flags.GetNumFlag ("order", 3));//flags.GetDefineFlag ("order");
 		c = flags.GetNumFlag ("wavespeed", 1);
+		testshift = flags.GetNumFlag ("testshift", 0);
 
 		local_ndof = (BinCoeff(D-1 + order, order) + BinCoeff(D-1 + order-1, order-1));
 		nel = ma->GetNE();
@@ -88,31 +89,18 @@ namespace ngcomp
 				break;
 			}
 			case ET_QUAD:
-			{
-				return *(new (alloc) T_TrefftzElement<2>(order, ET_QUAD)) ->SetWavespeed(c);
-				break;
-			}
 			case ET_TRIG:
 			{
-				Vec<2> center = 0;
-				for(auto vertex : vertices_index) center += ma->GetPoint<2>(vertex);
-				center *= (1.0/3.0);
-				return *(new (alloc) T_TrefftzElement<2>(order, ET_TRIG))->SetWavespeed(c);//->SetCenter(center)->SetElSize( Adiam<2>(ei) );
+				if(testshift == true) return *(new (alloc) T_TrefftzElement<2>(order, ma->GetElType(ei))) ->SetWavespeed(c) ->SetCenter(ElCenter<2>(ei))->SetElSize( Adiam<2>(ei) );
+				return *(new (alloc) T_TrefftzElement<2>(order, ma->GetElType(ei))) ->SetWavespeed(c);
 				break;
 			}
 			case ET_HEX:
 			case ET_PRISM:
 			case ET_PYRAMID:
-			{
-				return *(new (alloc) T_TrefftzElement<3>(order, ma->GetElType(ei)) ) ->SetWavespeed(c);
-				break;
-			}
 			case ET_TET:
 			{
-				Vec<3> center = 0;
-				for(auto vertex : vertices_index) center += ma->GetPoint<3>(vertex);
-				center *= 0.25;
-				return *(new (alloc) T_TrefftzElement<3>(order, ET_TET)) ->SetWavespeed(c);// ->SetCenter(center)  ->SetElSize( Adiam<3>(ei) );
+				return *(new (alloc) T_TrefftzElement<3>(order, ma->GetElType(ei))) ->SetWavespeed(c);
 				break;
 			}
 		}
@@ -134,6 +122,17 @@ namespace ngcomp
 			}
 		}
 		return anisotropicdiam;
+	}
+
+	template<int D>
+	Vec<D> TrefftzFESpace :: ElCenter(ElementId ei) const
+	{
+		Vec<D> center = 0;
+		auto vertices_index = ma->GetElVertices(ei);
+		for(auto vertex : vertices_index) center += ma->GetPoint<D>(vertex);
+		center *= (1.0/vertices_index.Size());
+		// cout << vertices_index.Size() << endl;
+		return center;
 	}
 
   /*
