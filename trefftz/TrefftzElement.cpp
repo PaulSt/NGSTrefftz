@@ -63,16 +63,12 @@ namespace ngfem
 	{
 		FlatVector<double> point = ShiftPoint(mip.GetPoint());
 		Vector<double> polynomial(npoly);
-		Vector<double> tempshape(nbasis);
-		Matrix<int> derindices(npoly,D);
 
 		for(int d=0;d<D;d++)  //loop over derivatives/dimensions
 		{
-			derindices = indices;
 			for(int i=0;i<npoly;i++)//loop over indices
 			{
-				derindices(i,d) = derindices(i,d) - 1;
-				polynomial(i) = ipowD_ar(d,point,derindices.Row(i));
+				polynomial(i) = ipowD_ar(d,point,indices.Row(i));
 			}
 			dshape.Col(d) = basis * polynomial;
 			if(d==0) dshape.Col(d) *= c; //inner derivative
@@ -176,8 +172,8 @@ namespace ngfem
 	template<int D>
 	double T_TrefftzElement<D> :: ipowD_ar(int der, FlatVector<double> base, Vec<D, int> ex, double result, int count) const
 	{
-		return ex(der) < 0 ? 0.0 :
-		 count == der ? ipowD_ar(der, base, ex, (ex(count)+1) * pow(base(count),ex(count)) * result, count-1 ) :
+		return ex(der) == 0 ? 0.0 :
+		 count == der ? ipowD_ar(der, base, ex, (ex(count)) * pow(base(count),ex(count)-1) * result, count-1 ) :
 		 count < 0 ? result : ipowD_ar(der, base, ex, pow(base(count),ex(count)) * result, count-1 );
 	}
 
