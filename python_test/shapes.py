@@ -6,8 +6,8 @@ from trefftzngs import *
 
 from netgen.csg import unit_cube
 
-# mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
-mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
+mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
+# mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 
 order = 4
 #fes = FESpace("trefftzfespace", mesh, flags = { "dgjumps" : True, "order" : 3 })

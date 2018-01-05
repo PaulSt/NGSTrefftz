@@ -22,8 +22,8 @@ from ngsolve import *
 mesh = Mesh(periodic.GenerateMesh(maxh=0.1))
 
 
-order=5
-fes = FESpace("trefftzfespace", mesh, order=order, dgjumps = True)
+order=4
+fes = FESpace("trefftzfespace", mesh, order=order, dgjumps = True, wavespeed = 1)
 # fes = L2( mesh, order=order, dgjumps = True)
 u = fes.TrialFunction()
 v = fes.TestFunction()

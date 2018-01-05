@@ -16,7 +16,7 @@ namespace ngfem
 			const int npoly;
 			const Matrix<int> indices;
 			const Matrix<double> basis;
-			Vec<D> elcenter=0; float elsize=1; float c=1;
+			Vec<D> elcenter=0; double elsize=1; float c=1;
 			ELEMENT_TYPE eltype;
 
 		public:
@@ -35,7 +35,7 @@ namespace ngfem
 			int GetNBasis() const { return nbasis; }
 
 			T_TrefftzElement<D> * SetCenter(Vec<D> acenter) {elcenter = acenter; return this;}
-			T_TrefftzElement<D> * SetElSize(float aelsize) {elsize = aelsize; return this;}
+			T_TrefftzElement<D> * SetElSize(double aelsize) {elsize = aelsize; return this;}
 			T_TrefftzElement<D> * SetWavespeed(float ac) {c = ac; return this;}
 
 		protected:
