@@ -16,7 +16,7 @@ namespace ngfem
     const Matrix<int> indices;
     const Matrix<double> basis;
     Vec<D> elcenter = 0;
-    float elsize = 1;
+    double elsize = 1;
     float c = 1;
     ELEMENT_TYPE eltype;
 
@@ -42,7 +42,7 @@ namespace ngfem
       elcenter = acenter;
       return this;
     }
-    T_TrefftzElement<D> *SetElSize (float aelsize)
+    T_TrefftzElement<D> *SetElSize (double aelsize)
     {
       elsize = aelsize;
       return this;

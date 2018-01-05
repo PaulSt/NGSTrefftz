@@ -1,6 +1,7 @@
 #include "TrefftzElement.hpp"
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
+#include "recursive_pol.hpp"
 
 namespace ngfem
 {
@@ -44,7 +45,7 @@ namespace ngfem
                                        BareSliceVector<> shape) const
   {
     FlatVector<double> point = ShiftPoint (mip.GetPoint ());
-    Vector<float> polynomial (npoly);
+    Vector<double> polynomial (npoly);
 
     for (int i = 0; i < npoly; i++) // loop over indices
       {
@@ -61,7 +62,7 @@ namespace ngfem
                                         SliceMatrix<> dshape) const
   {
     FlatVector<double> point = ShiftPoint (mip.GetPoint ());
-    Vector<float> polynomial (npoly);
+    Vector<double> polynomial (npoly);
     Vector<double> tempshape (nbasis);
     Matrix<int> derindices (npoly, D);
 
@@ -119,6 +120,8 @@ namespace ngfem
               {
                 temp_basis (l, IndexMap (indices.Row (l))) = 1.0;
                 i += nbasis - 1;
+                // LegendrePolynomial leg;
+                // cout << "legendre pol: " << endl << leg.GetCoefs() << endl;
               }
           }
       }
