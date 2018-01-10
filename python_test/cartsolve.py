@@ -1,7 +1,7 @@
 #########################################################################################################################################
-N = 10
-c=1
-order = 4
+N = 5
+c=2
+order = 6
 #########################################################################################################################################
 import netgen.meshing as ngm
 from netgen.geom2d import unit_square
@@ -51,14 +51,14 @@ Draw(mesh)
 from ngsolve import *
 from trefftzngs import *
 import numpy as np
+k = 5
+fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, testshift = False)
 
-fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True)
-
-truesol = CoefficientFunction(sin( c*x + y ))
+truesol =  sin( k*(c*x + y) )#exp(-pow(c*x+y,2)))#
 U0 = GridFunction(fes)
 U0.Set(truesol)
-v0 = cos(x+y)#grad(U0)[0]
-sig0 = -cos(x+y)#-grad(U0)[1]
+v0 = c*k*cos(k*(c*x+y))#grad(U0)[0]
+sig0 = -k*cos(k*(c*x+y))#-grad(U0)[1]
 Draw(U0,mesh,'U0')
 input()
 # Draw(sig0,mesh,'sig0')
@@ -99,36 +99,55 @@ jump_wt = ( w - wo ) * n_t
 jump_sigt = ( sig - sigo ) * n_t
 jump_taut = ( tau - tauo ) * n_t
 
+jump_Ut = (U - U.Other()) * n_t
+
 timelike = n_x**2 #IfPos(n_t,0,IfPos(-n_t,0,1)) # n_t=0
 spacelike = n_t**2 #IfPos(n_x,0,IfPos(-n_x,0,1)) # n_x=0
 
-alpha = 0.5
-beta = 0.5
+alpha = 0.5 #pow(10,5)
+beta = 0.5 #pow(10,5)
+gamma = 1
+
+C = CoefficientFunction(pow(c,-2))
 
 a = BilinearForm(fes)
 # a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ) ,VOL,  skeleton=True ) #space like faces
-a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ) ,VOL,  skeleton=True ) #space like faces, no jump in x since horizontal
+a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(C*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ) ,VOL,  skeleton=True ) #space like faces, no jump in x since horizontal
+
+a += SymbolicBFI( spacelike * ( gamma * (jump_Ut)*IfPos(n_t,V.Other(),V) ) ,VOL,  skeleton=True ) #space like faces, no jump in x since horizontal
+a += SymbolicBFI( spacelike * ( gamma * IfPos(-n_t,1,0) * U*V ) ,BND,  skeleton=True ) #space like faces, no jump in x since horizontal
+
 a += SymbolicBFI( timelike 	* ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ) ,VOL, skeleton=True ) #time like faces
-a += SymbolicBFI( spacelike * IfPos(n_t,1,0) * ( pow(c,-2)*v*w + sig*tau ), BND, skeleton=True) #t=T (or *x)
+a += SymbolicBFI( spacelike * IfPos(n_t,1,0) * ( C*v*w + sig*tau ), BND, skeleton=True) #t=T (or *x)
 a += SymbolicBFI( timelike 	* ( sig*n_x*w + alpha*v*w ), BND, skeleton=True) #dirichlet boundary 'timelike'
 a.Assemble()
 
 f = LinearForm(fes)
-f += SymbolicLFI( spacelike * IfPos(-n_t,1,0) *  ( pow(c,-2)*v0*w + sig0*tau ), BND, skeleton=True) #t=0 (or *(1-x))
+f += SymbolicLFI( spacelike * IfPos(-n_t,1,0) *  ( C*v0*w + sig0*tau ), BND, skeleton=True) #t=0 (or *(1-x))
 f += SymbolicLFI( timelike 	* ( v0 * (alpha*w - tau*n_x) ), BND, skeleton=True) #dirichlet boundary 'timelike'
+f += SymbolicLFI( spacelike * gamma * IfPos(-n_t,1,0) *  ( (U0)*V ) ,BND,  skeleton=True ) #space like faces, no jump in x since horizontal
+
 f.Assemble()
 
+gfu = GridFunction(fes, name="uDG")
+# gfu.vec.data = a.mat.Inverse(inverse="pardiso") * f.vec
 
+#
 nmat = np.zeros((a.mat.height,a.mat.width))
 nvec = np.zeros(a.mat.width)
+
 for i in range(a.mat.width):
-	nvec[i] = f.vec[i]
+	#nvec[i] = f.vec[i]
 	for j in range(a.mat.height):
 		nmat[j,i] = a.mat[j,i]
 
+# sol = np.linalg.solve(nmat,nvec)
+# for i in range(a.mat.height):
+# 	gfu.vec[i] = sol[i]
+
 nmatclean = nmat[nmat.any(axis=0),:]
 nmatclean = nmatclean[:,nmat.any(axis=1)]
-nvecclean = nvec[nmat.any(axis=1)]
+nvecclean = f.vec.FV().NumPy()[nmat.any(axis=1)] #nvec
 
 print("cond nmat: ", np.linalg.cond(nmatclean))
 # print(nmat)
@@ -140,13 +159,17 @@ sol[nmat.any(axis=1)] = solclean
 # print(nmat.any(axis=1))
 
 
-gfu = GridFunction(fes, name="uDG")
 for i in range(a.mat.height):
 	gfu.vec[i] = sol[i]
-# gfu.vec.data = a.mat.Inverse() * f.vec
+#gfu.vec.data = a.mat.Inverse() * f.vec
 # gradu=grad(U0)
 # Draw(sig0,mesh,'fun')
+
+print("error=", Integrate((truesol - gfu)*(truesol - gfu), mesh))
+print("grad-error=", Integrate((grad(U0) - grad(gfu))*(grad(U0) - grad(gfu)), mesh))
 Draw(gfu,mesh,'sol')
+
+Draw(grad(gfu),mesh,'gradsol')
 
 
 # u = GridFunction(fes,"shapes")
