@@ -56,9 +56,8 @@ namespace ngfem
 		static void GenerateMatrixIR (const FiniteElement & fel,
 																	const BaseMappedIntegrationRule & mir,
 																	MAT & mat, LocalHeap & lh)
-		{ //cout << "pre mat 4: " << mat << endl;
+		{ 
 			Cast(fel).CalcShape (mir, Trans(mat));
-			//cout << "gen mat 4:" << mat << endl;
 		}
 
 		static void GenerateMatrixSIMDIR (const FiniteElement & fel,
@@ -81,7 +80,6 @@ namespace ngfem
 					 const FlatVector<double> & x, FlatVector<double> & y,
 					 LocalHeap & lh)
 		{
-			//cout << "x: " << x <<endl;
 			y(0) = Cast(fel).Evaluate(mip, x);
 		}
 

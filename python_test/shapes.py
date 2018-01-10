@@ -11,7 +11,7 @@ mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
 
 order = 4
 #fes = FESpace("trefftzfespace", mesh, flags = { "dgjumps" : True, "order" : 3 })
-fes = FESpace("trefftzfespace", mesh, order=order)
+fes = FESpace("trefftzfespace", mesh, order=order, testshift = True)
 # fes = FESpace("l22", mesh, order = order, dgjumps = True) #L2(mesh, order=order, flags = { "dgjumps" : True })
 
 u = GridFunction(fes,"shapes")

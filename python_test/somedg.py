@@ -22,7 +22,7 @@ from ngsolve import *
 mesh = Mesh(periodic.GenerateMesh(maxh=0.1))
 
 
-order=4
+order=5
 fes = FESpace("trefftzfespace", mesh, order=order, dgjumps = True, wavespeed = 1)
 # fes = L2( mesh, order=order, dgjumps = True)
 u = fes.TrialFunction()
@@ -51,3 +51,16 @@ f.Assemble()
 gfu = GridFunction(fes, name="uDG")
 gfu.vec.data = a.mat.Inverse() * f.vec
 Draw (gfu)
+
+
+
+# import numpy as np
+# inv = Matrix(a.mat.height, a.mat.width)
+# try:
+# 	a.mat.Inverse(inv)
+# except:
+# 	print("error")#print(id.nr, mat)
+
+
+# print(inv)
+print(Norm(inv))

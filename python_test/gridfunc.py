@@ -3,16 +3,15 @@ from ngsolve import *
 from trefftzngs import *
 from netgen.csg import unit_cube
 from netgen.geom2d import unit_square
-from trefftzngs import *
 
 mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 # mesh = Mesh("cone/cone.vol.gz")
-# mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
+# mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.2))
 Draw(mesh)
 
 c = 10
-order = 6
-fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c)
+order = 3
+fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, testshift = True)
 # fes = L2(mesh, order=order, flags = { "dgjumps" : True })
 
 gfu = GridFunction(fes)
