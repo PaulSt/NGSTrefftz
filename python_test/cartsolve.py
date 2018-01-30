@@ -1,6 +1,6 @@
 #########################################################################################################################################
-N = 5
-c=2
+N = 8
+c=4
 order = 6
 #########################################################################################################################################
 import netgen.meshing as ngm
@@ -52,7 +52,8 @@ from ngsolve import *
 from trefftzngs import *
 import numpy as np
 k = 5
-fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, testshift = False)
+fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, testshift = True)
+# fes = L2(mesh, order=order, flags = { "dgjumps" : True })
 
 truesol =  sin( k*(c*x + y) )#exp(-pow(c*x+y,2)))#
 U0 = GridFunction(fes)
@@ -108,31 +109,25 @@ alpha = 0.5 #pow(10,5)
 beta = 0.5 #pow(10,5)
 gamma = 1
 
-C = CoefficientFunction(pow(c,-2))
-
 a = BilinearForm(fes)
 # a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ) ,VOL,  skeleton=True ) #space like faces
-a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(C*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ) ,VOL,  skeleton=True ) #space like faces, no jump in x since horizontal
-
-a += SymbolicBFI( spacelike * ( gamma * (jump_Ut)*IfPos(n_t,V.Other(),V) ) ,VOL,  skeleton=True ) #space like faces, no jump in x since horizontal
-a += SymbolicBFI( spacelike * ( gamma * IfPos(-n_t,1,0) * U*V ) ,BND,  skeleton=True ) #space like faces, no jump in x since horizontal
-
+a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ) ,VOL,  skeleton=True ) #space like faces, no jump in x since horizontal
 a += SymbolicBFI( timelike 	* ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ) ,VOL, skeleton=True ) #time like faces
-a += SymbolicBFI( spacelike * IfPos(n_t,1,0) * ( C*v*w + sig*tau ), BND, skeleton=True) #t=T (or *x)
+a += SymbolicBFI( spacelike * IfPos(n_t,1,0) * ( pow(c,-2)*v*w + sig*tau ), BND, skeleton=True) #t=T (or *x)
 a += SymbolicBFI( timelike 	* ( sig*n_x*w + alpha*v*w ), BND, skeleton=True) #dirichlet boundary 'timelike'
+a += SymbolicBFI( spacelike * ( gamma * (jump_Ut)*IfPos(n_t,V.Other(),V) ) ,VOL,  skeleton=True ) #correction term to recover sol of second order system
+a += SymbolicBFI( spacelike * ( gamma * IfPos(-n_t,1,0) * U*V ) ,BND,  skeleton=True ) #BND correction term to recover sol of second order system
 a.Assemble()
 
 f = LinearForm(fes)
-f += SymbolicLFI( spacelike * IfPos(-n_t,1,0) *  ( C*v0*w + sig0*tau ), BND, skeleton=True) #t=0 (or *(1-x))
+f += SymbolicLFI( spacelike * IfPos(-n_t,1,0) *  ( pow(c,-2)*v0*w + sig0*tau ), BND, skeleton=True) #t=0 (or *(1-x))
 f += SymbolicLFI( timelike 	* ( v0 * (alpha*w - tau*n_x) ), BND, skeleton=True) #dirichlet boundary 'timelike'
-f += SymbolicLFI( spacelike * gamma * IfPos(-n_t,1,0) *  ( (U0)*V ) ,BND,  skeleton=True ) #space like faces, no jump in x since horizontal
-
+f += SymbolicLFI( spacelike * gamma * IfPos(-n_t,1,0) *  ( (U0)*V ) ,BND,  skeleton=True ) #rhs correction term to recover sol of second order system
 f.Assemble()
 
 gfu = GridFunction(fes, name="uDG")
 # gfu.vec.data = a.mat.Inverse(inverse="pardiso") * f.vec
 
-#
 nmat = np.zeros((a.mat.height,a.mat.width))
 nvec = np.zeros(a.mat.width)
 
@@ -170,7 +165,6 @@ print("grad-error=", Integrate((grad(U0) - grad(gfu))*(grad(U0) - grad(gfu)), me
 Draw(gfu,mesh,'sol')
 
 Draw(grad(gfu),mesh,'gradsol')
-
 
 # u = GridFunction(fes,"shapes")
 # Draw(u)

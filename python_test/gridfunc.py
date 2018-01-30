@@ -9,18 +9,19 @@ mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 # mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.2))
 Draw(mesh)
 
-c = 10
-order = 3
+c = 4
+order = 4
+k = 4
 fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, testshift = True)
 # fes = L2(mesh, order=order, flags = { "dgjumps" : True })
 
 gfu = GridFunction(fes)
 
 
-u = fes.TestFunction()
-v = fes.TrialFunction()
+# u = fes.TestFunction()
+# v = fes.TrialFunction()
 
-bfi = SymbolicBFI(u*v)
+# bfi = SymbolicBFI(u*v)
 
 # gfu.vec[:] = 0
 # for id in mesh.Elements(VOL):
@@ -42,7 +43,7 @@ bfi = SymbolicBFI(u*v)
 #print(gfu.vec)
 #kx
 #uex = sin(kx*x+ky*y - c*t)
-uex = sin(c*x+y)
+uex = sin(k*(c*x+y))
 # #gfu.Set(CoefficientFunction(0))
 gfu.Set(uex)
 #
@@ -51,4 +52,4 @@ gradu = grad(gfu)
 # Draw(uex,mesh,'uex')
 # #Draw(gfu, mesh, 'gfu')
 Draw(gfu)
-Draw(gradu, mesh, 'fun')
+Draw(gradu, mesh, 'gradu')

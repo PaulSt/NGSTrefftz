@@ -6,36 +6,38 @@
 
 namespace ngfem
 {
-	template<int D>
-	T_TrefftzElement<D> ::T_TrefftzElement()
-		: ScalarMappedElement<D>(D+1, 1),
-			ord(1),
-			nbasis(D+1),
-			npoly(D+1),
-			indices(MakeIndices()),
-			basis(TrefftzBasis()),
-			eltype(ET_TRIG)
-			{;}
+	// template<int D>
+	// T_TrefftzElement<D> ::T_TrefftzElement()
+	// 	: ScalarMappedElement<D>(D+1, 1),
+	// 		ord(1),
+	// 		nbasis(D+1),
+	// 		npoly(D+1),
+	// 		indices(MakeIndices()),
+	// 		basis(TrefftzBasis()),
+	// 		eltype(ET_TRIG)
+	// 		{;}
+
+	// template<int D>
+  // T_TrefftzElement<D> ::T_TrefftzElement(int aord, float ac = 1)
+	// 	: ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
+	// 		ord(aord),
+	// 		c(ac),
+	// 		nbasis(BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1)),
+	// 		npoly(BinCoeff(D + ord, ord)),
+	// 		indices(MakeIndices()),
+	// 		basis(TrefftzBasis()),
+	// 		eltype(ET_TRIG)
+	// 		{;}
 
 	template<int D>
-  T_TrefftzElement<D> ::T_TrefftzElement(int aord)
+  T_TrefftzElement<D> ::T_TrefftzElement(int aord, float ac, ELEMENT_TYPE aeltype)
 		: ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
 			ord(aord),
+			c(ac),
 			nbasis(BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1)),
 			npoly(BinCoeff(D + ord, ord)),
 			indices(MakeIndices()),
-			basis(TrefftzBasis()),
-			eltype(ET_TRIG)
-			{;}
-
-	template<int D>
-  T_TrefftzElement<D> ::T_TrefftzElement(int aord, ELEMENT_TYPE aeltype)
-		: ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
-			ord(aord),
-			nbasis(BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1)),
-			npoly(BinCoeff(D + ord, ord)),
-			indices(MakeIndices()),
-			basis(TrefftzBasis()),
+			basis(TrefftzBasis(ac)),
 			eltype(aeltype)
 			{;}
 
@@ -45,12 +47,15 @@ namespace ngfem
   void T_TrefftzElement<D> :: CalcShape (const BaseMappedIntegrationPoint & mip,
                                   BareSliceVector<> shape) const
   {
-		FlatVector<double> point = ShiftPoint(mip.GetPoint());
+		// Vector<double> cpoint = mip.GetPoint();
+		Vector<double> cpoint(D);
+		for(int i=0; i<D; i++) cpoint[i] = mip.GetPoint()[i];
+		cpoint = ShiftPoint(cpoint);
 		Vector<double> polynomial(npoly);
 
 		for(int i=0; i<npoly; i++)//loop over indices
 		{
-			polynomial(i) = ipow_ar(point,indices.Row(i));
+			polynomial(i) = ipow_ar(cpoint,indices.Row(i));
 		}
 		Vector<double> tempshape(nbasis);
 		tempshape = basis * polynomial;
@@ -61,29 +66,31 @@ namespace ngfem
 	void T_TrefftzElement<D> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
 																		SliceMatrix<> dshape) const
 	{
-		FlatVector<double> point = ShiftPoint(mip.GetPoint());
+		// Vector<double> cpoint = mip.GetPoint();
+		Vector<double> cpoint(D);
+		for(int i=0; i<D; i++) cpoint[i] = mip.GetPoint()[i];
+		cpoint = ShiftPoint(cpoint);
 		Vector<double> polynomial(npoly);
 
 		for(int d=0;d<D;d++)  //loop over derivatives/dimensions
 		{
 			for(int i=0;i<npoly;i++)//loop over indices
 			{
-				polynomial(i) = ipowD_ar(d,point,indices.Row(i));
+				polynomial(i) = ipowD_ar(d,cpoint,indices.Row(i));
 			}
 			dshape.Col(d) = basis * polynomial;
-			if(d==0) dshape.Col(d) *= c; //inner derivative
+			//if(d==0) dshape.Col(d) *= c; //inner derivative
 		}
 		dshape *= (1.0/elsize); //inner derivative
 	}
 
 	template<int D>
-	FlatVector<double> T_TrefftzElement<D> :: ShiftPoint(FlatVector<double> point) const
-	{ point -= elcenter; point *= (1.0/elsize); point(0) *= c; return point; }
-
+	Vector<double> T_TrefftzElement<D> :: ShiftPoint(Vector<double> point) const
+	{ point -= elcenter; point *= (1.0/elsize); return point;} //point[0] *= c;
 
 
 	template<int D>
-	constexpr Matrix<double> T_TrefftzElement<D> :: TrefftzBasis() const
+	constexpr Matrix<double> T_TrefftzElement<D> :: TrefftzBasis(float wavespeed) const
 	{
 		Matrix<double> temp_basis(nbasis,npoly);
 		temp_basis = 0;
@@ -101,7 +108,8 @@ namespace ngfem
 						get_coeff[m] = get_coeff[m] + 2;
 						temp_basis( l, IndexMap(indices.Row(i)) ) += (indices(i,m)+1) * (indices(i,m)+2) * temp_basis(l,IndexMap(get_coeff) );
 					}
-					temp_basis( l, IndexMap(indices.Row(i)) ) *= 1.0/(k * (k-1));
+					if(wavespeed != 4) cout << "ELBasisWavespeed: " << wavespeed << " " << endl;
+					temp_basis( l, IndexMap(indices.Row(i)) ) *= pow(wavespeed,2)/(k * (k-1));
 				}
 				else if(k == 0 ) //time=0
 				{

@@ -16,13 +16,14 @@ namespace ngfem
 			const int npoly;
 			const Matrix<int> indices;
 			const Matrix<double> basis;
-			Vec<D> elcenter=0; double elsize=1; float c=1;
+			Vec<D> elcenter=0;
+			double elsize=1;
+			float c = 1.0;
 			ELEMENT_TYPE eltype;
 
 		public:
-			T_TrefftzElement();
-			T_TrefftzElement(int aord);
-			T_TrefftzElement(int aord, ELEMENT_TYPE aeltype);
+			// T_TrefftzElement();
+			T_TrefftzElement(int aord = 1, float ac = 1.0, ELEMENT_TYPE aeltype = ET_TRIG);
 
 			virtual ELEMENT_TYPE ElementType() const { return eltype; }
 
@@ -36,18 +37,19 @@ namespace ngfem
 
 			T_TrefftzElement<D> * SetCenter(Vec<D> acenter) {elcenter = acenter; return this;}
 			T_TrefftzElement<D> * SetElSize(double aelsize) {elsize = aelsize; return this;}
-			T_TrefftzElement<D> * SetWavespeed(float ac) {c = ac; return this;}
+			// T_TrefftzElement<D> * SetWavespeed(float ac) {c = ac; return this;}
 
 		protected:
-			FlatVector<double> ShiftPoint(FlatVector<double> point) const;
+			Vector<double> ShiftPoint(Vector<double> point) const;
 
 			constexpr void MakeIndices_inner(Matrix<int> &indice, Vec<D, int> &numbers, int &count, int dim = D);
 			constexpr Matrix<int> MakeIndices();
 
 			constexpr int IndexMap(Vec<D, int> index) const;
+			constexpr Matrix<double> TrefftzBasis(float wavespeed) const;
+
 			double ipow_ar(FlatVector<double> base, Vec<D, int> ex, double result = 1, int count = D-1) const;
 			double ipowD_ar(int der, FlatVector<double> base, Vec<D, int> ex, double result = 1, int count = D-1) const;
-			constexpr Matrix<double> TrefftzBasis() const;
 	};
 }
 
