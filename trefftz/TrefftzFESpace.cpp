@@ -92,13 +92,11 @@ namespace ngcomp
     // ma->GetPoint<3>(vertices_index[0]) << endl<<
     // ma->GetPoint<3>(vertices_index[1])
     // <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
-
     switch (ma->GetElType (ei))
       {
       case ET_SEGM:
         {
-          return *(new (alloc) T_TrefftzElement<1> (order, ET_SEGM))
-                      ->SetWavespeed (c);
+          return *(new (alloc) T_TrefftzElement<1> (order, c, ET_SEGM));
           break;
         }
       case ET_QUAD:
@@ -106,12 +104,11 @@ namespace ngcomp
         {
           if (testshift == true)
             return *(new (alloc)
-                         T_TrefftzElement<2> (order, ma->GetElType (ei)))
-                        ->SetWavespeed (c)
+                         T_TrefftzElement<2> (order, c, ma->GetElType (ei)))
                         ->SetCenter (ElCenter<2> (ei))
                         ->SetElSize (Adiam<2> (ei));
-          return *(new (alloc) T_TrefftzElement<2> (order, ma->GetElType (ei)))
-                      ->SetWavespeed (c);
+          return *(new (alloc)
+                       T_TrefftzElement<2> (order, c, ma->GetElType (ei)));
           break;
         }
       case ET_HEX:
@@ -119,8 +116,8 @@ namespace ngcomp
       case ET_PYRAMID:
       case ET_TET:
         {
-          return *(new (alloc) T_TrefftzElement<3> (order, ma->GetElType (ei)))
-                      ->SetWavespeed (c);
+          return *(new (alloc)
+                       T_TrefftzElement<3> (order, c, ma->GetElType (ei)));
           break;
         }
       }
@@ -153,7 +150,6 @@ namespace ngcomp
     for (auto vertex : vertices_index)
       center += ma->GetPoint<D> (vertex);
     center *= (1.0 / vertices_index.Size ());
-    // cout << vertices_index.Size() << endl;
     return center;
   }
 
