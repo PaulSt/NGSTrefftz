@@ -58,7 +58,7 @@ namespace ngfem
     constexpr Matrix<int> MakeIndices ();
 
     constexpr int IndexMap (Vec<D, int> index) const;
-    constexpr Matrix<double> TrefftzBasis (float wavespeed) const;
+    constexpr Matrix<double> TrefftzBasis () const;
 
     double ipow_ar (FlatVector<double> base, Vec<D, int> ex, double result = 1,
                     int count = D - 1) const;

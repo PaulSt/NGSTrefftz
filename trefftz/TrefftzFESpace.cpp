@@ -18,7 +18,7 @@ namespace ngcomp
 
     DefineNumFlag ("wavespeed");
     cout << "======== Constructor of TrefftzFESpace =========" << endl;
-    cout << "Flags = " << flags;
+    cout << "Flags:" << endl << flags;
 
     D = ma->GetDimension ();
 
