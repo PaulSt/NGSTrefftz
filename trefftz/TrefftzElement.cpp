@@ -37,7 +37,7 @@ namespace ngfem
 			nbasis(BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1)),
 			npoly(BinCoeff(D + ord, ord)),
 			indices(MakeIndices()),
-			basis(TrefftzBasis(ac)),
+			basis(TrefftzBasis()),
 			eltype(aeltype)
 			{;}
 
@@ -49,7 +49,7 @@ namespace ngfem
   {
 		// Vector<double> cpoint = mip.GetPoint();
 		Vector<double> cpoint(D);
-		for(int i=0; i<D; i++) cpoint[i] = mip.GetPoint()[i];
+		for(int d=0; d<D; d++) cpoint[d] = mip.GetPoint()[d];
 		cpoint = ShiftPoint(cpoint);
 		Vector<double> polynomial(npoly);
 
@@ -62,13 +62,14 @@ namespace ngfem
 		for(int b = 0; b < nbasis; b++) shape(b) = tempshape(b);
 	}
 
+
 	template<int D>
 	void T_TrefftzElement<D> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
 																		SliceMatrix<> dshape) const
 	{
 		// Vector<double> cpoint = mip.GetPoint();
 		Vector<double> cpoint(D);
-		for(int i=0; i<D; i++) cpoint[i] = mip.GetPoint()[i];
+		for(int d=0; d<D; d++) cpoint[d] = mip.GetPoint()[d];
 		cpoint = ShiftPoint(cpoint);
 		Vector<double> polynomial(npoly);
 
@@ -79,18 +80,18 @@ namespace ngfem
 				polynomial(i) = ipowD_ar(d,cpoint,indices.Row(i));
 			}
 			dshape.Col(d) = basis * polynomial;
-			//if(d==0) dshape.Col(d) *= c; //inner derivative
 		}
+		dshape.Col(0) *= c; //inner derivative
 		dshape *= (1.0/elsize); //inner derivative
 	}
 
 	template<int D>
 	Vector<double> T_TrefftzElement<D> :: ShiftPoint(Vector<double> point) const
-	{ point -= elcenter; point *= (1.0/elsize); return point;} //point[0] *= c;
+	{ point -= elcenter; point *= (1.0/elsize); point[0] *= c; return point;} //
 
 
 	template<int D>
-	constexpr Matrix<double> T_TrefftzElement<D> :: TrefftzBasis(float wavespeed) const
+	constexpr Matrix<double> T_TrefftzElement<D> :: TrefftzBasis() const
 	{
 		Matrix<double> temp_basis(nbasis,npoly);
 		temp_basis = 0;
@@ -99,7 +100,7 @@ namespace ngfem
 			for(int i=0;i<npoly;i++)//loop over indices BinCoeff(D + ord, ord)
 			{
 				int k = indices(i,0);
-				if(k > 1 )
+				if(k > 1)
 				{
 					for(int m=1;m<=D-1;m++) //rekursive sum
 					{
@@ -108,13 +109,15 @@ namespace ngfem
 						get_coeff[m] = get_coeff[m] + 2;
 						temp_basis( l, IndexMap(indices.Row(i)) ) += (indices(i,m)+1) * (indices(i,m)+2) * temp_basis(l,IndexMap(get_coeff) );
 					}
-					if(wavespeed != 4) cout << "ELBasisWavespeed: " << wavespeed << " " << endl;
-					temp_basis( l, IndexMap(indices.Row(i)) ) *= pow(wavespeed,2)/(k * (k-1));
+					temp_basis( l, IndexMap(indices.Row(i)) ) *= 1.0/(k * (k-1));
 				}
-				else if(k == 0 ) //time=0
+				else //if(k == 0) //time=0 and =1
 				{
-					temp_basis( l, IndexMap(indices.Row(l)) ) = 1.0;
-					i += nbasis-1;
+					temp_basis( l, IndexMap(indices.Row(l)) ) = 1.0; //set the l-th coeff to 1
+					i += nbasis-1;	//jump to time = 2
+
+					// LegCoeff(n,k)
+
 					// LegendrePolynomial leg;
 					// cout << "legendre pol: " << endl << leg.GetCoefs() << endl;
 				}
@@ -122,6 +125,7 @@ namespace ngfem
 		}
 		return temp_basis;
 	}
+
 
 	template<int D>
 	constexpr void T_TrefftzElement<D> :: MakeIndices_inner(Matrix<int> &indice, Vec<D, int> &numbers, int &count, int dim)
@@ -147,6 +151,7 @@ namespace ngfem
 		}
 	}
 
+
 	template<int D>
 	constexpr Matrix<int> T_TrefftzElement<D> :: MakeIndices()
 	{
@@ -156,6 +161,7 @@ namespace ngfem
 		MakeIndices_inner(indice, numbers, count);
 		return indice;
 	}
+
 
 	template<int D>
 	constexpr int T_TrefftzElement<D> :: IndexMap(Vec<D, int> index) const
