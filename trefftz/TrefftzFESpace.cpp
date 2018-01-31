@@ -8,6 +8,7 @@
 #include "TrefftzFESpace.hpp"
 #include "DiffOpMapped.hpp"
 
+#include "helpers.cpp"
 
 namespace ngcomp
 {
@@ -24,7 +25,6 @@ namespace ngcomp
 
     order = int(flags.GetNumFlag ("order", 3));//flags.GetDefineFlag ("order");
 		c = flags.GetNumFlag ("wavespeed", 1);
-		testshift = flags.GetNumFlag ("testshift", 0);
 
 		local_ndof = (BinCoeff(D-1 + order, order) + BinCoeff(D-1 + order-1, order-1));
 		nel = ma->GetNE();
@@ -89,8 +89,7 @@ namespace ngcomp
 			case ET_QUAD:
 			case ET_TRIG:
 			{
-				if(testshift == true) return *(new (alloc) T_TrefftzElement<2>(order, c, ma->GetElType(ei))) ->SetCenter(ElCenter<2>(ei)) ->SetElSize( Adiam<2>(ei) );
-				return *(new (alloc) T_TrefftzElement<2>(order, c, ma->GetElType(ei)));
+				return *(new (alloc) T_TrefftzElement<2>(order, c, ma->GetElType(ei))) ->SetCenter(ElCenter<2>(ei)) ->SetElSize( Adiam<2>(ei) );
 				break;
 			}
 			case ET_HEX:
@@ -103,6 +102,7 @@ namespace ngcomp
 			}
 		}
 	}
+
 
 	template<int D>
 	double TrefftzFESpace :: Adiam(ElementId ei) const

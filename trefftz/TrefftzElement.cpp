@@ -87,7 +87,7 @@ namespace ngfem
 
 	template<int D>
 	Vector<double> T_TrefftzElement<D> :: ShiftPoint(Vector<double> point) const
-	{ point -= elcenter; point *= (1.0/elsize); point[0] *= c; return point;} //
+	{ point -= elcenter; point *= (1.0/elsize); point[0] *= c; return point;}
 
 
 	template<int D>
@@ -115,9 +115,6 @@ namespace ngfem
 				{
 					temp_basis( l, IndexMap(indices.Row(l)) ) = 1.0; //set the l-th coeff to 1
 					i += nbasis-1;	//jump to time = 2
-
-					// LegCoeff(n,k)
-
 					// LegendrePolynomial leg;
 					// cout << "legendre pol: " << endl << leg.GetCoefs() << endl;
 				}
