@@ -91,7 +91,7 @@ namespace ngfem
     point *= (1.0 / elsize);
     point[0] *= c;
     return point;
-  } //
+  }
 
   template <int D>
   constexpr Matrix<double> T_TrefftzElement<D>::TrefftzBasis () const
@@ -123,9 +123,6 @@ namespace ngfem
                 temp_basis (l, IndexMap (indices.Row (l)))
                     = 1.0;       // set the l-th coeff to 1
                 i += nbasis - 1; // jump to time = 2
-
-                // LegCoeff(n,k)
-
                 // LegendrePolynomial leg;
                 // cout << "legendre pol: " << endl << leg.GetCoefs() << endl;
               }
