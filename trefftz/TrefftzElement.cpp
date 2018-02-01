@@ -16,7 +16,6 @@ namespace ngfem
 	// 		basis(TrefftzBasis()),
 	// 		eltype(ET_TRIG)
 	// 		{;}
-
 	// template<int D>
   // T_TrefftzElement<D> ::T_TrefftzElement(int aord, float ac = 1)
 	// 	: ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
@@ -111,12 +110,21 @@ namespace ngfem
 					}
 					temp_basis( l, IndexMap(indices.Row(i)) ) *= 1.0/(k * (k-1));
 				}
-				else //if(k == 0) //time=0 and =1
+				else if(k == 0 && l < BinCoeff(D-1 + ord, ord)) //time=0 and =1
 				{
-					temp_basis( l, IndexMap(indices.Row(l)) ) = 1.0; //set the l-th coeff to 1
-					i += nbasis-1;	//jump to time = 2
+					// temp_basis( l, IndexMap(indices.Row(l)) ) = 1.0; //set the l-th coeff to 1
+					// i += nbasis-1;	//jump to time = 2
+					double coeff = 1;
+					for(int exponent :  indices.Row(i).Range(1,D)) coeff *= LegCoeffMonBasis(l,exponent);
+					temp_basis( l, IndexMap(indices.Row(i)) ) = coeff;
 					// LegendrePolynomial leg;
 					// cout << "legendre pol: " << endl << leg.GetCoefs() << endl;
+				}
+				else if(k == 1 && l >= BinCoeff(D-1 + ord, ord)) //time=0 and =1
+				{
+					double coeff = 1;
+					for(int exponent :  indices.Row(i).Range(1,D)) coeff *= LegCoeffMonBasis(l,exponent);
+					temp_basis( l, IndexMap(indices.Row(i)) ) = coeff;
 				}
 			}
 		}

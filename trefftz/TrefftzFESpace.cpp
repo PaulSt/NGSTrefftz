@@ -8,8 +8,6 @@
 #include "TrefftzFESpace.hpp"
 #include "DiffOpMapped.hpp"
 
-#include "helpers.cpp"
-
 namespace ngcomp
 {
 

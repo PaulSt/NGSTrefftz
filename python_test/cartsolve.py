@@ -1,5 +1,5 @@
 #########################################################################################################################################
-N = 8
+N = 9
 c=4
 order = 6
 #########################################################################################################################################
@@ -52,7 +52,7 @@ from ngsolve import *
 from trefftzngs import *
 import numpy as np
 k = 5
-fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, testshift = True)
+fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True)
 # fes = L2(mesh, order=order, flags = { "dgjumps" : True })
 
 truesol =  sin( k*(c*x + y) )#exp(-pow(c*x+y,2)))#
