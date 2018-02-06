@@ -25,6 +25,7 @@ namespace ngcomp
     order = int (
         flags.GetNumFlag ("order", 3)); // flags.GetDefineFlag ("order");
     c = flags.GetNumFlag ("wavespeed", 1);
+    basistype = flags.GetNumFlag ("basistype", 0);
 
     local_ndof = (BinCoeff (D - 1 + order, order)
                   + BinCoeff (D - 1 + order - 1, order - 1));
@@ -95,14 +96,15 @@ namespace ngcomp
       {
       case ET_SEGM:
         {
-          return *(new (alloc) T_TrefftzElement<1> (order, c, ET_SEGM));
+          return *(new (alloc)
+                       T_TrefftzElement<1> (order, c, ET_SEGM, basistype));
           break;
         }
       case ET_QUAD:
       case ET_TRIG:
         {
-          return *(new (alloc)
-                       T_TrefftzElement<2> (order, c, ma->GetElType (ei)))
+          return *(new (alloc) T_TrefftzElement<2> (
+                       order, c, ma->GetElType (ei), basistype))
                       ->SetCenter (ElCenter<2> (ei))
                       ->SetElSize (Adiam<2> (ei));
           break;
@@ -112,8 +114,8 @@ namespace ngcomp
       case ET_PYRAMID:
       case ET_TET:
         {
-          return *(new (alloc)
-                       T_TrefftzElement<3> (order, c, ma->GetElType (ei)));
+          return *(new (alloc) T_TrefftzElement<3> (
+              order, c, ma->GetElType (ei), basistype));
           break;
         }
       }
