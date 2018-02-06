@@ -129,7 +129,7 @@ def SolveNp(a,f,fes):
 	sol = np.linalg.solve(nmat,nvec)
 	for i in range(a.mat.height):
 		gfu.vec[i] = sol[i]
-	# print("cond nmat: ", np.linalg.cond(nmat))
+	print("cond nmat: ", np.linalg.cond(nmat))
 	return [gfu,np.linalg.cond(nmat)]
 
 
@@ -138,21 +138,20 @@ def error(gfu,truesol,fes):
 	U0.Set(truesol)
 	L2error = Integrate((truesol - gfu)*(truesol - gfu), mesh)
 	sH1error = Integrate((grad(U0) - grad(gfu))*(grad(U0) - grad(gfu)), mesh)
-	# print("error=", L2error)
-	# print("grad-error=", sH1error)
-	#Draw(gfu,mesh,'sol')
-	#Draw(grad(gfu),mesh,'gradsol')
+	print("error=", L2error)
+	print("grad-error=", sH1error)
+	Draw(gfu,mesh,'sol')
+	Draw(grad(gfu),mesh,'gradsol')
 	return [L2error,sH1error]
 
 
 
 solution = []
-for order in range(3,order):
-	fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True)
-	[a,f] = MakeSystem(truesol,v0,sig0,fes)
-	[gfu,cond] = SolveNp(a,f,fes)
-	[L2error,sH1error] = error(gfu,truesol,fes)
-	solution.append([order,cond,L2error,sH1error])
+# for order in range(3,order):
+fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=1)
+[a,f] = MakeSystem(truesol,v0,sig0,fes)
+[gfu,cond] = SolveNp(a,f,fes)
+[L2error,sH1error] = error(gfu,truesol,fes)
 
 
 

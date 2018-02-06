@@ -23,7 +23,7 @@ namespace ngfem
 
 		public:
 			// T_TrefftzElement();
-			T_TrefftzElement(int aord = 1, float ac = 1.0, ELEMENT_TYPE aeltype = ET_TRIG);
+			T_TrefftzElement(int aord = 1, float ac = 1.0, ELEMENT_TYPE aeltype = ET_TRIG, int basistype = 0);
 
 			virtual ELEMENT_TYPE ElementType() const { return eltype; }
 
@@ -46,7 +46,7 @@ namespace ngfem
 			constexpr Matrix<int> MakeIndices();
 
 			constexpr int IndexMap(Vec<D, int> index) const;
-			constexpr Matrix<double> TrefftzBasis() const;
+			constexpr Matrix<double> TrefftzBasis(int basistype) const;
 
 			double ipow_ar(FlatVector<double> base, Vec<D, int> ex, double result = 1, int count = D-1) const;
 			double ipowD_ar(int der, FlatVector<double> base, Vec<D, int> ex, double result = 1, int count = D-1) const;

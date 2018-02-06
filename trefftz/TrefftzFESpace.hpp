@@ -15,6 +15,7 @@ namespace ngcomp
 		int local_ndof;
 		float c=1;
 		bool testshift=false;
+		int basistype;
 
   public:
     /*

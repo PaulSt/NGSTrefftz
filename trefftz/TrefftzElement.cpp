@@ -29,14 +29,14 @@ namespace ngfem
 	// 		{;}
 
 	template<int D>
-  T_TrefftzElement<D> ::T_TrefftzElement(int aord, float ac, ELEMENT_TYPE aeltype)
+  T_TrefftzElement<D> ::T_TrefftzElement(int aord, float ac, ELEMENT_TYPE aeltype, int basistype)
 		: ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
 			ord(aord),
 			c(ac),
 			nbasis(BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1)),
 			npoly(BinCoeff(D + ord, ord)),
 			indices(MakeIndices()),
-			basis(TrefftzBasis()),
+			basis(TrefftzBasis(basistype)),
 			eltype(aeltype)
 			{;}
 
@@ -90,7 +90,7 @@ namespace ngfem
 
 
 	template<int D>
-	constexpr Matrix<double> T_TrefftzElement<D> :: TrefftzBasis() const
+	constexpr Matrix<double> T_TrefftzElement<D> :: TrefftzBasis(int basistype) const
 	{
 		Matrix<double> temp_basis(nbasis,npoly);
 		temp_basis = 0;
@@ -110,21 +110,19 @@ namespace ngfem
 					}
 					temp_basis( l, IndexMap(indices.Row(i)) ) *= 1.0/(k * (k-1));
 				}
-				else if(k == 0 && l < BinCoeff(D-1 + ord, ord)) //time=0 and =1
+				else if((k == 0 && l < BinCoeff(D-1 + ord, ord)) || (k == 1 && l >= BinCoeff(D-1 + ord, ord))) //time=0 and =1
 				{
-					// temp_basis( l, IndexMap(indices.Row(l)) ) = 1.0; //set the l-th coeff to 1
-					// i += nbasis-1;	//jump to time = 2
-					double coeff = 1;
-					for(int exponent :  indices.Row(i).Range(1,D)) coeff *= LegCoeffMonBasis(l,exponent);
-					temp_basis( l, IndexMap(indices.Row(i)) ) = coeff;
-					// LegendrePolynomial leg;
-					// cout << "legendre pol: " << endl << leg.GetCoefs() << endl;
-				}
-				else if(k == 1 && l >= BinCoeff(D-1 + ord, ord)) //time=0 and =1
-				{
-					double coeff = 1;
-					for(int exponent :  indices.Row(i).Range(1,D)) coeff *= LegCoeffMonBasis(l,exponent);
-					temp_basis( l, IndexMap(indices.Row(i)) ) = coeff;
+					switch (basistype) {
+						case 0:
+							temp_basis( l, IndexMap(indices.Row(l)) ) = 1.0; //set the l-th coeff to 1
+							//i += nbasis-1;	//jump to time = 2 if i=0
+							break;
+						case 1:
+							double coeff = 1;
+							for(int exponent :  indices.Row(i).Range(1,D)) coeff *= LegCoeffMonBasis(l,exponent);
+							temp_basis( l, IndexMap(indices.Row(i)) ) = coeff;
+							break;
+					}
 				}
 			}
 		}
