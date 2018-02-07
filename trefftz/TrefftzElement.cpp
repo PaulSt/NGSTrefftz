@@ -112,14 +112,18 @@ namespace ngfem
 				}
 				else if((k == 0 && l < BinCoeff(D-1 + ord, ord)) || (k == 1 && l >= BinCoeff(D-1 + ord, ord))) //time=0 and =1
 				{
+					double coeff = 1;
 					switch (basistype) {
 						case 0:
 							temp_basis( l, IndexMap(indices.Row(l)) ) = 1.0; //set the l-th coeff to 1
 							//i += nbasis-1;	//jump to time = 2 if i=0
 							break;
 						case 1:
-							double coeff = 1;
 							for(int exponent :  indices.Row(i).Range(1,D)) coeff *= LegCoeffMonBasis(l,exponent);
+							temp_basis( l, IndexMap(indices.Row(i)) ) = coeff;
+							break;
+						case 2:
+							for(int exponent :  indices.Row(i).Range(1,D)) coeff *= ChebCoeffMonBasis(l,exponent);
 							temp_basis( l, IndexMap(indices.Row(i)) ) = coeff;
 							break;
 					}

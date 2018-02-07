@@ -1,7 +1,7 @@
 #########################################################################################################################################
 N = 9
 c=4
-order = 8
+order = 7
 k = 5
 #########################################################################################################################################
 import netgen.meshing as ngm
@@ -45,10 +45,7 @@ import numpy as np
 truesol =  sin( k*(c*x + y) )#exp(-pow(c*x+y,2)))#
 v0 = c*k*cos(k*(c*x+y))#grad(U0)[0]
 sig0 = -k*cos(k*(c*x+y))#-grad(U0)[1]
-# U0 = GridFunction(fes)
-# U0.Set(truesol)
-# Draw(U0,mesh,'U0')
-# input()
+
 
 def MakeSystem(truesol,v0,sig0,fes):
 	U = fes.TrialFunction()
@@ -148,7 +145,13 @@ def error(gfu,truesol,fes):
 
 solution = []
 # for order in range(3,order):
-fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=1)
+fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=2)
+
+U0 = GridFunction(fes)
+U0.Set(truesol)
+Draw(U0,mesh,'U0')
+input()
+
 [a,f] = MakeSystem(truesol,v0,sig0,fes)
 [gfu,cond] = SolveNp(a,f,fes)
 [L2error,sH1error] = error(gfu,truesol,fes)
