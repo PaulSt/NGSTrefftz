@@ -81,12 +81,12 @@ namespace ngfem
 			dshape.Col(d) = basis * polynomial;
 		}
 		dshape.Col(0) *= c; //inner derivative
-		dshape *= (1.0/elsize); //inner derivative
+		dshape *= (2.0/elsize); //inner derivative
 	}
 
 	template<int D>
 	Vector<double> T_TrefftzElement<D> :: ShiftPoint(Vector<double> point) const
-	{ point -= elcenter; point *= (1.0/elsize); point[0] *= c; return point;}
+	{ point -= elcenter; point *= (2.0/elsize); point[0] *= c; return point;}
 
 
 	template<int D>
