@@ -1,7 +1,8 @@
 #########################################################################################################################################
-N = 9
-c=4
-order = 7
+N = 5
+c=3
+t_steps = c*N
+order = 6
 k = 5
 #########################################################################################################################################
 import netgen.meshing as ngm
@@ -12,25 +13,25 @@ ngmesh = ngm.Mesh()
 ngmesh.SetGeometry(unit_square)
 ngmesh.dim = 2
 pnums = []
-for i in range(N + 1):
+for i in range(t_steps + 1):
     for j in range(N + 1):
-        pnums.append(ngmesh.Add(ngm.MeshPoint(ngm.Pnt(i / N, j / N, 0))))
+        pnums.append(ngmesh.Add(ngm.MeshPoint(ngm.Pnt(i / t_steps, j / N, 0))))
 
 foo = ngm.FaceDescriptor(surfnr=1,domin=1,bc=1)
 ngmesh.Add (foo)
 ngmesh.SetMaterial(1, "mat")
-for j in range(N):
+for j in range(t_steps):
     for i in range(N):
         ngmesh.Add(ngm.Element2D(1, [pnums[i + j * (N + 1)],
                                  pnums[i + (j + 1) * (N + 1)],
                                  pnums[i + 1 + (j + 1) * (N + 1)],
                                  pnums[i + 1 + j * (N + 1)]]))
-for i in range(N):
+for i in range(t_steps):
    ngmesh.Add(ngm.Element1D([pnums[N + i * (N + 1)], pnums[N + (i + 1) * (N + 1)]], index=1))
    ngmesh.Add(ngm.Element1D([pnums[0 + i * (N + 1)], pnums[0 + (i + 1) * (N + 1)]], index=1))
 for i in range(N):
    ngmesh.Add(ngm.Element1D([pnums[i], pnums[i + 1]], index=2))
-   ngmesh.Add(ngm.Element1D([pnums[i + N * (N + 1)], pnums[i + 1 + N * (N + 1)]], index=2))
+   ngmesh.Add(ngm.Element1D([pnums[i + t_steps * (N + 1)], pnums[i + 1 + t_steps * (N + 1)]], index=2))
 
 mesh = Mesh(ngmesh)
 Draw(mesh)
@@ -145,7 +146,7 @@ def error(gfu,truesol,fes):
 
 solution = []
 # for order in range(3,order):
-fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=2)
+fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=1)
 
 U0 = GridFunction(fes)
 U0.Set(truesol)
