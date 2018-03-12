@@ -54,6 +54,8 @@ fes = L2(mesh, order=order, dgjumps=True)
 U0 = GridFunction(fes)
 U0.Set(truesol)
 Draw(U0,mesh,'U0')
+testhes = U0.Operator("hesse");
+Draw(testhes,mesh,'h')
 input()
 
 
@@ -103,7 +105,7 @@ gamma = 1
 HV = V.Operator("hesse")
 
 a = BilinearForm(fes)
-a += SymbolicBFI(  -v*(HV[3]+pow(c,-2)*HV[0]) - sig*(HV[2]+HV[1])  )
+a += SymbolicBFI(  -v*(-HV[3]+pow(c,-2)*HV[0]) - sig*(-HV[2]+HV[1])  )
 # a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ) ,VOL,  skeleton=True ) #space like faces
 a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ) ,VOL,  skeleton=True ) #space like faces, no jump in x since horizontal
 a += SymbolicBFI( timelike 	* ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ) ,VOL, skeleton=True ) #time like faces
