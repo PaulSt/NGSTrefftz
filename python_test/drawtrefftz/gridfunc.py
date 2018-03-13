@@ -6,7 +6,7 @@ from netgen.geom2d import unit_square
 
 # mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 # mesh = Mesh("cone/cone.vol.gz")
-mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.5)
+mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.5))
 Draw(mesh)
 
 c = 4
