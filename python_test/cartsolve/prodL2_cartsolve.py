@@ -1,10 +1,13 @@
 #########################################################################################################################################
-N = 2
-c=1
+N = 3
+c=2
 t_steps = c*N
-order = 1
+order = 4
 k = 1
 #########################################################################################################################################
+from trefftzngs import *
+import numpy as np
+
 import netgen.meshing as ngm
 from netgen.geom2d import unit_square
 from ngsolve import *
@@ -13,52 +16,48 @@ ngmesh = ngm.Mesh()
 ngmesh.SetGeometry(unit_square)
 ngmesh.dim = 2
 pnums = []
-for i in range(t_steps + 1):
-    for j in range(N + 1):
-        pnums.append(ngmesh.Add(ngm.MeshPoint(ngm.Pnt(i / t_steps, j / N, 0))))
+for j in range(t_steps + 1):
+	for i in range(N + 1):
+		pnums.append(ngmesh.Add(ngm.MeshPoint(ngm.Pnt(i / N, j / t_steps, 0))))
 
 foo = ngm.FaceDescriptor(surfnr=1,domin=1,bc=1)
 ngmesh.Add (foo)
 ngmesh.SetMaterial(1, "mat")
 for j in range(t_steps):
-    for i in range(N):
-        ngmesh.Add(ngm.Element2D(1, [pnums[i + j * (N + 1)],
-                                 pnums[i + (j + 1) * (N + 1)],
-                                 pnums[i + 1 + (j + 1) * (N + 1)],
-                                 pnums[i + 1 + j * (N + 1)]]))
+	for i in range(N):
+		ngmesh.Add(ngm.Element2D(1, [pnums[i + j * (N + 1)],
+									pnums[i + 1 + j * (N + 1)],
+									pnums[i + 1 + (j + 1) * (N + 1)],
+									pnums[i + (j + 1) * (N + 1)]]))
 for i in range(t_steps):
-   ngmesh.Add(ngm.Element1D([pnums[N + i * (N + 1)], pnums[N + (i + 1) * (N + 1)]], index=1))
-   ngmesh.Add(ngm.Element1D([pnums[0 + i * (N + 1)], pnums[0 + (i + 1) * (N + 1)]], index=1))
+	ngmesh.Add(ngm.Element1D([pnums[N + i * (N + 1)], pnums[N + (i + 1) * (N + 1)]], index=1))
+	ngmesh.Add(ngm.Element1D([pnums[0 + i * (N + 1)], pnums[0 + (i + 1) * (N + 1)]], index=1))
 for i in range(N):
-   ngmesh.Add(ngm.Element1D([pnums[i], pnums[i + 1]], index=2))
-   ngmesh.Add(ngm.Element1D([pnums[i + t_steps * (N + 1)], pnums[i + 1 + t_steps * (N + 1)]], index=2))
+	ngmesh.Add(ngm.Element1D([pnums[i], pnums[i + 1]], index=2))
+	ngmesh.Add(ngm.Element1D([pnums[i + t_steps * (N + 1)], pnums[i + 1 + t_steps * (N + 1)]], index=2))
 
 mesh = Mesh(ngmesh)
+
 Draw(mesh)
 # print("boundaries" + str(mesh.GetBoundaries()))
 #########################################################################################################################################
-
-from ngsolve import *
-from trefftzngs import *
-import numpy as np
-
 
 # fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=1)
 X = L2(mesh, order=order)
 fes = FESpace([X,X], flags = { "dgjumps" : True })
 
-truesol =  sin( k*(c*x + y) )#exp(-pow(c*x+y,2)))#
-v0 = c*k*cos(k*(c*x+y))#grad(U0)[0]
-sig0 = -k*cos(k*(c*x+y))#-grad(U0)[1]
+truesol =  sin( k*(c*y + x) )#exp(-pow(c*x+y,2)))#
+v0 = c*k*cos(k*(c*y+x))#grad(U0)[0]
+sig0 = -k*cos(k*(c*y+x))#-grad(U0)[1]
 
 U0 = GridFunction(fes)
-U0.components[0].Set(v0)
-U0.components[1].Set(sig0)
+U0.components[1].Set(v0)
+U0.components[0].Set(sig0)
 # Draw(U0.components[0],mesh,'U0')
 # input()
 
-v,sig = fes.TrialFunction()
-w,tau = fes.TestFunction()
+sig,v = fes.TrialFunction()
+tau,w = fes.TestFunction()
 
 vo = v.Other()
 sigo = sig.Other()
@@ -67,8 +66,8 @@ tauo = tau.Other()
 
 h = specialcf.mesh_size
 n = specialcf.normal(2)
-n_t = n[0]/Norm(n)
-n_x = n[1]/Norm(n)
+n_t = n[1]/Norm(n)
+n_x = n[0]/Norm(n)
 
 mean_v = 0.5*(v+vo)
 mean_w = 0.5*(w+wo)
@@ -95,7 +94,7 @@ beta = 0.5 #pow(10,5)
 gamma = 1
 
 a = BilinearForm(fes)
-a += SymbolicBFI(  -v*(grad(tau)[1]+pow(c,-2)*grad(w)[0]) - sig*(grad(tau)[0]+grad(w)[1])  )
+a += SymbolicBFI(  -v*(grad(tau)[0]+pow(c,-2)*grad(w)[1]) - sig*(grad(tau)[1]+grad(w)[0])  )
 a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ) ,VOL,  skeleton=True ) #space like faces, no jump in x since horizontal
 a += SymbolicBFI( timelike 	* ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ) ,VOL, skeleton=True ) #time like faces
 a += SymbolicBFI( spacelike * IfPos(n_t,1,0) * ( pow(c,-2)*v*w + sig*tau ), BND, skeleton=True) #t=T (or *x)

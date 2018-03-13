@@ -43,7 +43,7 @@ gfu = GridFunction(fes)
 #print(gfu.vec)
 #kx
 #uex = sin(kx*x+ky*y - c*t)
-uex = sin(k*(c*x+y))
+uex = sin(k*(c*y+x))
 # #gfu.Set(CoefficientFunction(0))
 gfu.Set(uex)
 #

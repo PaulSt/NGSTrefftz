@@ -5,6 +5,9 @@ t_steps = c*N
 order = 4
 k = 1
 #########################################################################################################################################
+from trefftzngs import *
+import numpy as np
+
 import netgen.meshing as ngm
 from netgen.geom2d import unit_square
 from ngsolve import *
@@ -13,39 +16,35 @@ ngmesh = ngm.Mesh()
 ngmesh.SetGeometry(unit_square)
 ngmesh.dim = 2
 pnums = []
-for i in range(t_steps + 1):
-    for j in range(N + 1):
-        pnums.append(ngmesh.Add(ngm.MeshPoint(ngm.Pnt(i / t_steps, j / N, 0))))
+for j in range(t_steps + 1):
+	for i in range(N + 1):
+		pnums.append(ngmesh.Add(ngm.MeshPoint(ngm.Pnt(i / N, j / t_steps, 0))))
 
 foo = ngm.FaceDescriptor(surfnr=1,domin=1,bc=1)
 ngmesh.Add (foo)
 ngmesh.SetMaterial(1, "mat")
 for j in range(t_steps):
-    for i in range(N):
-        ngmesh.Add(ngm.Element2D(1, [pnums[i + j * (N + 1)],
-                                 pnums[i + (j + 1) * (N + 1)],
-                                 pnums[i + 1 + (j + 1) * (N + 1)],
-                                 pnums[i + 1 + j * (N + 1)]]))
+	for i in range(N):
+		ngmesh.Add(ngm.Element2D(1, [pnums[i + j * (N + 1)],
+									pnums[i + 1 + j * (N + 1)],
+									pnums[i + 1 + (j + 1) * (N + 1)],
+									pnums[i + (j + 1) * (N + 1)]]))
 for i in range(t_steps):
-   ngmesh.Add(ngm.Element1D([pnums[N + i * (N + 1)], pnums[N + (i + 1) * (N + 1)]], index=1))
-   ngmesh.Add(ngm.Element1D([pnums[0 + i * (N + 1)], pnums[0 + (i + 1) * (N + 1)]], index=1))
+	ngmesh.Add(ngm.Element1D([pnums[N + i * (N + 1)], pnums[N + (i + 1) * (N + 1)]], index=1))
+	ngmesh.Add(ngm.Element1D([pnums[0 + i * (N + 1)], pnums[0 + (i + 1) * (N + 1)]], index=1))
 for i in range(N):
-   ngmesh.Add(ngm.Element1D([pnums[i], pnums[i + 1]], index=2))
-   ngmesh.Add(ngm.Element1D([pnums[i + t_steps * (N + 1)], pnums[i + 1 + t_steps * (N + 1)]], index=2))
+	ngmesh.Add(ngm.Element1D([pnums[i], pnums[i + 1]], index=2))
+	ngmesh.Add(ngm.Element1D([pnums[i + t_steps * (N + 1)], pnums[i + 1 + t_steps * (N + 1)]], index=2))
 
 mesh = Mesh(ngmesh)
+
 Draw(mesh)
 # print("boundaries" + str(mesh.GetBoundaries()))
 #########################################################################################################################################
 
-from ngsolve import *
-from trefftzngs import *
-import numpy as np
-
-
-truesol =  sin( k*(c*x + y) )#exp(-pow(c*x+y,2)))#
-v0 = c*k*cos(k*(c*x+y))#grad(U0)[0]
-sig0 = -k*cos(k*(c*x+y))#-grad(U0)[1]
+truesol =  sin( k*(c*y + x) )#exp(-pow(c*x+y,2)))#
+v0 = c*k*cos(k*(c*y+x))#grad(U0)[0]
+sig0 = -k*cos(k*(c*y+x))#-grad(U0)[1]
 
 # for order in range(3,order):
 # fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0)
@@ -62,20 +61,20 @@ input()
 U = fes.TrialFunction()
 V = fes.TestFunction()
 
-v = grad(U)[0]
-sig = -grad(U)[1]
-w = grad(V)[0]
-tau = -grad(V)[1]
+v = grad(U)[1]
+sig = -grad(U)[0]
+w = grad(V)[1]
+tau = -grad(V)[0]
 
-vo = grad(U.Other())[0]
-sigo = -grad(U.Other())[1]
-wo = grad(V.Other())[0]
-tauo = -grad(V.Other())[1]
+vo = grad(U.Other())[1]
+sigo = -grad(U.Other())[0]
+wo = grad(V.Other())[1]
+tauo = -grad(V.Other())[0]
 
 h = specialcf.mesh_size
 n = specialcf.normal(2)
-n_t = n[0]/Norm(n)
-n_x = n[1]/Norm(n)
+n_t = n[1]/Norm(n)
+n_x = n[0]/Norm(n)
 
 mean_v = 0.5*(v+vo)
 mean_w = 0.5*(w+wo)
@@ -105,7 +104,7 @@ gamma = 1
 HV = V.Operator("hesse")
 
 a = BilinearForm(fes)
-a += SymbolicBFI(  -v*(-HV[3]+pow(c,-2)*HV[0]) - sig*(-HV[2]+HV[1])  )
+a += SymbolicBFI(  -v*(-HV[0]+pow(c,-2)*HV[3]) - sig*(-HV[1]+HV[2])  )
 # a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ) ,VOL,  skeleton=True ) #space like faces
 a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ) ,VOL,  skeleton=True ) #space like faces, no jump in x since horizontal
 a += SymbolicBFI( timelike 	* ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ) ,VOL, skeleton=True ) #time like faces
@@ -139,7 +138,7 @@ sol = np.linalg.solve(nmat,nvec)
 for i in range(a.mat.height):
 	gfu.vec[i] = sol[i]
 print("cond nmat: ", np.linalg.cond(nmat))
-print(nmat)
+# print(nmat)
 
 
 U0 = GridFunction(fes)

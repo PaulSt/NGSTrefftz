@@ -80,13 +80,13 @@ namespace ngfem
 			}
 			dshape.Col(d) = basis * polynomial;
 		}
-		dshape.Col(0) *= c; //inner derivative
+		dshape.Col(D-1) *= c; //inner derivative
 		dshape *= (2.0/elsize); //inner derivative
 	}
 
 	template<int D>
 	Vector<double> T_TrefftzElement<D> :: ShiftPoint(Vector<double> point) const
-	{ point -= elcenter; point *= (2.0/elsize); point[0] *= c; return point;}
+	{ point -= elcenter; point *= (2.0/elsize); point[D-1] *= c; return point;}
 
 
 	template<int D>
@@ -98,13 +98,13 @@ namespace ngfem
 		{
 			for(int i=0;i<npoly;i++)//loop over indices BinCoeff(D + ord, ord)
 			{
-				int k = indices(i,0);
+				int k = indices(i,D-1);
 				if(k > 1)
 				{
-					for(int m=1;m<=D-1;m++) //rekursive sum
+					for(int m=0;m<D-1;m++) //rekursive sum
 					{
 						Vec<D, int> get_coeff = indices.Row(i);
-						get_coeff[0] = get_coeff[0] - 2;
+						get_coeff[D-1] = get_coeff[D-1] - 2;
 						get_coeff[m] = get_coeff[m] + 2;
 						temp_basis( l, IndexMap(indices.Row(i)) ) += (indices(i,m)+1) * (indices(i,m)+2) * temp_basis(l,IndexMap(get_coeff) );
 					}
@@ -119,11 +119,11 @@ namespace ngfem
 							//i += nbasis-1;	//jump to time = 2 if i=0
 							break;
 						case 1:
-							for(int exponent :  indices.Row(i).Range(1,D)) coeff *= LegCoeffMonBasis(l,exponent);
+							for(int exponent :  indices.Row(i).Range(0,D-1)) coeff *= LegCoeffMonBasis(l,exponent);
 							temp_basis( l, IndexMap(indices.Row(i)) ) = coeff;
 							break;
 						case 2:
-							for(int exponent :  indices.Row(i).Range(1,D)) coeff *= ChebCoeffMonBasis(l,exponent);
+							for(int exponent :  indices.Row(i).Range(0,D-1)) coeff *= ChebCoeffMonBasis(l,exponent);
 							temp_basis( l, IndexMap(indices.Row(i)) ) = coeff;
 							break;
 					}
@@ -141,8 +141,8 @@ namespace ngfem
 		{
 			for(int i=0;i<=ord;i++)
 			{
-				numbers(D - dim)=i;
-				MakeIndices_inner(indice,numbers,count,dim-1) ;
+				numbers(dim-1)=i;
+				MakeIndices_inner(indice,numbers,count,dim-1);
 			}
 		}
 		else
@@ -176,10 +176,10 @@ namespace ngfem
 		int sum=0;
 		int temp_size = 0;
 		for(int d=0;d<D;d++){
-			for(int p=0;p<index(d);p++){
+			for(int p=0;p<index(D-1-d);p++){
 				sum+=BinCoeff(D-1 - d + ord - p - temp_size, ord - p - temp_size);
 			}
-			temp_size+=index(d);
+			temp_size+=index(D-1-d);
 		}
 		return sum;
 	}
