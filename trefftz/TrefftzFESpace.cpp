@@ -133,9 +133,10 @@ namespace ngcomp
             Vec<D> v2 = ma->GetPoint<D> (vertex2);
             // cout << "v1: " << v1 << " v1 part: " << v1(1,D-1) << "norm " <<
             // L2Norm(v1) << endl ;
-            anisotropicdiam = max (
-                anisotropicdiam, sqrt (L2Norm2 (v1 (1, D - 1) - v2 (1, D - 1))
-                                       + pow (c * (v1 (0) - v2 (0)), 2)));
+            anisotropicdiam
+                = max (anisotropicdiam,
+                       sqrt (L2Norm2 (v1 (0, D - 2) - v2 (0, D - 2))
+                             + pow (c * (v1 (D - 1) - v2 (D - 1)), 2)));
           }
       }
     return anisotropicdiam;
