@@ -29,11 +29,11 @@ U0.Set(truesol)
 Draw(U0,mesh,'U0')
 # input()
 
-[a,f] = DGeqsys(fes,U0,v0,sig0,c)
+[a,f] = DGeqsys(fes,truesol,v0,sig0,c,v0)
 # gfu2= GridFunction(fes, name="uDG")
 # gfu2.vec.data = a.mat.Inverse() * f.vec
 
-gfu = DGsolve(fes,a,f)
+[gfu,cond] = DGsolve(fes,a,f)
 
 L2error = Integrate((truesol - gfu)*(truesol - gfu), mesh)
 sH1error = Integrate((grad(U0) - grad(gfu))*(grad(U0) - grad(gfu)), mesh)

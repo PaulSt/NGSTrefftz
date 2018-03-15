@@ -80,7 +80,7 @@ f += SymbolicLFI( timelike 	* ( v0 * (alpha*w - tau*n_x) ), BND, skeleton=True) 
 f.Assemble()
 
 
-gfu = DGsolve(fes,a,f)
+[gfu,cond] = DGsolve(fes,a,f)
 
 err0=U0.components[0] - gfu.components[0]
 err1=U0.components[1] - gfu.components[1]

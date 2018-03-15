@@ -30,9 +30,9 @@ Draw(U0,mesh,'U0')
 # Draw(testhes,mesh,'h')
 #input()
 
-[a,f] = DGeqsys(fes,truesol,v0,sig0,c,True)
+[a,f] = DGeqsys(fes,truesol,v0,sig0,c,v0,True)
 
-gfu = DGsolve(fes,a,f)
+[gfu,cond] = DGsolve(fes,a,f)
 
 L2error = Integrate((truesol - gfu)*(truesol - gfu), mesh)
 sH1error = Integrate((grad(U0) - grad(gfu))*(grad(U0) - grad(gfu)), mesh)
