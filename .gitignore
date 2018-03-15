@@ -5,5 +5,6 @@ trefftz/l2hofespace2.cpp
 trefftz/l2hofespace2.hpp
 hpw/
 python_test/cone/
-python_test/cartsolve/notebooks/.ipynb_checkpoints/
-python_test/cartsolve/notebooks/results/
+python_test/notebooks/.ipynb_checkpoints/
+python_test/notebooks/results/
+python_test/__pycache__

@@ -7,39 +7,12 @@ k = 1
 #########################################################################################################################################
 from trefftzngs import *
 import numpy as np
-
-import netgen.meshing as ngm
-from netgen.geom2d import unit_square
+from prodmesh import CartSquare
 from ngsolve import *
+#import netgen.gui
+from DGeq import *
 
-ngmesh = ngm.Mesh()
-ngmesh.SetGeometry(unit_square)
-ngmesh.dim = 2
-pnums = []
-for j in range(t_steps + 1):
-	for i in range(N + 1):
-		pnums.append(ngmesh.Add(ngm.MeshPoint(ngm.Pnt(i / N, j / t_steps, 0))))
-
-foo = ngm.FaceDescriptor(surfnr=1,domin=1,bc=1)
-ngmesh.Add (foo)
-ngmesh.SetMaterial(1, "mat")
-for j in range(t_steps):
-	for i in range(N):
-		ngmesh.Add(ngm.Element2D(1, [pnums[i + j * (N + 1)],
-									pnums[i + 1 + j * (N + 1)],
-									pnums[i + 1 + (j + 1) * (N + 1)],
-									pnums[i + (j + 1) * (N + 1)]]))
-for i in range(t_steps):
-	ngmesh.Add(ngm.Element1D([pnums[N + i * (N + 1)], pnums[N + (i + 1) * (N + 1)]], index=1))
-	ngmesh.Add(ngm.Element1D([pnums[0 + i * (N + 1)], pnums[0 + (i + 1) * (N + 1)]], index=1))
-for i in range(N):
-	ngmesh.Add(ngm.Element1D([pnums[i], pnums[i + 1]], index=2))
-	ngmesh.Add(ngm.Element1D([pnums[i + t_steps * (N + 1)], pnums[i + 1 + t_steps * (N + 1)]], index=2))
-
-mesh = Mesh(ngmesh)
-
-Draw(mesh)
-# print("boundaries" + str(mesh.GetBoundaries()))
+mesh = CartSquare(N,t_steps)
 #########################################################################################################################################
 
 # fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=1)
@@ -106,23 +79,8 @@ f += SymbolicLFI( spacelike * IfPos(-n_t,1,0) *  ( pow(c,-2)*v0*w + sig0*tau ), 
 f += SymbolicLFI( timelike 	* ( v0 * (alpha*w - tau*n_x) ), BND, skeleton=True) #dirichlet boundary 'timelike'
 f.Assemble()
 
-# inv = a.mat.Inverse()
-# gfu = GridFunction(fes)
-# gfu.vec.data = inv * f.vec
 
-gfu = GridFunction(fes, name="uDG")
-
-nmat = np.zeros((a.mat.height,a.mat.width))
-nvec = np.zeros(a.mat.width)
-
-for i in range(a.mat.width):#gfu.vec.data = a.mat.Inverse() * f.vec
-	for j in range(a.mat.height):
-		nmat[j,i] = a.mat[j,i]
-nvec = f.vec.FV().NumPy() #nvec
-
-sol = np.linalg.solve(nmat,nvec)
-for i in range(a.mat.height):
-	gfu.vec[i] = sol[i]
+gfu = DGsolve(fes,a,f)
 
 err0=U0.components[0] - gfu.components[0]
 err1=U0.components[1] - gfu.components[1]
