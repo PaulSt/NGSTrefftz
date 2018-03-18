@@ -2,7 +2,7 @@
 #define FILE_SCALARMAPPEDELEMENT_HPP
 
 #include <fem.hpp>
-#include "helpers.cpp"
+#include "helpers.hpp"
 
 namespace ngfem
 {

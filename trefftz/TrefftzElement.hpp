@@ -2,7 +2,7 @@
 #define FILE_TREFFTZELEMENT_HPP
 
 #include <fem.hpp>
-#include "helpers.cpp"
+#include "helpers.hpp"
 #include "ScalarMappedElement.hpp"
 
 namespace ngfem
