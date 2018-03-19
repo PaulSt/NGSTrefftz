@@ -9,7 +9,7 @@ from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from prodmesh import ProdMesh
 from ngsolve import *
-import netgen.gui
+#import netgen.gui
 from trefftzngs import *
 from DGeq import *
 

@@ -41,7 +41,9 @@ namespace ngfem
 
 	double Horner( Vector<double> a, int x );
 
-	double MultiHorner( Matrix<double> a, Vector<double> x);
+	double MultiHorner( Matrix<int> multiind, Vector<double> coeff, Vector<double> point);
+
+	Vector<int> maxj(Matrix<int> multiind);
 
 }
 
