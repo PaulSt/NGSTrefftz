@@ -2,6 +2,7 @@
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
 #include "recursive_pol.hpp"
+#include "helpers.hpp"
 
 namespace ngfem
 {
@@ -58,6 +59,8 @@ namespace ngfem
     tempshape = basis * polynomial;
     for (int b = 0; b < nbasis; b++)
       shape (b) = tempshape (b);
+
+    MultiHorner (indices, basis.Row (0), cpoint);
   }
 
   template <int D>
