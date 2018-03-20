@@ -38,12 +38,12 @@ namespace ngfem
 		double coeff = pow(2,k-1)*n*pow(-1,floor((n-k)/2)) * tgamma((n+k)/2)/(tgamma(floor((n-k)/2)+1)*tgamma(k+1));
 		return coeff;
 	}
-
-	double Horner( Vector<double> a, int x );
-
-	double MultiHorner( Matrix<int> multiind, Vector<double> coeff, Vector<double> point);
-
-	Vector<int> maxj(Matrix<int> multiind);
+	
+	// double Horner( Vector<double> a, int x );
+	//
+	// double MultiHorner( Matrix<int> multiind, Vector<int> klist, Vector<double> coeff, Vector<double> point);
+	//
+	// Vector<int> maxj(Matrix<int> multiind);
 
 }
 
