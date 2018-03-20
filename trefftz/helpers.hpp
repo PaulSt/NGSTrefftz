@@ -51,12 +51,12 @@ namespace ngfem
     return coeff;
   }
 
-  double Horner (Vector<double> a, int x);
-
-  double MultiHorner (Matrix<int> multiind, Vector<double> coeff,
-                      Vector<double> point);
-
-  Vector<int> maxj (Matrix<int> multiind);
+  // double Horner( Vector<double> a, int x );
+  //
+  // double MultiHorner( Matrix<int> multiind, Vector<int> klist,
+  // Vector<double> coeff, Vector<double> point);
+  //
+  // Vector<int> maxj(Matrix<int> multiind);
 
 }
 
