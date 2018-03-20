@@ -59,8 +59,6 @@ namespace ngfem
 		Vector<double> tempshape(nbasis);
 		tempshape = basis * polynomial;
 		for(int b = 0; b < nbasis; b++) shape(b) = tempshape(b);
-
-		MultiHorner( indices, basis.Row(0), cpoint);
 	}
 
 
