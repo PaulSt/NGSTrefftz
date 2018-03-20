@@ -13,7 +13,8 @@ namespace ngcomp
 
   TrefftzFESpace ::TrefftzFESpace (shared_ptr<MeshAccess> ama,
                                    const Flags &flags)
-      : FESpace (ama, flags)
+      : FESpace (ama, flags), TTT (int (flags.GetNumFlag ("order", 3)),
+                                   flags.GetNumFlag ("wavespeed", 1))
   {
 
     DefineNumFlag ("wavespeed");
@@ -114,6 +115,7 @@ namespace ngcomp
       case ET_PYRAMID:
       case ET_TET:
         {
+          // return TTT;
           return *(new (alloc) T_TrefftzElement<3> (
               order, c, ma->GetElType (ei), basistype));
           break;
