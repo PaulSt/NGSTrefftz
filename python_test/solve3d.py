@@ -1,20 +1,20 @@
 #########################################################################################################################################
 c = 2
-t_steps = 1/10
-nt_steps = 5
-order = 3
+t_steps = 1/2
+nt_steps = 3
+order = 5
 k = 2
 #########################################################################################################################################
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from prodmesh import ProdMesh
 from ngsolve import *
-#import netgen.gui
+# import netgen.gui
 from trefftzngs import *
 from DGeq import *
-
+import time
 # mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.2,quad_dominated=True))
-ngmeshbase = unit_square.GenerateMesh(maxh = 0.4)
+ngmeshbase = unit_square.GenerateMesh(maxh = 0.3)
 mesh = ProdMesh(ngmeshbase,t_steps)
 #Draw(mesh)
 #########################################################################################################################################
@@ -38,26 +38,32 @@ basemesh = Mesh(ngmeshbase)
 Draw(basemesh)
 gfu = GridFunction(fes)
 gfu.Set(truesol)
-input("startcomp")
+#input("startcomp")
 for t_step in range(nt_steps):
 	truesol = sin( k*(c* (z+t_step*t_steps) +x+y) )
 	gD = c*k* cos( k*(c* (z+t_step*t_steps) +x+y) )
 	v0 = c*k*cos(k*(c*(z+t_step*t_steps)+x+y))
 	sig0 = CoefficientFunction( (-k*cos(k*(c*(z+t_step*t_steps)+x+y)),-k*cos(k*(c*(z+t_step*t_steps)+x+y))) )
+	start = time.clock()
 	[a,f] = DGeqsys(fes,truesol,v0,sig0,c,gD)
+	print("DGsys: ", str(time.clock()-start))
+
+	start = time.clock()
 	[gfu, cond] = DGsolve(fes,a,f)
+	print("DGsolve: ", str(time.clock()-start))
 
 	#sig0 = CoefficientFunction((-grad(gfu)[0],-grad(gfu)[1]))
 	#v0 = grad(gfu)[2]
-
+	start = time.clock()
 	L2error = Integrate((truesol - gfu)*(truesol - gfu), mesh)
+	print("L2error: ", str(time.clock()-start))
 	#gradtruesol = CoefficientFunction(( k*cos(k*(c*z+x+y)), k*cos(k*(c*z+x+y)), c*k*cos(k*(c*z+x+y)) ))
 	#sH1error = sqrt(Integrate((gradtruesol - grad(gfu))*(gradtruesol - grad(gfu)), mesh))
 	print("error=", L2error)
 	#print("grad-error=", sH1error)
 
-	Draw(gfu,basemesh,'sol')
-	input(t_step)
+	#Draw(gfu,basemesh,'sol')
+	#input(t_step)
 
 # Draw(gfu,mesh,'sol')
 # Draw(grad(gfu),mesh,'gradsol')
