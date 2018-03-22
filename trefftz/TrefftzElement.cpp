@@ -35,8 +35,8 @@ namespace ngfem
 			c(ac),
 			nbasis(BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1)),
 			npoly(BinCoeff(D + ord, ord)),
-			indices(MakeIndices()),
-			basis(TrefftzBasis(basistype)),
+			indices(GetIndices()),
+			basis(GetTrefftzBasis(basistype)),
 			eltype(aeltype)
 			{;}
 
@@ -90,6 +90,31 @@ namespace ngfem
 
 
 	template<int D>
+	Matrix<int> T_TrefftzElement<D> :: GetIndices()
+	{
+		static int order;
+		static Matrix<int> indicesstorage;
+		if(order != ord){
+			order = ord;
+			indicesstorage = MakeIndices();}
+		return indicesstorage;
+	}
+
+	template<int D>
+	Matrix<double> T_TrefftzElement<D> :: GetTrefftzBasis(int basistype) const
+	{
+		static int order;
+		static int btype;
+		static Matrix<double> basisstorage;
+		if(order != ord || btype != basistype){
+			basisstorage = TrefftzBasis(basistype);
+			order = ord;
+			btype = basistype;
+		}
+		return basisstorage;
+	}
+
+	template<int D>
 	constexpr Matrix<double> T_TrefftzElement<D> :: TrefftzBasis(int basistype) const
 	{
 		Matrix<double> temp_basis(nbasis,npoly);
@@ -106,25 +131,25 @@ namespace ngfem
 						Vec<D, int> get_coeff = indices.Row(i);
 						get_coeff[D-1] = get_coeff[D-1] - 2;
 						get_coeff[m] = get_coeff[m] + 2;
-						temp_basis( l, IndexMap(indices.Row(i)) ) += (indices(i,m)+1) * (indices(i,m)+2) * temp_basis(l,IndexMap(get_coeff) );
+						temp_basis( l, i ) += (indices(i,m)+1) * (indices(i,m)+2) * temp_basis(l,IndexMap(get_coeff) );
 					}
-					temp_basis( l, IndexMap(indices.Row(i)) ) *= 1.0/(k * (k-1));
+					temp_basis( l, i ) *= 1.0/(k * (k-1));
 				}
 				else if((k == 0 && l < BinCoeff(D-1 + ord, ord)) || (k == 1 && l >= BinCoeff(D-1 + ord, ord))) //time=0 and =1
 				{
 					double coeff = 1;
 					switch (basistype) {
 						case 0:
-							temp_basis( l, IndexMap(indices.Row(l)) ) = 1.0; //set the l-th coeff to 1
+							temp_basis( l, l ) = 1.0; //set the l-th coeff to 1
 							//i += nbasis-1;	//jump to time = 2 if i=0
 							break;
 						case 1:
 							for(int exponent :  indices.Row(i).Range(0,D-1)) coeff *= LegCoeffMonBasis(l,exponent);
-							temp_basis( l, IndexMap(indices.Row(i)) ) = coeff;
+							temp_basis( l, i ) = coeff;
 							break;
 						case 2:
 							for(int exponent :  indices.Row(i).Range(0,D-1)) coeff *= ChebCoeffMonBasis(l,exponent);
-							temp_basis( l, IndexMap(indices.Row(i)) ) = coeff;
+							temp_basis( l, i ) = coeff;
 							break;
 					}
 				}

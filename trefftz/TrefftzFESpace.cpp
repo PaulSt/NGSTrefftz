@@ -82,7 +82,7 @@ namespace ngcomp
 		switch (ma->GetElType(ei)) {
 			case ET_SEGM:
 			{
-				return *(new (alloc) T_TrefftzElement<1>(order, c, ET_SEGM,basistype) );
+				return *(new (alloc) T_TrefftzElement<1>(order, c, ET_SEGM,basistype) )->SetCenter(ElCenter<1>(ei)) ->SetElSize( Adiam<1>(ei) );
 				break;
 			}
 			case ET_QUAD:
@@ -97,7 +97,7 @@ namespace ngcomp
 			case ET_TET:
 			{
 				//return TTT;
-				return *(new (alloc) T_TrefftzElement<3>(order, c, ma->GetElType(ei),basistype) );
+				return *(new (alloc) T_TrefftzElement<3>(order, c, ma->GetElType(ei),basistype) )->SetCenter(ElCenter<3>(ei)) ->SetElSize( Adiam<3>(ei) );
 				break;
 			}
 		}
