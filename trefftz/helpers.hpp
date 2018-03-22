@@ -38,12 +38,38 @@ namespace ngfem
 		double coeff = pow(2,k-1)*n*pow(-1,floor((n-k)/2)) * tgamma((n+k)/2)/(tgamma(floor((n-k)/2)+1)*tgamma(k+1));
 		return coeff;
 	}
-	
-	// double Horner( Vector<double> a, int x );
-	//
-	// double MultiHorner( Matrix<int> multiind, Vector<int> klist, Vector<double> coeff, Vector<double> point);
-	//
-	// Vector<int> maxj(Matrix<int> multiind);
+
+
+	class HornerScheme
+	{
+		private:
+			int D;
+			int ord;
+			int npoly;
+			Matrix<int> pascal;
+		public:
+			HornerScheme(int aD, int aord): D(aD), ord(aord), npoly(BinCoeff(D + ord, ord)), pascal(pascal_sym())
+			{;}
+
+			MultiHorner(Vector<double> coeff, Vector<double> point){
+				// for(int j=npoly;j>0;j--)
+				// 	for(int i=1;i<=D;i++)
+				// 	 	for(int k=1;k<=
+			}
+
+			Matrix<int> pascal_sym() {
+				Matrix<int> pasc(D,ord);
+				int i, j;
+
+				for (i = 0; i < D; ++i)
+					for (j = 0; j < ord; ++j)
+						if (i == 0 || j == 0)
+							pasc(i,j) = 1;
+						else
+							pasc(i,j) = pasc(i-1,j) + pasc(i,j-1);
+				return pasc;
+			}
+	};
 
 }
 
