@@ -56,9 +56,11 @@ namespace ngfem
     MakeIndices_inner (Matrix<int> &indice, Vec<D, int> &numbers, int &count,
                        int dim = D);
     constexpr Matrix<int> MakeIndices ();
+    Matrix<int> GetIndices ();
 
     constexpr int IndexMap (Vec<D, int> index) const;
     constexpr Matrix<double> TrefftzBasis (int basistype) const;
+    Matrix<double> GetTrefftzBasis (int basistype) const;
 
     double ipow_ar (FlatVector<double> base, Vec<D, int> ex, double result = 1,
                     int count = D - 1) const;

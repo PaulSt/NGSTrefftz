@@ -98,7 +98,9 @@ namespace ngcomp
       case ET_SEGM:
         {
           return *(new (alloc)
-                       T_TrefftzElement<1> (order, c, ET_SEGM, basistype));
+                       T_TrefftzElement<1> (order, c, ET_SEGM, basistype))
+                      ->SetCenter (ElCenter<1> (ei))
+                      ->SetElSize (Adiam<1> (ei));
           break;
         }
       case ET_QUAD:
@@ -117,7 +119,9 @@ namespace ngcomp
         {
           // return TTT;
           return *(new (alloc) T_TrefftzElement<3> (
-              order, c, ma->GetElType (ei), basistype));
+                       order, c, ma->GetElType (ei), basistype))
+                      ->SetCenter (ElCenter<3> (ei))
+                      ->SetElSize (Adiam<3> (ei));
           break;
         }
       }
