@@ -51,18 +51,28 @@ namespace ngfem
 			HornerScheme(int aD, int aord): D(aD), ord(aord), npoly(BinCoeff(D + ord, ord)), pascal(pascal_sym())
 			{;}
 
-			MultiHorner(Vector<double> coeff, Vector<double> point){
-				// for(int j=npoly;j>0;j--)
-				// 	for(int i=1;i<=D;i++)
-				// 	 	for(int k=1;k<=
+			void MultiHorner(Vector<double> coeff, Vector<double> point) const
+			{
+				for(int j=ord;j>0;j--)
+					for(int i=1;i<=D;i++)
+					 	for(int k=1;k<=pascal(j-1,i-1);k++){
+if(coeff.Size() < pascal(j-1,D)+pascal(j,i-2)+k-1){
+							// cout << pascal << endl;
+							// cout << coeff.Size() << endl;
+
+							// cout << "D: " << D << " ord: " << ord <<" j: " << j << " i: " << i << " k: " << k<< " index1: " <<pascal(j-2,D)+k << " index2: " <<  pascal(j-1,D)+pascal(j,i-2)+k << endl<<  endl;
+						}// coeff( pascal(j-2,D)+k ) += point( D-i+1 ) * coeff( pascal(j-1,D)+pascal(j,i-2)+k );
+							// coeff( pascal(j-1,D)+pascal(j,i-2)+k ) = 0;
+							// cout << coeff <<  endl;
+						}
 			}
 
 			Matrix<int> pascal_sym() {
-				Matrix<int> pasc(D,ord);
+				Matrix<int> pasc(ord+1,D+1);
 				int i, j;
 
-				for (i = 0; i < D; ++i)
-					for (j = 0; j < ord; ++j)
+				for (i = 0; i <= ord; ++i)
+					for (j = 0; j <= D; ++j)
 						if (i == 0 || j == 0)
 							pasc(i,j) = 1;
 						else

@@ -20,6 +20,7 @@ namespace ngfem
 			double elsize=1;
 			float c = 1.0;
 			ELEMENT_TYPE eltype;
+			HornerScheme horner;
 
 		public:
 			// T_TrefftzElement();
