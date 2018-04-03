@@ -213,16 +213,16 @@ namespace ngfem
   constexpr int T_TrefftzElement<D>::IndexMap (Vec<D, int> index) const
   {
     int sum = 0;
-    int temp_size = 0;
-    for (int d = 0; d < D; d++)
+    int indexleng = 0;
+    for (int r = 0; r < D; r++)
       {
-        for (int p = 0; p < index (D - 1 - d); p++)
+        indexleng += index (r);
+        for (int i = 0; i < index (r); i++)
           {
-            sum += BinCoeff (D - 1 - d + ord - p - temp_size,
-                             ord - p - temp_size);
+            sum += BinCoeff (indexleng - i + r - 1, indexleng - i);
           }
-        temp_size += index (D - 1 - d);
       }
+    sum += BinCoeff (indexleng - 1 + D, indexleng - 1);
     return sum;
   }
 
