@@ -19,7 +19,7 @@ namespace ngfem
     double elsize = 1;
     float c = 1.0;
     ELEMENT_TYPE eltype;
-    HornerScheme horner;
+    HornerScheme<D> horner;
 
   public:
     // T_TrefftzElement();
@@ -55,7 +55,7 @@ namespace ngfem
 
     constexpr void
     MakeIndices_inner (Matrix<int> &indice, Vec<D, int> &numbers, int &count,
-                       int dim = D);
+                       int ordr, int dim = D);
     constexpr Matrix<int> MakeIndices ();
     Matrix<int> GetIndices ();
 

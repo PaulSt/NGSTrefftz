@@ -117,7 +117,6 @@ namespace ngcomp
       case ET_PYRAMID:
       case ET_TET:
         {
-          // return TTT;
           return *(new (alloc) T_TrefftzElement<3> (
                        order, c, ma->GetElType (ei), basistype))
                       ->SetCenter (ElCenter<3> (ei))

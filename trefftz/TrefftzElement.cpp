@@ -4,6 +4,8 @@
 #include "recursive_pol.hpp"
 #include "helpers.hpp"
 
+#include <ctime>
+
 namespace ngfem
 {
   // template<int D>
@@ -35,7 +37,7 @@ namespace ngfem
         ord (aord), c (ac), nbasis (BinCoeff (D - 1 + ord, ord)
                                     + BinCoeff (D - 1 + ord - 1, ord - 1)),
         npoly (BinCoeff (D + ord, ord)), indices (GetIndices ()),
-        basis (GetTrefftzBasis (basistype)), eltype (aeltype)
+        basis (GetTrefftzBasis (basistype)), eltype (aeltype), horner (ord)
   {
     ;
   }
@@ -49,6 +51,7 @@ namespace ngfem
     for (int d = 0; d < D; d++)
       cpoint[d] = mip.GetPoint ()[d];
     cpoint = ShiftPoint (cpoint);
+
     Vector<double> polynomial (npoly);
 
     for (int i = 0; i < npoly; i++) // loop over indices
@@ -59,13 +62,22 @@ namespace ngfem
     tempshape = basis * polynomial;
     for (int b = 0; b < nbasis; b++)
       shape (b) = tempshape (b);
+
+    // static double elapsed_secs2 = 0;
+    // static int calltime2 = 0;
+    // clock_t begin2 = clock();
+    // 		for(int b = 0; b < nbasis; b++)
+    // 			shape(b) = horner.MultiHorner(basis.Row(b),cpoint);
+    // clock_t end2 = clock();
+    // elapsed_secs2 += double(end2 - begin2) / CLOCKS_PER_SEC;
+    // cout << "CS horner: " << elapsed_secs2 <<" times called: " <<
+    // ++calltime2 << " avg run: "<< elapsed_secs2/calltime2<<  endl;
   }
 
   template <int D>
   void T_TrefftzElement<D>::CalcDShape (const BaseMappedIntegrationPoint &mip,
                                         SliceMatrix<> dshape) const
   {
-    // Vector<double> cpoint = mip.GetPoint();
     Vector<double> cpoint (D);
     for (int d = 0; d < D; d++)
       cpoint[d] = mip.GetPoint ()[d];
@@ -126,6 +138,7 @@ namespace ngfem
   {
     Matrix<double> temp_basis (nbasis, npoly);
     temp_basis = 0;
+    int setbasis = 0;
     for (int l = 0; l < nbasis; l++) // loop over basis functions
       {
         for (int i = 0; i < npoly;
@@ -145,15 +158,17 @@ namespace ngfem
                   }
                 temp_basis (l, i) *= 1.0 / (k * (k - 1));
               }
-            else if ((k == 0 && l < BinCoeff (D - 1 + ord, ord))
-                     || (k == 1
-                         && l >= BinCoeff (D - 1 + ord, ord))) // time=0 and =1
+            else if (k <= 1 && l == 0
+                     && setbasis <= i) // if((k == 0 && l < BinCoeff(D-1 + ord,
+                                       // ord)) || (k == 1 && l >= BinCoeff(D-1
+                                       // + ord, ord))) //time=0 and =1
               {
                 double coeff = 1;
                 switch (basistype)
                   {
                   case 0:
-                    temp_basis (l, l) = 1.0; // set the l-th coeff to 1
+                    temp_basis (setbasis++, i) = 1.0; // set the l-th coeff to
+                                                      // 1
                     // i += nbasis-1;	//jump to time = 2 if i=0
                     break;
                   case 1:
@@ -174,16 +189,17 @@ namespace ngfem
   }
 
   template <int D>
-  constexpr void T_TrefftzElement<D>::MakeIndices_inner (Matrix<int> &indice,
-                                                         Vec<D, int> &numbers,
-                                                         int &count, int dim)
+  constexpr void
+  T_TrefftzElement<D>::MakeIndices_inner (Matrix<int> &indice,
+                                          Vec<D, int> &numbers, int &count,
+                                          int ordr, int dim)
   {
     if (dim > 0)
       {
-        for (int i = 0; i <= ord; i++)
+        for (int i = 0; i <= ordr; i++)
           {
             numbers (dim - 1) = i;
-            MakeIndices_inner (indice, numbers, count, dim - 1);
+            MakeIndices_inner (indice, numbers, count, ordr, dim - 1);
           }
       }
     else
@@ -193,7 +209,7 @@ namespace ngfem
           {
             sum += numbers (i);
           }
-        if (sum <= ord)
+        if (sum == ordr)
           {
             indice.Row (count++) = numbers;
           }
@@ -205,7 +221,10 @@ namespace ngfem
     Matrix<int> indice (npoly, D);
     Vec<D, int> numbers = 0;
     int count = 0;
-    MakeIndices_inner (indice, numbers, count);
+    for (int o = 0; o <= ord; o++)
+      {
+        MakeIndices_inner (indice, numbers, count, o);
+      }
     return indice;
   }
 
