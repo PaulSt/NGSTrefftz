@@ -39,41 +39,38 @@ namespace ngfem
 		return coeff;
 	}
 
-
+	template<int D>
 	class HornerScheme
 	{
 		private:
-			int D;
 			int ord;
 			int npoly;
 			Matrix<int> pascal;
 		public:
-			HornerScheme(int aD, int aord): D(aD), ord(aord), npoly(BinCoeff(D + ord, ord)), pascal(pascal_sym())
+			HornerScheme(int aord): ord(aord), npoly(BinCoeff(D + ord, ord)), pascal(pascal_sym())
 			{;}
 
-			void MultiHorner(Vector<double> coeff, Vector<double> point) const
+			double MultiHorner(Vector<double> coeff, Vector<double> &point) const
 			{
 				for(int j=ord;j>0;j--)
-					for(int i=1;i<=D;i++)
-					 	for(int k=1;k<=pascal(j-1,i-1);k++){
-if(coeff.Size() < pascal(j-1,D)+pascal(j,i-2)+k-1){
-							// cout << pascal << endl;
-							// cout << coeff.Size() << endl;
-
-							// cout << "D: " << D << " ord: " << ord <<" j: " << j << " i: " << i << " k: " << k<< " index1: " <<pascal(j-2,D)+k << " index2: " <<  pascal(j-1,D)+pascal(j,i-2)+k << endl<<  endl;
-						}// coeff( pascal(j-2,D)+k ) += point( D-i+1 ) * coeff( pascal(j-1,D)+pascal(j,i-2)+k );
-							// coeff( pascal(j-1,D)+pascal(j,i-2)+k ) = 0;
-							// cout << coeff <<  endl;
+					for(int i=0;i<D;i++)
+					 	for(int k=pascal(i+1,j)-1; k>=0; k--){
+							coeff( pascal(D+1,j-1)+k ) += point( i ) * coeff( pascal(D+1,j)+pascal(i,j+1)+k );
+							coeff( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
 						}
+				return coeff(0);
 			}
 
-			Matrix<int> pascal_sym() {
-				Matrix<int> pasc(ord+1,D+1);
+			Matrix<int> pascal_sym()
+			{
+				Matrix<int> pasc(D+2,ord+2);
 				int i, j;
 
-				for (i = 0; i <= ord; ++i)
-					for (j = 0; j <= D; ++j)
+				for (i = 0; i <= D+1; ++i)
+					for (j = 0; j <= ord+1; ++j)
 						if (i == 0 || j == 0)
+							pasc(i,j) = 0;
+						else if (i == 1 || j == 1)
 							pasc(i,j) = 1;
 						else
 							pasc(i,j) = pasc(i-1,j) + pasc(i,j-1);

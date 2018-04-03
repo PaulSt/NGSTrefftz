@@ -20,7 +20,7 @@ namespace ngfem
 			double elsize=1;
 			float c = 1.0;
 			ELEMENT_TYPE eltype;
-			HornerScheme horner;
+			HornerScheme<D> horner;
 
 		public:
 			// T_TrefftzElement();
@@ -43,7 +43,7 @@ namespace ngfem
 		protected:
 			Vector<double> ShiftPoint(Vector<double> point) const;
 
-			constexpr void MakeIndices_inner(Matrix<int> &indice, Vec<D, int> &numbers, int &count, int dim = D);
+			constexpr void MakeIndices_inner(Matrix<int> &indice, Vec<D, int> &numbers, int &count, int ordr, int dim = D);
 			constexpr Matrix<int> MakeIndices();
 			Matrix<int> GetIndices();
 

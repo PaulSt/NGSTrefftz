@@ -1,9 +1,9 @@
 #########################################################################################################################################
-c = 2
-t_steps = 1/2
-nt_steps = 3
-order = 5
-k = 2
+c = 1
+t_steps = 1/5
+nt_steps = 1
+order = 8
+k = 1
 #########################################################################################################################################
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
@@ -54,13 +54,11 @@ for t_step in range(nt_steps):
 
 	#sig0 = CoefficientFunction((-grad(gfu)[0],-grad(gfu)[1]))
 	#v0 = grad(gfu)[2]
-	start = time.clock()
 	L2error = Integrate((truesol - gfu)*(truesol - gfu), mesh)
-	print("L2error: ", str(time.clock()-start))
-	#gradtruesol = CoefficientFunction(( k*cos(k*(c*z+x+y)), k*cos(k*(c*z+x+y)), c*k*cos(k*(c*z+x+y)) ))
-	#sH1error = sqrt(Integrate((gradtruesol - grad(gfu))*(gradtruesol - grad(gfu)), mesh))
-	print("error=", L2error)
-	#print("grad-error=", sH1error)
+	gradtruesol = CoefficientFunction(( k*cos(k*(c*z+x+y)), k*cos(k*(c*z+x+y)), c*k*cos(k*(c*z+x+y)) ))
+	sH1error = sqrt(Integrate((gradtruesol - grad(gfu))*(gradtruesol - grad(gfu)), mesh))
+	print("L2error=", L2error)
+	print("grad-error=", sH1error)
 
 	#Draw(gfu,basemesh,'sol')
 	#input(t_step)
