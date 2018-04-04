@@ -49,30 +49,12 @@ namespace ngfem
   void T_TrefftzElement<D> :: CalcShape (const BaseMappedIntegrationPoint & mip,
                                   BareSliceVector<> shape) const
   {
-		// Vector<double> cpoint = mip.GetPoint();
-		Vector<double> cpoint(D);
-		for(int d=0; d<D; d++) cpoint[d] = mip.GetPoint()[d];
+		Vector<double> cpoint = mip.GetPoint();
 		cpoint = ShiftPoint(cpoint);
-
-		Vector<double> polynomial(npoly);
-
-		for(int i=0; i<npoly; i++)//loop over indices
-		{
-			polynomial(i) = ipow_ar(cpoint,indices.Row(i));
-		}
 		Vector<double> tempshape(nbasis);
-		tempshape = basis * polynomial;
+
+		tempshape = horner.MultiHornerMat(basis,cpoint);
 		for(int b = 0; b < nbasis; b++) shape(b) = tempshape(b);
-
-// static double elapsed_secs2 = 0;
-// static int calltime2 = 0;
-// clock_t begin2 = clock();
-// 		for(int b = 0; b < nbasis; b++)
-// 			shape(b) = horner.MultiHorner(basis.Row(b),cpoint);
-// clock_t end2 = clock();
-// elapsed_secs2 += double(end2 - begin2) / CLOCKS_PER_SEC;
-// cout << "CS horner: " << elapsed_secs2 <<" times called: " << ++calltime2 << " avg run: "<< elapsed_secs2/calltime2<<  endl;
-
 	}
 
 
