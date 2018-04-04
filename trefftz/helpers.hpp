@@ -65,7 +65,8 @@ namespace ngfem
       ;
     }
 
-    double MultiHorner (Vector<double> coeff, Vector<double> &point) const
+    inline double
+    MultiHorner (Vector<double> coeff, Vector<double> &point) const
     {
       for (int j = ord; j > 0; j--)
         for (int i = 0; i < D; i++)
@@ -77,6 +78,21 @@ namespace ngfem
               coeff (pascal (D + 1, j) + pascal (i, j + 1) + k) = 0;
             }
       return coeff (0);
+    }
+
+    inline Vector<double>
+    MultiHornerMat (Matrix<double> coeff, Vector<double> &point) const
+    {
+      for (int j = ord; j > 0; j--)
+        for (int i = 0; i < D; i++)
+          for (int k = pascal (i + 1, j) - 1; k >= 0; k--)
+            {
+              coeff.Col (pascal (D + 1, j - 1) + k)
+                  += point (i)
+                     * coeff.Col (pascal (D + 1, j) + pascal (i, j + 1) + k);
+              coeff.Col (pascal (D + 1, j) + pascal (i, j + 1) + k) = 0;
+            }
+      return coeff.Col (0);
     }
 
     Matrix<int> pascal_sym ()
