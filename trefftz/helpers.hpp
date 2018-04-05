@@ -44,10 +44,9 @@ namespace ngfem
 	{
 		private:
 			int ord;
-			int npoly;
 			Matrix<int> pascal;
 		public:
-			HornerScheme(int aord): ord(aord), npoly(BinCoeff(D + ord, ord)), pascal(pascal_sym())
+			HornerScheme(int aord): ord(aord), pascal(pascal_sym())
 			{;}
 
 			inline double MultiHorner(Vector<double> coeff, Vector<double> &point) const
@@ -61,9 +60,9 @@ namespace ngfem
 				return coeff(0);
 			}
 
-			inline Vector<double> MultiHornerMat(Matrix<double> coeff, Vector<double> &point) const
+			inline Vector<double> MultiHornerMat(Matrix<double> coeff, Vector<double> &point, int polord) const
 			{
-				for(int j=ord;j>0;j--)
+				for(int j=polord;j>0;j--)
 					for(int i=0;i<D;i++)
 					 	for(int k=pascal(i+1,j)-1; k>=0; k--){
 							coeff.Col( pascal(D+1,j-1)+k ) += point( i ) * coeff.Col( pascal(D+1,j)+pascal(i,j+1)+k );

@@ -53,7 +53,7 @@ namespace ngfem
 		cpoint = ShiftPoint(cpoint);
 		Vector<double> tempshape(nbasis);
 
-		tempshape = horner.MultiHornerMat(basis,cpoint);
+		tempshape = horner.MultiHornerMat(basis,cpoint,ord);
 		for(int b = 0; b < nbasis; b++) shape(b) = tempshape(b);
 	}
 
@@ -65,16 +65,10 @@ namespace ngfem
 		Vector<double> cpoint(D);
 		for(int d=0; d<D; d++) cpoint[d] = mip.GetPoint()[d];
 		cpoint = ShiftPoint(cpoint);
-		Vector<double> polynomial(npoly);
 
-		for(int d=0;d<D;d++)  //loop over derivatives/dimensions
-		{
-			for(int i=0;i<npoly;i++)//loop over indices
-			{
-				polynomial(i) = ipowD_ar(d,cpoint,indices.Row(i));
-			}
-			dshape.Col(d) = basis * polynomial;
-		}
+		for(int d=0;d<D;d++)//loop over derivatives/dimensions
+			dshape.Col(d) = horner.MultiHornerMat(GetDerTrefftzBasis(d), cpoint, ord-1);
+
 		dshape.Col(D-1) *= c; //inner derivative
 		dshape *= (2.0/elsize); //inner derivative
 	}
@@ -83,17 +77,6 @@ namespace ngfem
 	Vector<double> T_TrefftzElement<D> :: ShiftPoint(Vector<double> point) const
 	{ point -= elcenter; point *= (2.0/elsize); point[D-1] *= c; return point;}
 
-
-	template<int D>
-	Matrix<int> T_TrefftzElement<D> :: GetIndices()
-	{
-		static int order;
-		static Matrix<int> indicesstorage;
-		if(order != ord){
-			order = ord;
-			indicesstorage = MakeIndices();}
-		return indicesstorage;
-	}
 
 	template<int D>
 	Matrix<double> T_TrefftzElement<D> :: GetTrefftzBasis(int basistype) const
@@ -108,6 +91,32 @@ namespace ngfem
 		}
 		return basisstorage;
 	}
+
+	template<int D>
+	Matrix<double> T_TrefftzElement<D> :: GetDerTrefftzBasis(int der, int basistype) const
+	{
+		static int order;
+		static int btype;
+		static Matrix<double> basisstorage[D];
+		if(order != ord || btype != basistype){
+			for(int d=0;d<D;d++){
+				Matrix<double> coeffcp(basis.Height(), BinCoeff(D+ord-1,ord-1));
+				int count = 0;
+				for(int i=0;i<basis.Width();i++)
+				{
+					if(indices(i,d) != 0)
+						coeffcp.Col(count++) = indices(i,d)*basis.Col(i);
+				}
+				basisstorage[d].SetSize(basis.Height(),coeffcp.Width());
+				basisstorage[d]=coeffcp;
+			}
+			order = ord;
+			btype = basistype;
+		}
+		return basisstorage[der];
+	}
+
+
 
 	template<int D>
 	constexpr Matrix<double> T_TrefftzElement<D> :: TrefftzBasis(int basistype) const
@@ -181,13 +190,18 @@ namespace ngfem
 
 
 	template<int D>
-	constexpr Matrix<int> T_TrefftzElement<D> :: MakeIndices()
+	Matrix<int> T_TrefftzElement<D> :: GetIndices()
 	{
-		Matrix<int> indice(npoly,D);
-		Vec<D, int>  numbers = 0;
-		int count = 0;
-		for(int o=0;o<=ord;o++){
-			MakeIndices_inner(indice, numbers, count, o);
+		static int order;
+		static Matrix<int> indice;
+		if(order != ord)
+		{
+			indice.SetSize(npoly,D);
+			Vec<D, int>  numbers = 0;
+			int count = 0;
+			for(int o=0;o<=ord;o++){
+				MakeIndices_inner(indice, numbers, count, o);
+			}
 		}
 		return indice;
 	}
