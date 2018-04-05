@@ -8,37 +8,15 @@
 
 namespace ngfem
 {
-	// template<int D>
-	// T_TrefftzElement<D> ::T_TrefftzElement()
-	// 	: ScalarMappedElement<D>(D+1, 1),
-	// 		ord(1),
-	// 		nbasis(D+1),
-	// 		npoly(D+1),
-	// 		indices(MakeIndices()),
-	// 		basis(TrefftzBasis()),
-	// 		eltype(ET_TRIG)
-	// 		{;}
-	// template<int D>
-  // T_TrefftzElement<D> ::T_TrefftzElement(int aord, float ac = 1)
-	// 	: ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
-	// 		ord(aord),
-	// 		c(ac),
-	// 		nbasis(BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1)),
-	// 		npoly(BinCoeff(D + ord, ord)),
-	// 		indices(MakeIndices()),
-	// 		basis(TrefftzBasis()),
-	// 		eltype(ET_TRIG)
-	// 		{;}
-
 	template<int D>
-  T_TrefftzElement<D> ::T_TrefftzElement(int aord, float ac, ELEMENT_TYPE aeltype, int basistype)
+  T_TrefftzElement<D> ::T_TrefftzElement(int aord, float ac, ELEMENT_TYPE aeltype, int abasistype)
 		: ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
 			ord(aord),
 			c(ac),
 			nbasis(BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1)),
 			npoly(BinCoeff(D + ord, ord)),
 			indices(GetIndices()),
-			basis(GetTrefftzBasis(basistype)),
+			basistype(abasistype),
 			eltype(aeltype),
 			horner(ord)
 			{;}
@@ -53,7 +31,7 @@ namespace ngfem
 		cpoint = ShiftPoint(cpoint);
 		Vector<double> tempshape(nbasis);
 
-		tempshape = horner.MultiHornerMat(basis,cpoint,ord);
+		tempshape = horner.MultiHornerMat(TrefftzBasis(),cpoint,ord);
 		for(int b = 0; b < nbasis; b++) shape(b) = tempshape(b);
 	}
 
@@ -79,35 +57,21 @@ namespace ngfem
 
 
 	template<int D>
-	Matrix<double> T_TrefftzElement<D> :: GetTrefftzBasis(int basistype) const
-	{
-		static int order;
-		static int btype;
-		static Matrix<double> basisstorage;
-		if(order != ord || btype != basistype){
-			basisstorage = TrefftzBasis(basistype);
-			order = ord;
-			btype = basistype;
-		}
-		return basisstorage;
-	}
-
-	template<int D>
-	Matrix<double> T_TrefftzElement<D> :: GetDerTrefftzBasis(int der, int basistype) const
+	Matrix<double> T_TrefftzElement<D> :: GetDerTrefftzBasis(int der) const
 	{
 		static int order;
 		static int btype;
 		static Matrix<double> basisstorage[D];
 		if(order != ord || btype != basistype){
 			for(int d=0;d<D;d++){
-				Matrix<double> coeffcp(basis.Height(), BinCoeff(D+ord-1,ord-1));
+				Matrix<double> coeffcp(nbasis, BinCoeff(D+ord-1,ord-1));
 				int count = 0;
-				for(int i=0;i<basis.Width();i++)
+				for(int i=0;i<npoly;i++)
 				{
 					if(indices(i,d) != 0)
-						coeffcp.Col(count++) = indices(i,d)*basis.Col(i);
+						coeffcp.Col(count++) = indices(i,d)*TrefftzBasis().Col(i);
 				}
-				basisstorage[d].SetSize(basis.Height(),coeffcp.Width());
+				basisstorage[d].SetSize(nbasis,coeffcp.Width());
 				basisstorage[d]=coeffcp;
 			}
 			order = ord;
@@ -116,51 +80,60 @@ namespace ngfem
 		return basisstorage[der];
 	}
 
-
-
 	template<int D>
-	constexpr Matrix<double> T_TrefftzElement<D> :: TrefftzBasis(int basistype) const
+	Matrix<double> T_TrefftzElement<D> :: TrefftzBasis() const
 	{
-		Matrix<double> temp_basis(nbasis,npoly);
-		temp_basis = 0;
-		int setbasis = 0;
-		for(int l=0;l<nbasis;l++) //loop over basis functions
+		static int order;
+		static int btype;
+		static Matrix<double> basisstorage;
+
+		if(order != ord || btype != basistype)
 		{
-			for(int i=0;i<npoly;i++)//loop over indices BinCoeff(D + ord, ord)
+			basisstorage.SetSize(nbasis,npoly);
+
+			basisstorage = 0;
+			int setbasis = 0;
+			for(int l=0;l<nbasis;l++) //loop over basis functions
 			{
-				int k = indices(i,D-1);
-				if(k > 1)
+				for(int i=0;i<npoly;i++)//loop over indices BinCoeff(D + ord, ord)
 				{
-					for(int m=0;m<D-1;m++) //rekursive sum
+					int k = indices(i,D-1);
+					if(k > 1)
 					{
-						Vec<D, int> get_coeff = indices.Row(i);
-						get_coeff[D-1] = get_coeff[D-1] - 2;
-						get_coeff[m] = get_coeff[m] + 2;
-						temp_basis( l, i ) += (indices(i,m)+1) * (indices(i,m)+2) * temp_basis(l,IndexMap(get_coeff) );
+						for(int m=0;m<D-1;m++) //rekursive sum
+						{
+							Vec<D, int> get_coeff = indices.Row(i);
+							get_coeff[D-1] = get_coeff[D-1] - 2;
+							get_coeff[m] = get_coeff[m] + 2;
+							basisstorage( l, i ) += (indices(i,m)+1) * (indices(i,m)+2) * basisstorage(l,IndexMap(get_coeff) );
+						}
+						basisstorage( l, i ) *= 1.0/(k * (k-1));
 					}
-					temp_basis( l, i ) *= 1.0/(k * (k-1));
-				}
-				else if(k<=1 && l==0 && setbasis <= i)//if((k == 0 && l < BinCoeff(D-1 + ord, ord)) || (k == 1 && l >= BinCoeff(D-1 + ord, ord))) //time=0 and =1
-				{
-					double coeff = 1;
-					switch (basistype) {
-						case 0:
-								temp_basis( setbasis++, i ) = 1.0; //set the l-th coeff to 1
-							//i += nbasis-1;	//jump to time = 2 if i=0
-							break;
-						case 1:
-							for(int exponent :  indices.Row(i).Range(0,D-1)) coeff *= LegCoeffMonBasis(l,exponent);
-							temp_basis( l, i ) = coeff;
-							break;
-						case 2:
-							for(int exponent :  indices.Row(i).Range(0,D-1)) coeff *= ChebCoeffMonBasis(l,exponent);
-							temp_basis( l, i ) = coeff;
-							break;
+					else if(k<=1 && l==0 && setbasis <= i)//if((k == 0 && l < BinCoeff(D-1 + ord, ord)) || (k == 1 && l >= BinCoeff(D-1 + ord, ord))) //time=0 and =1
+					{
+						double coeff = 1;
+						switch (basistype) {
+							case 0:
+								basisstorage( setbasis++, i ) = 1.0; //set the l-th coeff to 1
+								//i += nbasis-1;	//jump to time = 2 if i=0
+								break;
+							case 1:
+								for(int exponent :  indices.Row(i).Range(0,D-1)) coeff *= LegCoeffMonBasis(l,exponent);
+								basisstorage( l, i ) = coeff;
+								break;
+							case 2:
+								for(int exponent :  indices.Row(i).Range(0,D-1)) coeff *= ChebCoeffMonBasis(l,exponent);
+								basisstorage( l, i ) = coeff;
+								break;
+						}
 					}
 				}
 			}
+			order = ord;
+			btype = basistype;
 		}
-		return temp_basis;
+
+		return basisstorage;
 	}
 
 
@@ -220,20 +193,6 @@ namespace ngfem
 		}
 		sum += BinCoeff(indexleng-1+D,indexleng-1);
 		return sum;
-	}
-
-	template<int D>
-	double T_TrefftzElement<D> :: ipow_ar(FlatVector<double> base, Vec<D, int> ex, double result, int count) const
-	{
-		return count < 0 ? result : ipow_ar( base, ex, pow(base(count),ex(count)) * result, count-1 );
-	}
-
-	template<int D>
-	double T_TrefftzElement<D> :: ipowD_ar(int der, FlatVector<double> base, Vec<D, int> ex, double result, int count) const
-	{
-		return ex(der) == 0 ? 0.0 :
-		 count == der ? ipowD_ar(der, base, ex, (ex(count)) * pow(base(count),ex(count)-1) * result, count-1 ) :
-		 count < 0 ? result : ipowD_ar(der, base, ex, pow(base(count),ex(count)) * result, count-1 );
 	}
 
 
