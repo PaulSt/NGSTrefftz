@@ -14,7 +14,7 @@ namespace ngfem
     const int nbasis;
     const int npoly;
     const Matrix<int> indices;
-    const Matrix<double> basis;
+    const int basistype;
     Vec<D> elcenter = 0;
     double elsize = 1;
     float c = 1.0;
@@ -24,7 +24,7 @@ namespace ngfem
   public:
     // T_TrefftzElement();
     T_TrefftzElement (int aord = 1, float ac = 1.0,
-                      ELEMENT_TYPE aeltype = ET_TRIG, int basistype = 0);
+                      ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0);
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
 
@@ -59,14 +59,8 @@ namespace ngfem
     Matrix<int> GetIndices ();
 
     constexpr int IndexMap (Vec<D, int> index) const;
-    constexpr Matrix<double> TrefftzBasis (int basistype) const;
-    Matrix<double> GetTrefftzBasis (int basistype) const;
-    Matrix<double> GetDerTrefftzBasis (int der, int basistype = 0) const;
-
-    double ipow_ar (FlatVector<double> base, Vec<D, int> ex, double result = 1,
-                    int count = D - 1) const;
-    double ipowD_ar (int der, FlatVector<double> base, Vec<D, int> ex,
-                     double result = 1, int count = D - 1) const;
+    Matrix<double> TrefftzBasis () const;
+    Matrix<double> GetDerTrefftzBasis (int der) const;
   };
 }
 
