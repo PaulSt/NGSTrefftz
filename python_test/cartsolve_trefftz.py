@@ -11,6 +11,7 @@ from prodmesh import CartSquare
 from ngsolve import *
 import netgen.gui
 from DGeq import *
+import time
 
 mesh = CartSquare(N,t_steps)
 
@@ -29,7 +30,9 @@ U0.Set(truesol)
 Draw(U0,mesh,'U0')
 # input()
 
+start = time.clock()
 [a,f] = DGeqsys(fes,truesol,v0,sig0,c,v0)
+print("DGsys: ", str(time.clock()-start))
 # gfu2= GridFunction(fes, name="uDG")
 # gfu2.vec.data = a.mat.Inverse() * f.vec
 
