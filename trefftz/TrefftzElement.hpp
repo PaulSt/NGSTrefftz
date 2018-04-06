@@ -14,12 +14,12 @@ namespace ngfem
     const int nbasis;
     const int npoly;
     const Matrix<int> indices;
+    const Matrix<int> pascal;
     const int basistype;
     Vec<D> elcenter = 0;
     double elsize = 1;
     float c = 1.0;
     ELEMENT_TYPE eltype;
-    HornerScheme<D> horner;
 
   public:
     // T_TrefftzElement();
@@ -61,6 +61,7 @@ namespace ngfem
     constexpr int IndexMap (Vec<D, int> index) const;
     Matrix<double> TrefftzBasis () const;
     Matrix<double> GetDerTrefftzBasis (int der) const;
+    Matrix<int> pascal_sym () const;
   };
 }
 

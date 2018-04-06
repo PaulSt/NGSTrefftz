@@ -50,62 +50,6 @@ namespace ngfem
                    / (tgamma (floor ((n - k) / 2) + 1) * tgamma (k + 1));
     return coeff;
   }
-
-  template <int D> class HornerScheme
-  {
-  private:
-    int ord;
-    Matrix<int> pascal;
-
-  public:
-    HornerScheme (int aord) : ord (aord), pascal (pascal_sym ()) { ; }
-
-    // inline double MultiHorner(Vector<double> coeff, Vector<double> &point)
-    // const
-    // {
-    // 	for(int j=ord;j>0;j--)
-    // 		for(int i=0;i<D;i++)
-    // 		 	for(int k=pascal(i+1,j)-1; k>=0; k--){
-    // 				coeff( pascal(D+1,j-1)+k ) += point( i ) * coeff(
-    // pascal(D+1,j)+pascal(i,j+1)+k ); 				coeff( pascal(D+1,j)+pascal(i,j+1)+k )
-    // = 0;
-    // 			}
-    // 	return coeff(0);
-    // }
-
-    inline Vector<double>
-    MultiHornerMat (Matrix<double> coeff, Vector<double> &point,
-                    int polord) const
-    {
-      for (int j = polord; j > 0; j--)
-        for (int i = 0; i < D; i++)
-          for (int k = pascal (i + 1, j) - 1; k >= 0; k--)
-            {
-              coeff.Col (pascal (D + 1, j - 1) + k)
-                  += point (i)
-                     * coeff.Col (pascal (D + 1, j) + pascal (i, j + 1) + k);
-              coeff.Col (pascal (D + 1, j) + pascal (i, j + 1) + k) = 0;
-            }
-      return coeff.Col (0);
-    }
-
-    Matrix<int> pascal_sym ()
-    {
-      Matrix<int> pasc (D + 2, ord + 2);
-      int i, j;
-
-      for (i = 0; i <= D + 1; ++i)
-        for (j = 0; j <= ord + 1; ++j)
-          if (i == 0 || j == 0)
-            pasc (i, j) = 0;
-          else if (i == 1 || j == 1)
-            pasc (i, j) = 1;
-          else
-            pasc (i, j) = pasc (i - 1, j) + pasc (i, j - 1);
-      return pasc;
-    }
-  };
-
 }
 
 #endif
