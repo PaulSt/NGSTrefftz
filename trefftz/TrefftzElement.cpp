@@ -18,7 +18,7 @@ namespace ngfem
 			indices(GetIndices()),
 			basistype(abasistype),
 			eltype(aeltype),
-			horner(ord)
+			pascal(pascal_sym())
 			{;}
 
 
@@ -30,9 +30,15 @@ namespace ngfem
 		Vector<double> cpoint = mip.GetPoint();
 		cpoint = ShiftPoint(cpoint);
 		Vector<double> tempshape(nbasis);
+		Matrix<double> coeff(TrefftzBasis());
 
-		tempshape = horner.MultiHornerMat(TrefftzBasis(),cpoint,ord);
-		for(int b = 0; b < nbasis; b++) shape(b) = tempshape(b);
+		for(int j=ord;j>0;j--)
+			for(int i=0;i<D;i++)
+				for(int k=pascal(i+1,j)-1; k>=0; k--)
+					coeff.Col( pascal(D+1,j-1)+k ) += cpoint( i ) * coeff.Col( pascal(D+1,j)+pascal(i,j+1)+k );
+					// coeff.Col( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
+
+		for(int b = 0; b < nbasis; b++) shape(b) = coeff.Col(0)(b);
 	}
 
 
@@ -44,8 +50,16 @@ namespace ngfem
 		for(int d=0; d<D; d++) cpoint[d] = mip.GetPoint()[d];
 		cpoint = ShiftPoint(cpoint);
 
-		for(int d=0;d<D;d++)//loop over derivatives/dimensions
-			dshape.Col(d) = horner.MultiHornerMat(GetDerTrefftzBasis(d), cpoint, ord-1);
+		for(int d=0;d<D;d++){//loop over derivatives/dimensions
+			Matrix<double> coeff = GetDerTrefftzBasis(d);
+			for(int j=ord-1;j>0;j--)
+				for(int i=0;i<D;i++)
+					for(int k=pascal(i+1,j)-1; k>=0; k--){
+						coeff.Col( pascal(D+1,j-1)+k ) += cpoint( i ) * coeff.Col( pascal(D+1,j)+pascal(i,j+1)+k );
+						// coeff.Col( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
+					}
+			dshape.Col(d) = coeff.Col(0);
+		}
 
 		dshape.Col(D-1) *= c; //inner derivative
 		dshape *= (2.0/elsize); //inner derivative
@@ -193,6 +207,30 @@ namespace ngfem
 		}
 		sum += BinCoeff(indexleng-1+D,indexleng-1);
 		return sum;
+	}
+
+
+	template<int D>
+	Matrix<int> T_TrefftzElement<D> :: pascal_sym() const
+	{
+		static int order;
+		static Matrix<double> pascalstorage;
+
+		if(order != ord)
+		{
+			pascalstorage.SetSize(D+2,ord+2);
+			for (int i = 0; i <= D+1; ++i)
+				for (int j = 0; j <= ord+1; ++j)
+					if (i == 0 || j == 0)
+						pascalstorage(i,j) = 0;
+					else if (i == 1 || j == 1)
+						pascalstorage(i,j) = 1;
+					else
+						pascalstorage(i,j) = pascalstorage(i-1,j) + pascalstorage(i,j-1);
+
+			order = ord;
+		}
+		return pascalstorage;
 	}
 
 
