@@ -1,7 +1,6 @@
 #include "TrefftzElement.hpp"
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
-#include "recursive_pol.hpp"
 #include "helpers.hpp"
 
 #include <ctime>
@@ -245,7 +244,7 @@ namespace ngfem
   template <int D> Matrix<int> T_TrefftzElement<D>::pascal_sym () const
   {
     static int order;
-    static Matrix<double> pascalstorage;
+    static Matrix<int> pascalstorage;
 
     if (order != ord)
       {
