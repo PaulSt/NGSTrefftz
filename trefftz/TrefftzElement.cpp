@@ -58,12 +58,10 @@ namespace ngfem
         for (int j = ord - 1; j > 0; j--)
           for (int i = 0; i < D; i++)
             for (int k = pascal (i + 1, j) - 1; k >= 0; k--)
-              {
-                coeff.Row (pascal (D + 1, j - 1) + k)
-                    += cpoint (i)
-                       * coeff.Row (pascal (D + 1, j) + pascal (i, j + 1) + k);
-                // coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
-              }
+              coeff.Row (pascal (D + 1, j - 1) + k)
+                  += cpoint (i)
+                     * coeff.Row (pascal (D + 1, j) + pascal (i, j + 1) + k);
+        // coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
         dshape.Col (d) = coeff.Row (0);
       }
 
@@ -76,7 +74,7 @@ namespace ngfem
   {
     static int order;
     static int btype;
-    static Matrix<double> basisstorage[D];
+    static Vec<D, Matrix<double>> basisstorage;
     if (order != ord || btype != basistype)
       {
         for (int d = 0; d < D; d++)
