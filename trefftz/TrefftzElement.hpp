@@ -51,8 +51,6 @@ namespace ngfem
     // T_TrefftzElement<D> * SetWavespeed(float ac) {c = ac; return this;}
 
   protected:
-    Vector<double> ShiftPoint (Vector<double> point) const;
-
     constexpr void
     MakeIndices_inner (Matrix<int> &indice, Vec<D, int> &numbers, int &count,
                        int ordr, int dim = D);
