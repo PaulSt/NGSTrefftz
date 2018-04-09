@@ -27,17 +27,16 @@ namespace ngfem
                                   BareSliceVector<> shape) const
   {
 		Vector<double> cpoint = mip.GetPoint();
-		cpoint = ShiftPoint(cpoint);
-		Vector<double> tempshape(nbasis);
+		cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[D-1] *= c;
 		Matrix<double> coeff(TrefftzBasis());
 
 		for(int j=ord;j>0;j--)
 			for(int i=0;i<D;i++)
 				for(int k=pascal(i+1,j)-1; k>=0; k--)
-					coeff.Col( pascal(D+1,j-1)+k ) += cpoint( i ) * coeff.Col( pascal(D+1,j)+pascal(i,j+1)+k );
-					// coeff.Col( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
+					coeff.Row( pascal(D+1,j-1)+k ) += cpoint( i ) * coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k );
+					// coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
 
-		for(int b = 0; b < nbasis; b++) shape(b) = coeff.Col(0)(b);
+		for(int b = 0; b < nbasis; b++) shape(b) = coeff.Row(0)(b);
 	}
 
 
@@ -45,28 +44,23 @@ namespace ngfem
 	void T_TrefftzElement<D> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
 																		SliceMatrix<> dshape) const
 	{
-		Vector<double> cpoint(D);
-		for(int d=0; d<D; d++) cpoint[d] = mip.GetPoint()[d];
-		cpoint = ShiftPoint(cpoint);
+		Vector<double> cpoint = mip.GetPoint();
+		cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[D-1] *= c;
 
 		for(int d=0;d<D;d++){//loop over derivatives/dimensions
-			Matrix<double> coeff = GetDerTrefftzBasis(d);
+			Matrix<double> coeff(GetDerTrefftzBasis(d));
 			for(int j=ord-1;j>0;j--)
 				for(int i=0;i<D;i++)
 					for(int k=pascal(i+1,j)-1; k>=0; k--){
-						coeff.Col( pascal(D+1,j-1)+k ) += cpoint( i ) * coeff.Col( pascal(D+1,j)+pascal(i,j+1)+k );
-						// coeff.Col( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
+						coeff.Row( pascal(D+1,j-1)+k ) += cpoint( i ) * coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k );
+						// coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
 					}
-			dshape.Col(d) = coeff.Col(0);
+			dshape.Col(d) = coeff.Row(0);
 		}
 
 		dshape.Col(D-1) *= c; //inner derivative
 		dshape *= (2.0/elsize); //inner derivative
 	}
-
-	template<int D>
-	Vector<double> T_TrefftzElement<D> :: ShiftPoint(Vector<double> point) const
-	{ point -= elcenter; point *= (2.0/elsize); point[D-1] *= c; return point;}
 
 
 	template<int D>
@@ -77,15 +71,13 @@ namespace ngfem
 		static Matrix<double> basisstorage[D];
 		if(order != ord || btype != basistype){
 			for(int d=0;d<D;d++){
-				Matrix<double> coeffcp(nbasis, BinCoeff(D+ord-1,ord-1));
+				basisstorage[d].SetSize(pascal(D+1,ord), nbasis);
 				int count = 0;
 				for(int i=0;i<npoly;i++)
 				{
 					if(indices(i,d) != 0)
-						coeffcp.Col(count++) = indices(i,d)*TrefftzBasis().Col(i);
+						basisstorage[d].Row(count++) = indices(i,d)*TrefftzBasis().Row(i);
 				}
-				basisstorage[d].SetSize(nbasis,coeffcp.Width());
-				basisstorage[d]=coeffcp;
 			}
 			order = ord;
 			btype = basistype;
@@ -102,7 +94,7 @@ namespace ngfem
 
 		if(order != ord || btype != basistype)
 		{
-			basisstorage.SetSize(nbasis,npoly);
+			basisstorage.SetSize(npoly,nbasis);
 
 			basisstorage = 0;
 			int setbasis = 0;
@@ -118,27 +110,27 @@ namespace ngfem
 							Vec<D, int> get_coeff = indices.Row(i);
 							get_coeff[D-1] = get_coeff[D-1] - 2;
 							get_coeff[m] = get_coeff[m] + 2;
-							basisstorage( l, i ) += (indices(i,m)+1) * (indices(i,m)+2) * basisstorage(l,IndexMap(get_coeff) );
+							basisstorage( i, l ) += (indices(i,m)+1) * (indices(i,m)+2) * basisstorage( IndexMap(get_coeff), l );
 						}
-						basisstorage( l, i ) *= 1.0/(k * (k-1));
+						basisstorage( i, l ) *= 1.0/(k * (k-1));
 					}
 					else if(k<=1) //time=0 and =1
 					{
 						switch (basistype) {
             case 0:
               if(l==0 && setbasis <= i)
-                basisstorage( setbasis++, i ) = 1.0; //set the l-th coeff to 1
+                basisstorage( i, setbasis++ ) = 1.0; //set the l-th coeff to 1
               //i += nbasis-1;	//jump to time = 2 if i=0
               break;
             case 1:
               if((k == 0 && l < BinCoeff(D-1 + ord, ord)) || (k == 1 && l >= BinCoeff(D-1 + ord, ord))){
-                basisstorage( l, i ) = 1;
-                for(int exponent :  indices.Row(i).Range(0,D-1)) basisstorage( l, i ) *= LegCoeffMonBasis(l,exponent);}
+                basisstorage( i, l ) = 1;
+                for(int exponent :  indices.Row(i).Range(0,D-1)) basisstorage( i, l ) *= LegCoeffMonBasis(l,exponent);}
               break;
             case 2:
               if((k == 0 && l < BinCoeff(D-1 + ord, ord)) || (k == 1 && l >= BinCoeff(D-1 + ord, ord))){
-                basisstorage( l, i ) = 1;
-                for(int exponent :  indices.Row(i).Range(0,D-1)) basisstorage( l, i ) *= ChebCoeffMonBasis(l,exponent);}
+                basisstorage( i, l ) = 1;
+                for(int exponent :  indices.Row(i).Range(0,D-1)) basisstorage( i, l ) *= ChebCoeffMonBasis(l,exponent);}
               break;
 						}
 					}
