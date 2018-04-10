@@ -1,8 +1,8 @@
 from ngsolve import *
 from trefftzngs import *
 import numpy as np
-import scipy.linalg as spla
-
+import scipy as sp
+import scipy.sparse.linalg
 
 def DGeqsys(fes,U0,v0,sig0,c,gD,fullsys=False):
 	D = sig0.dim
@@ -80,23 +80,41 @@ def DGeqsys(fes,U0,v0,sig0,c,gD,fullsys=False):
 def DGsolve(fes,a,f):
 	gfu = GridFunction(fes, name="uDG")
 
-	nmat = np.zeros((a.mat.height,a.mat.width))
-	nvec = np.zeros(a.mat.width)
+	# tmp1 = f.vec.CreateVector()
+	# tmp2 = f.vec.CreateVector()
+	# def matvec(v):
+	# 	tmp1.FV().NumPy()[:] = v
+	# 	tmp2.data = a.mat * tmp1
+	# 	return tmp2.FV().NumPy()
+	#
+	# A = sp.sparse.linalg.LinearOperator( (a.mat.height,a.mat.width), matvec)
+	# gfu.vec.FV().NumPy()[:], succ = sp.sparse.linalg.gmres(A, f.vec.FV().NumPy())
 
-	for i in range(a.mat.width):#gfu.vec.data = a.mat.Inverse() * f.vec
-		nvec[i] = f.vec[i]/sqrt(a.mat[i,i])
-		for j in range(a.mat.height):
-			nmat[j,i] = a.mat[j,i]/sqrt(a.mat[i,i]*a.mat[j,j])
-	#nvec = f.vec.FV().NumPy()
-	sol = spla.solve(nmat,nvec)
+	rows,cols,vals = a.mat.COO()
+	A = sp.sparse.csr_matrix((vals,(rows,cols)))
+	gfu.vec.FV().NumPy()[:] = sp.sparse.linalg.spsolve(A,f.vec.FV())
 
-	for i in range(a.mat.height):
-		gfu.vec[i] = sol[i]/sqrt(a.mat[i,i])
+	cond = np.linalg.cond(A.todense())
 
-    #print(min(np.linalg.eigvalsh(0.5*(nmat + nmat.transpose()))))
+
+	# nmat = np.zeros((a.mat.height,a.mat.width))
+	# nvec = np.zeros(a.mat.width)
+	#
+	# for i in range(a.mat.width):#gfu.vec.data = a.mat.Inverse() * f.vec
+	# 	nvec[i] = f.vec[i]/sqrt(a.mat[i,i])
+	# 	for j in range(a.mat.height):
+	# 		nmat[j,i] = a.mat[j,i]/sqrt(a.mat[i,i]*a.mat[j,j])
+	# #nvec = f.vec.FV().NumPy()
+	# sol = spla.solve(nmat,nvec)
+	#
+	# for i in range(a.mat.height):
+	# 	gfu.vec[i] = sol[i]/sqrt(a.mat[i,i])
+
+	#print(min(np.linalg.eigvalsh(0.5*(nmat + nmat.transpose()))))
 	#nmatinv = np.linalg.inv(nmat)
-    #print(min(np.linalg.eigvalsh(0.5*(nmatinv + nmatinv.transpose()))))
-    #nvec = f.vec.FV().NumPy() #nvec
-    # print("cond nmat: ", np.linalg.cond(nmat))
-	cond = np.linalg.cond(nmat)
+	#print(min(np.linalg.eigvalsh(0.5*(nmatinv + nmatinv.transpose()))))
+	#nvec = f.vec.FV().NumPy() #nvec
+	# print("cond nmat: ", np.linalg.cond(nmat))
+	# cond = np.linalg.cond(nmat)
+
 	return [gfu,cond]
