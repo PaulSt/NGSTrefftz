@@ -2,7 +2,7 @@
 N = 4
 c=2
 t_steps = c*N
-order = 5
+order = 11
 k = 5
 #########################################################################################################################################
 from trefftzngs import *
@@ -35,13 +35,14 @@ start = time.clock()
 print("DGsys: ", str(time.clock()-start))
 # gfu2= GridFunction(fes, name="uDG")
 # gfu2.vec.data = a.mat.Inverse() * f.vec
-
+start = time.clock()
 [gfu,cond] = DGsolve(fes,a,f)
+print("DGsolve: ", str(time.clock()-start))
 
 L2error = Integrate((truesol - gfu)*(truesol - gfu), mesh)
 sH1error = Integrate((grad(U0) - grad(gfu))*(grad(U0) - grad(gfu)), mesh)
-print("error=", L2error)
-print("grad-error=", sH1error)
+print("error=", sqrt(L2error))
+print("grad-error=", sqrt(sH1error))
 Draw(gfu,mesh,'sol')
 Draw(grad(gfu),mesh,'gradsol')
 

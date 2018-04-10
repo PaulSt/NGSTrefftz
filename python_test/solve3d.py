@@ -22,8 +22,8 @@ truesol =  sin( k*(c*z+x+y) )#exp(-pow(c*x+y,2)))#
 v0 = c*k*cos(k*(c*z+x+y))#grad(U0)[0]
 sig0 = CoefficientFunction( (-k*cos(k*(c*z+x+y)),-k*cos(k*(c*z+x+y))) )#-grad(U0)[1]
 # for order in range(3,order):
-fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0)
-# fes = L2(mesh, order=order, flags = { "dgjumps" : True })
+# fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0)
+fes = L2(mesh, order=order, flags = { "dgjumps" : True })
 # U0 = GridFunction(fes)
 # U0.Set(truesol)basemesh = Mesh(ngmeshbase)
 # Draw(U0)
@@ -45,7 +45,7 @@ for t_step in range(nt_steps):
 	v0 = c*k*cos(k*(c*(z+t_step*t_steps)+x+y))
 	sig0 = CoefficientFunction( (-k*cos(k*(c*(z+t_step*t_steps)+x+y)),-k*cos(k*(c*(z+t_step*t_steps)+x+y))) )
 	start = time.clock()
-	[a,f] = DGeqsys(fes,truesol,v0,sig0,c,gD)
+	[a,f] = DGeqsys(fes,truesol,v0,sig0,c,gD,True)
 	print("DGsys: ", str(time.clock()-start))
 
 	start = time.clock()
@@ -54,7 +54,7 @@ for t_step in range(nt_steps):
 
 	#sig0 = CoefficientFunction((-grad(gfu)[0],-grad(gfu)[1]))
 	#v0 = grad(gfu)[2]
-	L2error = Integrate((truesol - gfu)*(truesol - gfu), mesh)
+	L2error = sqrt(Integrate((truesol - gfu)*(truesol - gfu), mesh))
 	gradtruesol = CoefficientFunction(( k*cos(k*(c*z+x+y)), k*cos(k*(c*z+x+y)), c*k*cos(k*(c*z+x+y)) ))
 	sH1error = sqrt(Integrate((gradtruesol - grad(gfu))*(gradtruesol - grad(gfu)), mesh))
 	print("L2error=", L2error)
