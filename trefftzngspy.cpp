@@ -5,6 +5,7 @@ using namespace ngsolve;
 #include "trefftz/TrefftzFESpace.hpp"
 #include "trefftz/TrefftzCoefficient.hpp"
 #include "trefftz/DiffOpMapped.hpp"
+#include "trefftz/ClipCoefficientFunction.hpp"
 //#include "trefftz/MappedElement.hpp"
 
 PYBIND11_PLUGIN(trefftzngs) {
@@ -16,6 +17,7 @@ PYBIND11_PLUGIN(trefftzngs) {
 	//ExportMappedElement(m);
 	ExportTrefftzFESpace(m);
 	ExportTrefftzCoefficient(m);
+	ExportClipCoefficientFunction(m);
 
   return m.ptr();
 }
