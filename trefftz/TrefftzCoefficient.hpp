@@ -21,11 +21,11 @@ namespace ngfem
 			FlatVector<double> point = mip.GetPoint();
 
 			int ndof = treff.GetNBasis();
-
+			cout  << "nr: " << basisfunction << " / " << ndof << endl;
 			Vector<double> shape(ndof);
 			//Matrix<double> shape(ndof,2);
 			treff.CalcShape(mip,shape);
-      return shape(basisfunction);
+      return shape[basisfunction];
     }
   };
 }
