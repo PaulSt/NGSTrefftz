@@ -33,7 +33,7 @@ namespace ngfem
 		for(int j=ord;j>0;j--)
 			for(int i=0;i<D;i++)
 				for(int k=pascal(i+1,j)-1; k>=0; k--)
-					coeff.Row( pascal(D+1,j-1)+k ) += cpoint( i ) * coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k );
+					coeff.Row( pascal(D+1,j-1)+k ) += cpoint[i] * coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k );
 					// coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
 
 		for(int b = 0; b < nbasis; b++) shape(b) = coeff.Row(0)(b);
@@ -52,7 +52,7 @@ namespace ngfem
 			for(int j=ord-1;j>0;j--)
 				for(int i=0;i<D;i++)
 					for(int k=pascal(i+1,j)-1; k>=0; k--)
-						coeff.Row( pascal(D+1,j-1)+k ) += cpoint( i ) * coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k );
+						coeff.Row( pascal(D+1,j-1)+k ) += cpoint[i] * coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k );
 						// coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
 			dshape.Col(d) = coeff.Row(0);
 		}

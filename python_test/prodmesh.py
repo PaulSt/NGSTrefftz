@@ -19,26 +19,26 @@ def ProdMesh(ngmeshbase,t_steps):
 
 	ngmesh.SetMaterial(1, "mat")
 	for el in El2d:
-		ngmesh.Add(ngm.Element3D(1, [el.points[0].nr,
-									el.points[1].nr,
-									el.points[2].nr,
-									pnums[el.points[0].nr-1],
-									pnums[el.points[1].nr-1],
-									pnums[el.points[2].nr-1]]))
+		ngmesh.Add(ngm.Element3D(1, [el.points[0].nr
+									,el.points[1].nr
+									,el.points[2].nr
+									,pnums[el.points[0].nr-1]
+									,pnums[el.points[1].nr-1]
+									,pnums[el.points[2].nr-1]]))
 
 	ngmesh.Add(ngm.FaceDescriptor(surfnr=1,domin=1,bc=1))
 	for el in El2d:
-		ngmesh.Add(ngm.Element2D(1, [pnums[el.points[0].nr-1],
-									pnums[el.points[1].nr-1],
-									pnums[el.points[2].nr-1]]))
-		ngmesh.Add(ngm.Element2D(1, [el.points[0].nr,
-									el.points[1].nr,
-									el.points[2].nr]))
+		ngmesh.Add(ngm.Element2D(1, [el.points[2].nr
+									,el.points[1].nr
+									,el.points[0].nr]))
+		ngmesh.Add(ngm.Element2D(1, [pnums[el.points[0].nr-1]
+									,pnums[el.points[1].nr-1]
+									,pnums[el.points[2].nr-1]]))
 	for el in El1d:
-		ngmesh.Add(ngm.Element2D(1, [el.points[0].nr,
-									el.points[1].nr,
-									pnums[el.points[1].nr-1],
-									pnums[el.points[0].nr-1]]))
+		ngmesh.Add(ngm.Element2D(1, [el.points[0].nr
+									,el.points[1].nr
+									,pnums[el.points[1].nr-1]
+									,pnums[el.points[0].nr-1]]))
 
 	mesh = Mesh(ngmesh)
 	return mesh

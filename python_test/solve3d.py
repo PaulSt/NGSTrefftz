@@ -16,7 +16,8 @@ import time
 # mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.2,quad_dominated=True))
 ngmeshbase = unit_square.GenerateMesh(maxh = t_stepsize)
 mesh = ProdMesh(ngmeshbase,t_stepsize)
-#Draw(mesh)
+Draw(mesh)
+input()
 #########################################################################################################################################
 truesol =  sin( k*(c*z+x+y) )#exp(-pow(c*x+y,2)))#
 v0 = c*k*cos(k*(c*z+x+y))#grad(U0)[0]

@@ -52,5 +52,7 @@ gradu = grad(gfu)
 # Draw(uex,mesh,'uex')
 # #Draw(gfu, mesh, 'gfu')
 print(Integrate((gfu-sin(k*(c*z+y+x)))*(gfu-sin(k*(c*z+y+x))), mesh))
+print(Integrate((gradu[0]-k*cos(k*(c*z+y+x)))*(gradu[0]-k*cos(k*(c*z+y+x))), mesh))
+
 Draw(gfu, mesh, 'gfu')
 Draw(gradu, mesh, 'gradu')
