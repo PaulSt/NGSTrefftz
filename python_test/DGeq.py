@@ -3,6 +3,7 @@ from trefftzngs import *
 import numpy as np
 import scipy as sp
 import scipy.sparse.linalg
+import scipy.linalg
 
 def DGeqsys(fes,U0,v0,sig0,c,gD,fullsys=False):
 	D = sig0.dim
@@ -44,11 +45,11 @@ def DGeqsys(fes,U0,v0,sig0,c,gD,fullsys=False):
 	jump_Ut = (U - U.Other()) * n_t
 	#gfu.vec.data = a.mat.Inverse() * f.vec
 
-	timelike = n_x*n_x#n_x**2 #IfPos(n_t,0,IfPos(-n_t,0,1)) # n_t=0
-	spacelike = n_t**2 #IfPos(n_x,0,IfPos(-n_x,0,1)) # n_x=0
+	timelike = n_x*n_x # n_t=0
+	spacelike = n_t**2 # n_x=0
 
-	alpha = 0 #pow(10,5)
-	beta = 0 #pow(10,5)
+	alpha = 0.5 #pow(10,5)
+	beta = 0.5 #pow(10,5)
 	gamma = 1
 
 	a = BilinearForm(fes)
@@ -97,25 +98,21 @@ def DGsolve(fes,a,f):
 
 	cond = np.linalg.cond(A.todense())
 
-
 	# nmat = np.zeros((a.mat.height,a.mat.width))
 	# nvec = np.zeros(a.mat.width)
 	#
-	# for i in range(a.mat.width):#gfu.vec.data = a.mat.Inverse() * f.vec
+	# for i in range(a.mat.width):
 	# 	nvec[i] = f.vec[i]/sqrt(a.mat[i,i])
 	# 	for j in range(a.mat.height):
 	# 		nmat[j,i] = a.mat[j,i]/sqrt(a.mat[i,i]*a.mat[j,j])
-	# #nvec = f.vec.FV().NumPy()
-	# sol = spla.solve(nmat,nvec)
+	# sol = scipy.linalg.solve(nmat,nvec)
 	#
 	# for i in range(a.mat.height):
 	# 	gfu.vec[i] = sol[i]/sqrt(a.mat[i,i])
+	# cond = np.linalg.cond(nmat)
 
 	#print(min(np.linalg.eigvalsh(0.5*(nmat + nmat.transpose()))))
 	#nmatinv = np.linalg.inv(nmat)
 	#print(min(np.linalg.eigvalsh(0.5*(nmatinv + nmatinv.transpose()))))
-	#nvec = f.vec.FV().NumPy() #nvec
-	# print("cond nmat: ", np.linalg.cond(nmat))
-	# cond = np.linalg.cond(nmat)
 
 	return [gfu,cond]
