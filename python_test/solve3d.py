@@ -1,9 +1,9 @@
 #########################################################################################################################################
 c = 1
-t_stepsize = 1/9
-nt_steps = 10
-order = 5
-k = 2
+t_stepsize = 1/5
+nt_steps = 3
+order = 4
+k = 1
 #########################################################################################################################################
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
@@ -14,7 +14,7 @@ from trefftzngs import *
 from DGeq import *
 import time
 # mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.2,quad_dominated=True))
-ngmeshbase = unit_square.GenerateMesh(maxh = 0.5)
+ngmeshbase = unit_square.GenerateMesh(maxh = t_stepsize)
 mesh = ProdMesh(ngmeshbase,t_stepsize)
 #Draw(mesh)
 #########################################################################################################################################
@@ -31,21 +31,21 @@ gfu = GridFunction(fes)
 gfu.Set(truesol)
 #input("startcomp")
 for t in range(nt_steps):
-	truesol = sin( k*(c* (z+t*t_stepsize) +x+y) )
-	gD = c*k* cos( k*(c* (z+t*t_stepsize) +x+y) )
-	v0 = c*k*cos(k*(c*(z+t*t_stepsize)+x+y))
-	sig0 = CoefficientFunction( (-k*cos(k*(c*(z+t*t_stepsize)+x+y)),-k*cos(k*(c*(z+t*t_stepsize)+x+y))) )
+	truesol = sin( k*( c*(z+t*t_stepsize) +x+y) )
+	gD = c*k* cos( k*( c*(z+t*t_stepsize) +x+y) )
+	# v0 = c*k*cos(k*(c*(z+t*t_stepsize)+x+y))
+	# sig0 = CoefficientFunction( (-k*cos(k*(c*(z+t*t_stepsize)+x+y)),-k*cos(k*(c*(z+t*t_stepsize)+x+y))) )
 
 	start = time.clock()
-	[a,f] = DGeqsys(fes,truesol,v0,sig0,c,gD)
+	[a,f] = DGeqsys(fes,gfu,v0,sig0,c,gD)
 	print("DGsys: ", str(time.clock()-start))
 
 	start = time.clock()
 	[gfu, cond] = DGsolve(fes,a,f)
 	print("DGsolve: ", str(time.clock()-start))
 
-	sig0 = CoefficientFunction( ClipCoefficientFunction(CoefficientFunction(-grad(gfu)[0]), 2, t_stepsize), ClipCoefficientFunction(CoefficientFunction(-grad(gfu)[1]), 2, t_stepsize) )
 	v0 = ClipCoefficientFunction(grad(gfu)[2], 2, t_stepsize)
+	sig0 = CoefficientFunction( (ClipCoefficientFunction((-grad(gfu)[0]), 2, t_stepsize), ClipCoefficientFunction((-grad(gfu)[1]), 2, t_stepsize)) )
 
 	L2error = sqrt(Integrate((truesol - gfu)*(truesol - gfu), mesh))
 	gradtruesol = CoefficientFunction(( k*cos(k*(c*z+x+y)), k*cos(k*(c*z+x+y)), c*k*cos(k*(c*z+x+y)) ))
@@ -53,6 +53,11 @@ for t in range(nt_steps):
 	print("L2error=", L2error)
 	print("grad-error=", sH1error)
 
+	# Draw(grad(gfu)[2],mesh,'grad')
+	# Draw(gD,mesh,'gD')
+	# input()
+	# Draw(v0,basemesh,'gradtime')
+	gfu = ClipCoefficientFunction(gfu,2,t_stepsize)
 	Draw(gfu,basemesh,'sol')
 	input(t)
 
