@@ -26,7 +26,7 @@ namespace ngfem
   void T_TrefftzElement<D> :: CalcShape (const BaseMappedIntegrationPoint & mip,
                                   BareSliceVector<> shape) const
   {
-		Vector<double> cpoint = mip.GetPoint();
+		Vector<double> cpoint(mip.GetPoint());
 		cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[D-1] *= c;
 		Matrix<double> coeff(TrefftzBasis());
 
@@ -44,7 +44,7 @@ namespace ngfem
 	void T_TrefftzElement<D> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
 																		SliceMatrix<> dshape) const
 	{
-		Vector<double> cpoint = mip.GetPoint();
+		Vector<double> cpoint(mip.GetPoint());
 		cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[D-1] *= c;
 
 		for(int d=0;d<D;d++){//loop over derivatives/dimensions
