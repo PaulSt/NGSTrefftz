@@ -58,20 +58,20 @@ def DGeqsys(fes,U0,v0,sig0,c,gD,fullsys=False):
 		# a += SymbolicBFI(  -v*(-HV[0]+pow(c,-2)*HV[3]) ) #- sig*(-HV[1]+HV[2])  )
 		a += SymbolicBFI(  -v*(-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
 	# a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ) ,VOL,  skeleton=True ) #space like faces
-	a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ) ,VOL,  skeleton=True ) #space like faces, no jump in x since horizontal
+	a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ) ,VOL,  skeleton=True ) #space like faces, w/o x jump
 	a += SymbolicBFI( timelike 	* ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ) ,VOL, skeleton=True ) #time like faces
-	a += SymbolicBFI( spacelike * IfPos(n_t,1,0) * ( pow(c,-2)*v*w + sig*tau ), BND, skeleton=True) #t=T (or *x)
-	a += SymbolicBFI( timelike 	* ( sig*n_x*w + alpha*v*w ), BND, skeleton=True) #dirichlet boundary 'timelike'
+	a += SymbolicBFI( ( pow(c,-2)*v*w + sig*tau ), BND,definedon=fes.mesh.Boundaries("outflow"), skeleton=True) #t=T (or *x)
+	a += SymbolicBFI( ( sig*n_x*w + alpha*v*w ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True) #dirichlet boundary 'timelike'
 	#a += SymbolicBFI( spacelike * ( gamma * (-n_t*jump_Ut)*IfPos(n_t,V.Other(),V) ) ,VOL,  skeleton=True ) #correction term to recover sol of second order system
 	a += SymbolicBFI( spacelike * ( gamma * (-jump_Ut)*IfPos(n_t,V.Other(),V) ) ,VOL,  skeleton=True ) #correction term to recover sol of second order system
-	a += SymbolicBFI( spacelike * ( gamma * IfPos(-n_t,1,0) * U*V ) ,BND,  skeleton=True ) #BND correction term to recover sol of second order system
+	a += SymbolicBFI( ( gamma * U*V ) ,BND,definedon=fes.mesh.Boundaries("inflow"),  skeleton=True ) #BND correction term to recover sol of second order system
 
 	a.Assemble()
 
 	f = LinearForm(fes)
-	f += SymbolicLFI( spacelike * IfPos(-n_t,1,0) *  ( pow(c,-2)*v0*w + sig0*tau ), BND, skeleton=True) #t=0 (or *(1-x))
-	f += SymbolicLFI( timelike 	* ( gD * (alpha*w - tau*n_x) ), BND, skeleton=True) #dirichlet boundary 'timelike'
-	f += SymbolicLFI( spacelike * gamma * IfPos(-n_t,1,0) *  ( (U0)*V ) ,BND,  skeleton=True ) #rhs correction term to recover sol of second order system
+	f += SymbolicLFI( ( pow(c,-2)*v0*w + sig0*tau ), BND,definedon=fes.mesh.Boundaries("inflow"), skeleton=True) #t=0 (or *(1-x))
+	f += SymbolicLFI( ( gD * (alpha*w - tau*n_x) ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True) #dirichlet boundary 'timelike'
+	f += SymbolicLFI( gamma * ( (U0)*V ) ,BND, definedon=fes.mesh.Boundaries("inflow"),  skeleton=True ) #rhs correction term to recover sol of second order system
 	f.Assemble()
 
 	return [a,f]

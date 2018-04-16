@@ -1,8 +1,8 @@
 #########################################################################################################################################
 c = 1
 t_stepsize = 1/5
-nt_steps = 3
-order = 4
+nt_steps =5
+order = 5
 k = 1
 #########################################################################################################################################
 from netgen.geom2d import unit_square
@@ -16,12 +16,10 @@ import time
 # mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.2,quad_dominated=True))
 ngmeshbase = unit_square.GenerateMesh(maxh = t_stepsize)
 mesh = ProdMesh(ngmeshbase,t_stepsize)
-Draw(mesh)
-input()
 #########################################################################################################################################
-truesol =  sin( k*(c*z+x+y) )#exp(-pow(c*x+y,2)))#
-v0 = c*k*cos(k*(c*z+x+y))#grad(U0)[0]
-sig0 = CoefficientFunction( (-k*cos(k*(c*z+x+y)),-k*cos(k*(c*z+x+y))) )#-grad(U0)[1]
+truesol = exp(-100*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)) )###sin( k*(c*z+x+y) ) 
+v0 = 0 #c*k*cos(k*(c*z+x+y))#grad(U0)[0]
+sig0 = CoefficientFunction( (200 * (x-0.5) * truesol, 200 * (y-0.5) * truesol)) #CoefficientFunction( (-k*cos(k*(c*z+x+y)),-k*cos(k*(c*z+x+y))) )# #-grad(U0)[1]
 
 fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0)
 # fes = L2(mesh, order=order, flags = { "dgjumps" : True })
@@ -30,10 +28,11 @@ basemesh = Mesh(ngmeshbase)
 Draw(basemesh)
 gfu = GridFunction(fes)
 gfu.Set(truesol)
+Draw(gfu,basemesh,'gfu')
 #input("startcomp")
 for t in range(nt_steps):
 	truesol = sin( k*( c*(z+t*t_stepsize) +x+y) )
-	gD = c*k* cos( k*( c*(z+t*t_stepsize) +x+y) )
+	gD = 0 # c*k* cos( k*( c*(z+t*t_stepsize) +x+y) )
 	# v0 = c*k*cos(k*(c*(z+t*t_stepsize)+x+y))
 	# sig0 = CoefficientFunction( (-k*cos(k*(c*(z+t*t_stepsize)+x+y)),-k*cos(k*(c*(z+t*t_stepsize)+x+y))) )
 
@@ -55,7 +54,8 @@ for t in range(nt_steps):
 	print("grad-error=", sH1error)
 
 	# Draw(grad(gfu)[2],mesh,'grad')
-	# Draw(gD,mesh,'gD')
+	# Draw(gfu,mesh,'gfu')
+	# Draw(grad(gfu),mesh,'gradgfu')
 	# input()
 	# Draw(v0,basemesh,'gradtime')
 	gfu = ClipCoefficientFunction(gfu,2,t_stepsize)
