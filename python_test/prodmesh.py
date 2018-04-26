@@ -1,59 +1,69 @@
+# -*- mode: python-mode; python-indent-offset: 4 -*-
 import netgen.meshing as ngm
 from ngsolve import *
 from netgen.geom2d import unit_square
 
 def PeriodicProdMesh(ngmeshbase,t_steps):
-	ngmesh = ngm.Mesh()
-	ngmesh.dim=3
-	pnums = []
+    ngmesh = ngm.Mesh()
+    ngmesh.dim=3
+    pnums = []
 
-	for p in ngmeshbase.Points():
-		x,y,z = p.p
-		ngmesh.Add(ngm.MeshPoint(ngm.Pnt(x,y,0)))
-	for i,p in enumerate(ngmeshbase.Points()):
-		x,y,z = p.p
-		pnums.append(ngmesh.Add(ngm.MeshPoint(ngm.Pnt(x,y,t_steps))))
-		ngmesh.AddPointIdentification(ngm.PointId(i+1),pnums[-1], identnr=1,type=2)
+    for i,p in enumerate(ngmeshbase.Points()):
+        x,y,z = p.p
+        pnums.append( ngmesh.Add(ngm.MeshPoint(ngm.Pnt(x,y,0))) )
+        pnums.append( ngmesh.Add(ngm.MeshPoint(ngm.Pnt(x,y,t_steps))) )
+        pnums.append( ngmesh.Add(ngm.MeshPoint(ngm.Pnt(x,y,2*t_steps))) )
+        # ngmesh.AddPointIdentification(pnums[-3],pnums[-1], identnr=1,type=2) #master, slave
+    El1d = ngmeshbase.Elements1D()
+    El2d = ngmeshbase.Elements2D()
 
-	El1d = ngmeshbase.Elements1D()
-	El2d = ngmeshbase.Elements2D()
+    ngmesh.SetMaterial(1, "mat")
+    for el in El2d:
+        ngmesh.Add(ngm.Element3D(1, [pnums[3*(el.points[0].nr-1)]
+                                     ,pnums[3*(el.points[1].nr-1)]
+                                     ,pnums[3*(el.points[2].nr-1)]
+                                     ,pnums[3*(el.points[0].nr-1)+1]
+                                     ,pnums[3*(el.points[1].nr-1)+1]
+                                    ,pnums[3*(el.points[2].nr-1)+1] ]))
+        ngmesh.Add(ngm.Element3D(1, [pnums[3*(el.points[0].nr-1)+1]
+                                    ,pnums[3*(el.points[1].nr-1)+1]
+                                    ,pnums[3*(el.points[2].nr-1)+1]
+                                    ,pnums[3*(el.points[0].nr-1)+2]
+                                    ,pnums[3*(el.points[1].nr-1)+2]
+                                    ,pnums[3*(el.points[2].nr-1)+2] ]))
+    fde = ngm.FaceDescriptor(surfnr=1,domin=1,bc=1)
+    fde.bcname = "inflow"
+    fdid = ngmesh.Add(fde)
+    for el in El2d:
+        ngmesh.Add(ngm.Element2D(fdid, [pnums[3*(el.points[2].nr-1)]
+                                        ,pnums[3*(el.points[1].nr-1)]
+                                        ,pnums[3*(el.points[0].nr-1)] ]))
+    fde = ngm.FaceDescriptor(surfnr=2,domin=1,bc=2)
+    fde.bcname = "outflow"
+    fdid = ngmesh.Add(fde)
+    for el in El2d:
+         ngmesh.Add(ngm.Element2D(fdid, [pnums[3*(el.points[0].nr-1)+2]
+                                        ,pnums[3*(el.points[1].nr-1)+2]
+                                        ,pnums[3*(el.points[2].nr-1)+2] ]))
+    fde = ngm.FaceDescriptor(surfnr=3,domin=1,bc=3)
+    fde.bcname = "dirichlet"
+    fdid = ngmesh.Add(fde)
+    for el in El1d:
+        ngmesh.Add(ngm.Element2D(fdid, [pnums[3*(el.points[0].nr-1)]
+                                        ,pnums[3*(el.points[1].nr-1)]
+                                        ,pnums[3*(el.points[1].nr-1)+1]
+                                        ,pnums[3*(el.points[0].nr-1)+1]]))
+        ngmesh.Add(ngm.Element2D(fdid, [pnums[3*(el.points[0].nr-1)+1]
+                                        ,pnums[3*(el.points[1].nr-1)+1]
+                                        ,pnums[3*(el.points[1].nr-1)+2]
+                                        ,pnums[3*(el.points[0].nr-1)+2]]))
 
-	ngmesh.SetMaterial(1, "mat")
-	for el in El2d:
-		ngmesh.Add(ngm.Element3D(1, [el.points[0].nr
-									,el.points[1].nr
-									,el.points[2].nr
-									,pnums[el.points[0].nr-1]
-									,pnums[el.points[1].nr-1]
-									,pnums[el.points[2].nr-1]]))
-	fde = ngm.FaceDescriptor(surfnr=1,domin=1,bc=1)
-	fde.bcname = "inflow"
-	fdid = ngmesh.Add(fde)
-	for el in El2d:
-		ngmesh.Add(ngm.Element2D(fdid, [el.points[2].nr
-									,el.points[1].nr
-									,el.points[0].nr]))
-	fde = ngm.FaceDescriptor(surfnr=2,domin=1,bc=2)
-	fde.bcname = "outflow"
-	fdid = ngmesh.Add(fde)
-	for el in El2d:
-		ngmesh.Add(ngm.Element2D(fdid, [pnums[el.points[0].nr-1]
-									,pnums[el.points[1].nr-1]
-									,pnums[el.points[2].nr-1]]))
-	fde = ngm.FaceDescriptor(surfnr=3,domin=1,bc=3)
-	fde.bcname = "dirichlet"
-	fdid = ngmesh.Add(fde)
-	for el in El1d:
-		ngmesh.Add(ngm.Element2D(fdid, [el.points[0].nr
-									,el.points[1].nr
-									,pnums[el.points[1].nr-1]
-									,pnums[el.points[0].nr-1]]))
 
-	ngmesh.SetBCName(0,"inflow")
-	ngmesh.SetBCName(1,"outflow")
-	ngmesh.SetBCName(2,"dirichlet")
-	mesh = Mesh(ngmesh)
-	return mesh
+    ngmesh.SetBCName(0,"inflow")
+    ngmesh.SetBCName(1,"outflow")
+    ngmesh.SetBCName(2,"dirichlet")
+    mesh = Mesh(ngmesh)
+    return mesh
 
 
 

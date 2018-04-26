@@ -3,14 +3,15 @@ from ngsolve import *
 from trefftzngs import *
 from netgen.csg import unit_cube
 from netgen.geom2d import unit_square
+import netgen.gui
 
-mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
+# mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
 # mesh = Mesh("cone/cone.vol.gz")
-# mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
+mesh = Mesh(unit_cube.GenerateMesh(maxh = 1))
 Draw(mesh)
 
-c = 4
-order = 9
+c = 1
+order = 3
 k = 1
 fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c)
 # fes = L2(mesh, order=order, dgjumps = True)
@@ -52,7 +53,20 @@ gradu = grad(gfu)
 # Draw(uex,mesh,'uex')
 # #Draw(gfu, mesh, 'gfu')
 print(Integrate((gfu-sin(k*(c*z+y+x)))*(gfu-sin(k*(c*z+y+x))), mesh))
-print(Integrate((gradu[0]-k*cos(k*(c*z+y+x)))*(gradu[0]-k*cos(k*(c*z+y+x))), mesh))
+print(Integrate((gradu-CoefficientFunction( tuple( (k*cos(k*(c*z+y+x)), k*cos(k*(c*z+y+x)), c*k*cos(k*(c*z+y+x)))) )) * (gradu-CoefficientFunction( tuple( (k*cos(k*(c*z+y+x)), k*cos(k*(c*z+y+x)), c*k*cos(k*(c*z+y+x))) ))), mesh))
 
-Draw(gfu, mesh, 'gfu')
-Draw(gradu, mesh, 'gradu')
+Draw(gfu, mesh, 'gfu',draw_surf=False)
+Draw(gradu, mesh, 'gradu',draw_surf=False)
+
+u = fes.TrialFunction()
+v = fes.TestFunction()
+b = BilinearForm(fes)
+b+=SymbolicBFI(CoefficientFunction(tuple( (grad(u)[0],grad(u)[1]) ))* CoefficientFunction(tuple( (grad(v)[0],grad(v)[1]) )) - grad(u)[2]*grad(v)[2])
+b.Assemble()
+import scipy as sp
+import scipy.sparse
+rows,cols,vals = b.mat.COO()
+A = sp.sparse.csr_matrix((vals,(rows,cols)))
+import numpy as np
+import numpy.linalg
+cond = np.linalg.cond(A.todense())
