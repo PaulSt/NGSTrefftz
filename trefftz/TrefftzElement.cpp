@@ -18,8 +18,7 @@ namespace ngfem
 			basistype(abasistype),
 			eltype(aeltype),
 			pascal(pascal_sym())
-			{;}
-
+  {;}
 
 
 	template<int D>
@@ -117,7 +116,7 @@ namespace ngfem
 					{
 						switch (basistype) {
             case 0:
-              if(l==0 && setbasis <= i)
+              if(l==0)
                 basisstorage( i, setbasis++ ) = 1.0; //set the l-th coeff to 1
               //i += nbasis-1;	//jump to time = 2 if i=0
               break;

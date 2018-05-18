@@ -58,15 +58,3 @@ print(Integrate((gradu-CoefficientFunction( tuple( (k*cos(k*(c*z+y+x)), k*cos(k*
 Draw(gfu, mesh, 'gfu',draw_surf=False)
 Draw(gradu, mesh, 'gradu',draw_surf=False)
 
-u = fes.TrialFunction()
-v = fes.TestFunction()
-b = BilinearForm(fes)
-b+=SymbolicBFI(CoefficientFunction(tuple( (grad(u)[0],grad(u)[1]) ))* CoefficientFunction(tuple( (grad(v)[0],grad(v)[1]) )) - grad(u)[2]*grad(v)[2])
-b.Assemble()
-import scipy as sp
-import scipy.sparse
-rows,cols,vals = b.mat.COO()
-A = sp.sparse.csr_matrix((vals,(rows,cols)))
-import numpy as np
-import numpy.linalg
-cond = np.linalg.cond(A.todense())

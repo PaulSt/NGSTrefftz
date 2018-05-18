@@ -20,10 +20,10 @@ def PeriodicProdMesh(ngmeshbase,t_steps):
     ngmesh.SetMaterial(1, "mat")
     for el in El2d:
         ngmesh.Add(ngm.Element3D(1, [pnums[3*(el.points[0].nr-1)]
-                                     ,pnums[3*(el.points[1].nr-1)]
-                                     ,pnums[3*(el.points[2].nr-1)]
-                                     ,pnums[3*(el.points[0].nr-1)+1]
-                                     ,pnums[3*(el.points[1].nr-1)+1]
+                                    ,pnums[3*(el.points[1].nr-1)]
+                                    ,pnums[3*(el.points[2].nr-1)]
+                                    ,pnums[3*(el.points[0].nr-1)+1]
+                                    ,pnums[3*(el.points[1].nr-1)+1]
                                     ,pnums[3*(el.points[2].nr-1)+1] ]))
         ngmesh.Add(ngm.Element3D(1, [pnums[3*(el.points[0].nr-1)+1]
                                     ,pnums[3*(el.points[1].nr-1)+1]
@@ -36,8 +36,8 @@ def PeriodicProdMesh(ngmeshbase,t_steps):
     fdid = ngmesh.Add(fde)
     for el in El2d:
         ngmesh.Add(ngm.Element2D(fdid, [pnums[3*(el.points[2].nr-1)]
-                                        ,pnums[3*(el.points[1].nr-1)]
-                                        ,pnums[3*(el.points[0].nr-1)] ]))
+                                       ,pnums[3*(el.points[1].nr-1)]
+                                       ,pnums[3*(el.points[0].nr-1)] ]))
     fde = ngm.FaceDescriptor(surfnr=2,domin=1,bc=2)
     fde.bcname = "outflow"
     fdid = ngmesh.Add(fde)
