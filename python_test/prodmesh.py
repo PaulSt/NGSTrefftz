@@ -12,51 +12,51 @@ def PeriodicProdMesh(ngmeshbase,t_steps):
         x,y,z = p.p
         pnums.append( ngmesh.Add(ngm.MeshPoint(ngm.Pnt(x,y,0))) )
         pnums.append( ngmesh.Add(ngm.MeshPoint(ngm.Pnt(x,y,t_steps))) )
-        pnums.append( ngmesh.Add(ngm.MeshPoint(ngm.Pnt(x,y,2*t_steps))) )
-        # ngmesh.AddPointIdentification(pnums[-3],pnums[-1], identnr=1,type=2) #master, slave
+        # pnums.append( ngmesh.Add(ngm.MeshPoint(ngm.Pnt(x,y,2*t_steps))) )
+        # ngmesh.AddPointIdentification(pnums[-2],pnums[-1], identnr=1,type=2) #master, slave
     El1d = ngmeshbase.Elements1D()
     El2d = ngmeshbase.Elements2D()
 
     ngmesh.SetMaterial(1, "mat")
     for el in El2d:
-        ngmesh.Add(ngm.Element3D(1, [pnums[3*(el.points[0].nr-1)]
-                                    ,pnums[3*(el.points[1].nr-1)]
-                                    ,pnums[3*(el.points[2].nr-1)]
-                                    ,pnums[3*(el.points[0].nr-1)+1]
-                                    ,pnums[3*(el.points[1].nr-1)+1]
-                                    ,pnums[3*(el.points[2].nr-1)+1] ]))
-        ngmesh.Add(ngm.Element3D(1, [pnums[3*(el.points[0].nr-1)+1]
-                                    ,pnums[3*(el.points[1].nr-1)+1]
-                                    ,pnums[3*(el.points[2].nr-1)+1]
-                                    ,pnums[3*(el.points[0].nr-1)+2]
-                                    ,pnums[3*(el.points[1].nr-1)+2]
-                                    ,pnums[3*(el.points[2].nr-1)+2] ]))
+        ngmesh.Add(ngm.Element3D(1, [pnums[2*(el.points[0].nr-1)]
+                                    ,pnums[2*(el.points[1].nr-1)]
+                                    ,pnums[2*(el.points[2].nr-1)]
+                                    ,pnums[2*(el.points[0].nr-1)+1]
+                                    ,pnums[2*(el.points[1].nr-1)+1]
+                                    ,pnums[2*(el.points[2].nr-1)+1] ]))
+        # ngmesh.Add(ngm.Element3D(1, [pnums[3*(el.points[0].nr-1)+1]
+        #                             ,pnums[3*(el.points[1].nr-1)+1]
+        #                             ,pnums[3*(el.points[2].nr-1)+1]
+        #                             ,pnums[3*(el.points[0].nr-1)+2]
+        #                             ,pnums[3*(el.points[1].nr-1)+2]
+        #                             ,pnums[3*(el.points[2].nr-1)+2] ]))
     fde = ngm.FaceDescriptor(surfnr=1,domin=1,bc=1)
     fde.bcname = "inflow"
     fdid = ngmesh.Add(fde)
     for el in El2d:
-        ngmesh.Add(ngm.Element2D(fdid, [pnums[3*(el.points[2].nr-1)]
-                                       ,pnums[3*(el.points[1].nr-1)]
-                                       ,pnums[3*(el.points[0].nr-1)] ]))
+        ngmesh.Add(ngm.Element2D(fdid, [pnums[2*(el.points[2].nr-1)]
+                                       ,pnums[2*(el.points[1].nr-1)]
+                                       ,pnums[2*(el.points[0].nr-1)] ]))
     fde = ngm.FaceDescriptor(surfnr=2,domin=1,bc=2)
     fde.bcname = "outflow"
     fdid = ngmesh.Add(fde)
     for el in El2d:
-         ngmesh.Add(ngm.Element2D(fdid, [pnums[3*(el.points[0].nr-1)+2]
-                                        ,pnums[3*(el.points[1].nr-1)+2]
-                                        ,pnums[3*(el.points[2].nr-1)+2] ]))
+         ngmesh.Add(ngm.Element2D(fdid, [pnums[2*(el.points[0].nr-1)+1]
+                                        ,pnums[2*(el.points[1].nr-1)+1]
+                                        ,pnums[2*(el.points[2].nr-1)+1] ]))
     fde = ngm.FaceDescriptor(surfnr=3,domin=1,bc=3)
     fde.bcname = "dirichlet"
     fdid = ngmesh.Add(fde)
     for el in El1d:
-        ngmesh.Add(ngm.Element2D(fdid, [pnums[3*(el.points[0].nr-1)]
-                                        ,pnums[3*(el.points[1].nr-1)]
-                                        ,pnums[3*(el.points[1].nr-1)+1]
-                                        ,pnums[3*(el.points[0].nr-1)+1]]))
-        ngmesh.Add(ngm.Element2D(fdid, [pnums[3*(el.points[0].nr-1)+1]
-                                        ,pnums[3*(el.points[1].nr-1)+1]
-                                        ,pnums[3*(el.points[1].nr-1)+2]
-                                        ,pnums[3*(el.points[0].nr-1)+2]]))
+        ngmesh.Add(ngm.Element2D(fdid, [pnums[2*(el.points[0].nr-1)]
+                                       ,pnums[2*(el.points[1].nr-1)]
+                                       ,pnums[2*(el.points[1].nr-1)+1]
+                                       ,pnums[2*(el.points[0].nr-1)+1]]))
+        # ngmesh.Add(ngm.Element2D(fdid, [pnums[3*(el.points[0].nr-1)+1]
+        #                                 ,pnums[3*(el.points[1].nr-1)+1]
+        #                                 ,pnums[3*(el.points[1].nr-1)+2]
+        #                                 ,pnums[3*(el.points[0].nr-1)+2]]))
 
 
     ngmesh.SetBCName(0,"inflow")
