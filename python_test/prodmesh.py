@@ -13,7 +13,7 @@ def PeriodicProdMesh(ngmeshbase,t_steps):
         pnums.append( ngmesh.Add(ngm.MeshPoint(ngm.Pnt(x,y,0))) )
         pnums.append( ngmesh.Add(ngm.MeshPoint(ngm.Pnt(x,y,t_steps))) )
         # pnums.append( ngmesh.Add(ngm.MeshPoint(ngm.Pnt(x,y,2*t_steps))) )
-        # ngmesh.AddPointIdentification(pnums[-2],pnums[-1], identnr=1,type=2) #master, slave
+        ngmesh.AddPointIdentification(pnums[-2],pnums[-1], identnr=1,type=2) #master, slave
     El1d = ngmeshbase.Elements1D()
     El2d = ngmeshbase.Elements2D()
 

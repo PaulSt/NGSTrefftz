@@ -83,8 +83,8 @@ def DGeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False):
         a.Assemble()
         f = GridFunction(fes)
         rhs = BilinearForm(fes)
-        rhs += SymbolicBFI( IfPos(n_t,0,1) * spacelike * ( pow(c,-2)*v*w + sig*tau ), element_boundary=True ) #space like faces, w/o x jump
-        rhs += SymbolicBFI( IfPos(n_t,0,1) * spacelike * ( U*V ), element_boundary=True )
+        rhs += SymbolicBFI( IfPos(n_t,0,1) * spacelike * ( pow(c,-2)*vo*w + sigo*tau ), element_boundary=True ) #space like faces, w/o x jump
+        rhs += SymbolicBFI( IfPos(n_t,0,1) * spacelike * ( U.Other()*V ), element_boundary=True )
         rhs += SymbolicBFI( ( gD * (alpha*w - tau*n_x) ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True) #dirichlet boundary 'timelike'
         rhs.Apply(U0.vec,f.vec)
 

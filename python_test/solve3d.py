@@ -44,8 +44,8 @@ gfu.Set(truesol) # gD = c*k* cos( k*(c*z+x+y) )
 gD = v0
 # gD = grad(gfu)[2]
 
-for t in range(1,3):
-    # gD = c*cos(c*(z+t*t_stepsize)+sq*(x+y))
+for t in range(1,5):
+    gD = c*cos(c*(z+t*t_stepsize)+sq*(x+y))
     start = time.clock()
     [a,f] = DGeqsys(fes,gfu,0,0,c,gD,False,True)
     print("DGsys: ", str(time.clock()-start))
@@ -54,6 +54,8 @@ for t in range(1,3):
     [gfu, cond] = DGsolve(fes,a,f)
     print("DGsolve: ", str(time.clock()-start))
 
+    truesol = sin(c*(z+t*t_stepsize)+sq*(x+y))
+    gradtruesol = CoefficientFunction( (sq*cos(c*(z+t*t_stepsize)+sq*(x+y)),sq*cos(c*(z+t*t_stepsize)+sq*(x+y)),c*cos(c*(z+t*t_stepsize)+sq*(x+y)) ) )
     L2error = sqrt(Integrate((truesol - gfu)*(truesol - gfu), mesh))
     sH1error = sqrt(Integrate((gradtruesol - grad(gfu))*(gradtruesol - grad(gfu)), mesh))
     print("L2error=", L2error)
