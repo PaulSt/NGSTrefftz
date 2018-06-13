@@ -124,6 +124,7 @@ namespace ngcomp
           break;
         }
       }
+    return *(new (alloc) T_TrefftzElement<1> ());
   }
 
   template <int D> double TrefftzFESpace ::Adiam (ElementId ei) const
