@@ -9,7 +9,7 @@ from trefftzngs import *
 import numpy as np
 from prodmesh import CartSquare
 from ngsolve import *
-import netgen.gui
+#  import netgen.gui
 from DGeq import *
 import time
 
@@ -17,19 +17,20 @@ mesh = CartSquare(N,t_steps)
 
 #########################################################################################################################################
 
-truesol =  sin( k*(c*y + x) )#exp(-pow(c*x+y,2)))#
-v0 = c*k*cos(k*(c*y+x))#grad(U0)[0]
-sig0 = -k*cos(k*(c*y+x))#-grad(U0)[1]
 
 # for order in range(3,order):
 fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0)
 # fes = L2(mesh, order=order, flags = { "dgjumps" : True })
+
+truesol = exp(-1.3*k*((x-0.15)-c*y)*((x-0.15)-c*y)) + exp(-k*((x-0.9)+c*y)*((x-0.9)+c*y)) #sin( k*(c*y + x) )#
 
 U0 = GridFunction(fes)
 U0.Set(truesol)
 Draw(U0,mesh,'U0')
 # input()
 
+v0 = grad(U0)[1]#c*k*cos(k*(c*y+x))#
+sig0 = -grad(U0)[0] #-k*cos(k*(c*y+x))#-grad(U0)[1]
 start = time.clock()
 [a,f] = DGeqsys(fes,truesol,v0,sig0,c,v0)
 print("DGsys: ", str(time.clock()-start))

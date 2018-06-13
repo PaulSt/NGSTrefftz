@@ -7,6 +7,7 @@ using namespace ngsolve;
 #include "trefftz/DiffOpMapped.hpp"
 #include "trefftz/ClipCoefficientFunction.hpp"
 //#include "trefftz/MappedElement.hpp"
+#include "trefftz/TestPython.hpp"
 
 PYBIND11_PLUGIN(trefftzngs) {
   // import ngsolve such that python base classes are defined
@@ -18,6 +19,7 @@ PYBIND11_PLUGIN(trefftzngs) {
 	ExportTrefftzFESpace(m);
 	ExportTrefftzCoefficient(m);
 	ExportClipCoefficientFunction(m);
+  ExportTestPython(m);
 
   return m.ptr();
 }

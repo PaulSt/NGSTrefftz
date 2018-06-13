@@ -94,19 +94,20 @@ def DGeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False):
 def DGsolve(fes,a,f):
     gfu = GridFunction(fes, name="uDG")
 
-    tmp1 = f.vec.CreateVector()
-    tmp2 = f.vec.CreateVector()
-    def matvec(v):
-    	tmp1.FV().NumPy()[:] = v
-    	tmp2.data = a.mat * tmp1
-    	return tmp2.FV().NumPy()
+    # tmp1 = f.vec.CreateVector()
+    # tmp2 = f.vec.CreateVector()
+    # def matvec(v):
+    # 	tmp1.FV().NumPy()[:] = v
+    # 	tmp2.data = a.mat * tmp1
+    # 	return tmp2.FV().NumPy()
 
-    A = sp.sparse.linalg.LinearOperator( (a.mat.height,a.mat.width), matvec)
-    gfu.vec.FV().NumPy()[:], succ = sp.sparse.linalg.gmres(A, f.vec.FV().NumPy())
+    # A = sp.sparse.linalg.LinearOperator( (a.mat.height,a.mat.width), matvec)
+    # gfu.vec.FV().NumPy()[:], succ = sp.sparse.linalg.gmres(A, f.vec.FV().NumPy())
 
-    # rows,cols,vals = a.mat.COO()
-    # A = sp.sparse.csr_matrix((vals,(rows,cols)))
-    # # gfu.vec.FV().NumPy()[:] = sp.sparse.linalg.spsolve(A,f.vec.FV())
+    rows,cols,vals = a.mat.COO()
+    A = sp.sparse.csr_matrix((vals,(rows,cols)))
+    gfu.vec.FV().NumPy()[:] = sp.sparse.linalg.spsolve(A,f.vec.FV())
+
     # A = A.todense()
     # nmatclean = A[~(A==0).all(1).A1,:]
     # nmatclean = nmatclean[:,~(A==0).all(1).A1]

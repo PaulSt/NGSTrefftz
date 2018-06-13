@@ -19,6 +19,7 @@ add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
 	trefftz/ScalarMappedElement.cpp
   trefftz/ClipCoefficientFunction.cpp
   trefftz/TrefftzCoefficient.hpp
+  trefftz/TestPython.hpp
   )
 
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
