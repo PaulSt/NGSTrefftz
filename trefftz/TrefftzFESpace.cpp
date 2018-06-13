@@ -100,6 +100,7 @@ namespace ngcomp
 				break;
 			}
 		}
+    return *(new (alloc) T_TrefftzElement<1>());
 	}
 
 
