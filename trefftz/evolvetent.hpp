@@ -8,15 +8,16 @@ namespace ngcomp
 {
   int TestPython(shared_ptr<MeshAccess> ma)
   {
-    PyObject *pName, *pModule, *pDict, *pFunc;
     py::module et  =  py::module::import("EvolveTent");
-    Flags flag;
-    flag.SetFlag("order",4);
-    // TrefftzFESpace fes(ma, flag);
-    // H1HighOrderFESpace fes(ma,flag);
+    // Flags flag();
+    // flag.SetFlag("order",4);
+    TrefftzFESpace fes(ma, Flags());
+    // std::shared_ptr<FESpace> p = std::make_shared<TrefftzFESpace>(fes);
+    // py::object ffes = py::cast(fes);
     // auto pyspace = py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>,FESpace> (m, pyname.c_str());
-    py::object fes = et.attr("GetFESTrefftz")(ma);
-    et.attr("EvolveTent")(fes,0,0);
+    py::object pyfes = et.attr("GetFESTrefftz")(ma);
+    // FESpace *ffes = pyfes.cast<FESpace *>();
+    // et.attr("EvolveTent")(pyfes,?,?);
     return 4;
   }
 }
