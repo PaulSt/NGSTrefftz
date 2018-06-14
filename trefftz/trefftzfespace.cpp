@@ -4,15 +4,15 @@
 #include <fem.hpp>
 #include <multigrid.hpp>
 
-#include "TrefftzElement.hpp"
-#include "TrefftzFESpace.hpp"
-#include "DiffOpMapped.hpp"
+#include "trefftzelement.hpp"
+#include "trefftzfespace.hpp"
+#include "diffopmapped.hpp"
 
 namespace ngcomp
 {
 
   TrefftzFESpace :: TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags)
-    : FESpace (ama, flags), TTT(int(flags.GetNumFlag ("order", 3)), flags.GetNumFlag ("wavespeed", 1))
+    : FESpace (ama, flags)
   {
 
 		DefineNumFlag("wavespeed");

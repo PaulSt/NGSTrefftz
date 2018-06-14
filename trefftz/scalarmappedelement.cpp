@@ -1,4 +1,4 @@
-#include "ScalarMappedElement.hpp"
+#include "scalarmappedelement.hpp"
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
 

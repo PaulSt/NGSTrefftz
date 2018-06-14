@@ -3,7 +3,7 @@
 
 #include <fem.hpp>
 #include "helpers.hpp"
-#include "ScalarMappedElement.hpp"
+#include "scalarmappedelement.hpp"
 
 namespace ngfem
 {

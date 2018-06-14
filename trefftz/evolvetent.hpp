@@ -21,7 +21,7 @@ namespace ngcomp
   }
 }
 #ifdef NGS_PYTHON
-void ExportTestPython(py::module m)
+void ExportEvolveTent(py::module m)
 {
 	m.def("TestPythonF", [](shared_ptr<MeshAccess> ma) -> int 
 					{
