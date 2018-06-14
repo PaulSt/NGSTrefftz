@@ -1,6 +1,6 @@
 #ifndef FILE_TREFFTZFESPACE_HPP
 #define FILE_TREFFTZFESPACE_HPP
-#include "TrefftzElement.hpp"
+#include "trefftzelement.hpp"
 
 namespace ngcomp
 {
@@ -16,7 +16,6 @@ namespace ngcomp
     float c = 1;
     bool testshift = false;
     int basistype;
-    mutable T_TrefftzElement<3> TTT;
 
   public:
     /*

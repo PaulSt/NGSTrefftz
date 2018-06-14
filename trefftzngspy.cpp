@@ -1,13 +1,13 @@
 #include <solve.hpp>
 using namespace ngsolve;
 #include <python_ngstd.hpp>
-//#include "trefftz/TrefftzElement.hpp"
-#include "trefftz/TrefftzFESpace.hpp"
-#include "trefftz/TrefftzCoefficient.hpp"
-#include "trefftz/DiffOpMapped.hpp"
-#include "trefftz/ClipCoefficientFunction.hpp"
-//#include "trefftz/MappedElement.hpp"
-#include "trefftz/TestPython.hpp"
+//#include "trefftz/trefftzelement.hpp"
+#include "trefftz/trefftzfespace.hpp"
+#include "trefftz/trefftzcoefficient.hpp"
+#include "trefftz/diffopmapped.hpp"
+#include "trefftz/clipcoefficientfunction.hpp"
+//#include "trefftz/mappedelement.hpp"
+#include "trefftz/evolvetent.hpp"
 
 PYBIND11_PLUGIN (trefftzngs)
 {
@@ -20,7 +20,7 @@ PYBIND11_PLUGIN (trefftzngs)
   ExportTrefftzFESpace (m);
   ExportTrefftzCoefficient (m);
   ExportClipCoefficientFunction (m);
-  ExportTestPython (m);
+  ExportEvolveTent (m);
 
   return m.ptr ();
 }

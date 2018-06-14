@@ -1,6 +1,6 @@
 #ifndef __FILE_TREFFTZCOEFFICIENT_HPP
 #define __FILE_TREFFTZCOEFFICIENT_HPP
-#include "TrefftzElement.hpp"
+#include "trefftzelement.hpp"
 
 namespace ngfem
 {

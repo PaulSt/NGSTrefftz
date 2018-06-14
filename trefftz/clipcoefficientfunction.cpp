@@ -1,5 +1,5 @@
 #include <fem.hpp>
-#include "ClipCoefficientFunction.hpp"
+#include "clipcoefficientfunction.hpp"
 #include <comp.hpp>
 using namespace ngcomp;
 

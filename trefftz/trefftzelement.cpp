@@ -1,4 +1,4 @@
-#include "TrefftzElement.hpp"
+#include "trefftzelement.hpp"
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
 #include "helpers.hpp"

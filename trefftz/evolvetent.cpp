@@ -1,4 +1,4 @@
-#include "TestPython.hpp"
+#include "testpython.hpp"
 
 #ifdef NGS_PYTHON
 
