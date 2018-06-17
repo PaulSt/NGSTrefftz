@@ -5,6 +5,7 @@
 #include <regex>
 #include <fem.hpp>
 #include <multigrid.hpp>
+#include "tents/tents.hpp"
 
 namespace ngcomp
 {
