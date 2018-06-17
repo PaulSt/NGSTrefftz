@@ -7,6 +7,7 @@ using namespace ngsolve;
 #include "trefftz/diffopmapped.hpp"
 #include "trefftz/clipcoefficientfunction.hpp"
 //#include "trefftz/mappedelement.hpp"
+#include "trefftz/tents/tents.hpp"
 #include "trefftz/evolvetent.hpp"
 
 PYBIND11_PLUGIN(trefftzngs) {
