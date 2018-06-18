@@ -25,14 +25,33 @@ namespace ngcomp
     mesh->SetGeometry (make_shared<netgen::NetgenGeometry> ());
     netgen::PointIndex pind;
 
+    Vec<1> point;
+    int i = 0;
     for (Tent *tent : tps.tents)
       {
-        pind = mesh->AddPoint (netgen::Point3d (1, 1, 1));
+
+        Array<netgen::PointIndex> nbvn (tent->nbv.Size ());
+        point = ma->GetPoint<1> (tent->vertex);
+        auto pindbot
+            = mesh->AddPoint (netgen::Point3d (point (0), tent->tbot, 0));
+        auto pindtop
+            = mesh->AddPoint (netgen::Point3d (point (0), tent->ttop, 0));
+        for (int k = 0; k < tent->nbv.Size (); k++)
+          {
+            point = ma->GetPoint<1> (tent->nbv[k]);
+            nbvn[k] = mesh->AddPoint (
+                netgen::Point3d (point (0), tent->nbtime[k], 0));
+            cout << k << endl;
+          }
+        cout << pindbot << endl;
+        // if(tent->nbv.Size() == 1)
+        netgen::Element2d el2d (pindbot, pindtop, nbvn[0]);
+        // mesh -> AddSurfaceElement();
+        // else if(tent->nbv.Size() == 2)
+        // mesh ->
+        // AddSurfaceElement(netgen::Element2d(pindbot,pindtop,nbvn[0],nbvn[1]));
         // cout << *tent << endl;
-        for (auto v : tent->nbv)
-          ma->GetPoint<1> (v);
       }
-    cout << endl;
 
     // Flags flag();
     // flag.SetFlag("order",4);
