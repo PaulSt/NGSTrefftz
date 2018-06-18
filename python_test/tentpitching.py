@@ -15,4 +15,4 @@ from ngsolve.comp import *
 mesh = Mesh(SegMesh(4,0,0.5))
 # mesh2 = Mesh(unit_square.GenerateMesh(maxh=0.4))
 # mesh = Mesh(MakeTensorProductMesh(mesh2,mesh1))
-
+EvolveTents(mesh)
