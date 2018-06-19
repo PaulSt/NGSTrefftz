@@ -9,7 +9,9 @@
 
 namespace ngcomp
 {
-  int EvolveTents (shared_ptr<MeshAccess> ma);
+  void EvolveTents (shared_ptr<MeshAccess> ma);
+  shared_ptr<MeshAccess>
+  ngs_tpmesh (shared_ptr<MeshAccess> ma, float wavespeed);
 }
 
 #ifdef NGS_PYTHON

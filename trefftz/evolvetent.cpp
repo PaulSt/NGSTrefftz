@@ -9,61 +9,78 @@
 
 namespace ngcomp
 {
-  int EvolveTents (shared_ptr<MeshAccess> ma)
+  void EvolveTents (shared_ptr<MeshAccess> ma)
   {
-    py::module et = py::module::import ("EvolveTent");
+    py::module et = py::module::import ("SolveTentSlab");
+    auto tpmesh = ngs_tpmesh (ma, 1);
+    // Flags flag();
+    // flag.SetFlag("order",4);
+    // TrefftzFESpace fes(ma, Flags());
+    // std::shared_ptr<FESpace> p = std::make_shared<TrefftzFESpace>(fes);
+    // py::object ffes = py::cast(fes);
+    // auto pyspace = py::class_<TrefftzFESpace,
+    // shared_ptr<TrefftzFESpace>,FESpace> (m, pyname.c_str()); py::object
+    // pyfes = et.attr("GetFESTrefftz")(ma); FESpace *ffes = pyfes.cast<FESpace
+    // *>(); et.attr("EvolveTent")(pyfes,?,?);
+  }
+
+  shared_ptr<MeshAccess>
+  ngs_tpmesh (shared_ptr<MeshAccess> ma, float wavespeed)
+  {
     int basedim = ma->GetDimension ();
     TentPitchedSlab<1> tps
         = TentPitchedSlab<1> (ma); // collection of tents in timeslab
     if (basedim >= 2)
       cout << "oh no" << endl;
-    tps.PitchTents (1.0, 1.0); // adt = time slab height, wavespeed
+    tps.PitchTents (1.0, wavespeed); // adt = time slab height, wavespeed
 
     auto mesh = make_shared<netgen::Mesh> ();
     mesh->SetDimension (ma->GetDimension () + 1);
     netgen::SetGlobalMesh (mesh); // for visualization
     mesh->SetGeometry (make_shared<netgen::NetgenGeometry> ());
-    netgen::PointIndex pind;
 
     Vec<1> point;
-    int i = 0;
+    netgen::FaceDescriptor *fd = new netgen::FaceDescriptor ();
+    fd->SetSurfNr (1);
+    fd->SetDomainIn (1);
+    fd->SetDomainOut (0);
+    fd->SetBCProperty (1);
+    mesh->AddFaceDescriptor (*fd);
     for (Tent *tent : tps.tents)
       {
-
-        Array<netgen::PointIndex> nbvn (tent->nbv.Size ());
+        Vector<netgen::PointIndex> vertices (tent->nbv.Size () + 2);
         point = ma->GetPoint<1> (tent->vertex);
-        auto pindbot
+        vertices[tent->nbv[0] > tent->vertex ? 0 : 2]
             = mesh->AddPoint (netgen::Point3d (point (0), tent->tbot, 0));
-        auto pindtop
+        vertices[tent->nbv[0] > tent->vertex ? 2 : 0]
             = mesh->AddPoint (netgen::Point3d (point (0), tent->ttop, 0));
         for (int k = 0; k < tent->nbv.Size (); k++)
           {
             point = ma->GetPoint<1> (tent->nbv[k]);
-            nbvn[k] = mesh->AddPoint (
+            vertices[2 * k + 1] = mesh->AddPoint (
                 netgen::Point3d (point (0), tent->nbtime[k], 0));
-            cout << k << endl;
           }
-        cout << pindbot << endl;
-        // if(tent->nbv.Size() == 1)
-        netgen::Element2d el2d (pindbot, pindtop, nbvn[0]);
-        // mesh -> AddSurfaceElement();
-        // else if(tent->nbv.Size() == 2)
-        // mesh ->
-        // AddSurfaceElement(netgen::Element2d(pindbot,pindtop,nbvn[0],nbvn[1]));
+        int index = 1;
+        netgen::Element2d *newel = nullptr;
+        if (tent->nbv.Size () == 1)
+          {
+            newel = new netgen::Element2d (netgen::TRIG);
+            for (int i = 0; i < 3; i++)
+              (*newel)[i] = vertices[i];
+            newel->SetIndex (index);
+          }
+        else if (tent->nbv.Size () == 2)
+          {
+            newel = new netgen::Element2d (netgen::QUAD);
+            for (int i = 0; i < 4; i++)
+              (*newel)[i] = vertices[i];
+            newel->SetIndex (index);
+          }
+        mesh->AddSurfaceElement (*newel);
         // cout << *tent << endl;
       }
-
-    // Flags flag();
-    // flag.SetFlag("order",4);
-    TrefftzFESpace fes (ma, Flags ());
-    // std::shared_ptr<FESpace> p = std::make_shared<TrefftzFESpace>(fes);
-    // py::object ffes = py::cast(fes);
-    // auto pyspace = py::class_<TrefftzFESpace,
-    // shared_ptr<TrefftzFESpace>,FESpace> (m, pyname.c_str());
-    py::object pyfes = et.attr ("GetFESTrefftz") (ma);
-    // FESpace *ffes = pyfes.cast<FESpace *>();
-    // et.attr("EvolveTent")(pyfes,?,?);
-    return 4;
+    auto tpmesh = make_shared<MeshAccess> (mesh);
+    return tpmesh;
   }
 }
 
@@ -71,9 +88,14 @@ namespace ngcomp
 #include <python_ngstd.hpp>
 void ExportEvolveTent (py::module m)
 {
-  m.def ("EvolveTents",
-         [] (shared_ptr<MeshAccess> ma) -> int {
-           return EvolveTents (ma);
+  m.def (
+      "EvolveTents", [] (shared_ptr<MeshAccess> ma) //-> shared_ptr<MeshAccess>
+      { return EvolveTents (ma); } //, py::call_guard<py::gil_scoped_release>()
+  );
+  m.def ("ngs_tpmesh",
+         [] (shared_ptr<MeshAccess> ma,
+             float wavespeed) -> shared_ptr<MeshAccess> {
+           return ngs_tpmesh (ma, wavespeed);
          } //, py::call_guard<py::gil_scoped_release>()
   );
 }
