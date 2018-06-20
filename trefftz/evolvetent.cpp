@@ -30,12 +30,6 @@ namespace ngcomp
     map<netgen::Point3d, netgen::PointIndex>
         point2index_map; // Your map type may vary, just change the typedef
 
-    cout << point2index (&point2index_map, netgen::Point3d (1, 1, 1)) << endl;
-    cout << point2index (&point2index_map, netgen::Point3d (2, 1, 1)) << endl;
-    cout << point2index (&point2index_map, netgen::Point3d (1, 1, 1)) << endl;
-    cout << point2index (&point2index_map, netgen::Point3d (1, 2, 1)) << endl;
-    cout << point2index (&point2index_map, netgen::Point3d (2, 1, 1)) << endl;
-
     int basedim = ma->GetDimension ();
     TentPitchedSlab<1> tps
         = TentPitchedSlab<1> (ma); // collection of tents in timeslab
@@ -102,29 +96,16 @@ namespace ngcomp
     if (lb != point2index_map->end ()
         && !(point2index_map->key_comp () (p, lb->first)))
       {
-        cout << "found point " << lb->first << " with pind: " << lb->second
-             << endl;
         return lb->second;
       }
     else
       {
         // the key does not exist in the map
         // add it to the map
-        netgen::PointIndex newpind (0);
-        if (lb == point2index_map->begin ())
-          {
-            cout << "adding first point index" << endl;
-          }
-        else
-          {
-            lb--;
-            newpind = lb->second;
-            lb++;
-          }
-        cout << "insterting: " << p << " with " << newpind + 1 << endl;
+        netgen::PointIndex newpind (point2index_map->size () + 1);
         point2index_map->insert (
             lb, map<netgen::Point3d, netgen::PointIndex>::value_type (
-                    p, ++newpind)); // Use lb as a hint to insert,
+                    p, newpind)); // Use lb as a hint to insert,
         return newpind;
       }
   }
