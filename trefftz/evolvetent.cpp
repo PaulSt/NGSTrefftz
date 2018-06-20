@@ -13,7 +13,7 @@ namespace ngcomp
   void EvolveTents(shared_ptr<MeshAccess> ma)
   {
     py::module et = py::module::import("SolveTentSlab");
-    auto tpmesh = ngs_tpmesh(ma, 1);
+    auto tpmesh = NgsTPmesh(ma, 1);
     // Flags flag();
     // flag.SetFlag("order",4);
     // TrefftzFESpace fes(ma, Flags());
@@ -26,9 +26,9 @@ namespace ngcomp
   }
 
 
-  shared_ptr<MeshAccess> ngs_tpmesh(shared_ptr<MeshAccess> ma, float wavespeed)
+  shared_ptr<MeshAccess> NgsTPmesh(shared_ptr<MeshAccess> ma, float wavespeed)
   {
-    map<netgen::Point3d, netgen::PointIndex> point2index_map;    // Your map type may vary, just change the typedef
+    Point2IndexMap* pim = new Point2IndexMap();    // Your map type may vary, just change the typedef
 
     int basedim =  ma->GetDimension(); 
     TentPitchedSlab<1> tps = TentPitchedSlab<1>(ma);      // collection of tents in timeslab
@@ -52,12 +52,12 @@ namespace ngcomp
     { 
       Vector<netgen::PointIndex> vertices(tent->nbv.Size()+2);
       point = ma -> GetPoint<1>(tent->vertex); 
-      vertices[ tent->nbv[0]>tent->vertex ? 0 : 2 ] = mesh -> AddPoint(netgen::Point3d(point(0),tent->tbot,0));
-      vertices[ tent->nbv[0]>tent->vertex ? 2 : 0 ] = mesh -> AddPoint(netgen::Point3d(point(0),tent->ttop,0));
+      vertices[ tent->nbv[0]>tent->vertex ? 0 : 2 ] = AddPointUnique(mesh,pim,netgen::Point3d(point(0),tent->tbot,0));
+      vertices[ tent->nbv[0]>tent->vertex ? 2 : 0 ] = AddPointUnique(mesh,pim,netgen::Point3d(point(0),tent->ttop,0));
       for (int k = 0; k < tent->nbv.Size(); k++)
       {
         point = ma->GetPoint<1>(tent->nbv[k]);
-        vertices[2*k+1] = mesh -> AddPoint(netgen::Point3d(point(0),tent->nbtime[k],0));
+        vertices[2*k+1] = AddPointUnique(mesh,pim,netgen::Point3d(point(0),tent->nbtime[k],0));
       }
       int index = 1;
       netgen::Element2d * newel = nullptr;
@@ -82,23 +82,30 @@ namespace ngcomp
     return tpmesh;
   }
 
-  netgen::PointIndex point2index(map<netgen::Point3d, netgen::PointIndex> *point2index_map, netgen::Point3d p)
+  netgen::PointIndex Point2Index(Point2IndexMap *pim, netgen::Point3d p)
   {
-    map<netgen::Point3d, netgen::PointIndex>::iterator lb = point2index_map->find(p);
+    Point2IndexMap::iterator lb = pim->find(p);
 
-    if(lb != point2index_map->end() && !(point2index_map->key_comp()(p, lb->first)))
-    {
+    if(lb != pim->end() && !(pim->key_comp()(p, lb->first)))
       return lb->second;
-    }
     else
     {
       // the key does not exist in the map
       // add it to the map
-      netgen::PointIndex newpind(point2index_map->size()+1);
-      point2index_map->insert(lb, map<netgen::Point3d, netgen::PointIndex>::value_type(p, newpind));    // Use lb as a hint to insert,
+      netgen::PointIndex newpind(pim->size()+1);
+      pim->insert(lb, Point2IndexMap::value_type(p, newpind));    // Use lb as a hint to insert,
       return newpind;
     }
   }
+
+  netgen::PointIndex AddPointUnique(shared_ptr<netgen::Mesh> ngma, Point2IndexMap *pim, netgen::Point3d p)
+  {
+    netgen::PointIndex pi = Point2Index(pim,p);
+    if(pi == pim->size())
+      ngma -> AddPoint(p);
+    return pi; 
+  }
+
 }
 
 #ifdef NGS_PYTHON
@@ -110,9 +117,9 @@ void ExportEvolveTent(py::module m)
             return EvolveTents(ma);
 					}//, py::call_guard<py::gil_scoped_release>()
       );
-	m.def("ngs_tpmesh", [](shared_ptr<MeshAccess> ma, float wavespeed) -> shared_ptr<MeshAccess>
+	m.def("NgsTPmesh", [](shared_ptr<MeshAccess> ma, float wavespeed) -> shared_ptr<MeshAccess>
 					{
-            return ngs_tpmesh(ma,wavespeed);
+            return NgsTPmesh(ma,wavespeed);
 					}//, py::call_guard<py::gil_scoped_release>()
       );
 }
