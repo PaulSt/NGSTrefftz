@@ -9,12 +9,16 @@
 
 namespace ngcomp
 {
+  typedef map<netgen::Point3d, netgen::PointIndex> Point2IndexMap;
+
   void EvolveTents (shared_ptr<MeshAccess> ma);
   shared_ptr<MeshAccess>
-  ngs_tpmesh (shared_ptr<MeshAccess> ma, float wavespeed);
+  NgsTPmesh (shared_ptr<MeshAccess> ma, float wavespeed);
   netgen::PointIndex
-  point2index (map<netgen::Point3d, netgen::PointIndex> *point2index_map,
+  Point2Index (map<netgen::Point3d, netgen::PointIndex> *point2index_map,
                netgen::Point3d p);
+  netgen::PointIndex AddPointUnique (shared_ptr<netgen::Mesh> ngma,
+                                     Point2IndexMap *pim, netgen::Point3d p);
 }
 
 #ifdef NGS_PYTHON
