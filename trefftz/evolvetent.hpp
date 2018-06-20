@@ -11,6 +11,7 @@ namespace ngcomp
 {
   void EvolveTents(shared_ptr<MeshAccess> ma);
   shared_ptr<MeshAccess> ngs_tpmesh(shared_ptr<MeshAccess> ma, float wavespeed);
+  netgen::PointIndex point2index(map<netgen::Point3d, netgen::PointIndex> *point2index_map, netgen::Point3d p);
 }
 
 #ifdef NGS_PYTHON
