@@ -13,7 +13,7 @@ namespace ngcomp
 
   void EvolveTents (shared_ptr<MeshAccess> ma);
   shared_ptr<MeshAccess>
-  NgsTPmesh (shared_ptr<MeshAccess> ma, float wavespeed);
+  NgsTPmesh (shared_ptr<MeshAccess> ma, double wavespeed, double dt = 1);
   netgen::PointIndex
   Point2Index (map<netgen::Point3d, netgen::PointIndex> *point2index_map,
                netgen::Point3d p);
