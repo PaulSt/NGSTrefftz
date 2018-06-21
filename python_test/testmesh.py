@@ -19,15 +19,25 @@ from ngsolve.comp import *
 mesh1 = Mesh(SegMesh(4,0,0.5))
 mesh2 = Mesh(unit_square.GenerateMesh(maxh=0.4))
 # mesh = Mesh(MakeTensorProductMesh(mesh2,mesh1))
+basemesh = Mesh(SegMesh(4,0,1))
+mesh = NgsTPmesh(basemesh,1)
 #########################################################################################################################################
 fes = H1(mesh, order=4)
 
 basemesh = Mesh(ngmeshbase)
-n = specialcf.normal(3)
+n = specialcf.normal(2)
 print(mesh.GetBoundaries())
-for i in range(3):
+for i in range(2):
     gfu = GridFunction(fes)
-    gfu.Set(n[i],BND,definedon=mesh.Boundaries("default"))
+    gfu.Set(n[i],BND,definedon=mesh.Boundaries("inflow"))
+    Draw(gfu,mesh,"gfu")
+    input()
+for i in range(2):
+    gfu.Set(n[i],BND,definedon=mesh.Boundaries("outflow"))
+    Draw(gfu,mesh,"gfu")
+    input()
+for i in range(2):
+    gfu.Set(n[i],BND,definedon=mesh.Boundaries("dirichlet"))
     Draw(gfu,mesh,"gfu")
     input()
 

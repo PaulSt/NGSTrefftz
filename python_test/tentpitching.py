@@ -8,12 +8,11 @@ from DGeq import *
 import time
 from ngsolve.TensorProductTools import *
 from ngsolve.comp import *
-#  basemeshsize = 0.3
-#  ngmeshbase = unit_square.GenerateMesh(maxh = basemeshsize)
-#  mesh = PeriodicProdMesh(ngmeshbase,t_stepsize)
 
 mesh = Mesh(SegMesh(4,0,1))
 tpmesh = NgsTPmesh(mesh,1)
 Draw(tpmesh)
-# mesh2 = Mesh(unit_square.GenerateMesh(maxh=0.4))
-# mesh = Mesh(MakeTensorProductMesh(mesh2,mesh1))
+
+
+
+
