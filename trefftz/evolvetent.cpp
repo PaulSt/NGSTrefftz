@@ -61,6 +61,12 @@ namespace ngcomp
 
     for (Tent *tent : tps.tents)
       {
+        // cout << *tent << endl;
+        if (tent->ttop < tent->tbot + 0.00001)
+          {
+            continue;
+            cout << "had to skip degenerate tent" << endl;
+          }
         // Add vertices and 2d Elements to the mesh
         Vector<netgen::PointIndex> vertices (tent->nbv.Size () + 2);
         double pointc = ma->GetPoint<1> (tent->vertex) (0);
@@ -93,7 +99,6 @@ namespace ngcomp
             newel->SetIndex (index);
           }
         mesh->AddSurfaceElement (*newel);
-        // cout << *tent << endl;
 
         for (int k = 0; k < tent->nbv.Size (); k++)
           {
