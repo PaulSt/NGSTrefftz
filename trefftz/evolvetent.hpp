@@ -11,9 +11,9 @@ namespace ngcomp
 {
   typedef map<netgen::Point3d, netgen::PointIndex> Point2IndexMap;
 
-  void EvolveTents (shared_ptr<MeshAccess> ma);
+  void EvolveTents (shared_ptr<MeshAccess> ma, double wavespeed, double dt);
   shared_ptr<MeshAccess>
-  NgsTPmesh (shared_ptr<MeshAccess> ma, double wavespeed, double dt = 1);
+  NgsTPmesh (shared_ptr<MeshAccess> ma, double wavespeed, double dt);
   netgen::PointIndex
   Point2Index (map<netgen::Point3d, netgen::PointIndex> *point2index_map,
                netgen::Point3d p);
