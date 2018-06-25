@@ -9,7 +9,7 @@ from trefftzngs import *
 import numpy as np
 from prodmesh import CartSquare
 from ngsolve import *
-#  import netgen.gui
+import netgen.gui
 from DGeq import *
 import time
 

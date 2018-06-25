@@ -10,10 +10,10 @@
 
 namespace ngcomp
 {
-  void EvolveTents(shared_ptr<MeshAccess> ma)
+  void EvolveTents(shared_ptr<MeshAccess> ma, double wavespeed, double dt)
   {
     py::module et = py::module::import("SolveTentSlab");
-    auto tpmesh = NgsTPmesh(ma, 1);
+    auto tpmesh = NgsTPmesh(ma, 1, dt);
     // Flags flag();
     // flag.SetFlag("order",4);
     // TrefftzFESpace fes(ma, Flags());
@@ -30,12 +30,16 @@ namespace ngcomp
   {
     Point2IndexMap* pim = new Point2IndexMap();    // Your map type may vary, just change the typedef
     int index = 1;
-
     int basedim =  ma->GetDimension(); 
+    double dt_eps = 0.00001;
+    //get boundaries of the init mesh
+    Array<double> bd_points(0);
+    for(auto el : ma->Elements(BND))
+      bd_points.Append(ma->GetPoint<1>(el.Vertices()[0])(0));
+    
     TentPitchedSlab<1> tps = TentPitchedSlab<1>(ma);      // collection of tents in timeslab
-    if(basedim >= 2)
-      cout << "oh no" << endl;
     tps.PitchTents(dt, wavespeed); // adt = time slab height, wavespeed
+    cout << "numb of tents: " << tps.tents.Size() << endl;
 
     auto mesh = make_shared<netgen::Mesh>();
     mesh -> SetDimension(ma->GetDimension() + 1);
@@ -61,7 +65,7 @@ namespace ngcomp
     for(Tent* tent : tps.tents)
     { 
       // cout << *tent << endl;
-      if(tent->ttop < tent->tbot + 0.00001){ continue;  cout << "had to skip degenerate tent" << endl;}
+      if(tent->ttop < tent->tbot + dt_eps){ continue;  cout << "had to skip degenerate tent" << endl;}
       // Add vertices and 2d Elements to the mesh
       Vector<netgen::PointIndex> vertices(tent->nbv.Size()+2);
       double pointc = ma -> GetPoint<1>(tent->vertex)(0); 
@@ -93,7 +97,7 @@ namespace ngcomp
       for (int k = 0; k < tent->nbv.Size(); k++)
       {
         // Add 1d Elements - inflow
-        if(tent->tbot == 0 && tent->nbtime[k] == 0)
+        if(tent->tbot < dt_eps && tent->nbtime[k] < dt_eps)
         {
           netgen::Segment * newel = new netgen::Segment();
           (*newel)[tent->vertex<tent->nbv[k] ? 0 : 1] = vertices[ibot];
@@ -106,7 +110,7 @@ namespace ngcomp
         }
 
       // Add 1d Elements - outflow
-        if(tent->ttop == dt && tent->nbtime[k] == dt)
+        if(tent->ttop > dt-dt_eps && tent->nbtime[k] > dt-dt_eps)
         {
           netgen::Segment * newel = new netgen::Segment();
           (*newel)[tent->vertex<tent->nbv[k] ? 1 : 0] = vertices[itop];
@@ -119,7 +123,7 @@ namespace ngcomp
         }
 
       // Add 1d Elements - dirichlet
-        if(pointc == 0 || pointc == 1)
+        if(pointc == bd_points[0] || pointc == bd_points[1])
         {
           netgen::Segment * newel = new netgen::Segment();
           (*newel)[0] = vertices[2];
@@ -138,7 +142,7 @@ namespace ngcomp
     mesh->SetBCName(3,"dirichlet");
 
     auto tpmesh = make_shared<MeshAccess>(mesh);
-    cout << tpmesh->GetMaterials(BND) << endl;
+    // cout << tpmesh->GetMaterials(BND) << endl;
     return tpmesh;
   }
 
@@ -171,14 +175,14 @@ namespace ngcomp
 #include <python_ngstd.hpp>
 void ExportEvolveTent(py::module m)
 {
-	m.def("EvolveTents", [](shared_ptr<MeshAccess> ma) //-> shared_ptr<MeshAccess>
+	m.def("EvolveTents", [](shared_ptr<MeshAccess> ma, double wavespeed, double dt) //-> shared_ptr<MeshAccess>
 					{
-            return EvolveTents(ma);
+            return EvolveTents(ma,wavespeed,dt);
 					}//, py::call_guard<py::gil_scoped_release>()
       );
-	m.def("NgsTPmesh", [](shared_ptr<MeshAccess> ma, double wavespeed) -> shared_ptr<MeshAccess>
+	m.def("NgsTPmesh", [](shared_ptr<MeshAccess> ma, double wavespeed, double dt) -> shared_ptr<MeshAccess>
 					{
-            return NgsTPmesh(ma,wavespeed);
+            return NgsTPmesh(ma,wavespeed,dt);
 					}//, py::call_guard<py::gil_scoped_release>()
       );
 }
