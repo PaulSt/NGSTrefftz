@@ -1,5 +1,5 @@
 #include "evolvetent.hpp"
-#include "trefftzfespace.hpp"
+#include "trefftzelement.hpp"
 #include "tents/tents.hpp"
 #include <comp.hpp>    // provides FESpace, ...
 #include <h1lofe.hpp>
