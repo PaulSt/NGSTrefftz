@@ -1,4 +1,3 @@
-# -*- mode: python-mode; python-indent-offset: 4 -*-
 from ngsolve import *
 from trefftzngs import *
 import numpy as np
@@ -45,13 +44,12 @@ def DGeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False):
     jump_taut = ( tau - tauo ) * n_t
 
     jump_Ut = (U - U.Other()) * n_t
-    #gfu.vec.data = a.mat.Inverse() * f.vec
 
     timelike = n_x*n_x # n_t=0
     spacelike = n_t**2 # n_x=0
 
-    alpha = 0.5 #pow(10,5)
-    beta = 0.5 #pow(10,5)
+    alpha = 0.5
+    beta = 0.5 
     gamma = 1
 
     if(applyrhs == False):
@@ -76,6 +74,9 @@ def DGeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False):
         f.Assemble()
     else:
         a = BilinearForm(fes)
+        if(fullsys==True):
+            HV = V.Operator("hesse")
+            a += SymbolicBFI(  -v*(-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
         a += SymbolicBFI( timelike * ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ), VOL, skeleton=True ) #time like faces
         a += SymbolicBFI( IfPos(n_t,1,0) * spacelike * ( pow(c,-2)*v*w + sig*tau ), element_boundary=True) #t=T (or *x)
         a += SymbolicBFI( IfPos(n_t,0,1) * spacelike * ( gamma * U*V ), element_boundary=True ) #BND correction term to recover sol of second order system
