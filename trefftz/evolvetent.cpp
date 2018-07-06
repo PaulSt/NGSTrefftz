@@ -10,13 +10,63 @@
 
 namespace ngcomp
 {
-  void EvolveTents(shared_ptr<MeshAccess> ma, double wavespeed, double dt)
-  {
-    py::module et = py::module::import("SolveTentSlab");
-    auto tpmesh = NgsTPmesh(ma, 1, dt);
-    // Flags flag();
-    // flag.SetFlag("order",4);
-    // TrefftzFESpace fes(ma, Flags());
+    template<int D>    
+    void EvolveTents(shared_ptr<MeshAccess> ma, double wavespeed, double dt, Vector<double> wavefront)
+    {
+        int order = 3;
+        int ir_order = ceil((order+1)/1);
+        int ne = ma->GetNE();
+
+        // wavefront.Resize(ir_order * ma->GetNEdges() * (D+2));
+        T_TrefftzElement<D+1> tel(order,wavespeed);
+        IntegrationRule ir(ET_SEGM, ir_order);
+        ScalarFE<ET_SEGM,D> faceint;
+
+        //py::module et = py::module::import("DGeq");
+
+
+        TentPitchedSlab<D> tps = TentPitchedSlab<1>(ma);      // collection of tents in timeslab
+        tps.PitchTents(dt, wavespeed); // adt = time slab height, wavespeed
+        LocalHeap lh(order * D * 1000);
+
+        RunParallelDependency 
+        (tps.tent_dependency, [&] (int i)
+        {
+            HeapReset hr(lh);
+            // LocalHeap slh = lh.Split();  // split to threads
+            Tent & tent = *tps.tents[i];
+            // cout << tent << endl;
+            cout << endl << "tent: " << i << " " << tent.vertex << endl;
+
+			int nbasis = BinCoeff(D-1 + order, order) + BinCoeff(D-1 + order-1, order-1);
+            Matrix<double> elmatrix(nbasis,nbasis);
+            Vector<double> elvector(nbasis);
+            // for (int k = 0; k < tent.nbv.Size(); k++)
+            for(auto el : tent.els)
+            {
+                auto verts = ma->GetEdgePNums(el);
+                MappedIntegrationRule<1,D> mir(ir, ma->GetTrafo(el,lh), lh); // <dim  el, dim space>
+
+                // determine linear basis function to use for tent face
+                Vec<3> bs=0;
+                for(int ivert=0;ivert<verts.Size();ivert++)
+                {
+                    if(verts[ivert] == tent.vertex)
+                        bs[ivert] = 1;
+                }
+                auto p = ma->GetPoint<1>(tent.vertex);
+                cout << "mir0: " << mir[0] << " val: " << faceint.Evaluate( ir[0], bs) << endl;
+                cout << "mir1: " << mir[1] << " val: " << faceint.Evaluate( ir[1], bs) << endl;
+                //cout << "mir1: " << mir[ir.Size()-1]<<mir[ir.Size()-1].GetWeight() << endl;
+
+                for(int imip=0;imip<mir.Size();imip++)
+                {
+                    auto p = mir[imip].GetPoint();
+                    Vec<D+1> tmip;                     
+                    tmip.Range(0,D) = p; 
+                }
+            }
+        });
     // std::shared_ptr<FESpace> p = std::make_shared<TrefftzFESpace>(fes);
     // py::object ffes = py::cast(fes);
     // auto pyspace = py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>,FESpace> (m, pyname.c_str());
@@ -176,10 +226,15 @@ namespace ngcomp
 void ExportEvolveTent(py::module m)
 {
 	m.def("EvolveTents", [](shared_ptr<MeshAccess> ma, double wavespeed, double dt) //-> shared_ptr<MeshAccess>
-					{
-            return EvolveTents(ma,wavespeed,dt);
-					}//, py::call_guard<py::gil_scoped_release>()
-      );
+            {
+                int D=1;
+                int order = 3;
+                int ir_order = ceil((order+1)/1);
+                int ne = ma->GetNE();
+                Vector<double> wavefront(ir_order * ne * (D+2));
+                return EvolveTents<1>(ma,wavespeed,dt,wavefront);
+            }//, py::call_guard<py::gil_scoped_release>()
+          );
 	m.def("NgsTPmesh", [](shared_ptr<MeshAccess> ma, double wavespeed, double dt) -> shared_ptr<MeshAccess>
 					{
             return NgsTPmesh(ma,wavespeed,dt);

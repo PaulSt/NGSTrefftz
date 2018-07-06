@@ -19,4 +19,7 @@ def GetFESTrefftz(mesh,c=1):
 
 c=2
 initmesh = Mesh(SegMesh(4,0,1))
-mesh = EvolveTents(initmesh,c,1)
+EvolveTents(initmesh,c,1)
+
+#  mesh = NgsTPmesh(initmesh,c,1)
+#  Draw(mesh)
