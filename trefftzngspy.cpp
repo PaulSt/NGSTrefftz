@@ -9,6 +9,7 @@ using namespace ngsolve;
 //#include "trefftz/mappedelement.hpp"
 #include "trefftz/tents/tents.hpp"
 #include "trefftz/evolvetent.hpp"
+#include "trefftz/meshtentslab.hpp"
 
 PYBIND11_PLUGIN (trefftzngs)
 {
@@ -22,6 +23,7 @@ PYBIND11_PLUGIN (trefftzngs)
   ExportTrefftzCoefficient (m);
   ExportClipCoefficientFunction (m);
   ExportEvolveTent (m);
+  ExportMeshTentSlab (m);
 
   return m.ptr ();
 }

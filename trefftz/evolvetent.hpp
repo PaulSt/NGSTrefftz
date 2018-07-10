@@ -11,14 +11,13 @@ namespace ngcomp
 {
   typedef map<netgen::Point3d, netgen::PointIndex> Point2IndexMap;
 
+  template <int D>
   void EvolveTents (shared_ptr<MeshAccess> ma, double wavespeed, double dt);
-  shared_ptr<MeshAccess>
-  NgsTPmesh (shared_ptr<MeshAccess> ma, double wavespeed, double dt);
-  netgen::PointIndex
-  Point2Index (map<netgen::Point3d, netgen::PointIndex> *point2index_map,
-               netgen::Point3d p);
-  netgen::PointIndex AddPointUnique (shared_ptr<netgen::Mesh> ngma,
-                                     Point2IndexMap *pim, netgen::Point3d p);
+  // double AreaTentFace(Tent tent, int elnr, shared_ptr<MeshAccess> ma);
+  // Vec<D+1> VertexTimesTentFace(Tent tent, Array<int> verts)
+
+  template <int D>
+  void VertexTimesTentFace (Tent tent, const INT<D + 1> &verts);
 }
 
 #ifdef NGS_PYTHON
