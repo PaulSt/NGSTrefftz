@@ -36,8 +36,8 @@ sig0 = CoefficientFunction(( -sq*cos(c*z+sq*(x+y)),-sq*cos(c*z+sq*(x+y)) ))
 gradtruesol = CoefficientFunction( (-sig0[0],-sig0[1], v0) )
 
 # fes = Periodic(FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0))
-# fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True)
-fes = L2(mesh, order=order, dgjumps = True )
+fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True)
+# fes = L2(mesh, order=order, dgjumps = True )
 
 gfu = GridFunction(fes)
 gfu.Set(truesol) # gD = c*k* cos( k*(c*z+x+y) )
@@ -47,7 +47,7 @@ gD = v0
 for t in range(1,5):
     gD = c*cos(c*(z+t*t_stepsize)+sq*(x+y))
     start = time.clock()
-    [a,f] = DGeqsys(fes,gfu,0,0,c,gD,True,True)
+    [a,f] = DGeqsys(fes,gfu,0,0,c,gD,False,True)
     print("DGsys: ", str(time.clock()-start))
 
     start = time.clock()
