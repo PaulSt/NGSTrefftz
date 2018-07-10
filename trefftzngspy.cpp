@@ -9,20 +9,22 @@ using namespace ngsolve;
 //#include "trefftz/mappedelement.hpp"
 #include "trefftz/tents/tents.hpp"
 #include "trefftz/evolvetent.hpp"
+#include "trefftz/meshtentslab.hpp"
 
 PYBIND11_PLUGIN(trefftzngs) {
-  // import ngsolve such that python base classes are defined
-  py::module::import("ngsolve");
+    // import ngsolve such that python base classes are defined
+    py::module::import("ngsolve");
 
-  py::module m("trefftzngs", "trefftzngs doc-string");
+    py::module m("trefftzngs", "trefftzngs doc-string");
 
-	//ExportMappedElement(m);
-	ExportTrefftzFESpace(m);
-	ExportTrefftzCoefficient(m);
-	ExportClipCoefficientFunction(m);
-  ExportEvolveTent(m);
+    //ExportMappedElement(m);
+    ExportTrefftzFESpace(m);
+    ExportTrefftzCoefficient(m);
+    ExportClipCoefficientFunction(m);
+    ExportEvolveTent(m);
+    ExportMeshTentSlab(m);
 
-  return m.ptr();
+    return m.ptr();
 }
 
 //static RegisterNumProc<NumProcPyDemo> npinit1("demopy");
