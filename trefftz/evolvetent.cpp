@@ -11,19 +11,6 @@
 namespace ngcomp
 {
 
-    template<int D>
-    Vec<D+1> VertexTimesTentFace(Tent tent, const INT<D+1>& verts )
-    {
-        // determine linear basis function to use for tent face
-        Vec<D+1> bs=0;
-        for(int ivert = 0;ivert<verts.Size();ivert++)
-        {
-            if(verts[ivert]==tent.vertex) bs[ivert]=tent.ttop;
-            for (int k = 0; k < tent.nbv.Size(); k++)
-                if(verts[ivert] == tent.nbv[k]) bs[ivert] =  tent.nbtime[k];
-        }
-        return bs;
-    }
 
     template<int D>    
     void EvolveTents(shared_ptr<MeshAccess> ma, double wavespeed, double dt, Vector<double> wavefront)
@@ -49,39 +36,38 @@ namespace ngcomp
             Tent & tent = *tps.tents[i];
             //cout << tent << endl;
             cout << endl << "tent: " << i << " " << tent.vertex << endl;
-            cout << "vertex: " << tent.vertex << ", tbot = " << tent.tbot << ", ttop = " << tent.ttop << endl;
+            cout << "vertex: " << tent.vertex << " at: " << ma->GetPoint<D>(tent.vertex) <<  ", tbot = " << tent.tbot << ", ttop = " << tent.ttop << endl;
             cout << "neighbour vertices: " << endl;
             for (int k = 0; k < tent.nbv.Size(); k++)
-                cout << k << ": " << tent.nbv[k] << " " << tent.nbtime[k] << endl;
-            //cout << "elements: " << endl << tent.els << endl;
+                cout << k << ": " << tent.nbv[k] << " at: " << ma->GetPoint<D>(tent.nbv[k]) <<" t: " << tent.nbtime[k] << endl;
 
             int nbasis = BinCoeff(D-1 + order, order) + BinCoeff(D-1 + order-1, order-1);
             Matrix<double> elmatrix(nbasis,nbasis);
             Vector<double> elvector(nbasis);
 
-            for(auto el : tent.els)
+            for(auto elnr: tent.els)
             {
-                MappedIntegrationRule<1,D> mir(ir, ma->GetTrafo(el,lh), lh); // <dim  el, dim space>
+                MappedIntegrationRule<1,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
 
-                INT<D+1> verts = ma->GetEdgePNums(el);
+                INT<D+1> verts = ma->GetEdgePNums(elnr);
                 Vec<D+1> bs = VertexTimesTentFace<D>(tent, verts);
 
-                auto p = ma->GetPoint<1>(tent.vertex);
-                cout << "ns: " << bs << endl;
-                //cout << "mir0: " << mir[0] << " val: " << faceint.Evaluate( ir[0], bs) << endl;
-                //cout << "mir1: " << mir[1] << " val: " << faceint.Evaluate( ir[1], bs) << endl;
-                //cout << "mir1: " << mir[ir.Size()-1]<<mir[ir.Size()-1].GetWeight() << endl;
+                AreaTentFace<D>(tent, elnr, ma);
 
                 for(int imip=0;imip<mir.Size();imip++)
                 {
-                    auto p = mir[imip].GetPoint();
-                    Vec<D+1> tmip;                     
-                    tmip.Range(0,D) = p; 
-                    tmip(D) = faceint.Evaluate(ir[imip], bs);
-                    //tent.nbtime[]
-                    cout << "tmip: " << tmip << endl;
+                    Vec<D+1> tmip_point;
+                    tmip_point.Range(0,D) = mir[imip].GetPoint(); 
+                    tmip_point(D) = faceint.Evaluate(ir[imip], bs);
+                    IntegrationPoint ip(tmip_point, ir[imip].Weight());
+                    MappedIntegrationPoint<D+1,D+1> tmip(ip, FE_ElementTransformation<D+1,D+1>() );
+
+                    Matrix<> blaa(D+1,nbasis);
+                    tel.CalcDShape(tmip,blaa);
+
+                    cout << "tmip_point: " << tmip_point << endl;
+                    
                 }
-                cout << "edge verts: " << ma->GetPoint<1>(verts[0]) << ma->GetPoint<1>(verts[1]) << endl; 
             }
 
         });
@@ -92,39 +78,46 @@ namespace ngcomp
         // FESpace *ffes = pyfes.cast<FESpace *>();
         // et.attr("EvolveTent")(pyfes,?,?);
     }
-    /*
-       template<int D>
-       double AreaTentFace(Tent tent, int elnr, shared_ptr<MeshAccess> ma) 
-       {
-       Mat<D+2,D+2> volmat;
-       volmat.Row(0) = 1;
-       volmat.Col(0) = 1;
-       volmat(0,0) = 0;
-       auto verts = ma->GetEdgePNums(elnr);
-       Vec<D+1> bs =  VertexTimesTentFace<D>(tent, verts);
 
-       for(int i=1;i<verts.Size();i++)
-       {
+    template<int D>
+    Vec<D+1> VertexTimesTentFace(const Tent& tent, const INT<D+1>& verts)
+    {
+        Vec<D+1> bs;
+        // determine linear basis function coeffs to use for tent face
+        for(int ivert = 0;ivert<verts.Size();ivert++)
+        {
+            if(verts[ivert] == tent.vertex) bs[ivert] = tent.ttop;
+            for (int k = 0; k < tent.nbv.Size(); k++)
+                if(verts[ivert] == tent.nbv[k]) bs[ivert] = tent.nbtime[k];
+        }
+        return bs;
+    }
 
-       }
-       double bla = 3.0;
-       return bla;
-
-       double anisotropicdiam = 0.0;
-       auto vertices_index = ma->GetElVertices(ei);
-       for(auto vertex1 : vertices_index)
-       {
-       for(auto vertex2 : vertices_index)
-       {
-       Vec<D> v1 = ma->GetPoint<D>(vertex1);
-       Vec<D> v2 = ma->GetPoint<D>(vertex2);
-    //cout << "v1: " << v1 << " v1 part: " << v1(1,D-1) << "norm " << L2Norm(v1) << endl ;
-    anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1(0,D-2) - v2(0,D-2)) + pow(c*(v1(D-1)-v2(D-1)),2) ) );
+    template<int D>
+    double AreaTentFace(const Tent& tent, int elnr, shared_ptr<MeshAccess> ma) 
+    {
+        INT<D+1> verts = ma->GetEdgePNums(elnr);
+        Vec<D+1> bs =  VertexTimesTentFace<D>(tent, verts);
+        Vec<D+1, Vec<D+1>> v;
+        for(int i=0;i<=D;i++)
+        {
+            v[i].Range(0,D-1) = ma->GetPoint<D>(verts[i]);
+            v[i](D) = bs(i);
+        }
+        switch(D) {
+            case 1 : return L2Norm(v[0]-v[1]);
+                     break;    
+            case 2 :{
+                        double a = L2Norm2(v[0]-v[1]);
+                        double b = L2Norm2(v[1]-v[2]);
+                        double c = L2Norm2(v[0]-v[2]);
+                        double s = 0.5*(a+b+c);
+                        return sqrt(s*(s-a)*(s-b)*(s-c));
+                        break;
+                    }
+            default: return 0;
+        }
     }
-    }
-    return anisotropicdiam;
-    }
-    */
 }
 
 #ifdef NGS_PYTHON
@@ -137,8 +130,8 @@ void ExportEvolveTent(py::module m)
               int order = 3;
               int ir_order = ceil((order+1)/1);
               int ne = ma->GetNE();
-              Vector<double> wavefront(ir_order * ne * (D+2));
-              //return EvolveTents<1>(ma,wavespeed,dt,wavefront);
+              Vector<double> wavefront; //(ir_order * ne * (D+2));
+              EvolveTents<1>(ma,wavespeed,dt,wavefront);
           }//, py::call_guard<py::gil_scoped_release>()
          );
 }
