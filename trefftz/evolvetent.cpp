@@ -10,9 +10,7 @@
 
 namespace ngcomp
 {
-
-
-    template<int D>    
+    template<int D>
     void EvolveTents(shared_ptr<MeshAccess> ma, double wavespeed, double dt, Vector<double> wavefront)
     {
         int order = 3;
@@ -21,6 +19,9 @@ namespace ngcomp
 
         // wavefront.Resize(ir_order * ma->GetNEdges() * (D+2));
         T_TrefftzElement<D+1> tel(order,wavespeed);
+        int nbasis = tel.GetNBasis();
+        cout << "NBASIS: " << nbasis << endl;
+
         IntegrationRule ir(ET_SEGM, ir_order);
         ScalarFE<ET_SEGM,D> faceint;
 
@@ -33,19 +34,18 @@ namespace ngcomp
         RunParallelDependency (tps.tent_dependency, [&] (int i) {
             HeapReset hr(lh);
             // LocalHeap slh = lh.Split();  // split to threads
-            Tent & tent = *tps.tents[i];
+            Tent* tent = tps.tents[i];
             //cout << tent << endl;
-            cout << endl << "tent: " << i << " " << tent.vertex << endl;
-            cout << "vertex: " << tent.vertex << " at: " << ma->GetPoint<D>(tent.vertex) <<  ", tbot = " << tent.tbot << ", ttop = " << tent.ttop << endl;
-            cout << "neighbour vertices: " << endl;
-            for (int k = 0; k < tent.nbv.Size(); k++)
-                cout << k << ": " << tent.nbv[k] << " at: " << ma->GetPoint<D>(tent.nbv[k]) <<" t: " << tent.nbtime[k] << endl;
+            //cout << endl << "tent: " << i << " " << tent.vertex << endl;
+            //cout << "vertex: " << tent.vertex << " at: " << ma->GetPoint<D>(tent.vertex) <<  ", tbot = " << tent.tbot << ", ttop = " << tent.ttop << endl;
+            //cout << "neighbour vertices: " << endl;
+            //for (int k = 0; k < tent.nbv.Size(); k++)
+            //cout << k << ": " << tent.nbv[k] << " at: " << ma->GetPoint<D>(tent.nbv[k]) <<" t: " << tent.nbtime[k] << endl;
 
-            int nbasis = BinCoeff(D-1 + order, order) + BinCoeff(D-1 + order-1, order-1);
             Matrix<double> elmatrix(nbasis,nbasis);
             Vector<double> elvector(nbasis);
 
-            for(auto elnr: tent.els)
+            for(auto elnr: tent->els)
             {
                 MappedIntegrationRule<1,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
 
@@ -56,17 +56,15 @@ namespace ngcomp
 
                 for(int imip=0;imip<mir.Size();imip++)
                 {
-                    Vec<D+1> tmip_point;
-                    tmip_point.Range(0,D) = mir[imip].GetPoint(); 
-                    tmip_point(D) = faceint.Evaluate(ir[imip], bs);
-                    IntegrationPoint ip(tmip_point, ir[imip].Weight());
-                    MappedIntegrationPoint<D+1,D+1> tmip(ip, FE_ElementTransformation<D+1,D+1>() );
+                    Vec<D+1> p;
+                    p.Range(0,D) = mir[imip].GetPoint();
+                    p(D) = faceint.Evaluate(ir[imip], bs);
 
-                    Matrix<> blaa(D+1,nbasis);
-                    tel.CalcDShape(tmip,blaa);
+                    Matrix<> dshape(nbasis,D+1);
+                    tel.CalcDShape(p,dshape);
 
-                    cout << "tmip_point: " << tmip_point << endl;
-                    
+                    cout << "shape: " << endl << dshape << endl;
+
                 }
             }
 
@@ -80,21 +78,21 @@ namespace ngcomp
     }
 
     template<int D>
-    Vec<D+1> VertexTimesTentFace(const Tent& tent, const INT<D+1>& verts)
+    Vec<D+1> VertexTimesTentFace(Tent* tent, const INT<D+1>& verts)
     {
         Vec<D+1> bs;
         // determine linear basis function coeffs to use for tent face
         for(int ivert = 0;ivert<verts.Size();ivert++)
         {
-            if(verts[ivert] == tent.vertex) bs[ivert] = tent.ttop;
-            for (int k = 0; k < tent.nbv.Size(); k++)
-                if(verts[ivert] == tent.nbv[k]) bs[ivert] = tent.nbtime[k];
+            if(verts[ivert] == tent->vertex) bs[ivert] = tent->ttop;
+            for (int k = 0; k < tent->nbv.Size(); k++)
+                if(verts[ivert] == tent->nbv[k]) bs[ivert] = tent->nbtime[k];
         }
         return bs;
     }
 
     template<int D>
-    double AreaTentFace(const Tent& tent, int elnr, shared_ptr<MeshAccess> ma) 
+    double AreaTentFace( Tent* tent, int elnr, shared_ptr<MeshAccess> ma)
     {
         INT<D+1> verts = ma->GetEdgePNums(elnr);
         Vec<D+1> bs =  VertexTimesTentFace<D>(tent, verts);
@@ -106,7 +104,7 @@ namespace ngcomp
         }
         switch(D) {
             case 1 : return L2Norm(v[0]-v[1]);
-                     break;    
+                     break;
             case 2 :{
                         double a = L2Norm2(v[0]-v[1]);
                         double b = L2Norm2(v[1]-v[2]);

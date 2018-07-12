@@ -15,10 +15,10 @@ namespace ngcomp
     void EvolveTents(shared_ptr<MeshAccess> ma, double wavespeed, double dt, Vector<double> wavefront);
 
     template<int D>
-    double AreaTentFace(const Tent& tent, int elnr, shared_ptr<MeshAccess> ma);
+    double AreaTentFace(Tent* tent, int elnr, shared_ptr<MeshAccess> ma);
 
     template<int D>
-    Vec<D+1> VertexTimesTentFace(const Tent& tent, const INT<D+1>& verts);
+    Vec<D+1> VertexTimesTentFace(Tent* tent, const INT<D+1>& verts);
 }
 
 #ifdef NGS_PYTHON
