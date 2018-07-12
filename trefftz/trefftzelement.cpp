@@ -22,10 +22,12 @@ namespace ngfem
   }
 
   template <int D>
-  void T_TrefftzElement<D>::CalcShape (const BaseMappedIntegrationPoint &mip,
+  void T_TrefftzElement<D>::CalcShape (BareSliceVector<> point,
                                        BareSliceVector<> shape) const
   {
-    Vector<double> cpoint (mip.GetPoint ());
+    Vec<D + 1> cpoint;
+    for (int i = 0; i <= D + 1; i++)
+      cpoint (i) = point (i);
     cpoint -= elcenter;
     cpoint *= (2.0 / elsize);
     cpoint[D - 1] *= c;
@@ -44,10 +46,12 @@ namespace ngfem
   }
 
   template <int D>
-  void T_TrefftzElement<D>::CalcDShape (const BaseMappedIntegrationPoint &mip,
+  void T_TrefftzElement<D>::CalcDShape (BareSliceVector<> point,
                                         SliceMatrix<> dshape) const
   {
-    Vector<double> cpoint (mip.GetPoint ());
+    Vec<D + 1> cpoint;
+    for (int i = 0; i <= D + 1; i++)
+      cpoint (i) = point (i);
     cpoint -= elcenter;
     cpoint *= (2.0 / elsize);
     cpoint[D - 1] *= c;
@@ -67,6 +71,20 @@ namespace ngfem
 
     dshape.Col (D - 1) *= c;  // inner derivative
     dshape *= (2.0 / elsize); // inner derivative
+  }
+
+  template <int D>
+  void T_TrefftzElement<D>::CalcShape (const BaseMappedIntegrationPoint &mip,
+                                       BareSliceVector<> shape) const
+  {
+    CalcShape (mip.GetPoint (), shape);
+  }
+
+  template <int D>
+  void T_TrefftzElement<D>::CalcDShape (const BaseMappedIntegrationPoint &mip,
+                                        SliceMatrix<> dshape) const
+  {
+    CalcDShape (mip.GetPoint (), dshape);
   }
 
   template <int D>
