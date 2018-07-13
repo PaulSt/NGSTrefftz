@@ -54,9 +54,11 @@ namespace ngcomp
                                            lh); // <dim  el, dim space>
 
           INT<D + 1> verts = ma->GetEdgePNums (elnr);
-          Vec<D + 1> bs = VertexTimesTentFace<D> (tent, verts);
+          Vec<D + 1> bs = TentFaceVertexTimes<D> (tent, verts);
 
-          AreaTentFace<D> (tent, elnr, ma);
+          Mat<D + 1, D + 1> v = TentFaceVerts<D> (tent, elnr, ma);
+          double A = TentFaceArea<D> (v);
+          Vec<D + 1> n = TentFaceNormal<D> (v, 1);
 
           for (int imip = 0; imip < mir.Size (); imip++)
             {
@@ -66,9 +68,17 @@ namespace ngcomp
 
               Matrix<> dshape (nbasis, D + 1);
               tel.CalcDShape (p, dshape);
-
-              cout << "shape: " << endl << dshape << endl;
+              for (int i = 0; i < nbasis; i++)
+                {
+                  for (int j = 0; j < nbasis; j++)
+                    {
+                      elmatrix (i, j) += (dshape (i, D) * dshape (j, D)
+                                          * (1 / (wavespeed * wavespeed)))
+                                         * A * ir[imip].Weight ();
+                    }
+                }
             }
+          cout << elmatrix << endl;
         }
     });
     // std::shared_ptr<FESpace> p = std::make_shared<TrefftzFESpace>(fes);
@@ -80,7 +90,7 @@ namespace ngcomp
   }
 
   template <int D>
-  Vec<D + 1> VertexTimesTentFace (Tent *tent, const INT<D + 1> &verts)
+  Vec<D + 1> TentFaceVertexTimes (Tent *tent, const INT<D + 1> &verts)
   {
     Vec<D + 1> bs;
     // determine linear basis function coeffs to use for tent face
@@ -96,33 +106,68 @@ namespace ngcomp
   }
 
   template <int D>
-  double AreaTentFace (Tent *tent, int elnr, shared_ptr<MeshAccess> ma)
+  Mat<D + 1, D + 1>
+  TentFaceVerts (Tent *tent, int elnr, shared_ptr<MeshAccess> ma)
   {
     INT<D + 1> verts = ma->GetEdgePNums (elnr);
-    Vec<D + 1> bs = VertexTimesTentFace<D> (tent, verts);
-    Vec<D + 1, Vec<D + 1>> v;
+    Vec<D + 1> bs = TentFaceVertexTimes<D> (tent, verts);
+    Mat<D + 1, D + 1> v;
     for (int i = 0; i <= D; i++)
       {
-        v[i].Range (0, D - 1) = ma->GetPoint<D> (verts[i]);
-        v[i](D) = bs (i);
+        v.Row (i).Range (0, D - 1) = ma->GetPoint<D> (verts[i]);
+        v.Row (i) (D) = bs (i);
       }
+    return v;
+  }
+
+  template <int D> double TentFaceArea (Mat<D + 1, D + 1> v)
+  {
     switch (D)
       {
       case 1:
-        return L2Norm (v[0] - v[1]);
+        return L2Norm (v.Row (0) - v.Row (1));
         break;
       case 2:
         {
-          double a = L2Norm2 (v[0] - v[1]);
-          double b = L2Norm2 (v[1] - v[2]);
-          double c = L2Norm2 (v[0] - v[2]);
+          double a = L2Norm2 (v.Row (0) - v.Row (1));
+          double b = L2Norm2 (v.Row (1) - v.Row (2));
+          double c = L2Norm2 (v.Row (0) - v.Row (2));
           double s = 0.5 * (a + b + c);
           return sqrt (s * (s - a) * (s - b) * (s - c));
           break;
         }
-      default:
-        return 0;
       }
+  }
+
+  template <int D> Vec<D + 1> TentFaceNormal (Mat<D + 1, D + 1> v, bool dir)
+  {
+    Vec<D + 1> normv;
+    switch (D)
+      {
+      case 1:
+        {
+          normv (v (0, 1) - v (1, 1), v (1, 0) - v (0, 0));
+          normv /= L2Norm (normv);
+          break;
+        }
+      case 2:
+        {
+          Vec<D + 1> a = v.Row (0) - v.Row (1);
+          Vec<D + 1> b = v.Row (0) - v.Row (2);
+          normv (0) = a (1) * b (2) - a (2) * b (1);
+          normv (1) = a (2) * b (0) - a (0) * b (2);
+          normv (2) = a (0) * b (1) - a (1) * b (0);
+          normv /= sqrt (L2Norm2 (a) * L2Norm2 (b)
+                         - (a[0] * b[0] + a[1] * b[1] + a[2] * b[2])
+                               * (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]));
+          break;
+        }
+      }
+    if (dir == 1)
+      normv *= sgn_nozero<double> (normv[D]);
+    else
+      normv *= (-sgn_nozero<double> (normv[D]));
+    return normv;
   }
 }
 
