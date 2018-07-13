@@ -38,6 +38,10 @@ namespace ngfem
 		double coeff = pow(2,k-1)*n*pow(-1,floor((n-k)/2)) * tgamma((n+k)/2)/(tgamma(floor((n-k)/2)+1)*tgamma(k+1));
 		return coeff;
 	}
+
+    template <typename T> int sgn_nozero(T val) {
+        return (T(0) <= val) - (val < T(0));
+    }
 }
 
 #endif
