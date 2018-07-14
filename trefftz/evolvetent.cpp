@@ -42,11 +42,14 @@ namespace ngcomp
             //for (int k = 0; k < tent.nbv.Size(); k++)
             //cout << k << ": " << tent.nbv[k] << " at: " << ma->GetPoint<D>(tent.nbv[k]) <<" t: " << tent.nbtime[k] << endl;
 
-            Matrix<double> elmatrix(nbasis,nbasis);
-            Vector<double> elvector(nbasis);
 
             for(auto elnr: tent->els)
             {
+                Matrix<double> elmatrix(nbasis,nbasis);
+                Vector<double> elvector(nbasis);
+                elmatrix = 0;
+                elvector = 0;
+
                 MappedIntegrationRule<1,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
 
                 INT<D+1> verts = ma->GetEdgePNums(elnr);
@@ -64,14 +67,25 @@ namespace ngcomp
 
                     Matrix<> dshape(nbasis,D+1);
                     tel.CalcDShape(p,dshape);
+
+                    cout << "A " << A << endl;
+                    cout << "n" << endl << n << endl;
+
                     for(int i=0;i<nbasis;i++)
                     {
                         for(int j=0;j<nbasis;j++)
                         {
-                            elmatrix(i,j) += ( dshape(i,D)*dshape(j,D)*(1/(wavespeed*wavespeed)) ) *A*ir[imip].Weight();
+                            elmatrix(i,j) += ( dshape(i,D)*dshape(j,D)*n(D) ) * (1/(wavespeed*wavespeed)) *A*ir[imip].Weight();
+                            elmatrix(i,j) += ( Dot<D>(dshape.Row(i).Range(0,D),dshape.Row(j).Range(0,D))*n(D) ) *A*ir[imip].Weight();
+                            elmatrix(i,j) += ( dshape(i,D)*Dot<D>(dshape.Row(j).Range(0,D),n.Range(0,D)) ) *A*ir[imip].Weight();
+                            elmatrix(i,j) += ( dshape(j,D)*Dot<D>(dshape.Row(i).Range(0,D),n.Range(0,D)) ) *A*ir[imip].Weight();
                         }
                     }
 
+                    for(int j=0;j<nbasis;j++)
+                    {
+                        //elvector(j) += (1/(wavespeed*wavespeed))* ( wavefront(ir_order * ma->GetNEdges() * (D+2)) ) *A*ir[imip].Weight();
+                    }
                 }
                 cout << elmatrix << endl;
             }
@@ -107,7 +121,7 @@ namespace ngcomp
         Mat<D+1, D+1> v;
         for(int i=0;i<=D;i++)
         {
-            v.Row(i).Range(0,D-1) = ma->GetPoint<D>(verts[i]);
+            v.Row(i).Range(0,D) = ma->GetPoint<D>(verts[i]);
             v.Row(i)(D) = bs(i);
         }
         return v;
@@ -132,11 +146,12 @@ namespace ngcomp
 
     template<int D>
     Vec<D+1> TentFaceNormal( Mat<D+1,D+1> v, bool dir )
-    { 
+    {
         Vec<D+1> normv;
         switch(D){
             case 1: {
-                        normv(v(0,1)-v(1,1), v(1,0)-v(0,0));
+                        normv(0) = v(0,1)-v(1,1);
+                        normv(1) = v(1,0)-v(0,0);
                         normv /= L2Norm(normv);
                         break;
                     }
@@ -166,7 +181,7 @@ void ExportEvolveTent(py::module m)
               int order = 3;
               int ir_order = ceil((order+1)/1);
               int ne = ma->GetNE();
-              Vector<double> wavefront; //(ir_order * ne * (D+2));
+              Vector<double> wavefront(ir_order * ne * (D+2));
               EvolveTents<1>(ma,wavespeed,dt,wavefront);
           }//, py::call_guard<py::gil_scoped_release>()
          );

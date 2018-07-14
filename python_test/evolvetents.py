@@ -17,7 +17,7 @@ def GetFESTrefftz(mesh,c=1):
     return FESpace("trefftzfespace", mesh, order = 4, wavespeed = c, dgjumps=True, basistype=0)
 
 
-c=2
+c=1
 initmesh = Mesh(SegMesh(4,0,1))
 EvolveTents(initmesh,c,1)
 
