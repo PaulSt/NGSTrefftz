@@ -9,20 +9,38 @@
 
 namespace ngcomp
 {
-  template <int D>
-  void EvolveTents (shared_ptr<MeshAccess> ma, double wavespeed, double dt,
-                    Vector<double> wavefront)
+  template <int D, typename TFUNC>
+  Vector<> MakeIC (IntegrationRule ir, shared_ptr<MeshAccess> ma,
+                   LocalHeap &lh, TFUNC func)
   {
-    int order = 3;
-    int ir_order = ceil ((order + 1) / 1);
+    Vector<> ic (ir.Size () * ma->GetNE () * (D + 2));
+    for (int elnr = 0; elnr < ma->GetNE (); elnr++)
+      {
+        MappedIntegrationRule<1, D> mir (ir, ma->GetTrafo (elnr, lh),
+                                         lh); // <dim  el, dim space>
+        for (int imip = 0; imip < mir.Size (); imip++)
+          {
+            Vec<D> p = mir[imip].GetPoint ();
+            int offset = elnr * ir.Size () * (D + 2) + imip * (D + 2);
+            ic.Range (offset, offset + D + 2) = func (p);
+          }
+      }
+    return ic;
+  }
+
+  template <int D>
+  void EvolveTents (int order, shared_ptr<MeshAccess> ma, double wavespeed,
+                    double dt)
+  {
     int ne = ma->GetNE ();
 
-    // wavefront.Resize(ir_order * ma->GetNEdges() * (D+2));
     T_TrefftzElement<D + 1> tel (order, wavespeed);
     int nbasis = tel.GetNBasis ();
     cout << "NBASIS: " << nbasis << endl;
 
-    IntegrationRule ir (ET_SEGM, ir_order);
+    IntegrationRule ir (ET_SEGM, order);
+    int ir_order = ir.Size (); // ceil((order+1)/1);
+    cout << "irsize: " << ir.Size () << " ir order: " << ir_order << endl;
     ScalarFE<ET_SEGM, D> faceint;
 
     // py::module et = py::module::import("DGeq");
@@ -31,6 +49,24 @@ namespace ngcomp
         = TentPitchedSlab<D> (ma);  // collection of tents in timeslab
     tps.PitchTents (dt, wavespeed); // adt = time slab height, wavespeed
     LocalHeap lh (order * D * 1000);
+
+    cout << "NE " << ne << " nedg " << ma->GetNEdges () << endl;
+    Vector<> wavefront (ir_order * ne * (D + 2));
+    wavefront = MakeIC<D> (ir, ma, lh, [&] (Vec<D> p) {
+      double x = p[0];
+      double y = 0;
+      Vec<D + 2> sol;
+      int k = 30;
+      sol[1] = (-2 * k * ((x - 0.5) - wavespeed * y));
+      sol[2] = (wavespeed * 2 * k * ((x - 0.5) - wavespeed * y));
+      sol *= exp (-k * ((x - 0.5) - wavespeed * y)
+                  * ((x - 0.5) - wavespeed * y));
+      sol[0] = exp (-k * ((x - 0.5) - wavespeed * y)
+                    * ((x - 0.5) - wavespeed * y));
+      cout << "p " << x << " v " << sol[0] << endl;
+      return sol;
+    });
+    cout << wavefront << endl;
 
     RunParallelDependency (tps.tent_dependency, [&] (int i) {
       HeapReset hr (lh);
@@ -62,6 +98,7 @@ namespace ngcomp
           double A = TentFaceArea<D> (v);
           Vec<D + 1> n = TentFaceNormal<D> (v, 1);
 
+          // cout << "ELNR: " << elnr <<endl;
           for (int imip = 0; imip < mir.Size (); imip++)
             {
               Vec<D + 1> p;
@@ -217,6 +254,7 @@ namespace ngcomp
       normv *= (-sgn_nozero<double> (normv[D]));
     return normv;
   }
+
 }
 
 #ifdef NGS_PYTHON
@@ -224,15 +262,11 @@ namespace ngcomp
 void ExportEvolveTent (py::module m)
 {
   m.def ("EvolveTents",
-         [] (shared_ptr<MeshAccess> ma, double wavespeed,
+         [] (int order, shared_ptr<MeshAccess> ma, double wavespeed,
              double dt) //-> shared_ptr<MeshAccess>
          {
            int D = 1;
-           int order = 3;
-           int ir_order = ceil ((order + 1) / 1);
-           int ne = ma->GetNE ();
-           Vector<double> wavefront (ir_order * ne * (D + 2));
-           EvolveTents<1> (ma, wavespeed, dt, wavefront);
+           EvolveTents<1> (order, ma, wavespeed, dt);
          } //, py::call_guard<py::gil_scoped_release>()
   );
 }
