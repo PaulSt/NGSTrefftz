@@ -68,26 +68,30 @@ namespace ngcomp
                     Matrix<> dshape(nbasis,D+1);
                     tel.CalcDShape(p,dshape);
 
-                    cout << "A " << A << endl;
-                    cout << "n" << endl << n << endl;
+                    //cout << "A " << A << endl;
+                    //cout << "n" << n << endl << endl;
 
                     for(int i=0;i<nbasis;i++)
                     {
                         for(int j=0;j<nbasis;j++)
                         {
                             elmatrix(i,j) += ( dshape(i,D)*dshape(j,D)*n(D) ) * (1/(wavespeed*wavespeed)) *A*ir[imip].Weight();
-                            elmatrix(i,j) += ( Dot<D>(dshape.Row(i).Range(0,D),dshape.Row(j).Range(0,D))*n(D) ) *A*ir[imip].Weight();
-                            elmatrix(i,j) += ( dshape(i,D)*Dot<D>(dshape.Row(j).Range(0,D),n.Range(0,D)) ) *A*ir[imip].Weight();
-                            elmatrix(i,j) += ( dshape(j,D)*Dot<D>(dshape.Row(i).Range(0,D),n.Range(0,D)) ) *A*ir[imip].Weight();
+                            elmatrix(i,j) += ( InnerProduct(dshape.Row(i).Range(0,D),dshape.Row(j).Range(0,D))*n(D) ) *A*ir[imip].Weight();
+                            elmatrix(i,j) += ( dshape(i,D)*InnerProduct(dshape.Row(j).Range(0,D),n.Range(0,D)) ) *A*ir[imip].Weight();
+                            elmatrix(i,j) += ( dshape(j,D)*InnerProduct(dshape.Row(i).Range(0,D),n.Range(0,D)) ) *A*ir[imip].Weight();
                         }
                     }
 
+                    int offset = elnr*ir_order*(D+2) + imip*(D+2);
                     for(int j=0;j<nbasis;j++)
                     {
-                        //elvector(j) += (1/(wavespeed*wavespeed))* ( wavefront(ir_order * ma->GetNEdges() * (D+2)) ) *A*ir[imip].Weight();
+                        elvector(j) -= ( wavefront(offset+D+1)*dshape(j,D)*n(D) ) * (1/(wavespeed*wavespeed)) *A*ir[imip].Weight();
+                        elvector(j) -= ( InnerProduct(wavefront.Range(offset+1,offset+D+1),dshape.Row(j).Range(0,D))*n(D) ) *A*ir[imip].Weight();
+                        elvector(j) -= ( wavefront(offset+D+1)*InnerProduct(dshape.Row(j).Range(0,D),n.Range(0,D)) ) *A*ir[imip].Weight();
+                        elvector(j) -= ( dshape(j,D)*InnerProduct(wavefront.Range(offset+1,offset+D+1),n.Range(0,D)) ) *A*ir[imip].Weight();
                     }
                 }
-                cout << elmatrix << endl;
+                //cout << elmatrix << endl << elvector << endl;
             }
 
         });
