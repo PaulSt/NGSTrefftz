@@ -22,7 +22,8 @@ namespace ngcomp
   template <int D> double TentFaceArea (Mat<D + 1, D + 1> v);
 
   template <int D>
-  Vec<D + 1> TentFaceVertexTimes (Tent *tent, const INT<D + 1> &verts);
+  Vec<D + 1>
+  TentFaceVertexTimes (Tent *tent, const INT<D + 1> &verts, bool top);
 
   template <int D> Vec<D + 1> TentFaceNormal (Mat<D + 1, D + 1> v, bool dir);
 }
