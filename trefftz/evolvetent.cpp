@@ -10,6 +10,7 @@
 
 namespace ngcomp
 {
+
     template<int D, typename TFUNC>
     Vector<> MakeIC(IntegrationRule ir, shared_ptr<MeshAccess> ma, LocalHeap& lh, TFUNC func){
         Vector<> ic(ir.Size() * ma->GetNE() * (D+2));
@@ -58,13 +59,14 @@ namespace ngcomp
             return sol;
         });
         cout << wavefront << endl;
+        ElementRange bd_points = ma->Elements(BND);
 
         RunParallelDependency (tps.tent_dependency, [&] (int i) {
             HeapReset hr(lh);
             // LocalHeap slh = lh.Split();  // split to threads
             Tent* tent = tps.tents[i];
             cout << endl << "tent: " << i << " vert: " << tent->vertex << " els: " << tent->els << endl;
-            //cout << tent << endl;
+            //cout << *tent << endl;
 
             Matrix<double> elmat(nbasis,nbasis);
             Vector<double> elvec(nbasis);
@@ -79,7 +81,7 @@ namespace ngcomp
                 cout << "top" << endl;
                 Mat<D+1,D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
                 Vec<D+1> n = TentFaceNormal<D>(v,1);
-                Vec<D+1> bs = v.Col(D); 
+                Vec<D+1> bs = v.Col(D);
                 double A = TentFaceArea<D>(v);
                 for(int imip=0;imip<mir.Size();imip++)
                 {
@@ -103,11 +105,13 @@ namespace ngcomp
                     }
                 }
 
+
+
                 // Integration over bot of tent
                 cout << "bot" << endl;
                 v = TentFaceVerts<D>(tent, elnr, ma, 0);
                 n = TentFaceNormal<D>(v,0);
-                bs = v.Col(D); 
+                bs = v.Col(D);
                 A = TentFaceArea<D>(v);
                 for(int imip=0;imip<mir.Size();imip++)
                 {
@@ -138,6 +142,33 @@ namespace ngcomp
                 }
             }
 
+            //Integrate over side of tent
+            ElementIterator elit = bd_points.begin();
+            bool bdtent = false;
+            while (elit!=bd_points.end()){
+                for(auto v : (*elit).Vertices())
+                    if (v==tent->vertex) bdtent = true;
+                ++elit;
+            } 
+            if(bdtent)
+            {
+                cout << "side" << endl;
+                double A = tent->ttop - tent->tbot;
+                Vec<D+1> n = 1; n(D) = 0; n /= L2Norm(n);
+                Vec<D+1> p;
+                p.Range(0,D) = ma->GetPoint<D>(tent->vertex);
+                for(int imip=0;imip<ir.Size();imip++)
+                {
+                    p(D) = A*ir[imip].Point()[0];
+                    p(D) += tent->tbot;
+                    cout << p << endl;
+                    Matrix<> dshape(nbasis,D+1);
+                    tel.CalcDShape(p,dshape);
+                    for(int i=0;i<nbasis;i++)
+                        for(int j=0;j<nbasis;j++)
+                            elmat(i,j) += InnerProduct(dshape.Row(i).Range(0,D),n.Range(0,D)) * dshape(j,D) *A*ir[imip].Weight();
+                }
+            }
             //cout << elmat << endl << elvec << endl;
 
             //KrylovSpaceSolver * solver;
@@ -157,7 +188,7 @@ namespace ngcomp
                 // eval solution on top of tent
                 Mat<D+1,D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
                 Vec<D+1> n = TentFaceNormal<D>(v,1);
-                Vec<D+1> bs = v.Col(D); 
+                Vec<D+1> bs = v.Col(D);
                 double A = TentFaceArea<D>(v);
                 for(int imip=0;imip<mir.Size();imip++)
                 {
@@ -171,9 +202,7 @@ namespace ngcomp
                     tel.CalcShape(p,shape);
 
                     int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
-                    cout << wavefront(offset) << endl;
                     wavefront(offset) = InnerProduct(shape,sol);
-                    cout << wavefront(offset) << endl;
                     wavefront.Range(offset+1,offset+D+2) = dshape*sol;
 
                 }

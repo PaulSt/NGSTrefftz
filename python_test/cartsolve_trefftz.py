@@ -23,6 +23,7 @@ fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True
 # fes = L2(mesh, order=order, flags = { "dgjumps" : True })
 
 truesol = exp(-1.3*k*((x-0.15)-c*y)*((x-0.15)-c*y)) + exp(-k*((x-0.9)+c*y)*((x-0.9)+c*y)) #sin( k*(c*y + x) )#
+truesol = exp(-3*k*((x-0.5)-c*y)*((x-0.5)-c*y)) 
 
 U0 = GridFunction(fes)
 U0.Set(truesol)
