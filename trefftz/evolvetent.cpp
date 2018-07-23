@@ -35,8 +35,9 @@ namespace ngcomp
         int nbasis = tel.GetNBasis();
         cout << "NBASIS: " << nbasis << endl;
 
-        IntegrationRule ir(ET_SEGM, order);
+        IntegrationRule ir(ET_SEGM, order+2);
         int ir_order = ir.Size();//ceil((order+1)/1);
+        cout << ir << endl;
         cout << "irsize: " << ir.Size() << endl;
         ScalarFE<ET_SEGM,D> faceint;
 
@@ -51,11 +52,11 @@ namespace ngcomp
         wavefront = MakeIC<D>(ir,ma,lh,[&](Vec<D> p){
             double x = p[0]; double y = 0;
             Vec<D+2> sol;
-            int k = 30;
-            sol[1] = (-2*k*((x-0.5)-wavespeed*y));
+            int k = 3;
+            sol[0] = 1;
+            sol[1] = (2*k*((x-0.5)-wavespeed*y));
             sol[2] = (wavespeed*2*k*((x-0.5)-wavespeed*y));
             sol *= exp(-k*((x-0.5)-wavespeed*y)*((x-0.5)-wavespeed*y));
-            sol[0] = exp(-k*((x-0.5)-wavespeed*y)*((x-0.5)-wavespeed*y));
             return sol;
         });
         cout << wavefront << endl;
@@ -97,10 +98,12 @@ namespace ngcomp
                     {
                         for(int j=0;j<nbasis;j++)
                         {
-                            elmat(i,j) += ( dshape(i,D)*dshape(j,D)*n(D) ) * (1/(wavespeed*wavespeed)) *A*ir[imip].Weight();
-                            elmat(i,j) += ( InnerProduct(dshape.Row(i).Range(0,D),dshape.Row(j).Range(0,D))*n(D) ) *A*ir[imip].Weight();
-                            elmat(i,j) += ( dshape(i,D)*InnerProduct(dshape.Row(j).Range(0,D),n.Range(0,D)) ) *A*ir[imip].Weight();
-                            elmat(i,j) += ( dshape(j,D)*InnerProduct(dshape.Row(i).Range(0,D),n.Range(0,D)) ) *A*ir[imip].Weight();
+                            Vec<D> sig = -dshape.Row(i).Range(0,D);
+                            Vec<D> tau = -dshape.Row(j).Range(0,D);
+                            elmat(j,i) += ( dshape(i,D)*dshape(j,D)*n(D) ) * (1/(wavespeed*wavespeed)) *A*ir[imip].Weight();
+                            elmat(j,i) += ( InnerProduct(sig,tau)*n(D) ) *A*ir[imip].Weight();
+                            elmat(j,i) += ( dshape(i,D)*InnerProduct(tau,n.Range(0,D)) ) *A*ir[imip].Weight();
+                            elmat(j,i) += ( dshape(j,D)*InnerProduct(sig,n.Range(0,D)) ) *A*ir[imip].Weight();
                         }
                     }
                 }
@@ -128,19 +131,20 @@ namespace ngcomp
                     int offset = elnr*ir_order*(D+2) + imip*(D+2);
                     for(int j=0;j<nbasis;j++)
                     {
+                        Vec<D> tau = -dshape.Row(j).Range(0,D);
                         elvec(j) -= ( wavefront(offset+D+1)*dshape(j,D)*n(D) ) * (1/(wavespeed*wavespeed)) *A*ir[imip].Weight();
-                        elvec(j) -= ( InnerProduct(wavefront.Range(offset+1,offset+D+1),dshape.Row(j).Range(0,D))*n(D) ) *A*ir[imip].Weight();
-                        elvec(j) -= ( wavefront(offset+D+1)*InnerProduct(dshape.Row(j).Range(0,D),n.Range(0,D)) ) *A*ir[imip].Weight();
+                        elvec(j) -= ( InnerProduct(wavefront.Range(offset+1,offset+D+1),tau)*n(D) ) *A*ir[imip].Weight();
+                        elvec(j) -= ( wavefront(offset+D+1)*InnerProduct(tau,n.Range(0,D)) ) *A*ir[imip].Weight();
                         elvec(j) -= ( dshape(j,D)*InnerProduct(wavefront.Range(offset+1,offset+D+1),n.Range(0,D)) ) *A*ir[imip].Weight();
                         elmat(j) += ( wavefront(offset)*shape(j) ) *A*ir[imip].Weight();
 
                         for(int i=0;i<nbasis;i++)
                         {
-                            elmat(i,j) += ( shape(i)*shape(j) ) *A*ir[imip].Weight();
+                            elmat(j,i) += ( shape(i)*shape(j) ) *A*ir[imip].Weight();
                         }
                     }
                 }
-            }
+            } // close loop over tent elements
 
             //Integrate over side of tent
             ElementIterator elit = bd_points.begin();
@@ -149,7 +153,7 @@ namespace ngcomp
                 for(auto v : (*elit).Vertices())
                     if (v==tent->vertex) bdtent = true;
                 ++elit;
-            } 
+            }
             if(bdtent)
             {
                 cout << "side" << endl;
@@ -159,14 +163,16 @@ namespace ngcomp
                 p.Range(0,D) = ma->GetPoint<D>(tent->vertex);
                 for(int imip=0;imip<ir.Size();imip++)
                 {
-                    p(D) = A*ir[imip].Point()[0];
-                    p(D) += tent->tbot;
+                    p(D) = A*ir[imip].Point()[0] + tent->tbot;
                     cout << p << endl;
                     Matrix<> dshape(nbasis,D+1);
                     tel.CalcDShape(p,dshape);
                     for(int i=0;i<nbasis;i++)
                         for(int j=0;j<nbasis;j++)
-                            elmat(i,j) += InnerProduct(dshape.Row(i).Range(0,D),n.Range(0,D)) * dshape(j,D) *A*ir[imip].Weight();
+                        {
+                            Vec<D> sig = -dshape.Row(i).Range(0,D);
+                            elmat(j,i) += InnerProduct(sig,n.Range(0,D)) * dshape(j,D) *A*ir[imip].Weight();
+                        }
                 }
             }
             //cout << elmat << endl << elvec << endl;
@@ -202,20 +208,32 @@ namespace ngcomp
                     tel.CalcShape(p,shape);
 
                     int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
+                    cout << " o: " << offset << endl;
                     wavefront(offset) = InnerProduct(shape,sol);
-                    wavefront.Range(offset+1,offset+D+2) = dshape*sol;
-
+                    wavefront.Range(offset+1,offset+D+2) = Trans(dshape)*sol;
+                    wavefront.Range(offset+1,offset+D+1) *= (-1);
                 }
             }
+        }); // end loop over tents
 
-        });
-        cout << wavefront << endl;
+        cout << endl << wavefront << endl;
         // std::shared_ptr<FESpace> p = std::make_shared<TrefftzFESpace>(fes);
         // py::object ffes = py::cast(fes);
         // auto pyspace = py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>,FESpace> (m, pyname.c_str());
         // py::object pyfes = et.attr("GetFESTrefftz")(ma);
         // FESpace *ffes = pyfes.cast<FESpace *>();
         // et.attr("EvolveTent")(pyfes,?,?);
+        wavefront = MakeIC<D>(ir,ma,lh,[&](Vec<D> p){
+            double x = p[0]; double y = 0.5;
+            Vec<D+2> sol;
+            int k = 3;
+            sol[0] = 1;
+            sol[1] = (2*k*((x-0.5)-wavespeed*y));
+            sol[2] = (wavespeed*2*k*((x-0.5)-wavespeed*y));
+            sol *= exp(-k*((x-0.5)-wavespeed*y)*((x-0.5)-wavespeed*y));
+            return sol;
+        });
+        cout << endl << wavefront << endl;
     }
 
     template<int D>

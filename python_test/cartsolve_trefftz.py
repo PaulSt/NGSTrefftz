@@ -1,9 +1,9 @@
 #########################################################################################################################################
-N = 4
-c=2
+N = 3
+c=1
 t_steps = c*N
-order = 9
-k = 5
+order = 3
+k = 3
 #########################################################################################################################################
 from trefftzngs import *
 import numpy as np
@@ -23,7 +23,7 @@ fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True
 # fes = L2(mesh, order=order, flags = { "dgjumps" : True })
 
 truesol = exp(-1.3*k*((x-0.15)-c*y)*((x-0.15)-c*y)) + exp(-k*((x-0.9)+c*y)*((x-0.9)+c*y)) #sin( k*(c*y + x) )#
-truesol = exp(-3*k*((x-0.5)-c*y)*((x-0.5)-c*y)) 
+truesol = exp(-k*((x-0.5)-c*y)*((x-0.5)-c*y))
 
 U0 = GridFunction(fes)
 U0.Set(truesol)
@@ -32,8 +32,9 @@ Draw(U0,mesh,'U0')
 
 v0 = grad(U0)[1]#c*k*cos(k*(c*y+x))#
 sig0 = -grad(U0)[0] #-k*cos(k*(c*y+x))#-grad(U0)[1]
+gD = 0 #v0
 start = time.clock()
-[a,f] = DGeqsys(fes,truesol,v0,sig0,c,v0)
+[a,f] = DGeqsys(fes,truesol,v0,sig0,c,gD)
 print("DGsys: ", str(time.clock()-start))
 # gfu2= GridFunction(fes, name="uDG")
 # gfu2.vec.data = a.mat.Inverse() * f.vec
