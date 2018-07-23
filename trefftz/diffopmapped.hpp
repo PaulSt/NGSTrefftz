@@ -10,7 +10,7 @@ namespace ngfem
      realizations of bdb integrators for many equations.
      The differential operators provide the B-matrix,
      the DMatOps provide the coefficient tensors
-  */
+     */
 
   /// Identity
   template <int D, typename FEL = ScalarMappedElement<D>>
@@ -380,12 +380,12 @@ namespace ngfem
       FlatMatrixFixWidth<D> grad (mir.Size (), &y (0));
       Cast (fel).EvaluateGrad (mir, x, grad);
       /*
-      for (int i = 0; i < mir.Size(); i++)
-      {
-              Vec<D> hv = grad.Row(i);
-              grad.Row(i) = Trans (mir[i].GetJacobianInverse()) * hv;
-      }
-      */
+         for (int i = 0; i < mir.Size(); i++)
+         {
+         Vec<D> hv = grad.Row(i);
+         grad.Row(i) = Trans (mir[i].GetJacobianInverse()) * hv;
+         }
+         */
     }
 
     using DiffOp<DiffOpMappedGradient<D, FEL>>::ApplySIMDIR;
