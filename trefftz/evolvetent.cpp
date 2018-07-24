@@ -165,7 +165,7 @@ namespace ngcomp
                               wavefront.Range (offset + 1, offset + D + 1),
                               n.Range (0, D)))
                          * A * ir[imip].Weight ();
-                  elmat (j) += (wavefront (offset) * shape (j)) * A
+                  elvec (j) += (wavefront (offset) * shape (j)) * A
                                * ir[imip].Weight ();
 
                   for (int i = 0; i < nbasis; i++)
