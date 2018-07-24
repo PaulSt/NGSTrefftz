@@ -136,7 +136,7 @@ namespace ngcomp
                         elvec(j) -= ( InnerProduct(wavefront.Range(offset+1,offset+D+1),tau)*n(D) ) *A*ir[imip].Weight();
                         elvec(j) -= ( wavefront(offset+D+1)*InnerProduct(tau,n.Range(0,D)) ) *A*ir[imip].Weight();
                         elvec(j) -= ( dshape(j,D)*InnerProduct(wavefront.Range(offset+1,offset+D+1),n.Range(0,D)) ) *A*ir[imip].Weight();
-                        elmat(j) += ( wavefront(offset)*shape(j) ) *A*ir[imip].Weight();
+                        elvec(j) += ( wavefront(offset)*shape(j) ) *A*ir[imip].Weight();
 
                         for(int i=0;i<nbasis;i++)
                         {
