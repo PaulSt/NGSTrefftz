@@ -11,6 +11,20 @@
 namespace ngcomp
 {
 
+    template<int D> 
+    Vec<D+2> TestSolution(Vec<D+1> p)
+    {
+            double x = p[0]; double t = 0;
+            int wavespeed = 1;
+            Vec<D+2> sol;
+            int k = 3;
+            sol[0] = 1;
+            sol[1] = (2*k*((x-0.5)-wavespeed*t));
+            sol[2] = (wavespeed*2*k*((x-0.5)-wavespeed*t));
+            sol *= exp(-k*((x-0.5)-wavespeed*t)*((x-0.5)-wavespeed*t));
+            return sol;
+    }
+
     template<int D, typename TFUNC>
     Vector<> MakeIC(IntegrationRule ir, shared_ptr<MeshAccess> ma, LocalHeap& lh, TFUNC func){
         Vector<> ic(ir.Size() * ma->GetNE() * (D+2));
@@ -18,7 +32,9 @@ namespace ngcomp
             MappedIntegrationRule<1,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
             for(int imip=0;imip<mir.Size();imip++)
             {
-                Vec<D> p = mir[imip].GetPoint();
+                Vec<D+1> p;
+                p.Range(0,D+1) = mir[imip].GetPoint();
+                p[D+1] = 0;
                 int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
                 ic.Range(offset,offset+D+2) = func(p);
             }
@@ -49,16 +65,7 @@ namespace ngcomp
 
         cout << "NE " << ne << " nedg " << ma->GetNEdges() << endl;
         Vector<> wavefront(ir_order * ne * (D+2));
-        wavefront = MakeIC<D>(ir,ma,lh,[&](Vec<D> p){
-            double x = p[0]; double y = 0;
-            Vec<D+2> sol;
-            int k = 3;
-            sol[0] = 1;
-            sol[1] = (2*k*((x-0.5)-wavespeed*y));
-            sol[2] = (wavespeed*2*k*((x-0.5)-wavespeed*y));
-            sol *= exp(-k*((x-0.5)-wavespeed*y)*((x-0.5)-wavespeed*y));
-            return sol;
-        });
+        wavefront = MakeIC<D>(ir,ma,lh,TestSolution<D>);
         cout << wavefront << endl;
         ElementRange bd_points = ma->Elements(BND);
 
