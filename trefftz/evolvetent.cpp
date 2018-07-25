@@ -80,7 +80,7 @@ namespace ngcomp
       // LocalHeap slh = lh.Split();  // split to threads
       Tent *tent = tps.tents[i];
       cout << endl
-           << "tent: " << i << " vert: " << tent->vertex
+           << "%%%% tent: " << i << " vert: " << tent->vertex
            << " els: " << tent->els << endl;
       // cout << *tent << endl;
 
@@ -100,6 +100,9 @@ namespace ngcomp
           Vec<D + 1> n = TentFaceNormal<D> (v, 1);
           Vec<D + 1> bs = v.Col (D);
           double A = TentFaceArea<D> (v);
+          cout << "verts: " << v << endl;
+          cout << "norm: " << n << endl;
+          cout << "A: " << A << endl;
           for (int imip = 0; imip < mir.Size (); imip++)
             {
               Vec<D + 1> p;
@@ -108,6 +111,8 @@ namespace ngcomp
 
               Matrix<> dshape (nbasis, D + 1);
               tel.CalcDShape (p, dshape);
+              Vector<> shape (nbasis);
+              tel.CalcShape (p, shape);
 
               double weight = A * ir[imip].Weight ();
               for (int i = 0; i < nbasis; i++)
@@ -133,6 +138,9 @@ namespace ngcomp
           n = TentFaceNormal<D> (v, 0);
           bs = v.Col (D);
           A = TentFaceArea<D> (v);
+          cout << "verts: " << v << endl;
+          cout << "norm: " << n << endl;
+          cout << "A: " << A << endl;
           for (int imip = 0; imip < mir.Size (); imip++)
             {
               Vec<D + 1> p;
@@ -245,12 +253,22 @@ namespace ngcomp
               tel.CalcDShape (p, dshape);
               Vector<> shape (nbasis);
               tel.CalcShape (p, shape);
+              cout << endl << "imap: " << imip << endl;
+              // cout << "sol: " << endl << sol << endl;
+              // cout << "shape; "<<endl << shape << endl << "dshape " <<endl
+              // << Trans(dshape) << endl;
 
               int offset = elnr * ir.Size () * (D + 2) + imip * (D + 2);
               wavefront (offset) = InnerProduct (shape, sol);
               wavefront.Range (offset + 1, offset + D + 2)
                   = Trans (dshape) * sol;
               wavefront.Range (offset + 1, offset + D + 1) *= (-1);
+
+              cout << "at " << p << " value: " << endl
+                   << wavefront.Range (offset, offset + D + 2)
+                   << endl; // InnerProduct(sol,shape) << endl <<
+                            // Trans(dshape)*sol << endl;
+              cout << "corr sol: " << TestSolution<D> (p) << endl;
             }
         }
     }); // end loop over tents
