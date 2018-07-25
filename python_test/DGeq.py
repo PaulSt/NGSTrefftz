@@ -139,8 +139,20 @@ def DGsolve(fes,a,f):
     return [gfu,cond]
 
 
+def TestSolution(fes,c):
+    k = 3
+    # truesol = sin( k*(c*y + x) )
+    # v0 = c*k*cos(k*(c*y+x))
+    # sig0 = -k*cos(k*(c*y+x))
+    # gD = v0
 
-# a += SymbolicBFI(-U*gV[D] + V*gU[D], BND, definedon=fes.mesh.Boundaries("outflow"), skeleton=True)
-# a += SymbolicBFI(0.5*(U+U.Other())*jump_taux - mean_sig*n_x*(V-V.Other()) , VOL, skeleton=True )
-# f+=SymbolicLFI(-U0*gV[D] + grad(U0)[D]*V, BND, definedon=fes.mesh.Boundaries("inflow"), skeleton=True)
-# f+=SymbolicLFI(-gD*tau*n_x + V*CoefficientFunction((grad(gD)[0],grad(gD)[1]))*n_x, BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True )
+    truesol = exp(-1.3*k*((x-0.15)-c*y)*((x-0.15)-c*y)) + exp(-k*((x-0.9)+c*y)*((x-0.9)+c*y)) 
+    truesol = exp(-k*((x-0.5)-c*y)*((x-0.5)-c*y))
+
+    U0 = GridFunction(fes)
+    U0.Set(truesol)
+    v0 = grad(U0)[1]
+    sig0 = -grad(U0)[0] 
+    gD = 0 #v0
+
+    return [truesol,U0,sig0,v0,gD]
