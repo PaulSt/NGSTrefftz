@@ -8,6 +8,7 @@ from DGeq import *
 import time
 from ngsolve.TensorProductTools import *
 from ngsolve.comp import *
+from testsolve import TestSolution2D
 
 
 def SolveTentSlab(fes,U0,gD=0,c=1):
@@ -88,7 +89,7 @@ Draw(mesh)
 
 fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0)
 
-[truesol,U0,sig0,v0,gD] = TestSolution(fes,c)
+[truesol,U0,sig0,v0,gD] = TestSolution2D(fes,c)
 
 [a,f] = SolveTentSlab(fes,U0,gD,c)
 

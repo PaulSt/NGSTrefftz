@@ -137,22 +137,3 @@ def DGsolve(fes,a,f):
 	#print(min(np.linalg.eigvalsh(0.5*(nmatinv + nmatinv.transpose()))))
 
     return [gfu,cond]
-
-
-def TestSolution(fes,c):
-    k = 3
-    # truesol = sin( k*(c*y + x) )
-    # v0 = c*k*cos(k*(c*y+x))
-    # sig0 = -k*cos(k*(c*y+x))
-    # gD = v0
-
-    truesol = exp(-1.3*k*((x-0.15)-c*y)*((x-0.15)-c*y)) + exp(-k*((x-0.9)+c*y)*((x-0.9)+c*y)) 
-    truesol = exp(-k*((x-0.5)-c*y)*((x-0.5)-c*y))
-
-    U0 = GridFunction(fes)
-    U0.Set(truesol)
-    v0 = grad(U0)[1]
-    sig0 = -grad(U0)[0] 
-    gD = 0 #v0
-
-    return [truesol,U0,sig0,v0,gD]
