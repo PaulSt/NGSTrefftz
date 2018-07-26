@@ -13,21 +13,23 @@ namespace ngcomp
   template <int D> Vec<D + 2> TestSolution (Vec<D + 1> p)
   {
     double x = p[0];
-    double t = 0;
+    double t = p[1];
     int wavespeed = 1;
     Vec<D + 2> sol;
     int k = 3;
-    sol[0] = 1;
-    sol[1] = (2 * k * ((x - 0.5) - wavespeed * t));
-    sol[2] = (wavespeed * 2 * k * ((x - 0.5) - wavespeed * t));
-    sol *= exp (-k * ((x - 0.5) - wavespeed * t)
-                * ((x - 0.5) - wavespeed * t));
+    // sol[0] = 1;
+    // sol[1] = (2*k*((x-0.5)-wavespeed*t));
+    // sol[2] = (wavespeed*2*k*((x-0.5)-wavespeed*t));
+    // sol *= exp(-k*((x-0.5)-wavespeed*t)*((x-0.5)-wavespeed*t));
+    sol[0] = sin (k * (wavespeed * t + x));
+    sol[2] = wavespeed * k * cos (k * (wavespeed * t + x));
+    sol[1] = -k * cos (k * (wavespeed * t + x));
     return sol;
   }
 
   template <int D, typename TFUNC>
-  Vector<> MakeIC (IntegrationRule ir, shared_ptr<MeshAccess> ma,
-                   LocalHeap &lh, TFUNC func)
+  Vector<> MakeWavefront (IntegrationRule ir, shared_ptr<MeshAccess> ma,
+                          LocalHeap &lh, TFUNC func, double time)
   {
     Vector<> ic (ir.Size () * ma->GetNE () * (D + 2));
     for (int elnr = 0; elnr < ma->GetNE (); elnr++)
@@ -38,7 +40,7 @@ namespace ngcomp
           {
             Vec<D + 1> p;
             p.Range (0, D + 1) = mir[imip].GetPoint ();
-            p[D + 1] = 0;
+            p[D] = time;
             int offset = elnr * ir.Size () * (D + 2) + imip * (D + 2);
             ic.Range (offset, offset + D + 2) = func (p);
           }
@@ -71,8 +73,7 @@ namespace ngcomp
 
     cout << "NE " << ne << " nedg " << ma->GetNEdges () << endl;
     Vector<> wavefront (ir_order * ne * (D + 2));
-    wavefront = MakeIC<D> (ir, ma, lh, TestSolution<D>);
-    cout << wavefront << endl;
+    wavefront = MakeWavefront<D> (ir, ma, lh, TestSolution<D>, 0);
     ElementRange bd_points = ma->Elements (BND);
 
     RunParallelDependency (tps.tent_dependency, [&] (int i) {
@@ -83,6 +84,13 @@ namespace ngcomp
            << "%%%% tent: " << i << " vert: " << tent->vertex
            << " els: " << tent->els << endl;
       // cout << *tent << endl;
+
+      // Vec<D+1> center;
+      // center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
+      // center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
+      // double size = (tent->ttop-tent->tbot)*(tent->ttop-tent->tbot);
+      // tel.SetCenter(center);
+      // tel.SetElSize(size);
 
       Matrix<double> elmat (nbasis, nbasis);
       Vector<double> elvec (nbasis);
@@ -206,16 +214,23 @@ namespace ngcomp
               Matrix<> dshape (nbasis, D + 1);
               tel.CalcDShape (p, dshape);
               double weight = A * ir[imip].Weight ();
-              for (int i = 0; i < nbasis; i++)
-                for (int j = 0; j < nbasis; j++)
-                  {
-                    Vec<D> sig = -dshape.Row (i).Range (0, D);
-                    Vec<D> tau = -dshape.Row (j).Range (0, D);
-                    elmat (j, i) += weight * InnerProduct (sig, n.Range (0, D))
-                                    * dshape (j, D);
-                    elmat (j, i) += weight * InnerProduct (tau, n.Range (0, D))
-                                    * dshape (i, D);
-                  }
+              for (int j = 0; j < nbasis; j++)
+                {
+                  Vec<D> tau = -dshape.Row (j).Range (0, D);
+                  // elvec(j) -= weight * InnerProduct(wavefront,n.Range(0,D))
+                  // * dshape(j,D);
+                  elvec (j) -= weight * InnerProduct (tau, n.Range (0, D))
+                               * TestSolution<D> (p)[2];
+                  for (int i = 0; i < nbasis; i++)
+                    {
+                      Vec<D> sig = -dshape.Row (i).Range (0, D);
+                      elmat (j, i) += weight
+                                      * InnerProduct (sig, n.Range (0, D))
+                                      * dshape (j, D);
+                      // elmat(j,i) += weight * InnerProduct(tau,n.Range(0,D))
+                      // * dshape(i,D);
+                    }
+                }
             }
         }
 
@@ -279,6 +294,12 @@ namespace ngcomp
     // shared_ptr<TrefftzFESpace>,FESpace> (m, pyname.c_str()); py::object
     // pyfes = et.attr("GetFESTrefftz")(ma); FESpace *ffes = pyfes.cast<FESpace
     // *>(); et.attr("EvolveTent")(pyfes,?,?);
+
+    cout << wavefront << endl;
+    Vector<> wavefront_corr
+        = MakeWavefront<D> (ir, ma, lh, TestSolution<D>, dt);
+    cout << wavefront_corr << endl;
+    cout << L2Norm (wavefront_corr - wavefront);
   }
 
   template <int D>
