@@ -235,10 +235,18 @@ namespace ngcomp
         // FESpace *ffes = pyfes.cast<FESpace *>();
         // et.attr("EvolveTent")(pyfes,?,?);
 
-        cout << wavefront << endl;
         Vector<> wavefront_corr = MakeWavefront<D>(ir,ma,lh,TestSolution<D>, dt);
-        cout << wavefront_corr << endl;
-        cout << L2Norm(wavefront_corr - wavefront);
+        double l2error=0;
+        for(int elnr=0;elnr<ma->GetNE();elnr++)
+        {
+            MappedIntegrationRule<1,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
+            for(int imip=0;imip<ir.Size();imip++)
+            {
+                int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
+                l2error += (wavefront(offset)-wavefront_corr(offset))*(wavefront(offset)-wavefront_corr(offset))*mir[imip].GetWeight();
+            }
+        }
+        cout << "L2 Error: " << sqrt(l2error)<< endl;
 
         return wavefront;
     }
