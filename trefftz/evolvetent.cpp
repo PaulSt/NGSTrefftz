@@ -187,11 +187,6 @@ namespace ngcomp
                 }
             }
 
-            //KrylovSpaceSolver * solver;
-            //solver = new CGSolver<double> (elmat);//, pre);
-            //solver->SetPrecision(1e-8);
-            //solver->SetMaxSteps(200);
-            //solver->SetPrintRates (true);
             CalcInverse(elmat);
             Vector<> sol = elmat*elvec;
 
@@ -226,14 +221,6 @@ namespace ngcomp
                 }
             }
         }); // end loop over tents
-
-        // py::module et = py::module::import("DGeq");
-        // std::shared_ptr<FESpace> p = std::make_shared<TrefftzFESpace>(fes);
-        // py::object ffes = py::cast(fes);
-        // auto pyspace = py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>,FESpace> (m, pyname.c_str());
-        // py::object pyfes = et.attr("GetFESTrefftz")(ma);
-        // FESpace *ffes = pyfes.cast<FESpace *>();
-        // et.attr("EvolveTent")(pyfes,?,?);
 
         Vector<> wavefront_corr = MakeWavefront<D>(ir,ma,lh,TestSolution<D>, dt);
         double l2error=0;
