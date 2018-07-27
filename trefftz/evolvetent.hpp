@@ -12,8 +12,8 @@ namespace ngcomp
   typedef map<netgen::Point3d, netgen::PointIndex> Point2IndexMap;
 
   template <int D>
-  void EvolveTents (int order, shared_ptr<MeshAccess> ma, double wavespeed,
-                    double dt);
+  Vector<> EvolveTents (int order, shared_ptr<MeshAccess> ma, double wavespeed,
+                        double dt, Vector<> wavefront);
 
   template <int D>
   Mat<D + 1, D + 1>
