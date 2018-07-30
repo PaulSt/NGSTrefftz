@@ -14,18 +14,23 @@ namespace ngcomp
     template<int D>
     Vec<D+2> TestSolution(Vec<D+1> p)
     {
-            double x = p[0]; double t = p[1];
-            int wavespeed = 1;
-            Vec<D+2> sol;
-            int k = 3;
-            //sol[0] = 1;
-            //sol[1] = (2*k*((x-0.5)-wavespeed*t));
-            //sol[2] = (wavespeed*2*k*((x-0.5)-wavespeed*t));
-            //sol *= exp(-k*((x-0.5)-wavespeed*t)*((x-0.5)-wavespeed*t));
+        double x = p[0]; double t = p[D];
+        int wavespeed = 1;
+        Vec<D+2> sol;
+        int k = 3;
+        if(D==1){
             sol[0] =  sin( k*(wavespeed*t + x) );
-            sol[2] = wavespeed*k*cos(k*(wavespeed*t+x));
             sol[1] = -k*cos(k*(wavespeed*t+x));
-            return sol;
+            sol[2] = wavespeed*k*cos(k*(wavespeed*t+x));
+        } else if(D==2) {
+            double y = p[1];
+            double sq = sqrt(0.5);
+            sol[0] = sin( wavespeed*t+sq*(x+y) );
+            sol[1] = -sq*cos(wavespeed*t+sq*(x+y));
+            sol[2] = -sq*cos(wavespeed*t+sq*(x+y));
+            sol[3] = wavespeed*cos(wavespeed*t+sq*(x+y));
+        }
+        return sol;
     }
 
     template<int D, typename TFUNC>
@@ -48,7 +53,7 @@ namespace ngcomp
     template<int D>
     Vector<> EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, Vector<> wavefront)
     {
-        LocalHeap lh(100000);
+        LocalHeap lh(500000);
         T_TrefftzElement<D+1> tel(order,wavespeed);
         int nbasis = tel.GetNBasis();
 
@@ -90,7 +95,7 @@ namespace ngcomp
                 // Integration over top of tent
                 Mat<D+1,D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
                 Vec<D+1> n = TentFaceNormal<D>(v,1);
-                Vec<D+1> bs = v.Col(D);
+                Vec<D+1> bs = v.Row(D);
                 double A = TentFaceArea<D>(v);
                 for(int imip=0;imip<mir.Size();imip++)
                 {
@@ -121,7 +126,7 @@ namespace ngcomp
                 // Integration over bot of tent
                 v = TentFaceVerts<D>(tent, elnr, ma, 0);
                 n = TentFaceNormal<D>(v,0);
-                bs = v.Col(D);
+                bs = v.Row(D);
                 A = TentFaceArea<D>(v);
                 for(int imip=0;imip<mir.Size();imip++)
                 {
@@ -155,34 +160,45 @@ namespace ngcomp
 
             //Integrate over side of tent
             ElementRange bd_points = ma->Elements(BND);
-            ElementIterator elit = bd_points.begin();
             bool bdtent = false;
-            while (elit!=bd_points.end()){
-                for(auto v : (*elit).Vertices())
-                    if (v==tent->vertex) bdtent = true;
-                ++elit;
-            }
-            if(bdtent)
+            for(ElementIterator elit = bd_points.begin();elit!=bd_points.end();++elit)
             {
-                double A = tent->ttop - tent->tbot;
-                Vec<D+1> n = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n(D) = 0; n /= L2Norm(n);
-                Vec<D+1> p;
-                p.Range(0,D) = ma->GetPoint<D>(tent->vertex);
-                for(int imip=0;imip<ir.Size();imip++)
+                for(auto v : (*elit).Vertices())
                 {
-                    p(D) = A*ir[imip].Point()[0] + tent->tbot;
-                    Matrix<> dshape(nbasis,D+1);
-                    tel.CalcDShape(p,dshape);
-                    double weight = A*ir[imip].Weight();
-                    for(int j=0;j<nbasis;j++)
+                    if (v==tent->vertex && D==1)
                     {
-                        Vec<D> tau = -dshape.Row(j).Range(0,D);
-                        elvec(j) -= weight * InnerProduct(tau,n.Range(0,D)) * TestSolution<D>(p)[2];
-                        for(int i=0;i<nbasis;i++)
+                        double A = tent->ttop - tent->tbot;
+                        Vec<D+1> n = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n(D) = 0; n /= L2Norm(n);
+                        Vec<D+1> p;
+                        p.Range(0,D) = ma->GetPoint<D>(tent->vertex);
+                        for(int imip=0;imip<ir.Size();imip++)
                         {
-                            Vec<D> sig = -dshape.Row(i).Range(0,D);
-                            elmat(j,i) += weight * InnerProduct(sig,n.Range(0,D)) * dshape(j,D);
+                            p(D) = A*ir[imip].Point()[0] + tent->tbot;
+                            FlatMatrix<> dshape(nbasis,D+1,lh);
+                            tel.CalcDShape(p,dshape);
+                            double weight = A*ir[imip].Weight();
+                            for(int j=0;j<nbasis;j++)
+                            {
+                                Vec<D> tau = -dshape.Row(j).Range(0,D);
+                                elvec(j) -= weight * InnerProduct(tau,n.Range(0,D)) * TestSolution<D>(p)[2];
+                                for(int i=0;i<nbasis;i++)
+                                {
+                                    Vec<D> sig = -dshape.Row(i).Range(0,D);
+                                    elmat(j,i) += weight * InnerProduct(sig,n.Range(0,D)) * dshape(j,D);
+                                }
+                            }
                         }
+                    } else if(v==tent->vertex && D==2) {
+                        cout << (*elit).Nr() << endl;
+                        Mat<D+1,D+1> verts;
+                        verts.Col(0).Range(0,D) = ma->GetPoint<D>((*elit).Vertices()[0]);
+                        verts.Col(1).Range(0,D) = ma->GetPoint<D>((*elit).Vertices()[1]);
+
+                        for(auto elnr: tent->els)
+                        {
+                        }
+                        cout << verts.Col(0) << endl;
+                        cout << verts.Col(1) << endl;
                     }
                 }
             }
@@ -198,7 +214,7 @@ namespace ngcomp
 
                 Mat<D+1,D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
                 Vec<D+1> n = TentFaceNormal<D>(v,1);
-                Vec<D+1> bs = v.Col(D);
+                Vec<D+1> bs = v.Row(D);
                 double A = TentFaceArea<D>(v);
                 for(int imip=0;imip<mir.Size();imip++)
                 {
@@ -238,6 +254,7 @@ namespace ngcomp
         return wavefront;
     }
 
+    // returns matrix where cols correspond to vertex coordinates of the space-time element
     template<int D>
     Mat<D+1,D+1> TentFaceVerts(Tent* tent, int elnr, shared_ptr<MeshAccess> ma, bool top)
     {
@@ -246,10 +263,10 @@ namespace ngcomp
         // determine linear basis function coeffs to use for tent face
         for(int ivert = 0;ivert<vnr.Size();ivert++)
         {
-            if(vnr[ivert] == tent->vertex) v(ivert,D) =  top ? tent->ttop : tent->tbot;
+            if(vnr[ivert] == tent->vertex) v(D,ivert) =  top ? tent->ttop : tent->tbot;
             for (int k = 0; k < tent->nbv.Size(); k++)
-                if(vnr[ivert] == tent->nbv[k]) v(ivert,D) = tent->nbtime[k];
-            v.Row(ivert).Range(0,D) = ma->GetPoint<D>(vnr[ivert]);
+                if(vnr[ivert] == tent->nbv[k]) v(D,ivert) = tent->nbtime[k];
+            v.Col(ivert).Range(0,D) = ma->GetPoint<D>(vnr[ivert]);
         }
 
         return v;
@@ -259,12 +276,12 @@ namespace ngcomp
     double TentFaceArea( Mat<D+1,D+1> v )
     {
         switch(D) {
-            case 1 : return L2Norm(v.Row(0)-v.Row(1));
+            case 1 : return L2Norm(v.Col(0)-v.Col(1));
                      break;
             case 2 :{
-                        double a = L2Norm2(v.Row(0)-v.Row(1));
-                        double b = L2Norm2(v.Row(1)-v.Row(2));
-                        double c = L2Norm2(v.Row(0)-v.Row(2));
+                        double a = L2Norm2(v.Col(0)-v.Col(1));
+                        double b = L2Norm2(v.Col(1)-v.Col(2));
+                        double c = L2Norm2(v.Col(0)-v.Col(2));
                         double s = 0.5*(a+b+c);
                         return sqrt(s*(s-a)*(s-b)*(s-c));
                         break;
@@ -278,14 +295,14 @@ namespace ngcomp
         Vec<D+1> normv;
         switch(D){
             case 1: {
-                        normv(0) = v(0,1)-v(1,1);
-                        normv(1) = v(1,0)-v(0,0);
+                        normv(0) = v(1,0)-v(1,1);
+                        normv(1) = v(0,1)-v(0,0);
                         normv /= L2Norm(normv);
                         break;
                     }
             case 2: {
-                        Vec<D+1> a = v.Row(0)-v.Row(1);
-                        Vec<D+1> b = v.Row(0)-v.Row(2);
+                        Vec<D+1> a = v.Col(0)-v.Col(1);
+                        Vec<D+1> b = v.Col(0)-v.Col(2);
                         normv(0) = a(1) * b(2) - a(2) * b(1);
                         normv(1) = a(2) * b(0) - a(0) * b(2);
                         normv(2) = a(0) * b(1) - a(1) * b(0);
@@ -308,7 +325,11 @@ void ExportEvolveTent(py::module m)
     m.def("EvolveTents", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt) //-> shared_ptr<MeshAccess>
           {
               Vector<> wavefront;
-              EvolveTents<1>(order,ma,wavespeed,dt,wavefront);
+              if(ma->GetDimension() == 1)
+                  EvolveTents<1>(order,ma,wavespeed,dt,wavefront);
+              else if(ma->GetDimension() == 2)
+                  EvolveTents<2>(order,ma,wavespeed,dt,wavefront);
+
           }//, py::call_guard<py::gil_scoped_release>()
          );
 }

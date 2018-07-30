@@ -16,9 +16,10 @@ import time
 def GetFESTrefftz(mesh,c=1):
     return FESpace("trefftzfespace", mesh, order = 4, wavespeed = c, dgjumps=True, basistype=0)
 
-order = 3;
+order = 4;
 c=1
-initmesh = Mesh(SegMesh(4,0,1))
+initmesh = Mesh(SegMesh(9,0,1))
+initmesh = Mesh(unit_square.GenerateMesh(maxh=0.2))
 EvolveTents(order,initmesh,c,0.5)
 
 #  mesh = NgsTPmesh(initmesh,c,1)
