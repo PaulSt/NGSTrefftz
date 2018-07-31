@@ -158,48 +158,39 @@ namespace ngcomp
                 }
             } // close loop over tent elements
 
+
             //Integrate over side of tent
-            ElementRange bd_points = ma->Elements(BND);
-            bool bdtent = false;
-            for(ElementIterator elit = bd_points.begin();elit!=bd_points.end();++elit)
-            {
-                for(auto v : (*elit).Vertices())
+            for(auto edge : tent->edges){
+                Array<int> neighbors;
+                ma->GetFacetElements(edge,neighbors);
+                if(neighbors.Size() == 1 && D==1)
                 {
-                    if (v==tent->vertex && D==1)
+                    double A = tent->ttop - tent->tbot;
+                    Vec<D+1> n = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n(D) = 0; n /= L2Norm(n);
+                    Vec<D+1> p;
+                    p.Range(0,D) = ma->GetPoint<D>(tent->vertex);
+                    for(int imip=0;imip<ir.Size();imip++)
                     {
-                        double A = tent->ttop - tent->tbot;
-                        Vec<D+1> n = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n(D) = 0; n /= L2Norm(n);
-                        Vec<D+1> p;
-                        p.Range(0,D) = ma->GetPoint<D>(tent->vertex);
-                        for(int imip=0;imip<ir.Size();imip++)
+                        p(D) = A*ir[imip].Point()[0] + tent->tbot;
+                        FlatMatrix<> dshape(nbasis,D+1,lh);
+                        tel.CalcDShape(p,dshape);
+                        double weight = A*ir[imip].Weight();
+                        for(int j=0;j<nbasis;j++)
                         {
-                            p(D) = A*ir[imip].Point()[0] + tent->tbot;
-                            FlatMatrix<> dshape(nbasis,D+1,lh);
-                            tel.CalcDShape(p,dshape);
-                            double weight = A*ir[imip].Weight();
-                            for(int j=0;j<nbasis;j++)
+                            Vec<D> tau = -dshape.Row(j).Range(0,D);
+                            elvec(j) -= weight * InnerProduct(tau,n.Range(0,D)) * TestSolution<D>(p)[2];
+                            for(int i=0;i<nbasis;i++)
                             {
-                                Vec<D> tau = -dshape.Row(j).Range(0,D);
-                                elvec(j) -= weight * InnerProduct(tau,n.Range(0,D)) * TestSolution<D>(p)[2];
-                                for(int i=0;i<nbasis;i++)
-                                {
-                                    Vec<D> sig = -dshape.Row(i).Range(0,D);
-                                    elmat(j,i) += weight * InnerProduct(sig,n.Range(0,D)) * dshape(j,D);
-                                }
+                                Vec<D> sig = -dshape.Row(i).Range(0,D);
+                                elmat(j,i) += weight * InnerProduct(sig,n.Range(0,D)) * dshape(j,D);
                             }
                         }
-                    } else if(v==tent->vertex && D==2) {
-                        cout << (*elit).Nr() << endl;
-                        Mat<D+1,D+1> verts;
-                        verts.Col(0).Range(0,D) = ma->GetPoint<D>((*elit).Vertices()[0]);
-                        verts.Col(1).Range(0,D) = ma->GetPoint<D>((*elit).Vertices()[1]);
-
-                        for(auto elnr: tent->els)
-                        {
-                        }
-                        cout << verts.Col(0) << endl;
-                        cout << verts.Col(1) << endl;
                     }
+                }
+                else if(neighbors.Size() == 1 && D==2) {
+                    int nbv = tent->vertex == ma->GetEdgePNums(edge)[0] ? ma->GetEdgePNums(edge)[1] : ma->GetEdgePNums(edge)[0]; 
+                    for(int k=0;k<tent->nbv.Size();k++)
+                        if(tent->nbv[k] == nbv) cout << tent->nbtime[k] << endl;
                 }
             }
 
