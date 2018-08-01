@@ -182,11 +182,9 @@ namespace ngcomp
         } // close loop over tent elements
 
       // Integrate over side of tent
-      for (auto edge : tent->edges)
+      for (auto surfel : ma->GetVertexSurfaceElements (tent->vertex))
         {
-          Array<int> neighbors;
-          ma->GetFacetElements (edge, neighbors);
-          if (neighbors.Size () == 1 && D == 1)
+          if (D == 1)
             {
               double A = tent->ttop - tent->tbot;
               Vec<D + 1> n = sgn_nozero<int> (tent->vertex - tent->nbv[0]);
@@ -215,14 +213,38 @@ namespace ngcomp
                     }
                 }
             }
-          else if (neighbors.Size () == 1 && D == 2)
+          else if (D == 2)
             {
-              int nbv = tent->vertex == ma->GetEdgePNums (edge)[0]
-                            ? ma->GetEdgePNums (edge)[1]
-                            : ma->GetEdgePNums (edge)[0];
-              for (int k = 0; k < tent->nbv.Size (); k++)
-                if (tent->nbv[k] == nbv)
-                  cout << tent->nbtime[k] << endl;
+              auto sel_verts = ma->GetElVertices (ElementId (BND, surfel));
+              int nbv
+                  = tent->vertex == sel_verts[0] ? sel_verts[1] : sel_verts[0];
+              Mat<D + 1, D + 1> v = 0;
+              for (int i = 0; i < D; i++)
+                v.Col (i).Range (0, D) = ma->GetPoint<D> (tent->vertex);
+              v.Col (D).Range (0, D) = ma->GetPoint<D> (nbv);
+              v (D, 0) = tent->ttop;
+              v (D, 1) = tent->tbot;
+              v (D, 2) = tent->nbtime[tent->nbv.Pos (nbv)];
+              double A = TentFaceArea<D> (v);
+
+              Vec<D + 1> n;
+              n.Range (0, D) = ma->GetPoint<D> (sel_verts[0])
+                               - ma->GetPoint<D> (sel_verts[1]);
+              n[2] = n[0];
+              n[0] = n[1];
+              n[1] = n[2];
+              n[2] = 0;
+              n[0] = -n[0];
+              n /= L2Norm (n);
+
+              Mat<D + 1, D> map;
+              map.Col (0) = v.Col (1) - v.Col (0);
+              map.Col (1) = v.Col (2) - v.Col (0);
+
+              cout << "verts: " << endl;
+              for (int d = 0; d <= D; d++)
+                cout << "v" << d << ": " << v.Col (d) << endl;
+              cout << "norm: " << n << " area " << A << endl;
             }
         }
 
@@ -291,7 +313,7 @@ namespace ngcomp
   Mat<D + 1, D + 1>
   TentFaceVerts (Tent *tent, int elnr, shared_ptr<MeshAccess> ma, bool top)
   {
-    INT<D + 1> vnr = ma->GetEdgePNums (elnr);
+    INT<D + 1> vnr = ma->GetElVertices (elnr);
     Mat<D + 1, D + 1> v;
     // determine linear basis function coeffs to use for tent face
     for (int ivert = 0; ivert < vnr.Size (); ivert++)
