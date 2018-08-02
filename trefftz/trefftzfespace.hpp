@@ -18,11 +18,6 @@ namespace ngcomp
     int basistype;
 
   public:
-    /*
-      constructor.
-      Arguments are the access to the mesh data structure,
-      and the flags from the define command in the pde-file
-    */
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
 
     virtual string GetClassName () const { return "TrefftzFESpace"; }
@@ -30,6 +25,7 @@ namespace ngcomp
     virtual void Update (LocalHeap &lh);
 
     virtual void GetDofNrs (ElementId ei, Array<DofId> &dnums) const;
+
     virtual FiniteElement &GetFE (ElementId ei, Allocator &alloc) const;
 
     virtual size_t GetNDof () const throw () override { return ndof; }

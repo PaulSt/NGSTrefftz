@@ -158,10 +158,10 @@ namespace ngcomp
   }
 
   /*
-    register fe-spaces
-    Object of type TrefftzFESpace can be defined in the pde-file via
-    "define fespace v -type=trefftzfespace"
-  */
+     register fe-spaces
+     Object of type TrefftzFESpace can be defined in the pde-file via
+     "define fespace v -type=trefftzfespace"
+     */
   static RegisterFESpace<TrefftzFESpace> initi_trefftz ("trefftzfespace");
 }
 
@@ -172,11 +172,11 @@ void ExportTrefftzFESpace (py::module m)
   using namespace ngcomp;
   using namespace ngfem;
   /*
-    We just export the class here and use the FESpace constructor to create our
-    space. This has the advantage, that we do not need to specify all the flags
-    to parse (like dirichlet, definedon,...), but we can still append new
-    functions only for that space.
-   */
+     We just export the class here and use the FESpace constructor to create
+     our space. This has the advantage, that we do not need to specify all the
+     flags to parse (like dirichlet, definedon,...), but we can still append
+     new functions only for that space.
+     */
   py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>, FESpace> (
       m, "TrefftzFESpace",
       "FESpace with first order and second order trigs on 2d mesh")
