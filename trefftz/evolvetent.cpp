@@ -59,7 +59,7 @@ namespace ngcomp
 
         const ELEMENT_TYPE eltyp = D==1 ? ET_SEGM : ET_TRIG;
         IntegrationRule ir(eltyp, order+2);
-        ScalarFE<eltyp,D> faceint;
+        ScalarFE<eltyp,1> faceint;
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
         tps.PitchTents(dt, wavespeed); // adt = time slab height, wavespeed
@@ -162,55 +162,54 @@ namespace ngcomp
             //Integrate over side of tent
             for(auto surfel : ma->GetVertexSurfaceElements(tent->vertex))
             {
-                if(D==1)
+                for(int imip=0;imip<ir.Size();imip++)
                 {
-                    double A = tent->ttop - tent->tbot;
-                    Vec<D+1> n = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n(D) = 0; n /= L2Norm(n);
+                    double A;
+                    Vec<D+1> n;
                     Vec<D+1> p;
-                    p.Range(0,D) = ma->GetPoint<D>(tent->vertex);
-                    for(int imip=0;imip<ir.Size();imip++)
+                    if(D==1)
                     {
+                        A = tent->ttop - tent->tbot;
+                        n = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n(D) = 0; n /= L2Norm(n);
+                        p.Range(0,D) = ma->GetPoint<D>(tent->vertex);
                         p(D) = A*ir[imip].Point()[0] + tent->tbot;
-                        FlatMatrix<> dshape(nbasis,D+1,lh);
-                        tel.CalcDShape(p,dshape);
-                        double weight = A*ir[imip].Weight();
-                        for(int j=0;j<nbasis;j++)
+                    }
+                    else if(D==2) 
+                    {
+                        auto sel_verts = ma->GetElVertices(ElementId(BND,surfel));
+                        int nbv = tent->vertex==sel_verts[0] ? sel_verts[1] : sel_verts[0];
+                        Mat<D+1,D+1> v = 0;
+                        for(int i=0;i<D;i++)
+                            v.Col(i).Range(0,D) = ma->GetPoint<D>(tent->vertex);
+                        v.Col(D).Range(0,D) = ma->GetPoint<D>(nbv);
+                        v(D,0) = tent->ttop;
+                        v(D,1) = tent->tbot;
+                        v(D,2) = tent->nbtime[tent->nbv.Pos(nbv)];
+                        A = TentFaceArea<D>(v);
+
+                        n.Range(0,D) =  ma->GetPoint<D>(sel_verts[0]) - ma->GetPoint<D>(sel_verts[1]);
+                        n[2] = n[0]; n[0] = n[1]; n[1] = n[2]; n[2] = 0;
+                        n[0] = -n[0];
+                        n /= L2Norm(n);
+
+                        Mat<D+1,D> map;
+                        map.Col(0) = v.Col(1)-v.Col(0);
+                        map.Col(1) = v.Col(2)-v.Col(0);
+                        p = map * ir[imip].Point() + v.Col(0);
+                    }
+                    FlatMatrix<> dshape(nbasis,D+1,lh);
+                    tel.CalcDShape(p,dshape);
+                    double weight = A*ir[imip].Weight();
+                    for(int j=0;j<nbasis;j++)
+                    {
+                        Vec<D> tau = -dshape.Row(j).Range(0,D);
+                        elvec(j) -= weight * InnerProduct(tau,n.Range(0,D)) * TestSolution<D>(p)[2];
+                        for(int i=0;i<nbasis;i++)
                         {
-                            Vec<D> tau = -dshape.Row(j).Range(0,D);
-                            elvec(j) -= weight * InnerProduct(tau,n.Range(0,D)) * TestSolution<D>(p)[2];
-                            for(int i=0;i<nbasis;i++)
-                            {
-                                Vec<D> sig = -dshape.Row(i).Range(0,D);
-                                elmat(j,i) += weight * InnerProduct(sig,n.Range(0,D)) * dshape(j,D);
-                            }
+                            Vec<D> sig = -dshape.Row(i).Range(0,D);
+                            elmat(j,i) += weight * InnerProduct(sig,n.Range(0,D)) * dshape(j,D);
                         }
                     }
-                }
-                else if(D==2) {
-                    auto sel_verts = ma->GetElVertices(ElementId(BND,surfel));
-                    int nbv = tent->vertex==sel_verts[0] ? sel_verts[1] : sel_verts[0]; 
-                    Mat<D+1,D+1> v = 0;
-                    for(int i=0;i<D;i++)
-                        v.Col(i).Range(0,D) = ma->GetPoint<D>(tent->vertex);
-                    v.Col(D).Range(0,D) = ma->GetPoint<D>(nbv);
-                    v(D,0) = tent->ttop;
-                    v(D,1) = tent->tbot;
-                    v(D,2) = tent->nbtime[tent->nbv.Pos(nbv)];
-                    double A = TentFaceArea<D>(v);
-
-                    Vec<D+1> n;
-                    n.Range(0,D) =  ma->GetPoint<D>(sel_verts[0]) - ma->GetPoint<D>(sel_verts[1]);
-                    n[2] = n[0]; n[0] = n[1]; n[1] = n[2]; n[2] = 0;
-                    n[0] = -n[0];
-                    n /= L2Norm(n);
-
-                    Mat<D+1,D> map;
-                    map.Col(0) = v.Col(1)-v.Col(0);
-                    map.Col(1) = v.Col(2)-v.Col(0);
-
-                    cout << "verts: " << endl;
-                    for(int d=0;d<=D;d++) cout << "v" << d << ": " << v.Col(d) << endl;
-                    cout << "norm: " << n << " area " << A << endl;
                 }
             }
 
@@ -260,7 +259,8 @@ namespace ngcomp
                 l2error += (wavefront(offset)-wavefront_corr(offset))*(wavefront(offset)-wavefront_corr(offset))*mir[imip].GetWeight();
             }
         }
-        cout << "L2 Error: " << sqrt(l2error)<< endl;
+        l2error = sqrt(l2error);
+        cout << "L2 Error: " << l2error<< endl;
 
         return wavefront;
     }
@@ -290,9 +290,9 @@ namespace ngcomp
             case 1 : return L2Norm(v.Col(0)-v.Col(1));
                      break;
             case 2 :{
-                        double a = L2Norm2(v.Col(0)-v.Col(1));
-                        double b = L2Norm2(v.Col(1)-v.Col(2));
-                        double c = L2Norm2(v.Col(0)-v.Col(2));
+                        double a = L2Norm(v.Col(0)-v.Col(1));
+                        double b = L2Norm(v.Col(1)-v.Col(2));
+                        double c = L2Norm(v.Col(0)-v.Col(2));
                         double s = 0.5*(a+b+c);
                         return sqrt(s*(s-a)*(s-b)*(s-c));
                         break;
@@ -325,8 +325,6 @@ namespace ngcomp
         else normv *= (-sgn_nozero<double>(normv[D]));
         return normv;
     }
-
-
 }
 
 #ifdef NGS_PYTHON
