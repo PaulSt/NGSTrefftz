@@ -6,42 +6,40 @@
 namespace ngcomp
 {
 
-  class TrefftzFESpace : public FESpace
-  {
-		int D;
-    int order;
-    size_t ndof;
-		int nel;
-		int nvert;
-		int local_ndof;
-		float c=1;
-		bool testshift=false;
-		int basistype;
+    class TrefftzFESpace : public FESpace
+    {
+        int D;
+        int order;
+        size_t ndof;
+        int nel;
+        int nvert;
+        int local_ndof;
+        float c=1;
+        bool testshift=false;
+        int basistype;
 
-  public:
-    /*
-      constructor.
-      Arguments are the access to the mesh data structure,
-      and the flags from the define command in the pde-file
-    */
-    TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags);
+        public:
 
-    virtual string GetClassName () const { return "TrefftzFESpace"; }
+        TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags);
 
-    virtual void Update(LocalHeap & lh);
+        virtual string GetClassName () const { return "TrefftzFESpace"; }
 
-    virtual void GetDofNrs (ElementId ei, Array<DofId> & dnums) const;
-    virtual FiniteElement & GetFE (ElementId ei, Allocator & alloc) const;
+        virtual void Update(LocalHeap & lh);
 
-		virtual size_t GetNDof () const throw() override {return ndof;}
+        virtual void GetDofNrs (ElementId ei, Array<DofId> & dnums) const;
 
-	protected:
-		template<int D>
-		double Adiam(ElementId ei) const;
+        virtual FiniteElement & GetFE (ElementId ei, Allocator & alloc) const;
 
-		template<int D>
-		Vec<D> ElCenter(ElementId ei) const;
-  };
+        virtual size_t GetNDof () const throw() override {return ndof;}
+
+        protected:
+
+        template<int D>
+        double Adiam(ElementId ei) const;
+
+        template<int D>
+        Vec<D> ElCenter(ElementId ei) const;
+    };
 }
 
 #ifdef NGS_PYTHON
