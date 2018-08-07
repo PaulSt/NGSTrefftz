@@ -11,6 +11,44 @@
 namespace ngcomp
 {
 
+    inline void LapackSolve(SliceMatrix<double> a, SliceVector<double> b)
+    {
+        integer n = a.Width();
+        integer lda = a.Dist();
+        integer ldb = b.Dist();
+        double rcond;
+        double rpvgrw;
+        integer success;
+        char fact = 'E';
+        char trans = 'N';
+        char equed = 'N';
+        integer nrhs = 1;
+        ArrayMem<integer,100> ipiv(n);
+        ArrayMem<double,100> dpiv(n);
+        ArrayMem<double,100> berr(n);
+        ArrayMem<double,100> ferr(n);
+        ArrayMem<double,100> af(n);
+        ArrayMem<double,100> work(4*n);
+        ArrayMem<integer,100> iwork(n);
+        integer iter;
+        Vector<> x(n);
+        int n_err_bnds = 0;
+        int nparams = 0;
+        SliceMatrix<double> ac(a);
+        char uplo = 'L';
+
+        //dgesvxx_ (&fact,&trans,&n,&nrhs,&a(0,0),&lda,&af[0],&lda,&ipiv[0],&equed,&dpiv[0],&dpiv[0],&b[0],&lda,&x[0],&lda,&rcond,&rpvgrw,&dpiv[0],&n_err_bnds,&dpiv[0],&dpiv[0],&nparams,&dpiv[0],&work[0],&ipiv[0],&success);
+        dgesvx_ (&fact,&trans,&n,&nrhs,&a(0,0),&lda,&af[0],&lda,&ipiv[0],&equed,&dpiv[0],&dpiv[0],&b[0],&n,&x[0],&n,&rcond,&ferr[0],&berr[0],&work[0],&iwork[0],&success);
+        //dgesv_(&n,&nrhs,&a(0,0),&lda,&ipiv[0],&b[0],&lda,&success);
+        //dsgesv_(&n,&nrhs,&a(0,0),&lda,&ipiv[0],&b[0],&lda,&x[0],&lda,&work[0],&swork[0],&iter,&success);
+
+        //dpotrf_ (&uplo,&n,&a(0,0),&lda,&success);
+        b=x;
+
+        cout << endl << "lapack: " << endl;
+        cout << "lapack success: " <<  success << endl;
+    }
+
     template<int D>
     Vec<D+2> TestSolution(Vec<D+1> p)
     {
@@ -174,7 +212,7 @@ namespace ngcomp
                         p.Range(0,D) = ma->GetPoint<D>(tent->vertex);
                         p(D) = A*ir[imip].Point()[0] + tent->tbot;
                     }
-                    else if(D==2) 
+                    else if(D==2)
                     {
                         auto sel_verts = ma->GetElVertices(ElementId(BND,surfel));
                         int nbv = tent->vertex==sel_verts[0] ? sel_verts[1] : sel_verts[0];
@@ -213,8 +251,24 @@ namespace ngcomp
                 }
             }
 
-            CalcInverse(elmat);
+            //Matrix<> jmat(elmat);
+            //for(int i=0;i<nbasis;i++){
+            //elvec[i] /= sqrt(jmat(i,i));
+            //for(int j=0;j<nbasis;j++){
+            //elmat(j,i)/=sqrt(jmat(i,i)*jmat(j,j));
+            //}
+            //}
+            //for(int i=0;i<nbasis;i++) sol[i]/=sqrt(jmat(i,i));
+
+            //Matrix<> mat(elmat);
+            //Vector<> vec(elvec);
+            //LapackSolve(mat,vec);
+            //cout << mat << endl;
+
+            CalcInverse(elmat,INVERSE_LIB::INV_LAPACK);
             Vector<> sol = elmat*elvec;
+            //cout <<"er: " << L2Norm(sol-vec)<< endl;
+            //sol = vec;
 
             // eval solution on top of tent
             for(auto elnr: tent->els)
