@@ -128,69 +128,60 @@ namespace ngcomp
             for(auto elnr: tent->els)
             {
                 INT<D+1> vnr = ma->GetEdgePNums(elnr);
-                MappedIntegrationRule<1,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
+                MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
 
-                // Integration over top of tent
-                Mat<D+1,D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
-                Vec<D+1> n = TentFaceNormal<D>(v,1);
-                Vec<D+1> bs = v.Row(D);
-                double A = TentFaceArea<D>(v);
+                Mat<D+1,D+1> vtop = TentFaceVerts<D>(tent, elnr, ma, 1);
+                Vec<D+1> linearbasis_top = vtop.Row(D);
+                Mat<D+1,D+1> vbot = TentFaceVerts<D>(tent, elnr, ma, 0);
+                Vec<D+1> linearbasis_bot = vbot.Row(D);
                 for(int imip=0;imip<mir.Size();imip++)
                 {
-                    Vec<D+1> p;
-                    p.Range(0,D) = mir[imip].GetPoint();
-                    p(D) = faceint.Evaluate(ir[imip], bs);
+                    FlatVector<> p = mir[imip].GetPoint();
+
+                    // Integration over top of tent
+                    Vec<D+1> n = TentFaceNormal<D>(vtop,1);
+                    mir[imip].SetMeasure(TentFaceArea<D>(vtop));
+                    p(D) = faceint.Evaluate(ir[imip], linearbasis_top);
 
                     FlatMatrix<> dshape(nbasis,D+1,lh);
-                    tel.CalcDShape(p,dshape);
+                    tel.CalcDShape(mir[imip],dshape);
                     FlatVector<> shape(nbasis,lh);
-                    tel.CalcShape(p,shape);
+                    tel.CalcShape(mir[imip],shape);
 
-                    double weight = A*ir[imip].Weight();
                     for(int i=0;i<nbasis;i++)
                     {
                         for(int j=0;j<nbasis;j++)
                         {
                             Vec<D> sig = -dshape.Row(i).Range(0,D);
                             Vec<D> tau = -dshape.Row(j).Range(0,D);
-                            elmat(j,i) += weight * dshape(i,D)*dshape(j,D)*n(D) * (1/(wavespeed*wavespeed));
-                            elmat(j,i) += weight * InnerProduct(sig,tau)*n(D);
-                            elmat(j,i) += weight * dshape(i,D)*InnerProduct(tau,n.Range(0,D));
-                            elmat(j,i) += weight * dshape(j,D)*InnerProduct(sig,n.Range(0,D));
+                            elmat(j,i) += mir[imip].GetWeight() * ( dshape(i,D)*dshape(j,D)*n(D) * (1/(wavespeed*wavespeed))
+                                                                   + InnerProduct(sig,tau)*n(D)
+                                                                   + dshape(i,D)*InnerProduct(tau,n.Range(0,D))
+                                                                   + dshape(j,D)*InnerProduct(sig,n.Range(0,D)) );
                         }
                     }
-                }
 
-                // Integration over bot of tent
-                v = TentFaceVerts<D>(tent, elnr, ma, 0);
-                n = TentFaceNormal<D>(v,0);
-                bs = v.Row(D);
-                A = TentFaceArea<D>(v);
-                for(int imip=0;imip<mir.Size();imip++)
-                {
-                    Vec<D+1> p;
-                    p.Range(0,D) = mir[imip].GetPoint();
-                    p(D) = faceint.Evaluate(ir[imip], bs);
+                    // Integration over bot of tent
+                    n = TentFaceNormal<D>(vbot,0);
+                    mir[imip].SetMeasure(TentFaceArea<D>(vbot));
+                    p(D) = faceint.Evaluate(ir[imip], linearbasis_bot);
 
-                    FlatMatrix<> dshape(nbasis,D+1,lh);
-                    tel.CalcDShape(p,dshape);
-                    FlatVector<> shape(nbasis,lh);
-                    tel.CalcShape(p,shape);
+                    tel.CalcDShape(mir[imip],dshape);
+                    tel.CalcShape(mir[imip],shape);
 
                     int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
-                    double weight = A*ir[imip].Weight();
                     for(int j=0;j<nbasis;j++)
                     {
                         Vec<D> tau = -dshape.Row(j).Range(0,D);
-                        elvec(j) -= weight * wavefront(offset+D+1)*dshape(j,D)*n(D) * (1/(wavespeed*wavespeed));
-                        elvec(j) -= weight * InnerProduct(wavefront.Range(offset+1,offset+D+1),tau)*n(D);
-                        elvec(j) -= weight * wavefront(offset+D+1)*InnerProduct(tau,n.Range(0,D));
-                        elvec(j) -= weight * dshape(j,D)*InnerProduct(wavefront.Range(offset+1,offset+D+1),n.Range(0,D));
-                        elvec(j) += weight * wavefront(offset)*shape(j);
+                        elvec(j) += mir[imip].GetWeight() * (- wavefront(offset+D+1)*dshape(j,D)*n(D) * (1/(wavespeed*wavespeed))
+                                                             - InnerProduct(wavefront.Range(offset+1,offset+D+1),tau)*n(D)
+                                                             - wavefront(offset+D+1)*InnerProduct(tau,n.Range(0,D))
+                                                             - dshape(j,D)*InnerProduct(wavefront.Range(offset+1,offset+D+1),n.Range(0,D))
+                                                             + wavefront(offset)*shape(j) );
 
                         for(int i=0;i<nbasis;i++)
                         {
-                            elmat(j,i) += weight * ( shape(i)*shape(j) );
+                            elmat(j,i) += mir[imip].GetWeight() * ( shape(i)*shape(j) );
                         }
                     }
                 }
@@ -200,41 +191,44 @@ namespace ngcomp
             //Integrate over side of tent
             for(auto surfel : ma->GetVertexSurfaceElements(tent->vertex))
             {
+                double A;
+                Vec<D+1> n;
+                Mat<D+1,D> map;
+                Vec<D+1> shift;
+                if(D==1)
+                {
+                    A = tent->ttop - tent->tbot;
+                    n = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n(D) = 0; n /= L2Norm(n);
+                    map(0,0) = 0; map(1,0) = A;
+                    shift(0) = ma->GetPoint<D>(tent->vertex)[0];
+                    shift(1) = tent->tbot;
+                }
+                else if(D==2)
+                {
+                    auto sel_verts = ma->GetElVertices(ElementId(BND,surfel));
+                    int nbv = tent->vertex==sel_verts[0] ? sel_verts[1] : sel_verts[0];
+                    Mat<D+1,D+1> v;
+                    for(int i=0;i<D;i++)
+                        v.Col(i).Range(0,D) = ma->GetPoint<D>(tent->vertex);
+                    v.Col(D).Range(0,D) = ma->GetPoint<D>(nbv);
+                    v(D,0) = tent->ttop;
+                    v(D,1) = tent->tbot;
+                    v(D,2) = tent->nbtime[tent->nbv.Pos(nbv)];
+                    A = TentFaceArea<D>(v);
+
+                    n.Range(0,D) =  ma->GetPoint<D>(sel_verts[0]) - ma->GetPoint<D>(sel_verts[1]);
+                    n[2] = n[0]; n[0] = n[1]; n[1] = n[2]; n[2] = 0;
+                    n[0] = -n[0];
+                    n /= L2Norm(n);
+
+                    map.Col(0) = v.Col(1)-v.Col(0);
+                    map.Col(1) = v.Col(2)-v.Col(0);
+                    shift = v.Col(0);
+                }
+
                 for(int imip=0;imip<ir.Size();imip++)
                 {
-                    double A;
-                    Vec<D+1> n;
-                    Vec<D+1> p;
-                    if(D==1)
-                    {
-                        A = tent->ttop - tent->tbot;
-                        n = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n(D) = 0; n /= L2Norm(n);
-                        p.Range(0,D) = ma->GetPoint<D>(tent->vertex);
-                        p(D) = A*ir[imip].Point()[0] + tent->tbot;
-                    }
-                    else if(D==2)
-                    {
-                        auto sel_verts = ma->GetElVertices(ElementId(BND,surfel));
-                        int nbv = tent->vertex==sel_verts[0] ? sel_verts[1] : sel_verts[0];
-                        Mat<D+1,D+1> v = 0;
-                        for(int i=0;i<D;i++)
-                            v.Col(i).Range(0,D) = ma->GetPoint<D>(tent->vertex);
-                        v.Col(D).Range(0,D) = ma->GetPoint<D>(nbv);
-                        v(D,0) = tent->ttop;
-                        v(D,1) = tent->tbot;
-                        v(D,2) = tent->nbtime[tent->nbv.Pos(nbv)];
-                        A = TentFaceArea<D>(v);
-
-                        n.Range(0,D) =  ma->GetPoint<D>(sel_verts[0]) - ma->GetPoint<D>(sel_verts[1]);
-                        n[2] = n[0]; n[0] = n[1]; n[1] = n[2]; n[2] = 0;
-                        n[0] = -n[0];
-                        n /= L2Norm(n);
-
-                        Mat<D+1,D> map;
-                        map.Col(0) = v.Col(1)-v.Col(0);
-                        map.Col(1) = v.Col(2)-v.Col(0);
-                        p = map * ir[imip].Point() + v.Col(0);
-                    }
+                    Vec<D+1> p = map * ir[imip].Point() + shift;
                     FlatMatrix<> dshape(nbasis,D+1,lh);
                     tel.CalcDShape(p,dshape);
                     double weight = A*ir[imip].Weight();
