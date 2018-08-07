@@ -15,7 +15,7 @@ namespace ngcomp
         int nvert;
         int local_ndof;
         float c=1;
-        bool testshift=false;
+        int useshift=1;
         int basistype;
 
         public:
