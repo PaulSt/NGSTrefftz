@@ -26,6 +26,7 @@ namespace ngcomp
         flags.GetNumFlag ("order", 3)); // flags.GetDefineFlag ("order");
     c = flags.GetNumFlag ("wavespeed", 1);
     basistype = flags.GetNumFlag ("basistype", 0);
+    useshift = flags.GetNumFlag ("useshift", 1);
 
     local_ndof = (BinCoeff (D - 1 + order, order)
                   + BinCoeff (D - 1 + order - 1, order - 1));
@@ -144,7 +145,7 @@ namespace ngcomp
                              + pow (c * (v1 (D - 1) - v2 (D - 1)), 2)));
           }
       }
-    return anisotropicdiam;
+    return anisotropicdiam * useshift;
   }
 
   template <int D> Vec<D> TrefftzFESpace ::ElCenter (ElementId ei) const
@@ -153,7 +154,7 @@ namespace ngcomp
     auto vertices_index = ma->GetElVertices (ei);
     for (auto vertex : vertices_index)
       center += ma->GetPoint<D> (vertex);
-    center *= (1.0 / vertices_index.Size ());
+    center *= (1.0 / vertices_index.Size ()) * useshift;
     return center;
   }
 
