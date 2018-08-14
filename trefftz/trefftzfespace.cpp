@@ -120,7 +120,7 @@ namespace ngcomp
                 anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1(0,D-2) - v2(0,D-2)) + pow(c*(v1(D-1)-v2(D-1)),2) ) );
             }
         }
-        return anisotropicdiam * useshift;
+        return anisotropicdiam * useshift + 1*(useshift==0);
     }
 
     template<int D>
