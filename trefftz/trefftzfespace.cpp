@@ -145,7 +145,7 @@ namespace ngcomp
                              + pow (c * (v1 (D - 1) - v2 (D - 1)), 2)));
           }
       }
-    return anisotropicdiam * useshift;
+    return anisotropicdiam * useshift + 1 * (useshift == 0);
   }
 
   template <int D> Vec<D> TrefftzFESpace ::ElCenter (ElementId ei) const
