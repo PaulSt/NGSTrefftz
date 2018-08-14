@@ -107,7 +107,7 @@ def DGsolve(fes,a,f):
 
     rows,cols,vals = a.mat.COO()
     A = sp.sparse.csr_matrix((vals,(rows,cols)))
-    gfu.vec.FV().NumPy()[:] = sp.sparse.linalg.spsolve(A,f.vec.FV())
+    # gfu.vec.FV().NumPy()[:] = sp.sparse.linalg.spsolve(A,f.vec.FV())
 
     # A = A.todense()
     # nmatclean = A[~(A==0).all(1).A1,:]
@@ -117,8 +117,11 @@ def DGsolve(fes,a,f):
     # sol = np.zeros(a.mat.height)
     # sol[~(A==0).all(1).A1] = solclean
     # gfu.vec.FV().NumPy()[:] = sol
-    # cond = np.linalg.cond(A.todense())
-    cond = 0
+    cond = np.linalg.cond(A.todense())
+    # cond = 0
+    # print(cond)
+    # print(a.mat.height)
+    # print(a.mat.width)
 	# nmat = np.zeros((a.mat.height,a.mat.width))
 	# nvec = np.zeros(a.mat.width)
 	#
@@ -135,5 +138,6 @@ def DGsolve(fes,a,f):
 	#print(min(np.linalg.eigvalsh(0.5*(nmat + nmat.transpose()))))
 	#nmatinv = np.linalg.inv(nmat)
 	#print(min(np.linalg.eigvalsh(0.5*(nmatinv + nmatinv.transpose()))))
+    gfu.vec.data = a.mat.Inverse()*f.vec
 
     return [gfu,cond]
