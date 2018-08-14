@@ -15,23 +15,11 @@ namespace ngcomp
     {
         integer n = a.Width();
         integer lda = a.Dist();
-        double rcond;
         integer success;
-        char fact = 'E';
         char trans = 'T';
-        char equed = 'N';
         integer nrhs = 1;
         ArrayMem<integer,100> ipiv(n);
-        ArrayMem<double,100> dpiv(n);
-        ArrayMem<double,100> berr(n);
-        ArrayMem<double,100> ferr(n);
-        ArrayMem<double,100> af(n);
-        ArrayMem<double,100> work(4*n);
-        ArrayMem<integer,100> iwork(n);
-        Vector<> x(n);
 
-        //dgesvx_ (&fact,&trans,&n,&nrhs,&a(0,0),&lda,&af[0],&lda,&ipiv[0],&equed,&dpiv[0],&dpiv[0],&b[0],&n,&x[0],&n,&rcond,&ferr[0],&berr[0],&work[0],&iwork[0],&success); b=x;
-        //dgesv_(&n,&nrhs,&a(0,0),&lda,&ipiv[0],&b[0],&lda,&success);
         dgetrf_(&n,&n,&a(0,0),&lda,&ipiv[0],&success);
         dgetrs_(&trans,&n,&nrhs,&a(0,0),&lda,&ipiv[0],&b[0],&lda,&success);
     }
