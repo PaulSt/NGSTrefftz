@@ -15,12 +15,10 @@ namespace ngcomp
     {
         integer n = a.Width();
         integer lda = a.Dist();
-        integer ldb = b.Dist();
         double rcond;
-        double rpvgrw;
         integer success;
         char fact = 'E';
-        char trans = 'N';
+        char trans = 'T';
         char equed = 'N';
         integer nrhs = 1;
         ArrayMem<integer,100> ipiv(n);
@@ -30,30 +28,18 @@ namespace ngcomp
         ArrayMem<double,100> af(n);
         ArrayMem<double,100> work(4*n);
         ArrayMem<integer,100> iwork(n);
-        integer iter;
         Vector<> x(n);
-        int n_err_bnds = 0;
-        int nparams = 0;
-        SliceMatrix<double> ac(a);
-        char uplo = 'L';
 
-        //dgesvxx_ (&fact,&trans,&n,&nrhs,&a(0,0),&lda,&af[0],&lda,&ipiv[0],&equed,&dpiv[0],&dpiv[0],&b[0],&lda,&x[0],&lda,&rcond,&rpvgrw,&dpiv[0],&n_err_bnds,&dpiv[0],&dpiv[0],&nparams,&dpiv[0],&work[0],&ipiv[0],&success);
-        dgesvx_ (&fact,&trans,&n,&nrhs,&a(0,0),&lda,&af[0],&lda,&ipiv[0],&equed,&dpiv[0],&dpiv[0],&b[0],&n,&x[0],&n,&rcond,&ferr[0],&berr[0],&work[0],&iwork[0],&success);
+        //dgesvx_ (&fact,&trans,&n,&nrhs,&a(0,0),&lda,&af[0],&lda,&ipiv[0],&equed,&dpiv[0],&dpiv[0],&b[0],&n,&x[0],&n,&rcond,&ferr[0],&berr[0],&work[0],&iwork[0],&success); b=x;
         //dgesv_(&n,&nrhs,&a(0,0),&lda,&ipiv[0],&b[0],&lda,&success);
-        //dsgesv_(&n,&nrhs,&a(0,0),&lda,&ipiv[0],&b[0],&lda,&x[0],&lda,&work[0],&swork[0],&iter,&success);
-
-        //dpotrf_ (&uplo,&n,&a(0,0),&lda,&success);
-        b=x;
-
-        cout << endl << "lapack: " << endl;
-        cout << "lapack success: " <<  success << endl;
+        dgetrf_(&n,&n,&a(0,0),&lda,&ipiv[0],&success);
+        dgetrs_(&trans,&n,&nrhs,&a(0,0),&lda,&ipiv[0],&b[0],&lda,&success);
     }
 
     template<int D>
-    Vec<D+2> TestSolution(Vec<D+1> p)
+    Vec<D+2> TestSolution(Vec<D+1> p, double wavespeed)
     {
         double x = p[0]; double t = p[D];
-        int wavespeed = 1;
         Vec<D+2> sol;
         int k = 3;
         if(D==1){
@@ -72,7 +58,7 @@ namespace ngcomp
     }
 
     template<int D, typename TFUNC>
-    Vector<> MakeWavefront(IntegrationRule ir, shared_ptr<MeshAccess> ma, LocalHeap& lh, TFUNC func, double time){
+    Vector<> MakeWavefront(IntegrationRule ir, shared_ptr<MeshAccess> ma, LocalHeap& lh, TFUNC func, double time, double wavespeed){
         Vector<> ic(ir.Size() * ma->GetNE() * (D+2));
         for(int elnr=0;elnr<ma->GetNE();elnr++){
             MappedIntegrationRule<1,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
@@ -82,7 +68,7 @@ namespace ngcomp
                 p.Range(0,D+1) = mir[imip].GetPoint();
                 p[D] = time;
                 int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
-                ic.Range(offset,offset+D+2) = func(p);
+                ic.Range(offset,offset+D+2) = func(p,wavespeed);
             }
         }
         return ic;
@@ -91,12 +77,15 @@ namespace ngcomp
     template<int D>
     Vector<> EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, Vector<> wavefront)
     {
-        LocalHeap lh(500000);
+        LocalHeap lh(10000000);
         T_TrefftzElement<D+1> tel(order,wavespeed);
         int nbasis = tel.GetNBasis();
 
+        Vector<> solutioncoeffs(nbasis * ma->GetNE());
+
         const ELEMENT_TYPE eltyp = D==1 ? ET_SEGM : ET_TRIG;
-        IntegrationRule ir(eltyp, order+2);
+        IntegrationRule ir(eltyp, order*2);
+        cout << "nbasis: " << nbasis << " ne: " << ma->GetNE() << " order: " << order << " number of ip: " << ir.Size() << endl;
         ScalarFE<eltyp,1> faceint;
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
@@ -105,7 +94,7 @@ namespace ngcomp
         if(wavefront.Size() == 0)
         {
             wavefront(ir.Size() * ma->GetNE() * (D+2));
-            wavefront = MakeWavefront<D>(ir,ma,lh,TestSolution<D>,0);
+            wavefront = MakeWavefront<D>(ir,ma,lh,TestSolution<D>,0,wavespeed);
         }
 
         RunParallelDependency (tps.tent_dependency, [&] (int i) {
@@ -115,12 +104,12 @@ namespace ngcomp
             //cout << endl << "%%%% tent: " << i << " vert: " << tent->vertex << " els: " << tent->els << endl;
             //cout << *tent << endl;
 
-            //Vec<D+1> center;
-            //center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
-            //center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
-            //double size = (tent->ttop-tent->tbot)*(tent->ttop-tent->tbot);
-            //tel.SetCenter(center);
-            //tel.SetElSize(size);
+            Vec<D+1> center;
+            center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
+            center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
+            double size = (tent->ttop-tent->tbot);
+            tel.SetCenter(center);
+            tel.SetElSize(size);
 
             FlatMatrix<> elmat(nbasis,lh);
             FlatVector<> elvec(nbasis,lh);
@@ -235,7 +224,7 @@ namespace ngcomp
                     for(int j=0;j<nbasis;j++)
                     {
                         Vec<D> tau = -dshape.Row(j).Range(0,D);
-                        elvec(j) -= weight * InnerProduct(tau,n.Range(0,D)) * TestSolution<D>(p)[2];
+                        elvec(j) -= weight * InnerProduct(tau,n.Range(0,D)) * TestSolution<D>(p,wavespeed)[D+1];
                         for(int i=0;i<nbasis;i++)
                         {
                             Vec<D> sig = -dshape.Row(i).Range(0,D);
@@ -245,24 +234,14 @@ namespace ngcomp
                 }
             }
 
-            //Matrix<> jmat(elmat);
-            //for(int i=0;i<nbasis;i++){
-            //elvec[i] /= sqrt(jmat(i,i));
-            //for(int j=0;j<nbasis;j++){
-            //elmat(j,i)/=sqrt(jmat(i,i)*jmat(j,j));
-            //}
-            //}
-            //for(int i=0;i<nbasis;i++) sol[i]/=sqrt(jmat(i,i));
+            LapackSolve(elmat,elvec);
+            Vector<> sol = elvec;
 
-            //Matrix<> mat(elmat);
-            //Vector<> vec(elvec);
-            //LapackSolve(mat,vec);
-            //cout << mat << endl;
-
-            CalcInverse(elmat,INVERSE_LIB::INV_LAPACK);
-            Vector<> sol = elmat*elvec;
-            //cout <<"er: " << L2Norm(sol-vec)<< endl;
-            //sol = vec;
+            //CalcInverse(elmat,INVERSE_LIB::INV_LAPACK);
+            //Vector<> sol2 = elmat*elvec;
+            
+            for(auto elnr: tent->els)
+                solutioncoeffs.Range(elnr*nbasis,(elnr+1)*nbasis) = sol;
 
             // eval solution on top of tent
             for(auto elnr: tent->els)
@@ -291,12 +270,12 @@ namespace ngcomp
                     wavefront.Range(offset+1,offset+D+1) *= (-1);
 
                     //cout << "at " << p << " value: " <<endl<< wavefront.Range(offset,offset+D+2) << endl; //InnerProduct(sol,shape) << endl << Trans(dshape)*sol << endl;
-                    //cout << "corr sol: " << TestSolution<D>(p) << endl;
+                    //cout << "corr sol: " << TestSolution<D>(p,wavespeed) << endl;
                 }
             }
         }); // end loop over tents
 
-        Vector<> wavefront_corr = MakeWavefront<D>(ir,ma,lh,TestSolution<D>, dt);
+        Vector<> wavefront_corr = MakeWavefront<D>(ir,ma,lh,TestSolution<D>, dt,wavespeed);
         double l2error=0;
         for(int elnr=0;elnr<ma->GetNE();elnr++)
         {
@@ -379,13 +358,15 @@ namespace ngcomp
 #include <python_ngstd.hpp>
 void ExportEvolveTent(py::module m)
 {
-    m.def("EvolveTents", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt) //-> shared_ptr<MeshAccess>
+    m.def("EvolveTents", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt) -> Vector<>//-> shared_ptr<MeshAccess>
           {
               Vector<> wavefront;
+              Vector<> sol;
               if(ma->GetDimension() == 1)
-                  EvolveTents<1>(order,ma,wavespeed,dt,wavefront);
+                  sol = EvolveTents<1>(order,ma,wavespeed,dt,wavefront);
               else if(ma->GetDimension() == 2)
-                  EvolveTents<2>(order,ma,wavespeed,dt,wavefront);
+                  sol = EvolveTents<2>(order,ma,wavespeed,dt,wavefront);
+              return sol;
 
           }//, py::call_guard<py::gil_scoped_release>()
          );

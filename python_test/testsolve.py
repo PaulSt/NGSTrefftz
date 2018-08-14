@@ -45,18 +45,18 @@ def Cartsolve2D(fes,c,fullsys=False,inputsol=None):
     We can solve on a simple rectangle grid
     >>> N = 4
     >>> c = 2
-    >>> order = 6
+    >>> order = 8
     >>> mesh = CartSquare(N,c*N)
 
     using Trefftz basis
     >>> fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0)
     >>> Cartsolve2D(fes,c) # doctest:+ELLIPSIS
-    [13.0, 0, ...e-07, ...e-05]
+    [17.0, 3, ...e-09, ...e-08]
 
     or normal L2 basis, requiring the full system
     >>> fes = L2(mesh, order=order, dgjumps=True)
     >>> Cartsolve2D(fes,c,True) # doctest:+ELLIPSIS
-    [49.0, 0, ...e-09, ...e-07]
+    [81.0, ..., ...e-10, ...e-09]
     """
     if inputsol is None:
         inputsol = TestSolution2D(fes,c)
