@@ -12,8 +12,8 @@ namespace ngcomp
   typedef map<netgen::Point3d, netgen::PointIndex> Point2IndexMap;
 
   template <int D>
-  Vector<> EvolveTents (int order, shared_ptr<MeshAccess> ma, double wavespeed,
-                        double dt, Vector<> wavefront);
+  void EvolveTents (int order, shared_ptr<MeshAccess> ma, double wavespeed,
+                    double dt, SliceVector<> wavefront);
 
   template <int D>
   Mat<D + 1, D + 1>
@@ -22,6 +22,8 @@ namespace ngcomp
   template <int D> double TentFaceArea (Mat<D + 1, D + 1> v);
 
   template <int D> Vec<D + 1> TentFaceNormal (Mat<D + 1, D + 1> v, bool dir);
+
+  template <int D> Vec<D + 2> TestSolution (Vec<D + 1> p, double wavespeed);
 }
 
 #ifdef NGS_PYTHON
