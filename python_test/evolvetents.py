@@ -21,8 +21,10 @@ def GetFESTrefftz(mesh,c=1):
 order = 5;
 c=3
 initmesh = Mesh(SegMesh(4,0,1))
-initmesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
-mat = EvolveTents(order,initmesh,c,0.5)
+# initmesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
+wavefront = EvolveTentsMakeWavefront(order,initmesh,c,0)
+mat = EvolveTents(order,initmesh,c,0.5,wavefront)
+print(EvolveTentsPostProcess(order,initmesh,mat,EvolveTentsMakeWavefront(order,initmesh,c,0.5)))
 # A = mat.NumPy()[:,1:12]
 # scipy.io.savemat('arrdata.mat', mdict={'arr': arr})
 
