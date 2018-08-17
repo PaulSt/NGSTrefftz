@@ -371,7 +371,7 @@ namespace ngcomp
         return ic;
     }
 
-    template<int D> 
+    template<int D>
     double Postprocess(int order, shared_ptr<MeshAccess> ma, Vector<> wavefront, Vector<> wavefront_corr)
     {
         double l2error=0;
@@ -402,6 +402,8 @@ void ExportEvolveTent(py::module m)
                   EvolveTents<1>(order,ma,wavespeed,dt,wavefront);
               else if(D == 2)
                   EvolveTents<2>(order,ma,wavespeed,dt,wavefront);
+              else if(D == 3)
+                  EvolveTents<3>(order,ma,wavespeed,dt,wavefront);
               return wavefront;
           }//, py::call_guard<py::gil_scoped_release>()
          );
@@ -413,6 +415,8 @@ void ExportEvolveTent(py::module m)
                   wavefront = MakeWavefront<1>(order, ma, wavespeed, time);
               else if(D == 2)
                   wavefront = MakeWavefront<2>(order, ma, wavespeed, time);
+              else if(D == 3)
+                  wavefront = MakeWavefront<3>(order, ma, wavespeed, time);
               return wavefront;
           }
          );
@@ -424,6 +428,8 @@ void ExportEvolveTent(py::module m)
                   l2error = Postprocess<1>(order, ma, wavefront, wavefront_corr);
               else if(D == 2)
                   l2error = Postprocess<2>(order, ma, wavefront, wavefront_corr);
+              else if(D == 3)
+                  l2error = Postprocess<3>(order, ma, wavefront, wavefront_corr);
               return l2error;
           }
          );
