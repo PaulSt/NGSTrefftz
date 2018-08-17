@@ -289,5 +289,6 @@ namespace ngfem
     template class ScalarMappedElement<1>;
     template class ScalarMappedElement<2>;
     template class ScalarMappedElement<3>;
+    template class ScalarMappedElement<4>;
 
     }
