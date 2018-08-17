@@ -240,19 +240,41 @@ namespace ngcomp
     }
 
     template<int D>
-    double TentFaceArea( Mat<D+1,D+1> v )
+    double TentFaceArea( Mat<D+1,D+1> ve )
     {
         switch(D) {
-            case 1 : return L2Norm(v.Col(0)-v.Col(1));
+            case 1 : return L2Norm(ve.Col(0)-ve.Col(1));
                      break;
             case 2 :{
-                        double a = L2Norm(v.Col(0)-v.Col(1));
-                        double b = L2Norm(v.Col(1)-v.Col(2));
-                        double c = L2Norm(v.Col(0)-v.Col(2));
+                        double a = L2Norm(ve.Col(0)-ve.Col(1));
+                        double b = L2Norm(ve.Col(1)-ve.Col(2));
+                        double c = L2Norm(ve.Col(0)-ve.Col(2));
                         double s = 0.5*(a+b+c);
                         return sqrt(s*(s-a)*(s-b)*(s-c));
                         break;
                     }
+            case 3:{
+                       double U = L2Norm(ve.Col(0)-ve.Col(1));
+                       double V = L2Norm(ve.Col(1)-ve.Col(2));
+                       double W = L2Norm(ve.Col(2)-ve.Col(0));
+                       double u = L2Norm(ve.Col(3)-ve.Col(2));
+                       double v = L2Norm(ve.Col(3)-ve.Col(0));
+                       double w = L2Norm(ve.Col(3)-ve.Col(1));
+
+                       double X = (w-U+v)*(U+v+w);
+                       double x = (U-v+w)*(v-w+U);
+                       double Y = (u-V+w)*(V+w+u);
+                       double y = (V-w+u)*(w-u+V);
+                       double Z = (v-W+u)*(W+u+v);
+                       double z = (W-u+v)*(u-v+W);
+
+                       double a = sqrt(x*Y*Z); 
+                       double b = sqrt(y*Z*X);
+                       double c = sqrt(z*X*Y);
+                       double d = sqrt(x*y*z);
+
+                       return sqrt((-a+b+c+d)*(a-b+c+d)*(a+b-c+d)*(a+b+c-d)) / (192*u*v*w);
+                   }
         }
     }
 
