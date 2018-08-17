@@ -273,6 +273,7 @@ namespace ngfem
   template class T_TrefftzElement<1>;
   template class T_TrefftzElement<2>;
   template class T_TrefftzElement<3>;
+  template class T_TrefftzElement<4>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
