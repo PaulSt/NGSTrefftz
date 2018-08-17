@@ -97,7 +97,7 @@ namespace ngcomp
                     }
 
                     // Integration over bot of tent
-                    n = TentFaceNormal<D>(vbot,0);
+                    n = TentFaceNormal<D>(vbot,-1);
                     mir[imip].SetMeasure(TentFaceArea<D>(vbot));
                     p(D) = faceint.Evaluate(ir[imip], linearbasis_bot);
 
@@ -258,7 +258,7 @@ namespace ngcomp
     }
 
     template<int D>
-    Vec<D+1> TentFaceNormal( Mat<D+1,D+1> v, bool top )
+    Vec<D+1> TentFaceNormal( Mat<D+1,D+1> v, int top )
     {
         Vec<D+1> normv;
         switch(D){
@@ -275,14 +275,38 @@ namespace ngcomp
                         normv(1) = a(2) * b(0) - a(0) * b(2);
                         normv(2) = a(0) * b(1) - a(1) * b(0);
                         normv /= sqrt(L2Norm2(a)*L2Norm2(b)- (a[0]*b[0]+a[1]*b[1]+a[2]*b[2])*(a[0]*b[0]+a[1]*b[1]+a[2]*b[2]));
+                    }
+            case 3: {
+                        for(int d=1;d<=D;d++)
+                            v.Col(d) = v.Col(0) - v.Col(d);
+
+                        for (unsigned int i = 0; i <= D; i++)
+                        {
+                            Mat<D,D> pS;
+                            for (unsigned int j = 1, r = 0; j <=D; j++, r++)
+                            {
+                                for (unsigned int k = 0, c = 0; k < D+1; k++)
+                                {
+                                    if (k == i)
+                                        continue;
+                                    pS(c,r) = v(k,j);
+                                    c++;
+                                }
+                            }
+                            if ((i % 2) == 0)
+                                normv[i] += Det(pS);
+                            else
+                                normv[i] -= Det(pS);
+                        }
+                        normv /= L2Norm(normv);
                         break;
                     }
         }
         if(top == 1) normv *= sgn_nozero<double>(normv[D]);
-        else normv *= (-sgn_nozero<double>(normv[D]));
+        else if(top == -1) normv *= (-sgn_nozero<double>(normv[D]));
         return normv;
     }
-    
+
 
     template<int D>
     Vec<D+2> TestSolution(Vec<D+1> p, double wavespeed)
