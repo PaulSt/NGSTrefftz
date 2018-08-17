@@ -152,8 +152,7 @@ namespace ngcomp
                     A = TentFaceArea<D>(v);
 
                     n.Range(0,D) =  ma->GetPoint<D>(sel_verts[0]) - ma->GetPoint<D>(sel_verts[1]);
-                    n[2] = n[0]; n[0] = n[1]; n[1] = n[2]; n[2] = 0;
-                    n[0] = -n[0];
+                    n[2] = n[0]; n[0] = -n[1]; n[1] = n[2]; n[2] = 0;
                     n /= L2Norm(n);
 
                     map.Col(0) = v.Col(1)-v.Col(0);
