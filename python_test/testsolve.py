@@ -51,7 +51,7 @@ def Cartsolve2D(fes,c,fullsys=False,inputsol=None):
     using Trefftz basis
     >>> fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0)
     >>> Cartsolve2D(fes,c) # doctest:+ELLIPSIS
-    [17.0, 3, ...e-09, ...e-08]
+    [17.0, ..., ...e-09, ...e-08]
 
     or normal L2 basis, requiring the full system
     >>> fes = L2(mesh, order=order, dgjumps=True)

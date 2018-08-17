@@ -24,8 +24,8 @@ namespace ngfem
     template<int D>
     void T_TrefftzElement<D> :: CalcShape (BareSliceVector<> point, BareSliceVector<> shape) const
     {
-        Vec<D+1> cpoint;
-        for(int i = 0; i <= D+1 ; i++) cpoint(i) = point(i);
+        Vec<D> cpoint;
+        for(int i = 0; i < D ; i++) cpoint(i) = point(i);
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[D-1] *= c;
         Matrix<double> coeff(TrefftzBasis());
 
@@ -42,8 +42,8 @@ namespace ngfem
     template<int D>
     void T_TrefftzElement<D> :: CalcDShape (BareSliceVector<> point, SliceMatrix<> dshape) const
     {
-        Vec<D+1> cpoint;
-        for(int i = 0; i <= D+1 ; i++) cpoint(i) = point(i);
+        Vec<D> cpoint;
+        for(int i = 0; i < D ; i++) cpoint(i) = point(i);
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[D-1] *= c;
 
         for(int d=0;d<D;d++){//loop over derivatives/dimensions
@@ -86,8 +86,7 @@ namespace ngfem
         if(order != ord || btype != basistype){
             for(int d=0;d<D;d++){
                 basisstorage[d].SetSize(pascal(D+1,ord), nbasis);
-                int count = 0;
-                for(int i=0;i<npoly;i++)
+                for(int i=0, count=0;i<npoly;i++)
                 {
                     if(indices(i,d) != 0)
                         basisstorage[d].Row(count++) = indices(i,d)*TrefftzBasis().Row(i);
