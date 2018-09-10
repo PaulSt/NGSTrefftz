@@ -38,15 +38,15 @@ namespace ngcomp
         IntegrationRule ir(eltyp, order*2);
         ScalarFE<eltyp,1> faceint;
 
-        cout << "nbasis: " << nbasis << " ne: " << ma->GetNE() << " order: " << order << " number of ip: " << ir.Size() << endl;
+        //cout << "nbasis: " << nbasis << " ne: " << ma->GetNE() << " order: " << order << " number of ip: " << ir.Size() << endl;
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
         tps.PitchTents(dt, wavespeed); // adt = time slab height, wavespeed
 
-        RunParallelDependency (tps.tent_dependency, [&] (int i) {
+        RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             // LocalHeap slh = lh.Split();  // split to threads
             HeapReset hr(lh);
-            Tent* tent = tps.tents[i];
+            Tent* tent = tps.tents[tentnr];
             //cout << endl << "%%%% tent: " << i << " vert: " << tent->vertex << " els: " << tent->els << endl;
             //cout << *tent << endl;
 
@@ -63,7 +63,7 @@ namespace ngcomp
             for(auto elnr: tent->els)
             {
                 INT<D+1> vnr = ma->GetEdgePNums(elnr);
-                MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
+                MappedIntegrationRule<D,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
 
                 Mat<D+1,D+1> vtop = TentFaceVerts<D>(tent, elnr, ma, 1);
                 Vec<D+1> linearbasis_top = vtop.Row(D);
@@ -71,17 +71,19 @@ namespace ngcomp
                 Vec<D+1> linearbasis_bot = vbot.Row(D);
                 for(int imip=0;imip<mir.Size();imip++)
                 {
-                    FlatVector<> p = mir[imip].GetPoint();
+                    Vec<D+1> p;
+                    p.Range(0,D) = mir[imip].GetPoint();
 
                     // Integration over top of tent
                     Vec<D+1> n = TentFaceNormal<D>(vtop,1);
                     mir[imip].SetMeasure(TentFaceArea<D>(vtop));
                     p(D) = faceint.Evaluate(ir[imip], linearbasis_top);
 
-                    FlatMatrix<> dshape(nbasis,D+1,lh);
-                    tel.CalcDShape(mir[imip],dshape);
                     FlatVector<> shape(nbasis,lh);
-                    tel.CalcShape(mir[imip],shape);
+                    FlatMatrix<> dshape(nbasis,D+1,lh);
+
+                    tel.CalcShape(p,shape);
+                    tel.CalcDShape(p,dshape);
 
                     for(int i=0;i<nbasis;i++)
                     {
@@ -101,8 +103,8 @@ namespace ngcomp
                     mir[imip].SetMeasure(TentFaceArea<D>(vbot));
                     p(D) = faceint.Evaluate(ir[imip], linearbasis_bot);
 
-                    tel.CalcDShape(mir[imip],dshape);
-                    tel.CalcShape(mir[imip],shape);
+                    tel.CalcShape(p,shape);
+                    tel.CalcDShape(p,dshape);
 
                     int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
                     for(int j=0;j<nbasis;j++)
@@ -143,9 +145,9 @@ namespace ngcomp
                     auto sel_verts = ma->GetElVertices(ElementId(BND,surfel));
                     int nbv = tent->vertex==sel_verts[0] ? sel_verts[1] : sel_verts[0];
                     Mat<D+1,D+1> v;
-                    for(int i=0;i<D;i++)
+                    for(int i=0;i<2;i++)
                         v.Col(i).Range(0,D) = ma->GetPoint<D>(tent->vertex);
-                    v.Col(D).Range(0,D) = ma->GetPoint<D>(nbv);
+                    v.Col(2).Range(0,D) = ma->GetPoint<D>(nbv);
                     v(D,0) = tent->ttop;
                     v(D,1) = tent->tbot;
                     v(D,2) = tent->nbtime[tent->nbv.Pos(nbv)];
@@ -192,7 +194,7 @@ namespace ngcomp
             for(auto elnr: tent->els)
             {
                 INT<D+1> vnr = ma->GetEdgePNums(elnr);
-                MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
+                MappedIntegrationRule<D,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
 
                 Mat<D+1,D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
                 Vec<D+1> n = TentFaceNormal<D>(v,1);
@@ -268,7 +270,7 @@ namespace ngcomp
                        double Z = (v-W+u)*(W+u+v);
                        double z = (W-u+v)*(u-v+W);
 
-                       double a = sqrt(x*Y*Z); 
+                       double a = sqrt(x*Y*Z);
                        double b = sqrt(y*Z*X);
                        double c = sqrt(z*X*Y);
                        double d = sqrt(x*y*z);
@@ -296,6 +298,7 @@ namespace ngcomp
                         normv(1) = a(2) * b(0) - a(0) * b(2);
                         normv(2) = a(0) * b(1) - a(1) * b(0);
                         normv /= sqrt(L2Norm2(a)*L2Norm2(b)- (a[0]*b[0]+a[1]*b[1]+a[2]*b[2])*(a[0]*b[0]+a[1]*b[1]+a[2]*b[2]));
+                        break;
                     }
             case 3: {
                         for(int d=1;d<=D;d++)
