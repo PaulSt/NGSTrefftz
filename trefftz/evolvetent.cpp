@@ -346,6 +346,15 @@ namespace ngcomp
             sol[1] = -sq*cos(wavespeed*t+sq*(x+y));
             sol[2] = -sq*cos(wavespeed*t+sq*(x+y));
             sol[3] = wavespeed*cos(wavespeed*t+sq*(x+y));
+        } else if(D==3) {
+            double y = p[1];
+            double z = p[2];
+            double sq = sqrt(0.33333333333333);
+            sol[0] = sin( wavespeed*t+sq*(x+y+z) );
+            sol[1] = -sq*cos(wavespeed*t+sq*(x+y+z));
+            sol[2] = -sq*cos(wavespeed*t+sq*(x+y+z));
+            sol[3] = -sq*cos(wavespeed*t+sq*(x+y+z));
+            sol[4] = wavespeed*cos(wavespeed*t+sq*(x+y+z));
         }
         return sol;
     }
