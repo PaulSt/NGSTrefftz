@@ -357,20 +357,17 @@ namespace ngcomp
           for (unsigned int i = 0; i <= D; i++)
             {
               Mat<D, D> pS;
-              for (unsigned int j = 1, r = 0; j <= D; j++, r++)
+              for (unsigned int k = 0, c = 0; k < D + 1; k++)
                 {
-                  for (unsigned int k = 0, c = 0; k < D + 1; k++)
-                    {
-                      if (k == i)
-                        continue;
-                      pS (c, r) = v (k, j);
-                      c++;
-                    }
+                  if (k == i)
+                    continue;
+                  pS.Row (c) = v.Row (k).Range (1, D + 1);
+                  c++;
                 }
               if ((i % 2) == 0)
-                normv[i] += Det (pS);
+                normv[i] = Det (pS);
               else
-                normv[i] -= Det (pS);
+                normv[i] = -Det (pS);
             }
           normv /= L2Norm (normv);
           break;
