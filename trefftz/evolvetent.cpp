@@ -161,6 +161,35 @@ namespace ngcomp
                     map.Col(1) = v.Col(2)-v.Col(0);
                     shift = v.Col(0);
                 }
+                else if(D==3)
+                {
+                    auto sel_verts = ma->GetElVertices(ElementId(BND,surfel));
+                    Mat<3,3> pv;
+                    for(int i=0;i<D;i++)
+                        pv.Col(i) = ma->GetPoint<D>(sel_verts[i]);
+                    Vec<3> pn = TentFaceNormal<2>(pv,0);
+                    n.Range(0,D) = pn;
+                    n[D] = 0;
+                    n /= L2Norm(n);
+
+                    int nbv1 = tent->vertex==sel_verts[0] ? sel_verts[2] : sel_verts[0];
+                    int nbv2 = tent->vertex==sel_verts[1] ? sel_verts[2] : sel_verts[1];
+                    Mat<D+1,D+1> v;
+                    for(int i=0;i<2;i++)
+                        v.Col(i).Range(0,D) = ma->GetPoint<D>(tent->vertex);
+                    v.Col(2).Range(0,D) = ma->GetPoint<D>(nbv1);
+                    v.Col(3).Range(0,D) = ma->GetPoint<D>(nbv2);
+                    v(D,0) = tent->ttop;
+                    v(D,1) = tent->tbot;
+                    v(D,2) = tent->nbtime[tent->nbv.Pos(nbv1)];
+                    v(D,3) = tent->nbtime[tent->nbv.Pos(nbv2)];
+                    A = TentFaceArea<3>(v);
+
+                    map.Col(0) = v.Col(1)-v.Col(0);
+                    map.Col(1) = v.Col(2)-v.Col(0);
+                    map.Col(2) = v.Col(3)-v.Col(0);
+                    shift = v.Col(0);
+                }
 
                 for(int imip=0;imip<ir.Size();imip++)
                 {
