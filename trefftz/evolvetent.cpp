@@ -353,16 +353,17 @@ namespace ngcomp
 
     template<int D>
     Vector<> MakeWavefront(int order, shared_ptr<MeshAccess> ma, double wavespeed, double time){
-        LocalHeap lh(1000000);
-        const ELEMENT_TYPE eltyp = D==1 ? ET_SEGM : ET_TRIG;
+        LocalHeap lh(10000000);
+        const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         IntegrationRule ir(eltyp, order*2);
         Vector<> ic(ir.Size() * ma->GetNE() * (D+2));
         for(int elnr=0;elnr<ma->GetNE();elnr++){
-            MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
+            HeapReset hr(lh);
+            MappedIntegrationRule<D,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
             for(int imip=0;imip<mir.Size();imip++)
             {
                 Vec<D+1> p;
-                p.Range(0,D+1) = mir[imip].GetPoint();
+                p.Range(0,D) = mir[imip].GetPoint();
                 p[D] = time;
                 int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
                 ic.Range(offset,offset+D+2) = TestSolution<D>(p,wavespeed);
@@ -375,12 +376,13 @@ namespace ngcomp
     double Postprocess(int order, shared_ptr<MeshAccess> ma, Vector<> wavefront, Vector<> wavefront_corr)
     {
         double l2error=0;
-        LocalHeap lh(1000000);
-        const ELEMENT_TYPE eltyp = D==1 ? ET_SEGM : ET_TRIG;
+        LocalHeap lh(10000000);
+        const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         IntegrationRule ir(eltyp, order*2);
         for(int elnr=0;elnr<ma->GetNE();elnr++)
         {
-            MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
+            HeapReset hr(lh);
+            MappedIntegrationRule<D,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
             for(int imip=0;imip<ir.Size();imip++)
             {
                 int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
