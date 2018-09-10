@@ -28,13 +28,13 @@ namespace ngcomp
     template<int D>
     void EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, SliceVector<double> wavefront)
     {
-        LocalHeap lh(1000000);
+        LocalHeap lh(100000000);
         T_TrefftzElement<D+1> tel(order,wavespeed);
         int nbasis = tel.GetNBasis();
 
         Vector<> solutioncoeffs(nbasis * ma->GetNE());
 
-        const ELEMENT_TYPE eltyp = D==1 ? ET_SEGM : ET_TRIG;
+        const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         IntegrationRule ir(eltyp, order*2);
         ScalarFE<eltyp,1> faceint;
 
@@ -50,12 +50,12 @@ namespace ngcomp
             //cout << endl << "%%%% tent: " << i << " vert: " << tent->vertex << " els: " << tent->els << endl;
             //cout << *tent << endl;
 
-            Vec<D+1> center;
-            center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
-            center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
-            double size = (tent->ttop-tent->tbot);
-            tel.SetCenter(center);
-            tel.SetElSize(size);
+            //Vec<D+1> center;
+            //center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
+            //center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
+            //double size = (tent->ttop-tent->tbot);
+            //tel.SetCenter(center);
+            //tel.SetElSize(size);
 
             FlatMatrix<> elmat(nbasis,lh);
             FlatVector<> elvec(nbasis,lh);
@@ -244,9 +244,6 @@ namespace ngcomp
                     wavefront(offset) = InnerProduct(shape,sol);
                     wavefront.Range(offset+1,offset+D+2) = Trans(dshape)*sol;
                     wavefront.Range(offset+1,offset+D+1) *= (-1);
-
-                    //cout << "at " << p << " value: " <<endl<< wavefront.Range(offset,offset+D+2) << endl; //InnerProduct(sol,shape) << endl << Trans(dshape)*sol << endl;
-                    //cout << "corr sol: " << TestSolution<D>(p,wavespeed) << endl;
                 }
             }
         }); // end loop over tents
