@@ -149,78 +149,32 @@ namespace ngcomp
       // Integrate over side of tent
       for (auto surfel : ma->GetVertexSurfaceElements (tent->vertex))
         {
-          double A;
+          auto sel_verts = ma->GetElVertices (ElementId (BND, surfel));
+          Mat<D + 1, D + 1> v;
+          v.Col (0).Range (0, D) = ma->GetPoint<D> (tent->vertex);
+          v (D, 0) = tent->tbot;
+          for (int n = 0; n < D; n++)
+            {
+              v.Col (n + 1).Range (0, D) = ma->GetPoint<D> (sel_verts[n]);
+              v (D, n + 1) = tent->vertex == sel_verts[n]
+                                 ? tent->ttop
+                                 : tent->nbtime[tent->nbv.Pos (sel_verts[n])];
+            }
+
+          double A = TentFaceArea<D> (v);
+
           Vec<D + 1> n;
-          Mat<D + 1, D> map;
-          Vec<D + 1> shift;
+          n.Range (0, D)
+              = TentFaceNormal<D - 1> (v.Cols (1, D).Rows (0, D - 1), 0);
           if (D == 1)
-            {
-              A = tent->ttop - tent->tbot;
-              n = sgn_nozero<int> (tent->vertex - tent->nbv[0]);
-              n (D) = 0;
-              n /= L2Norm (n);
-              map (0, 0) = 0;
-              map (1, 0) = A;
-              shift (0) = ma->GetPoint<D> (tent->vertex)[0];
-              shift (1) = tent->tbot;
-            }
-          else if (D == 2)
-            {
-              auto sel_verts = ma->GetElVertices (ElementId (BND, surfel));
-              int nbv
-                  = tent->vertex == sel_verts[0] ? sel_verts[1] : sel_verts[0];
-              Mat<D + 1, D + 1> v;
-              for (int i = 0; i < 2; i++)
-                v.Col (i).Range (0, D) = ma->GetPoint<D> (tent->vertex);
-              v.Col (2).Range (0, D) = ma->GetPoint<D> (nbv);
-              v (D, 0) = tent->ttop;
-              v (D, 1) = tent->tbot;
-              v (D, 2) = tent->nbtime[tent->nbv.Pos (nbv)];
-              A = TentFaceArea<D> (v);
+            n[0] = sgn_nozero<int> (tent->vertex - tent->nbv[0]);
+          n (D) = 0;
+          n[D] = 0;
 
-              n.Range (0, D) = ma->GetPoint<D> (sel_verts[0])
-                               - ma->GetPoint<D> (sel_verts[1]);
-              n[2] = n[0];
-              n[0] = -n[1];
-              n[1] = n[2];
-              n[2] = 0;
-              n /= L2Norm (n);
-
-              map.Col (0) = v.Col (1) - v.Col (0);
-              map.Col (1) = v.Col (2) - v.Col (0);
-              shift = v.Col (0);
-            }
-          else if (D == 3)
-            {
-              auto sel_verts = ma->GetElVertices (ElementId (BND, surfel));
-              Mat<3, 3> pv;
-              for (int i = 0; i < D; i++)
-                pv.Col (i) = ma->GetPoint<D> (sel_verts[i]);
-              Vec<3> pn = TentFaceNormal<2> (pv, 0);
-              n.Range (0, D) = pn;
-              n[D] = 0;
-              n /= L2Norm (n);
-
-              int nbv1
-                  = tent->vertex == sel_verts[0] ? sel_verts[2] : sel_verts[0];
-              int nbv2
-                  = tent->vertex == sel_verts[1] ? sel_verts[2] : sel_verts[1];
-              Mat<D + 1, D + 1> v;
-              for (int i = 0; i < 2; i++)
-                v.Col (i).Range (0, D) = ma->GetPoint<D> (tent->vertex);
-              v.Col (2).Range (0, D) = ma->GetPoint<D> (nbv1);
-              v.Col (3).Range (0, D) = ma->GetPoint<D> (nbv2);
-              v (D, 0) = tent->ttop;
-              v (D, 1) = tent->tbot;
-              v (D, 2) = tent->nbtime[tent->nbv.Pos (nbv1)];
-              v (D, 3) = tent->nbtime[tent->nbv.Pos (nbv2)];
-              A = TentFaceArea<3> (v);
-
-              map.Col (0) = v.Col (1) - v.Col (0);
-              map.Col (1) = v.Col (2) - v.Col (0);
-              map.Col (2) = v.Col (3) - v.Col (0);
-              shift = v.Col (0);
-            }
+          Mat<D + 1, D> map;
+          for (int i = 0; i < D; i++)
+            map.Col (i) = v.Col (i + 1) - v.Col (0);
+          Vec<D + 1> shift = v.Col (0);
 
           for (int imip = 0; imip < ir.Size (); imip++)
             {
@@ -358,8 +312,8 @@ namespace ngcomp
       {
       case 1:
         {
-          normv (0) = v (1, 0) - v (1, 1);
-          normv (1) = v (0, 1) - v (0, 0);
+          normv (0) = v (1, 1) - v (1, 0);
+          normv (1) = v (0, 0) - v (0, 1);
           normv /= L2Norm (normv);
           break;
         }
