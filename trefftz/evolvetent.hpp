@@ -25,6 +25,9 @@ namespace ngcomp
 
     template<int D>
     Vec<D+2> TestSolution(Vec<D+1> p, double wavespeed);
+
+    template<typename T=double>
+    void swap_if_greater(T& a, T& b);
 }
 
 #ifdef NGS_PYTHON

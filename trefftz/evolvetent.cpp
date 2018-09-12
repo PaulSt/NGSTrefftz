@@ -237,8 +237,8 @@ namespace ngcomp
                         double a = L2Norm(ve.Col(0)-ve.Col(1));
                         double b = L2Norm(ve.Col(1)-ve.Col(2));
                         double c = L2Norm(ve.Col(0)-ve.Col(2));
-                        double s = 0.5*(a+b+c);
-                        return sqrt(s*(s-a)*(s-b)*(s-c));
+                        swap_if_greater<>(a,b); swap_if_greater<>(a,c); swap_if_greater<>(b,c);
+                        return 0.25 * sqrt((a+(b+c))*(c-(a-b))*(c+(a-b))*(a+(b-c)));
                         break;
                     }
             case 3:{
@@ -261,7 +261,7 @@ namespace ngcomp
                        double c = sqrt(z*X*Y);
                        double d = sqrt(x*y*z);
 
-                       return sqrt((-a+b+c+d)*(a-b+c+d)*(a+b-c+d)*(a+b+c-d)) / (192*u*v*w);
+                       return sqrt((-a+b+c+d)*(a-b+c+d)*(a+b-c+d)*(a+b+c-d)) / (192.0*u*v*w);
                    }
         }
     }
@@ -274,7 +274,6 @@ namespace ngcomp
             case 1: {
                         normv(0) = v(1,1)-v(1,0);
                         normv(1) = v(0,0)-v(0,1);
-                        normv /= L2Norm(normv);
                         break;
                     }
             case 2: {
@@ -283,7 +282,6 @@ namespace ngcomp
                         normv(0) = a(1) * b(2) - a(2) * b(1);
                         normv(1) = a(2) * b(0) - a(0) * b(2);
                         normv(2) = a(0) * b(1) - a(1) * b(0);
-                        normv /= sqrt(L2Norm2(a)*L2Norm2(b)- (a[0]*b[0]+a[1]*b[1]+a[2]*b[2])*(a[0]*b[0]+a[1]*b[1]+a[2]*b[2]));
                         break;
                     }
             case 3: {
@@ -305,10 +303,10 @@ namespace ngcomp
                             else
                                 normv[i] = -Det(pS);
                         }
-                        normv /= L2Norm(normv);
                         break;
                     }
         }
+        normv /= L2Norm(normv);
         if(top == 1) normv *= sgn_nozero<double>(normv[D]);
         else if(top == -1) normv *= (-sgn_nozero<double>(normv[D]));
         return normv;
@@ -335,7 +333,7 @@ namespace ngcomp
         } else if(D==3) {
             double y = p[1];
             double z = p[2];
-            double sq = sqrt(0.33333333333333);
+            double sq = sqrt(1.0/3.0);
             sol[0] = sin( wavespeed*t+sq*(x+y+z) );
             sol[1] = -sq*cos(wavespeed*t+sq*(x+y+z));
             sol[2] = -sq*cos(wavespeed*t+sq*(x+y+z));
@@ -385,6 +383,17 @@ namespace ngcomp
             }
         }
         return sqrt(l2error);
+    }
+
+    template<typename T>
+    void swap_if_greater(T& a, T& b)
+    {
+        if (a < b)
+        {
+            T tmp(a);
+            a = b;
+            b = tmp;
+        }
     }
 }
 
