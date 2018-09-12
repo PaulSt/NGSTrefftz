@@ -20,14 +20,15 @@ from netgen.csg import unit_cube
 def GetFESTrefftz(mesh,c=1):
     return FESpace("trefftzfespace", mesh, order = 4, wavespeed = c, dgjumps=True, basistype=0)
 
-order = 2;
-c=3
-initmesh = Mesh(SegMesh(4,0,1))
-initmesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
-initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.7))
+order = 4
+c=1
+t_end = 1
+initmesh = Mesh(SegMesh(10,0,1))
+# initmesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
+initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.6))
 wavefront = EvolveTentsMakeWavefront(order,initmesh,c,0)
-mat = EvolveTents(order,initmesh,c,0.5,wavefront)
-print(EvolveTentsPostProcess(order,initmesh,mat,EvolveTentsMakeWavefront(order,initmesh,c,0.5)))
+mat = EvolveTents(order,initmesh,c,t_end,wavefront,0)
+print(EvolveTentsPostProcess(order,initmesh,mat,EvolveTentsMakeWavefront(order,initmesh,c,t_end)))
 # A = mat.NumPy()[:,1:12]
 # scipy.io.savemat('arrdata.mat', mdict={'arr': arr})
 

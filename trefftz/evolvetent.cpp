@@ -22,11 +22,12 @@ namespace ngcomp
 
         dgetrf_(&n,&n,&a(0,0),&lda,&ipiv[0],&success);
         dgetrs_(&trans,&n,&nrhs,&a(0,0),&lda,&ipiv[0],&b[0],&lda,&success);
+        if(success!=0) cout << "Lapack error: " << success << endl;
     }
 
 
     template<int D>
-    void EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, SliceVector<double> wavefront)
+    void EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, SliceVector<double> wavefront, double timeshift)
     {
         LocalHeap lh(100000000);
         T_TrefftzElement<D+1> tel(order,wavespeed);
@@ -34,7 +35,7 @@ namespace ngcomp
 
         Vector<> solutioncoeffs(nbasis * ma->GetNE());
 
-        const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
+        const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         IntegrationRule ir(eltyp, order*2);
         ScalarFE<eltyp,1> faceint;
 
@@ -43,6 +44,7 @@ namespace ngcomp
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
         tps.PitchTents(dt, wavespeed); // adt = time slab height, wavespeed
 
+        cout << "solving tents";
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             // LocalHeap slh = lh.Split();  // split to threads
             HeapReset hr(lh);
@@ -156,6 +158,7 @@ namespace ngcomp
                     Vec<D+1> p = map * ir[imip].Point() + shift;
                     FlatMatrix<> dshape(nbasis,D+1,lh);
                     tel.CalcDShape(p,dshape);
+                    p[D] += timeshift;
                     double weight = A*ir[imip].Weight();
                     for(int j=0;j<nbasis;j++)
                     {
@@ -170,14 +173,16 @@ namespace ngcomp
                 }
             }
 
+            // solve
+            Vector<> blavec = elvec;
+            Matrix<> blamat = elmat;
             LapackSolve(elmat,elvec);
             Vector<> sol = elvec;
+            if(L2Norm(blamat*sol-blavec)>1e-7) 
+                cout << "error inverse: " << L2Norm(blamat*sol-blavec) << endl;
 
-            //CalcInverse(elmat,INVERSE_LIB::INV_LAPACK);
-            //Vector<> sol2 = elmat*elvec;
-
-            for(auto elnr: tent->els)
-                solutioncoeffs.Range(elnr*nbasis,(elnr+1)*nbasis) = sol;
+            //for(auto elnr: tent->els)
+            //solutioncoeffs.Range(elnr*nbasis,(elnr+1)*nbasis) = sol;
 
             // eval solution on top of tent
             for(auto elnr: tent->els)
@@ -204,9 +209,14 @@ namespace ngcomp
                     wavefront(offset) = InnerProduct(shape,sol);
                     wavefront.Range(offset+1,offset+D+2) = Trans(dshape)*sol;
                     wavefront.Range(offset+1,offset+D+1) *= (-1);
+
+                    //if(imip==0 && L2Norm(wavefront.Range(offset,offset+D+2) - TestSolution<D>(p,wavespeed))>pow(10,-order+2))
+                        //cout << " at " << p << " error: " << L2Norm(wavefront.Range(offset,offset+D+2) - TestSolution<D>(p,wavespeed)) << 
+                            //" isbndtent: " << ma->GetVertexSurfaceElements(tent->vertex).Size()<< " vert: " << tent->vertex <<  " tenth: " << tent->ttop-tent->tbot << endl;
                 }
             }
         }); // end loop over tents
+        cout << "...done" << endl;
     }
 
     // returns matrix where cols correspond to vertex coordinates of the space-time element
@@ -401,15 +411,15 @@ namespace ngcomp
 #include <python_ngstd.hpp>
 void ExportEvolveTent(py::module m)
 {
-    m.def("EvolveTents", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, Vector<> wavefront) -> Vector<>//-> shared_ptr<MeshAccess>
+    m.def("EvolveTents", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, Vector<> wavefront, double timeshift = 0) -> Vector<>//-> shared_ptr<MeshAccess>
           {
               int D = ma->GetDimension();
               if(D == 1)
-                  EvolveTents<1>(order,ma,wavespeed,dt,wavefront);
+                  EvolveTents<1>(order,ma,wavespeed,dt,wavefront, timeshift);
               else if(D == 2)
-                  EvolveTents<2>(order,ma,wavespeed,dt,wavefront);
+                  EvolveTents<2>(order,ma,wavespeed,dt,wavefront, timeshift);
               else if(D == 3)
-                  EvolveTents<3>(order,ma,wavespeed,dt,wavefront);
+                  EvolveTents<3>(order,ma,wavespeed,dt,wavefront, timeshift);
               return wavefront;
           }//, py::call_guard<py::gil_scoped_release>()
          );
