@@ -44,20 +44,22 @@ namespace ngcomp
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
         tps.PitchTents(dt, wavespeed); // adt = time slab height, wavespeed
 
+
         cout << "solving tents";
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             // LocalHeap slh = lh.Split();  // split to threads
             HeapReset hr(lh);
             Tent* tent = tps.tents[tentnr];
             //cout << endl << "%%%% tent: " << i << " vert: " << tent->vertex << " els: " << tent->els << endl;
-            //cout << *tent << endl;
+            cout << *tent << endl;
+            //if(tent->tbot==0 && tent->ttop-tent->tbot >= 0.19) cout << tent->ttop-tent->tbot << endl<< *tent << endl;
 
-            //Vec<D+1> center;
-            //center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
-            //center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
-            //double size = (tent->ttop-tent->tbot);
-            //tel.SetCenter(center);
-            //tel.SetElSize(size);
+            Vec<D+1> center;
+            center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
+            center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
+
+            tel.SetCenter(center);
+            tel.SetElSize(TentAdiam<D>(tent, ma));
 
             FlatMatrix<> elmat(nbasis,lh);
             FlatVector<> elvec(nbasis,lh);
@@ -247,7 +249,7 @@ namespace ngcomp
                         double a = L2Norm(ve.Col(0)-ve.Col(1));
                         double b = L2Norm(ve.Col(1)-ve.Col(2));
                         double c = L2Norm(ve.Col(0)-ve.Col(2));
-                        swap_if_greater<>(a,b); swap_if_greater<>(a,c); swap_if_greater<>(b,c);
+                        SwapIfGreater<>(a,b); SwapIfGreater<>(a,c); SwapIfGreater<>(b,c);
                         return 0.25 * sqrt((a+(b+c))*(c-(a-b))*(c+(a-b))*(a+(b-c)));
                         break;
                     }
@@ -396,7 +398,7 @@ namespace ngcomp
     }
 
     template<typename T>
-    void swap_if_greater(T& a, T& b)
+    void SwapIfGreater(T& a, T& b)
     {
         if (a < b)
         {
@@ -404,6 +406,33 @@ namespace ngcomp
             a = b;
             b = tmp;
         }
+    }
+
+    template<int D>
+    double TentAdiam(Tent* tent, shared_ptr<MeshAccess> ma)
+    {
+        double anisotropicdiam = 0;
+        int vnumber = tent->nbv.Size()+2;
+
+        Array<int> verts(vnumber);
+        verts.Range(2,vnumber) = tent->nbv;
+        verts[0] = tent->vertex;
+        verts[1] = tent->vertex;
+
+        Array<int> vtime(vnumber);
+        vtime.Range(2,vnumber) = tent->nbtime;
+        vtime[0] = tent->tbot;
+        vtime[1] = tent->ttop;
+        for (int k = 0; k < vnumber; k++)
+        {
+            for (int j = 0; j < vnumber; j++)
+            {
+                Vec<D> v1 = ma->GetPoint<D>(verts[j]);
+                Vec<D> v2 = ma->GetPoint<D>(verts[k]);
+                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(vtime[j]-vtime[k],2) ) );
+            }
+        }
+        return anisotropicdiam;
     }
 }
 
