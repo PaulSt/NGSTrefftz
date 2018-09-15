@@ -25,7 +25,9 @@ namespace ngcomp
 
   template <int D> Vec<D + 2> TestSolution (Vec<D + 1> p, double wavespeed);
 
-  template <typename T = double> void swap_if_greater (T &a, T &b);
+  template <typename T = double> void SwapIfGreater (T &a, T &b);
+
+  template <int D> double TentAdiam (Tent *tent, shared_ptr<MeshAccess> ma);
 }
 
 #ifdef NGS_PYTHON
