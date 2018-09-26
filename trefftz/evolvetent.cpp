@@ -34,11 +34,10 @@ namespace ngcomp
     T_TrefftzElement<D + 1> tel (order, wavespeed);
     int nbasis = tel.GetNBasis ();
 
-    Vector<> solutioncoeffs (nbasis * ma->GetNE ());
-
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     IntegrationRule ir (eltyp, order * 2);
+
     ScalarFE<eltyp, 1> faceint;
 
     // cout << "nbasis: " << nbasis << " ne: " << ma->GetNE() << " order: " <<
@@ -85,13 +84,13 @@ namespace ngcomp
               Vec<D + 1> p;
               p.Range (0, D) = mir[imip].GetPoint ();
 
-              // Integration over top of tent
-              Vec<D + 1> n = TentFaceNormal<D> (vtop, 1);
-              mir[imip].SetMeasure (TentFaceArea<D> (vtop));
-              p (D) = faceint.Evaluate (ir[imip], linearbasis_top);
-
               FlatVector<> shape (nbasis, lh);
               FlatMatrix<> dshape (nbasis, D + 1, lh);
+
+              // Integration over top of tent
+              Vec<D + 1> n = TentFaceNormal<D + 1> (vtop, 1);
+              mir[imip].SetMeasure (TentFaceArea<D> (vtop));
+              p (D) = faceint.Evaluate (ir[imip], linearbasis_top);
 
               tel.CalcShape (p, shape);
               tel.CalcDShape (p, dshape);
@@ -115,7 +114,7 @@ namespace ngcomp
                 }
 
               // Integration over bot of tent
-              n = TentFaceNormal<D> (vbot, -1);
+              n = TentFaceNormal<D + 1> (vbot, -1);
               mir[imip].SetMeasure (TentFaceArea<D> (vbot));
               p (D) = faceint.Evaluate (ir[imip], linearbasis_bot);
 
@@ -171,10 +170,9 @@ namespace ngcomp
 
           Vec<D + 1> n;
           n.Range (0, D)
-              = TentFaceNormal<D - 1> (v.Cols (1, D).Rows (0, D - 1), 0);
+              = TentFaceNormal<D> (v.Cols (1, D + 1).Rows (0, D), 0);
           if (D == 1)
             n[0] = sgn_nozero<int> (tent->vertex - tent->nbv[0]);
-          n (D) = 0;
           n[D] = 0;
 
           Mat<D + 1, D> map;
@@ -206,15 +204,12 @@ namespace ngcomp
         }
 
       // solve
-      Vector<> blavec = elvec;
-      Matrix<> blamat = elmat;
+      // Vector<> blavec = elvec;
+      // Matrix<> blamat = elmat;
       LapackSolve (elmat, elvec);
       Vector<> sol = elvec;
-      if (L2Norm (blamat * sol - blavec) > 1e-7)
-        cout << "error inverse: " << L2Norm (blamat * sol - blavec) << endl;
-
-      // for(auto elnr: tent->els)
-      // solutioncoeffs.Range(elnr*nbasis,(elnr+1)*nbasis) = sol;
+      // if(L2Norm(blamat*sol-blavec)>1e-7)
+      // cout << "error inverse: " << L2Norm(blamat*sol-blavec) << endl;
 
       // eval solution on top of tent
       for (auto elnr : tent->els)
@@ -224,7 +219,7 @@ namespace ngcomp
                                            lh); // <dim  el, dim space>
 
           Mat<D + 1, D + 1> v = TentFaceVerts<D> (tent, elnr, ma, 1);
-          Vec<D + 1> n = TentFaceNormal<D> (v, 1);
+          Vec<D + 1> n = TentFaceNormal<D + 1> (v, 1);
           Vec<D + 1> bs = v.Row (D);
           double A = TentFaceArea<D> (v);
           for (int imip = 0; imip < mir.Size (); imip++)
@@ -245,13 +240,17 @@ namespace ngcomp
               wavefront.Range (offset + 1, offset + D + 1) *= (-1);
 
               // if(imip==0 && L2Norm(wavefront.Range(offset,offset+D+2) -
-              // TestSolution<D>(p,wavespeed))>pow(10,-order+2)) cout << " at "
-              // << p << " error: " <<
-              // L2Norm(wavefront.Range(offset,offset+D+2) -
-              // TestSolution<D>(p,wavespeed)) << " isbndtent: " <<
-              //ma->GetVertexSurfaceElements(tent->vertex).Size()<< " vert: "
-              //<< tent->vertex <<  " tenth: " << tent->ttop-tent->tbot <<
-              //endl;
+              // TestSolution<D>(p,wavespeed))>pow(10,-order+2)) if(imip==0){
+              // p[D] += timeshift;
+              // cout << "at " << p << endl <<" error: ";
+              // for(auto bal : wavefront.Range(offset,offset+D+2))
+              // cout << bal << " ";
+              // cout << endl<< " corr: " <<  TestSolution<D>(p,wavespeed) << "
+              // isbndtent: " <<
+              // ma->GetVertexSurfaceElements(tent->vertex).Size()<< " vert: "
+              // << tent->vertex <<  " tenth: " << tent->ttop-tent->tbot <<
+              // endl;
+              //}
             }
         }
     }); // end loop over tents
@@ -328,18 +327,18 @@ namespace ngcomp
       }
   }
 
-  template <int D> Vec<D + 1> TentFaceNormal (Mat<D + 1, D + 1> v, int top)
+  template <int D> Vec<D> TentFaceNormal (Mat<D, D> v, int top)
   {
-    Vec<D + 1> normv;
+    Vec<D> normv;
     switch (D)
       {
-      case 1:
+      case 2:
         {
           normv (0) = v (1, 1) - v (1, 0);
           normv (1) = v (0, 0) - v (0, 1);
           break;
         }
-      case 2:
+      case 3:
         {
           Vec<D + 1> a = v.Col (0) - v.Col (1);
           Vec<D + 1> b = v.Col (0) - v.Col (2);
@@ -348,19 +347,19 @@ namespace ngcomp
           normv (2) = a (0) * b (1) - a (1) * b (0);
           break;
         }
-      case 3:
+      case 4:
         {
-          for (int d = 1; d <= D; d++)
+          for (int d = 1; d < D; d++)
             v.Col (d) = v.Col (0) - v.Col (d);
 
-          for (unsigned int i = 0; i <= D; i++)
+          for (unsigned int i = 0; i < D; i++)
             {
-              Mat<D, D> pS;
-              for (unsigned int k = 0, c = 0; k < D + 1; k++)
+              Mat<D - 1, D - 1> pS;
+              for (unsigned int k = 0, c = 0; k < D; k++)
                 {
                   if (k == i)
                     continue;
-                  pS.Row (c) = v.Row (k).Range (1, D + 1);
+                  pS.Row (c) = v.Row (k).Range (1, D);
                   c++;
                 }
               if ((i % 2) == 0)
@@ -373,9 +372,9 @@ namespace ngcomp
       }
     normv /= L2Norm (normv);
     if (top == 1)
-      normv *= sgn_nozero<double> (normv[D]);
+      normv *= sgn_nozero<double> (normv[D - 1]);
     else if (top == -1)
-      normv *= (-sgn_nozero<double> (normv[D]));
+      normv *= (-sgn_nozero<double> (normv[D - 1]));
     return normv;
   }
 

@@ -21,7 +21,7 @@ namespace ngcomp
 
   template <int D> double TentFaceArea (Mat<D + 1, D + 1> v);
 
-  template <int D> Vec<D + 1> TentFaceNormal (Mat<D + 1, D + 1> v, int dir);
+  template <int D> Vec<D> TentFaceNormal (Mat<D, D> v, int dir);
 
   template <int D> Vec<D + 2> TestSolution (Vec<D + 1> p, double wavespeed);
 
