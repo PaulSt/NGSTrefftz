@@ -79,10 +79,15 @@ def SolveTentSlab(fes,U0,gD=0,c=1):
     return [a,f]
 
 
-c =2
+c = 3
 order = 9
 
-initmesh = Mesh(SegMesh(4,0,1))
+from ngsolve import *
+
+# ngmesh = SegMesh(4,0,1)
+ngmesh = QadSegMesh(4,0,1)
+initmesh = Mesh(ngmesh)
+
 mesh = NgsTPmesh(initmesh,c,1)
 Draw(mesh)
 

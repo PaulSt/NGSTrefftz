@@ -2,6 +2,20 @@
 import netgen.meshing as ngm
 from ngsolve import *
 from netgen.geom2d import unit_square
+from ngsolve import TensorProductTools
+
+def QadSegMesh(n,x0,x1):
+    ngmesh = ngm.Mesh(dim=1)
+    pids = []
+    for i in range(n+1):
+        pids.append (ngmesh.Add (ngm.MeshPoint(ngm.Pnt(x0+(x1-x0)*i/n*i/n, 0, 0))))
+    TensorProductTools.AddEdgeEls(0,1,1,n,pids,ngmesh)
+    ngmesh.Add (ngm.Element0D( pids[0], index=1))
+    ngmesh.Add (ngm.Element0D( pids[n], index=2))
+    ngmesh.SetBCName(0,"left")
+    ngmesh.SetBCName(1,"right")
+    return ngmesh
+
 
 def PeriodicProdMesh(ngmeshbase,t_steps):
     ngmesh = ngm.Mesh()
