@@ -31,17 +31,14 @@ namespace ngcomp
                     double dt, SliceVector<double> wavefront, double timeshift)
   {
     LocalHeap lh (100000000);
-    T_TrefftzElement<D + 1> tel (order, wavespeed);
-    int nbasis = tel.GetNBasis ();
 
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     IntegrationRule ir (eltyp, order * 2);
 
-    ScalarFE<eltyp, 1> faceint;
-
-    // cout << "nbasis: " << nbasis << " ne: " << ma->GetNE() << " order: " <<
-    // order << " number of ip: " << ir.Size() << endl;
+    ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
+    T_TrefftzElement<D + 1> tel (order, wavespeed);
+    int nbasis = tel.GetNBasis ();
 
     TentPitchedSlab<D> tps
         = TentPitchedSlab<D> (ma);  // collection of tents in timeslab
@@ -52,11 +49,6 @@ namespace ngcomp
       // LocalHeap slh = lh.Split();  // split to threads
       HeapReset hr (lh);
       Tent *tent = tps.tents[tentnr];
-      // cout << endl << "%%%% tent: " << i << " vert: " << tent->vertex << "
-      // els: " << tent->els << endl;
-      cout << *tent << endl;
-      // if(tent->tbot==0 && tent->ttop-tent->tbot >= 0.19) cout <<
-      // tent->ttop-tent->tbot << endl<< *tent << endl;
 
       Vec<D + 1> center;
       center.Range (0, D) = ma->GetPoint<D> (tent->vertex);
