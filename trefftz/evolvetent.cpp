@@ -241,19 +241,6 @@ namespace ngcomp
                   += (wavefront (offset) - TestSolution<D> (p, wavespeed)[0])
                      * (wavefront (offset) - TestSolution<D> (p, wavespeed)[0])
                      * ir[imip].Weight () * A;
-              // if(imip==0){
-              // p[D] += timeshift;
-              // cout << "at " << p << endl <<" estim: ";
-              // for(auto bal : wavefront.Range(offset,offset+D+2))
-              // cout << bal << " ";
-              // cout << endl<< " corr: " <<  TestSolution<D>(p,wavespeed) << "
-              // isbndtent: " <<
-              // ma->GetVertexSurfaceElements(tent->vertex).Size()<< " vert: "
-              // << tent->vertex <<  " tenth: " << tent->ttop-tent->tbot <<
-              // endl; cout << " error: " <<
-              // L2Norm(wavefront.Range(offset,offset+D+2) -
-              // TestSolution<D>(p,wavespeed)) << endl;
-              //}
             }
         }
       for (auto nbt : tent->nbtime)
