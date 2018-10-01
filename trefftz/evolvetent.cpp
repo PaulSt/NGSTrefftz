@@ -270,12 +270,12 @@ namespace ngcomp
       {
         if (vnr[ivert] == tent->vertex)
           v (D, ivert) = top ? tent->ttop : tent->tbot;
-        for (int k = 0; k < tent->nbv.Size (); k++)
-          if (vnr[ivert] == tent->nbv[k])
-            v (D, ivert) = tent->nbtime[k];
+        else
+          for (int k = 0; k < tent->nbv.Size (); k++)
+            if (vnr[ivert] == tent->nbv[k])
+              v (D, ivert) = tent->nbtime[k];
         v.Col (ivert).Range (0, D) = ma->GetPoint<D> (vnr[ivert]);
       }
-
     return v;
   }
 
