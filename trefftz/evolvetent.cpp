@@ -146,7 +146,7 @@ namespace ngcomp
                 Vec<D+1> n;
                 n.Range(0,D) = TentFaceNormal<D>(v.Cols(1,D+1).Rows(0,D),0);
                 if(D==1)
-                    n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]); 
+                    n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]);
                 n[D] = 0;
 
                 Mat<D+1,D> map;
@@ -207,14 +207,6 @@ namespace ngcomp
 
                     p[D] += timeshift;
                     tenterror += (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight() * A;
-                    //if(imip==0){
-                        //p[D] += timeshift;
-                        //cout << "at " << p << endl <<" estim: ";
-                        //for(auto bal : wavefront.Range(offset,offset+D+2))
-                            //cout << bal << " ";
-                        //cout << endl<< " corr: " <<  TestSolution<D>(p,wavespeed) << " isbndtent: " << ma->GetVertexSurfaceElements(tent->vertex).Size()<< " vert: " << tent->vertex <<  " tenth: " << tent->ttop-tent->tbot << endl;
-                        //cout << " error: " << L2Norm(wavefront.Range(offset,offset+D+2) - TestSolution<D>(p,wavespeed)) << endl;
-                    //}
                 }
             }
             for(auto nbt : tent->nbtime) if(tent->ttop - nbt > 0.5/wavespeed + 1e-5) cout << "to high: " << tent->ttop-nbt << " ";
