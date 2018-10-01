@@ -204,13 +204,10 @@ namespace ngcomp
         }
 
       // solve
-      // Vector<> blavec = elvec;
-      // Matrix<> blamat = elmat;
       LapackSolve (elmat, elvec);
       Vector<> sol = elvec;
-      // if(L2Norm(blamat*sol-blavec)>1e-7)
-      // cout << "error inverse: " << L2Norm(blamat*sol-blavec) << endl;
 
+      double tenterror = 0;
       // eval solution on top of tent
       for (auto elnr : tent->els)
         {
@@ -239,20 +236,30 @@ namespace ngcomp
                   = Trans (dshape) * sol;
               wavefront.Range (offset + 1, offset + D + 1) *= (-1);
 
-              // if(imip==0 && L2Norm(wavefront.Range(offset,offset+D+2) -
-              // TestSolution<D>(p,wavespeed))>pow(10,-order+2)) if(imip==0){
+              p[D] += timeshift;
+              tenterror
+                  += (wavefront (offset) - TestSolution<D> (p, wavespeed)[0])
+                     * (wavefront (offset) - TestSolution<D> (p, wavespeed)[0])
+                     * ir[imip].Weight () * A;
+              // if(imip==0){
               // p[D] += timeshift;
-              // cout << "at " << p << endl <<" error: ";
+              // cout << "at " << p << endl <<" estim: ";
               // for(auto bal : wavefront.Range(offset,offset+D+2))
               // cout << bal << " ";
               // cout << endl<< " corr: " <<  TestSolution<D>(p,wavespeed) << "
               // isbndtent: " <<
               // ma->GetVertexSurfaceElements(tent->vertex).Size()<< " vert: "
               // << tent->vertex <<  " tenth: " << tent->ttop-tent->tbot <<
-              // endl;
+              // endl; cout << " error: " <<
+              // L2Norm(wavefront.Range(offset,offset+D+2) -
+              // TestSolution<D>(p,wavespeed)) << endl;
               //}
             }
         }
+      for (auto nbt : tent->nbtime)
+        if (tent->ttop - nbt > 0.5 / wavespeed + 1e-5)
+          cout << "to high: " << tent->ttop - nbt << " ";
+      cout << "error tent: " << sqrt (tenterror) << endl;
     }); // end loop over tents
     cout << "...done" << endl;
   }
