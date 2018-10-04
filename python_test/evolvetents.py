@@ -23,12 +23,12 @@ def GetFESTrefftz(mesh,c=1):
 
 order = 4
 c = 5
-t_end = 1
+t_end = 10
 
 # ngmesh = SegMesh(4,0,1)
-# ngmesh = QadSegMesh(4,0,1)
-# initmesh = Mesh(ngmesh)
-initmesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
+ngmesh = QadSegMesh(4,0,1)
+initmesh = Mesh(ngmesh)
+# initmesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
 # initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.5))
 
 wavefront = EvolveTentsMakeWavefront(order,initmesh,c,0)

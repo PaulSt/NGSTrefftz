@@ -42,11 +42,15 @@ namespace ngcomp
         tps.PitchTents(dt, wavespeed+1); // adt = time slab height, wavespeed
 
         cout << "solving tents";
+        static Timer ttent("tent",2);
+        static Timer tint("tentint",2);
+        static Timer tcalcshape("tentcalcshape",2);
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             // LocalHeap slh = lh.Split();  // split to threads
             HeapReset hr(lh);
             Tent* tent = tps.tents[tentnr];
 
+            RegionTimer reg(ttent);
             Vec<D+1> center;
             center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
             center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
@@ -79,9 +83,12 @@ namespace ngcomp
                     mir[imip].SetMeasure(TentFaceArea<D>(vtop));
                     p(D) = faceint.Evaluate(ir[imip], linearbasis_top);
 
+                    tcalcshape.Start();
                     tel.CalcShape(p,shape);
                     tel.CalcDShape(p,dshape);
+                    tcalcshape.Stop();
 
+                    tint.Start();
                     for(int i=0;i<nbasis;i++)
                     {
                         for(int j=0;j<nbasis;j++)
@@ -94,6 +101,7 @@ namespace ngcomp
                                                                    + dshape(j,D)*InnerProduct(sig,n.Range(0,D)) );
                         }
                     }
+                    tint.Stop();
 
                     // Integration over bot of tent
                     n = TentFaceNormal<D+1>(vbot,-1);
@@ -120,7 +128,6 @@ namespace ngcomp
                     }
                 }
             } // close loop over tent elements
-
 
             //Integrate over side of tent
             for(auto surfel : ma->GetVertexSurfaceElements(tent->vertex))
@@ -207,10 +214,10 @@ namespace ngcomp
             //Vec<D> v = ma->GetPoint<D>(tent->vertex);
             //for(int n=0;n<tent->nbv.Size();n++)
             //{
-                //Vec<D> vn = ma->GetPoint<D>(tent->nbv[n]);
-                //double h = L2Norm(vn-v);
-                //if(tent->ttop - tent->nbtime[n]/h > 1/wavespeed )
-                    //cout<<"nb: "<<n<<"/"<<tent->nbv.Size()<<" slope: "<< tent->ttop - tent->nbtime[n]/h << " but " << 1/wavespeed << " ";
+            //Vec<D> vn = ma->GetPoint<D>(tent->nbv[n]);
+            //double h = L2Norm(vn-v);
+            //if(tent->ttop - tent->nbtime[n]/h > 1/wavespeed )
+            //cout<<"nb: "<<n<<"/"<<tent->nbv.Size()<<" slope: "<< tent->ttop - tent->nbtime[n]/h << " but " << 1/wavespeed << " ";
 
             //}
             //cout << "error tent: " << sqrt(tenterror) << endl;

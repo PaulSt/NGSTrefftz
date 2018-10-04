@@ -79,8 +79,8 @@ def SolveTentSlab(fes,U0,gD=0,c=1):
     return [a,f]
 
 
-c = 3
-order = 9
+c = 4
+order = 6
 
 from ngsolve import *
 
