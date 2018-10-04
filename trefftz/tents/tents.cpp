@@ -1,5 +1,5 @@
 #include "tents.hpp"
-// #include "myvisual.hpp"
+//#include "myvisual.hpp"
 
 constexpr ELEMENT_TYPE ET_ (int D)
 {
@@ -12,7 +12,8 @@ int additional_intorder = 1;
 template <int DIM>
 void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed)
 {
-  cout << "pitch tents ... ";
+  cout << "pitch tents ... "
+       << " finaltime: " << dt << " ws " << wavespeed << endl;
   Timer t ("pitch tents");
   RegionTimer reg (t);
   // Timer tminlevel("pitch tents - find minlevel");
@@ -28,6 +29,9 @@ void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed)
   // compute edge-based max time-differences
   Array<double> edge_refdt (ma->GetNEdges ());
   edge_refdt = 1e99; // max-double ??
+  // check if edge is contained in mesh
+  BitArray fine_edges (ma->GetNEdges ());
+  fine_edges.Clear ();
   for (Ngs_Element el : ma->Elements (VOL))
     {
       for (int e : el.Edges ())
@@ -37,18 +41,20 @@ void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed)
           double len = L2Norm (ma->template GetPoint<DIM> (v1)
                                - ma->template GetPoint<DIM> (v2));
           edge_refdt[e] = min (edge_refdt[e], len / cmax[el.Nr ()]);
+          fine_edges.Set (e);
         }
     }
 
   Array<double> vertex_refdt (ma->GetNV ());
   vertex_refdt = 1e99;
   for (int e : IntRange (0, ma->GetNEdges ()))
-    {
-      int v1, v2;
-      ma->GetEdgePNums (e, v1, v2);
-      vertex_refdt[v1] = min (vertex_refdt[v1], edge_refdt[e]);
-      vertex_refdt[v2] = min (vertex_refdt[v2], edge_refdt[e]);
-    }
+    if (fine_edges.Test (e))
+      {
+        int v1, v2;
+        ma->GetEdgePNums (e, v1, v2);
+        vertex_refdt[v1] = min (vertex_refdt[v1], edge_refdt[e]);
+        vertex_refdt[v2] = min (vertex_refdt[v2], edge_refdt[e]);
+      }
 
   Array<double> tau (ma->GetNV ()); // advancing front
   tau = 0.0;
@@ -71,15 +77,16 @@ void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed)
   for (; !create_v2e.Done (); create_v2e++, create_v2v++)
     {
       for (int e : IntRange (0, ma->GetNEdges ()))
-        {
-          int v1, v2;
-          ma->GetEdgePNums (e, v1, v2);
-          create_v2v.Add (v1, v2);
-          create_v2v.Add (v2, v1);
+        if (fine_edges.Test (e))
+          {
+            int v1, v2;
+            ma->GetEdgePNums (e, v1, v2);
+            create_v2v.Add (v1, v2);
+            create_v2v.Add (v2, v1);
 
-          create_v2e.Add (v1, e);
-          create_v2e.Add (v2, e);
-        }
+            create_v2e.Add (v1, e);
+            create_v2e.Add (v2, e);
+          }
     }
 
   Table<int> v2v = create_v2v.MoveTable ();
@@ -148,7 +155,7 @@ void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed)
             for (auto f : ma->GetElement (elnr).Faces ())
               {
                 ma->GetFacetPNums (f, fpnts);
-                if (fpnts.Contains (vi) && !tent->edges.Append (f))
+                if (fpnts.Contains (vi) && !tent->edges.Contains (f))
                   tent->edges.Append (f);
               }
         }
@@ -335,6 +342,9 @@ void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed,
   // compute edge-based max time-differences
   Array<double> edge_refdt (ma->GetNEdges ());
   edge_refdt = 1e99; // max-double ??
+  // check if edge is contained in mesh
+  BitArray fine_edges (ma->GetNEdges ());
+  fine_edges.Clear ();
   for (Ngs_Element el : ma->Elements (VOL))
     {
       for (int e : el.Edges ())
@@ -344,18 +354,20 @@ void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed,
           double len = L2Norm (ma->template GetPoint<DIM> (v1)
                                - ma->template GetPoint<DIM> (v2));
           edge_refdt[e] = min (edge_refdt[e], len / cmax[el.Nr ()]);
+          fine_edges.Set (e);
         }
     }
 
   Array<double> vertex_refdt (ma->GetNV ());
   vertex_refdt = 1e99;
   for (int e : IntRange (0, ma->GetNEdges ()))
-    {
-      int v1, v2;
-      ma->GetEdgePNums (e, v1, v2);
-      vertex_refdt[v1] = min (vertex_refdt[v1], edge_refdt[e]);
-      vertex_refdt[v2] = min (vertex_refdt[v2], edge_refdt[e]);
-    }
+    if (fine_edges.Test (e))
+      {
+        int v1, v2;
+        ma->GetEdgePNums (e, v1, v2);
+        vertex_refdt[v1] = min (vertex_refdt[v1], edge_refdt[e]);
+        vertex_refdt[v2] = min (vertex_refdt[v2], edge_refdt[e]);
+      }
 
   *testout << "old: " << endl << vertex_refdt << endl;
   // build vertex2edge and vertex2vertex tables
@@ -364,15 +376,16 @@ void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed,
   for (; !create_v2e.Done (); create_v2e++, create_v2v++)
     {
       for (int e : IntRange (0, ma->GetNEdges ()))
-        {
-          int v1, v2;
-          ma->GetEdgePNums (e, v1, v2);
-          create_v2v.Add (v1, v2);
-          create_v2v.Add (v2, v1);
+        if (fine_edges.Test (e))
+          {
+            int v1, v2;
+            ma->GetEdgePNums (e, v1, v2);
+            create_v2v.Add (v1, v2);
+            create_v2v.Add (v2, v1);
 
-          create_v2e.Add (v1, e);
-          create_v2e.Add (v2, e);
-        }
+            create_v2e.Add (v1, e);
+            create_v2e.Add (v2, e);
+          }
     }
 
   Table<int> v2v = create_v2v.MoveTable ();
@@ -503,7 +516,7 @@ void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed,
             for (auto f : ma->GetElement (elnr).Faces ())
               {
                 ma->GetFacetPNums (f, fpnts);
-                if (fpnts.Contains (vi) && !tent->edges.Append (f))
+                if (fpnts.Contains (vi) && !tent->edges.Contains (f))
                   tent->edges.Append (f);
               }
         }
@@ -588,7 +601,6 @@ template <int DIM>
 void TentPitchedSlab<DIM>::SetupTents (
     const shared_ptr<L2HighOrderFESpace> fes, LocalHeap &lh)
 {
-  double maxgrad = 0.0;
   spacetime_dofs = 0;
   int cnt_tents = 0;
   cout << "calc data for tents ... ";
@@ -649,10 +661,11 @@ void TentPitchedSlab<DIM>::SetupTents (
 
     tent.gradphi_facet_bot = Table<Matrix<>> (elfacets);
     tent.gradphi_facet_top = Table<Matrix<>> (elfacets);
+    tent.agradphi_facet_bot = Table<AFlatMatrix<>> (elfacets);
+    tent.agradphi_facet_top = Table<AFlatMatrix<>> (elfacets);
     tent.delta_facet = Table<Vector<double>> (elfacets);
     tent.adelta_facet = Table<AVector<double>> (elfacets);
 
-    int maxorder = 0;
     for (int j : Range (nels)) // loop over elts in a tent
       {
         ElementId ej (VOL, tent.els[j]);
@@ -667,9 +680,6 @@ void TentPitchedSlab<DIM>::SetupTents (
 
         const DGFiniteElement<DIM> &fel
             = static_cast<const DGFiniteElement<DIM> &> (fes->GetFE (ej, lh));
-
-        if (fel.Order () > maxorder)
-          maxorder = fel.Order ();
 
         ELEMENT_TYPE eltype = fel.ElementType ();
 
@@ -725,24 +735,18 @@ void TentPitchedSlab<DIM>::SetupTents (
             tent.gradphi_bot[j].Row (k) = Trans (dshape_nodal) * coef_bot;
             tent.gradphi_top[j].Row (k) = Trans (dshape_nodal) * coef_top;
             if (k == 0)
-              {
-                if (L2Norm (tent.gradphi_top[j].Row (k)) > maxgrad)
-                  maxgrad = L2Norm (tent.gradphi_top[j].Row (k));
-              }
-            if (k == 0)
               tent.graddelta[j] = Trans (dshape_nodal) * (coef_top - coef_bot);
           }
         tent.adelta[j] = 0.0;
         tent.adelta[j] = tent.delta[j];
 
-        /*
-        for (int k = 0; k < tent.agradphi_bot[j].VWidth(); k++)
-          for (int l = 0; l < DIM; l++)
-            {
-              tent.agradphi_bot[j].Get(l,k) = 0.0;
-              tent.agradphi_top[j].Get(l,k) = 0.0;
-            }
-        */
+        // for (int k = 0; k < tent.agradphi_bot[j].VWidth(); k++)
+        //   for (int l = 0; l < DIM; l++)
+        //     {
+        //       tent.agradphi_bot[j].Get(l,k) = 0.0;
+        //       tent.agradphi_top[j].Get(l,k) = 0.0;
+        //     }
+
         tent.agradphi_bot[j] = 0.0;
         tent.agradphi_top[j] = 0.0;
         for (int k = 0; k < tent.agradphi_bot[j].Width (); k++)
@@ -797,18 +801,220 @@ void TentPitchedSlab<DIM>::SetupTents (
               }
             tent.adelta_facet[j][k] = 0.0;
             tent.adelta_facet[j][k] = tent.delta_facet[j][k];
+
+            posix_memalign (&ptr, 64, 8 * DIM * (ir.Size () + 8));
+            new (&tent.agradphi_facet_top[j][k])
+                AFlatMatrix<> (DIM, ir.Size (), (double *)ptr);
+            posix_memalign (&ptr, 64, 8 * DIM * (ir.Size () + 8));
+            new (&tent.agradphi_facet_bot[j][k])
+                AFlatMatrix<> (DIM, ir.Size (), (double *)ptr);
+
+            tent.agradphi_facet_bot[j][k] = 0.0;
+            tent.agradphi_facet_top[j][k] = 0.0;
+            for (int l = 0; l < tent.agradphi_facet_bot[j][k].Width (); l++)
+              for (int m = 0; m < DIM; m++)
+                {
+                  tent.agradphi_facet_bot[j][k](m, l)
+                      = tent.gradphi_facet_bot[j][k](l, m);
+                  tent.agradphi_facet_top[j][k](m, l)
+                      = tent.gradphi_facet_top[j][k](l, m);
+                }
           }
       } // loop over elements of tent
-    tent.order = maxorder;
-  }); // loop over all tents
-  cout << endl << "max grad = " << maxgrad << endl;
+  });   // loop over all tents
+
   cout << "done" << endl;
   cout << "number of tents = " << tents.Size () << endl;
+}
+
+TempTentData::TempTentData (const Tent &tent, const FESpace &fes,
+                            const MeshAccess &ma, LocalHeap &lh)
+    : fei (tent.els.Size (), lh), iri (tent.els.Size (), lh),
+      miri (tent.els.Size (), lh), trafoi (tent.els.Size (), lh),
+      agradphi_bot (tent.els.Size (), lh), agradphi_top (tent.els.Size (), lh),
+      adelta (tent.els.Size (), lh), felpos (tent.edges.Size (), lh),
+      firi (tent.edges.Size (), lh), mfiri (tent.edges.Size (), lh),
+      anormals (tent.edges.Size (), lh), adelta_facet (tent.edges.Size (), lh)
+{
+  int dim = ma.GetDimension ();
+  FlatArray<BaseScalarFiniteElement *> fe_nodal (tent.els.Size (), lh);
+  FlatArray<FlatVector<double>> coef_delta (tent.els.Size (), lh);
+
+  for (int i = 0; i < tent.els.Size (); i++)
+    {
+      ElementId ei (VOL, tent.els[i]);
+      fei[i] = &fes.GetFE (ei, lh);
+      iri[i] = new (lh)
+          SIMD_IntegrationRule (fei[i]->ElementType (), 2 * fei[i]->Order ());
+      trafoi[i] = &ma.GetTrafo (ei, lh);
+      miri[i] = &(*trafoi[i]) (*iri[i], lh);
+
+      ArrayMem<int, 4> vnums;
+      ma.GetElVertices (ei, vnums);
+
+      int nipt = miri[i]->Size ();
+      agradphi_bot[i].AssignMemory (dim, nipt, lh);
+      agradphi_top[i].AssignMemory (dim, nipt, lh);
+      adelta[i].AssignMemory (nipt, lh);
+
+      // BaseScalarFiniteElement * fe_nodal;
+      switch (dim)
+        {
+        case 1:
+          fe_nodal[i] = new (lh) ScalarFE<ET_SEGM, 1> ();
+          break;
+        case 2:
+          fe_nodal[i] = new (lh) ScalarFE<ET_TRIG, 1> ();
+          break;
+        default:
+          fe_nodal[i] = new (lh) ScalarFE<ET_TET, 1> ();
+        }
+
+      Vector<double> coef_bot,
+          coef_top; // coefficient of tau_bot(X) and tau_top(X)
+      coef_bot.SetSize (fe_nodal[i]->GetNDof ());
+      coef_top.SetSize (fe_nodal[i]->GetNDof ());
+      for (int k = 0; k < vnums.Size (); k++)
+        {
+          if (vnums[k] == tent.vertex) // central vertex
+            {
+              coef_bot (k) = tent.tbot;
+              coef_top (k) = tent.ttop;
+            }
+          else
+            for (int l = 0; l < tent.nbv.Size (); l++)
+              if (tent.nbv[l] == vnums[k])
+                coef_bot (k) = coef_top (k) = tent.nbtime[l];
+        }
+      fe_nodal[i]->EvaluateGrad (*miri[i], coef_top, agradphi_top[i]);
+      fe_nodal[i]->EvaluateGrad (*miri[i], coef_bot, agradphi_bot[i]);
+
+      // Vector<double> coef_delta = coef_top-coef_bot;
+      // fe_nodal[i]->Evaluate(*iri[i],coef_delta,adelta[i]);
+      coef_delta[i].AssignMemory (fe_nodal[i]->GetNDof (), lh);
+      coef_delta[i] = coef_top - coef_bot;
+      fe_nodal[i]->Evaluate (*iri[i], coef_delta[i], adelta[i]);
+    }
+
+  for (int i = 0; i < tent.edges.Size (); i++)
+    {
+      int order = 0;
+      INT<2> loc_facetnr;
+
+      ArrayMem<int, 2> elnums;
+      ma.GetFacetElements (tent.edges[i], elnums);
+
+      SIMD_IntegrationRule *simd_ir_facet;
+
+      felpos[i] = INT<2, size_t> (size_t (-1));
+      for (int j : Range (elnums.Size ()))
+        {
+          felpos[i][j] = tent.els.Pos (elnums[j]);
+          if (felpos[i][j] != size_t (-1))
+            {
+              int elorder = fei[felpos[i][j]]->Order ();
+              if (elorder > order)
+                order = elorder;
+
+              ArrayMem<int, 4> fnums;
+              ma.GetElFacets (elnums[j], fnums);
+              for (int k : Range (fnums.Size ()))
+                if (fnums[k] == tent.edges[i])
+                  loc_facetnr[j] = k;
+
+              auto &trafo = *trafoi[felpos[i][j]];
+
+              ArrayMem<int, 4> vnums;
+              ma.GetElVertices (elnums[j], vnums);
+              Facet2ElementTrafo transform (trafo.GetElementType (), vnums);
+
+              auto etfacet = ElementTopology::GetFacetType (
+                  trafo.GetElementType (), loc_facetnr[j]);
+              if (j == 0)
+                simd_ir_facet = new (lh) SIMD_IntegrationRule (
+                    etfacet, 2 * order + additional_intorder);
+
+              // auto & simd_ir_facet_vol = transform(loc_facetnr[j],
+              // *simd_ir_facet, lh);
+              firi[i][j] = &transform (loc_facetnr[j], *simd_ir_facet, lh);
+              if (j == 0)
+                {
+                  mfiri[i] = &trafo (*firi[i][j], lh);
+                  mfiri[i]->ComputeNormalsAndMeasure (trafo.GetElementType (),
+                                                      loc_facetnr[j]);
+
+                  anormals[i].AssignMemory (dim, mfiri[i]->Size (), lh);
+                  adelta_facet[i].AssignMemory (mfiri[i]->Size (), lh);
+
+                  for (size_t k : Range (mfiri[i]->Size ()))
+                    {
+                      switch (dim)
+                        {
+                        case 1:
+                          anormals[i].Col (k) = static_cast<const SIMD<
+                              DimMappedIntegrationPoint<1>> &> ((*mfiri[i])[k])
+                                                    .GetNV ();
+                          break;
+                        case 2:
+                          anormals[i].Col (k) = static_cast<const SIMD<
+                              DimMappedIntegrationPoint<2>> &> ((*mfiri[i])[k])
+                                                    .GetNV ();
+                          break;
+                        default:
+                          anormals[i].Col (k) = static_cast<const SIMD<
+                              DimMappedIntegrationPoint<3>> &> ((*mfiri[i])[k])
+                                                    .GetNV ();
+                        }
+                      size_t elpos = felpos[i][j];
+                      fe_nodal[elpos]->Evaluate (
+                          *firi[i][j], coef_delta[elpos], adelta_facet[i]);
+                    }
+                }
+            }
+        }
+    }
 }
 
 template <int DIM> void TentPitchedSlab<DIM>::VTKOutputTents (string filename)
 {
   ;
+}
+
+template <int DIM>
+void TentPitchedSlab<DIM>::GetTentData (Array<int> &tentdata,
+                                        Array<float> &tenttimes, int &nlevels)
+{
+  nlevels = 0;
+  tentdata.SetAllocSize (4 * tents.Size ());
+  tenttimes.SetAllocSize (4 * tents.Size ());
+
+  for (int i : Range (tents))
+    {
+      Tent &tent = *tents[i];
+      for (int el : Range (tent.els))
+        {
+          tentdata.Append (i);
+          tentdata.Append (tent.level);
+          tentdata.Append (tent.vertex);
+          tentdata.Append (tent.els[el]);
+          if (tent.level > nlevels)
+            nlevels = tent.level;
+
+          auto verts = ma->GetElVertices (ElementId (VOL, tent.els[el]));
+          for (auto v : verts)
+            {
+              if (v == tent.vertex)
+                tenttimes.Append (tent.tbot);
+              else
+                {
+                  auto pos = tent.nbv.Pos (v);
+                  tenttimes.Append (tent.nbtime[pos]);
+                }
+            }
+          tenttimes.Append (tent.ttop);
+        }
+    }
+  nlevels += 1;
 }
 
 void VTKOutputTents (shared_ptr<MeshAccess> maptr, Array<Tent *> &tents,
