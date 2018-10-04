@@ -30,8 +30,6 @@ public:
   Array<int> edges;  // all internal facets in the tent's vertex patch
   Table<int> elfnums;   // elfnums[k] all internal facets of the k-th element of tent
 
-  int order;
-  
   int nd;            // total # interior and interface dofs in space
   Array<int> nd_T;   // nd_T[k] = # innerdofs of the k-th element of tent
   Array<int> dofs;   // all interior and interface dof nums, size(dofs)=nd.
@@ -48,6 +46,7 @@ public:
   Array< Vector<> > graddelta;
 
   Table< Matrix<> > gradphi_facet_bot, gradphi_facet_top;
+  Table< AFlatMatrix<> > agradphi_facet_bot, agradphi_facet_top;
   Table< Vector<double> > delta_facet;
   Table< AVector<double> > adelta_facet;
   
@@ -59,25 +58,61 @@ public:
 
   class TempTentData * tempdata = nullptr;
 
+  // global physical times
+  double * time;     // global physical time at vertex, stored in NPConservationLaw::gftau
+  double timebot;    // global physical bottom time at vertex
+
+  void InitTent(shared_ptr<GridFunction> gftau)
+  {
+    time = &(gftau->GetVector().FVDouble()(vertex));
+    timebot = *time;
+  }
+
+  void SetFinalTime() { *time = timebot + (ttop - tbot); }
+
   ~Tent()
   {
     for(auto grad : agradphi_bot)
       free(&grad(0,0));
     for(auto grad : agradphi_top)
       free(&grad(0,0));
+    for(auto elgrad : agradphi_facet_bot)
+      for(auto grad : elgrad)
+        free(&grad(0,0));
+    for(auto elgrad : agradphi_facet_top)
+      for(auto grad : elgrad)
+        free(&grad(0,0));
   }
 };
 
 class TempTentData
 {
 public:
-  Array<FiniteElement*> fei;
-  Array<SIMD_IntegrationRule*> iri;
-  Array<SIMD_BaseMappedIntegrationRule*> miri;
-  Array<ElementTransformation*> trafoi;
+  // element data
+  Array<FiniteElement*> fei;                     // finite elements for all elements in the tent
+  Array<SIMD_IntegrationRule*> iri;              // integration rules for all elements in the tent
+  Array<SIMD_BaseMappedIntegrationRule*> miri;   // mapped integration rules for all elements in the tent
+  Array<ElementTransformation*> trafoi;          // element transformations for all elements in the tent
+
+  Array<FlatMatrix<SIMD<double>>> agradphi_bot;  // gradient of the old advancing front in the IP's
+  Array<FlatMatrix<SIMD<double>>> agradphi_top;  // gradient of the new advancing front in the IP's
+  Array<FlatVector<SIMD<double>>> adelta;        // height of the tent in the IP's
+
+  // facet data
+  Array<INT<2,size_t>> felpos;                   // local numbers of the neighbors
+  Array<Vec<2,SIMD_IntegrationRule*>> firi;      // facet integration rules for all facets in the tent
+                                                 // transformed to local coordinated of the
+                                                 // neighboring elements
+  Array<SIMD_BaseMappedIntegrationRule*> mfiri;  // mapped facet integration rules for all facets
+                                                 // (only for the first neighbor)
+  Array<FlatMatrix<SIMD<double>>> anormals;      // normal vectors in the IP's
+  // Array<int> facetorder;
+  Array<FlatVector<SIMD<double>>> adelta_facet;  // height of the tent in the IP's
 
   TempTentData (int n, LocalHeap & lh)
-    : fei(n, lh), iri(n, lh), miri(n, lh), trafoi(n, lh) { ; } 
+    : fei(n, lh), iri(n, lh), miri(n, lh), trafoi(n, lh) { ; }
+
+  TempTentData (const Tent & tent, const FESpace & fes, const MeshAccess & ma, LocalHeap & lh);
 };
 
 
@@ -118,6 +153,8 @@ public:
   
   // Export pitched tents into a VTK output file
   void VTKOutputTents(string filename);
+
+  void GetTentData(Array<int> & tentdata, Array<float> & tenttimes, int & nlevels);
 };
 
 // template class TentPitchedSlab<1>;
