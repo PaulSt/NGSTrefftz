@@ -1,6 +1,9 @@
+#include "specialcoefficientfunction.hpp"
 #include <fem.hpp>
-#include "clipcoefficientfunction.hpp"
 #include <comp.hpp>
+#include <h1lofe.hpp>
+#include <regex>
+#include <multigrid.hpp>
 using namespace ngcomp;
 
 namespace ngfem
@@ -31,7 +34,7 @@ typedef CoefficientFunction CF;
 typedef shared_ptr<CoefficientFunction> spCF;
 
 #ifdef NGS_PYTHON
-void ExportClipCoefficientFunction (py::module m)
+void ExportSpecialCoefficientFunction (py::module m)
 {
   m.def (
       "ClipCoefficientFunction",
@@ -43,5 +46,23 @@ void ExportClipCoefficientFunction (py::module m)
         return pcf;
       },
       py::call_guard<py::gil_scoped_release> ());
+
+  py::class_<IntegrationPointFunction, shared_ptr<IntegrationPointFunction>,
+             CoefficientFunction> (m, "IntegrationPointFunction")
+      .def (
+          "__init__",
+          [] (IntegrationPointFunction *instance, shared_ptr<MeshAccess> mesh,
+              IntegrationRule &intrule) {
+            new (instance) IntegrationPointFunction (mesh, intrule);
+          },
+          py::arg ("mesh"), py::arg ("intrule"))
+
+      .def ("PrintTable", &IntegrationPointFunction::PrintTable);
+
+  py::class_<TrefftzCoefficientFunction,
+             shared_ptr<TrefftzCoefficientFunction>, CoefficientFunction> (
+      m, "TrefftzCoefficient", "")
+      .def (py::init<> ())
+      .def (py::init<int> ());
 }
 #endif // NGS_PYTHON
