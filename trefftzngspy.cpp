@@ -3,9 +3,8 @@ using namespace ngsolve;
 #include <python_ngstd.hpp>
 //#include "trefftz/trefftzelement.hpp"
 #include "trefftz/trefftzfespace.hpp"
-#include "trefftz/trefftzcoefficient.hpp"
 #include "trefftz/diffopmapped.hpp"
-#include "trefftz/clipcoefficientfunction.hpp"
+#include "trefftz/specialcoefficientfunction.hpp"
 //#include "trefftz/mappedelement.hpp"
 #include "trefftz/tents/tents.hpp"
 #include "trefftz/evolvetent.hpp"
@@ -19,8 +18,7 @@ PYBIND11_PLUGIN(trefftzngs) {
 
     //ExportMappedElement(m);
     ExportTrefftzFESpace(m);
-    ExportTrefftzCoefficient(m);
-    ExportClipCoefficientFunction(m);
+    ExportSpecialCoefficientFunction(m);
     ExportEvolveTent(m);
     ExportMeshTentSlab(m);
 
