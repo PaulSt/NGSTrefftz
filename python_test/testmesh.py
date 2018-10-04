@@ -20,7 +20,7 @@ mesh1 = Mesh(SegMesh(4,0,0.5))
 mesh2 = Mesh(unit_square.GenerateMesh(maxh=0.4))
 # mesh = Mesh(MakeTensorProductMesh(mesh2,mesh1))
 basemesh = Mesh(SegMesh(4,0,1))
-mesh = NgsTPmesh(basemesh,1)
+mesh = NgsTPmesh(basemesh,1,1)
 #########################################################################################################################################
 fes = H1(mesh, order=4)
 

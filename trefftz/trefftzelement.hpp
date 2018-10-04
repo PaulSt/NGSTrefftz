@@ -43,7 +43,7 @@ namespace ngfem
             // T_TrefftzElement<D> * SetWavespeed(float ac) {c = ac; return this;}
 
         protected:
-            constexpr void MakeIndices_inner(Matrix<int> &indice, Vec<D, int> &numbers, int &count, int ordr, int dim = D);
+            constexpr void MakeIndices_inner(Matrix<int> &indice, Vec<D, int> numbers, int &count, int ordr, int dim = D);
             Matrix<int> GetIndices();
 
             constexpr int IndexMap(Vec<D, int> index) const;

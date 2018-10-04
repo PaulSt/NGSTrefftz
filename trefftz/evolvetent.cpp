@@ -39,7 +39,7 @@ namespace ngcomp
         int nbasis = tel.GetNBasis();
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
-        tps.PitchTents(dt, wavespeed); // adt = time slab height, wavespeed
+        tps.PitchTents(dt, wavespeed+1); // adt = time slab height, wavespeed
 
         cout << "solving tents";
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
@@ -199,12 +199,21 @@ namespace ngcomp
                     wavefront.Range(offset+1,offset+D+2) = Trans(dshape)*sol;
                     wavefront.Range(offset+1,offset+D+1) *= (-1);
 
-                    p[D] += timeshift;
-                    tenterror += (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight() * A;
+                    //p[D] += timeshift;
+                    //tenterror += (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight() * A;
                 }
             }
-            for(auto nbt : tent->nbtime) if(tent->ttop - nbt > 0.5/wavespeed + 1e-5) cout << "to high: " << tent->ttop-nbt << " ";
-            cout << "error tent: " << sqrt(tenterror) << endl;
+
+            //Vec<D> v = ma->GetPoint<D>(tent->vertex);
+            //for(int n=0;n<tent->nbv.Size();n++)
+            //{
+                //Vec<D> vn = ma->GetPoint<D>(tent->nbv[n]);
+                //double h = L2Norm(vn-v);
+                //if(tent->ttop - tent->nbtime[n]/h > 1/wavespeed )
+                    //cout<<"nb: "<<n<<"/"<<tent->nbv.Size()<<" slope: "<< tent->ttop - tent->nbtime[n]/h << " but " << 1/wavespeed << " ";
+
+            //}
+            //cout << "error tent: " << sqrt(tenterror) << endl;
         }); // end loop over tents
         cout << "...done" << endl;
     }
@@ -220,7 +229,7 @@ namespace ngcomp
         {
             if(vnr[ivert] == tent->vertex) v(D,ivert) =  top ? tent->ttop : tent->tbot;
             else for (int k = 0; k < tent->nbv.Size(); k++)
-                    if(vnr[ivert] == tent->nbv[k]) v(D,ivert) = tent->nbtime[k];
+                if(vnr[ivert] == tent->nbv[k]) v(D,ivert) = tent->nbtime[k];
             v.Col(ivert).Range(0,D) = ma->GetPoint<D>(vnr[ivert]);
         }
         return v;
@@ -317,7 +326,7 @@ namespace ngcomp
     {
         double x = p[0]; double t = p[D];
         Vec<D+2> sol;
-        int k = 3;
+        int k = 1;
         if(D==1){
             sol[0] =  sin( k*(wavespeed*t + x) );
             sol[1] = -k*cos(k*(wavespeed*t+x));

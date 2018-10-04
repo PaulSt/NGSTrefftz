@@ -21,14 +21,16 @@ from prodmesh import *
 def GetFESTrefftz(mesh,c=1):
     return FESpace("trefftzfespace", mesh, order = 4, wavespeed = c, dgjumps=True, basistype=0)
 
-order = 9
-c = 3
+order = 4
+c = 5
 t_end = 1
+
 # ngmesh = SegMesh(4,0,1)
-ngmesh = QadSegMesh(4,0,1)
-initmesh = Mesh(ngmesh)
-# initmesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
-# initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.6))
+# ngmesh = QadSegMesh(4,0,1)
+# initmesh = Mesh(ngmesh)
+initmesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
+# initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.5))
+
 wavefront = EvolveTentsMakeWavefront(order,initmesh,c,0)
 mat = EvolveTents(order,initmesh,c,t_end,wavefront,0)
 print(EvolveTentsPostProcess(order,initmesh,mat,EvolveTentsMakeWavefront(order,initmesh,c,t_end)))
