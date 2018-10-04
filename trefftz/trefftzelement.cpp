@@ -187,7 +187,7 @@ namespace ngfem
   template <int D>
   constexpr void
   T_TrefftzElement<D>::MakeIndices_inner (Matrix<int> &indice,
-                                          Vec<D, int> &numbers, int &count,
+                                          Vec<D, int> numbers, int &count,
                                           int ordr, int dim)
   {
     if (dim > 0)
