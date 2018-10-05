@@ -35,19 +35,19 @@ namespace ngfem
     {
         public:
 
-            IntegrationPointFunction(shared_ptr<MeshAccess> mesh, IntegrationRule& intrule)
+            IntegrationPointFunction(shared_ptr<MeshAccess> mesh, IntegrationRule& intrule, Vector<> ipdata)
                 : CoefficientFunction(1)
             {
                 values.resize(mesh->GetNE());
-
+                int elnr=0;
                 for (auto& vec : values)
                 {
                     vec.resize(intrule.GetNIP());
-
                     for (int i = 0;i < vec.size();i++)
                     {
-                        vec[i] = i; //input data or something
+                        vec[i] = ipdata[intrule.Size()*elnr+i]; //input data or something
                     }
+                    elnr++;
                 }
             }
 

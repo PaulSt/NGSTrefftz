@@ -47,10 +47,10 @@ void ExportSpecialCoefficientFunction(py::module m)
             (m, "IntegrationPointFunction")
             .def("__init__",
                  [](IntegrationPointFunction *instance,
-                    shared_ptr<MeshAccess> mesh, IntegrationRule& intrule)
+                    shared_ptr<MeshAccess> mesh, IntegrationRule& intrule, Vector<> data)
                  {
-                     new (instance) IntegrationPointFunction(mesh, intrule);
-                 }, py::arg("mesh"), py::arg("intrule"))
+                     new (instance) IntegrationPointFunction(mesh, intrule, data);
+                 }, py::arg("mesh"), py::arg("intrule"), py::arg("Vector"))
 
     .def("PrintTable", &IntegrationPointFunction::PrintTable)
         ;
