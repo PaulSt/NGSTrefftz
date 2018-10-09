@@ -4,7 +4,7 @@ from ngsolve.TensorProductTools import *
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from trefftzngs import *
-# import netgen.gui
+import netgen.gui
 import scipy as sp
 import scipy.sparse.linalg
 import scipy.linalg
