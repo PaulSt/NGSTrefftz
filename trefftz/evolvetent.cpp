@@ -81,21 +81,15 @@ namespace ngcomp
                     mir[imip].SetMeasure(TentFaceArea<D>(vtop));
                     mir[imip].Point()(D) = faceint.Evaluate(ir[imip], linearbasis_top);
 
-                    tel.CalcShape(mir[imip],shape);
                     tel.CalcDShape(mir[imip],dshape);
 
-                    for(int i=0;i<nbasis;i++)
-                    {
-                        for(int j=0;j<nbasis;j++)
-                        {
-                            Vec<D> sig = -dshape.Row(i).Range(0,D);
-                            Vec<D> tau = -dshape.Row(j).Range(0,D);
-                            elmat(j,i) += mir[imip].GetWeight() * ( dshape(i,D)*dshape(j,D)*n(D) * (1/(wavespeed*wavespeed))
-                                                                   + InnerProduct(sig,tau)*n(D)
-                                                                   + dshape(i,D)*InnerProduct(tau,n.Range(0,D))
-                                                                   + dshape(j,D)*InnerProduct(sig,n.Range(0,D)) );
-                        }
-                    }
+                    Mat<D+1> Dmat = Id<D+1>();
+                    Dmat *= n(D);
+                    Dmat.Row(D).Range(0,D) = -n.Range(0,D);
+                    Dmat.Col(D).Range(0,D) = -n.Range(0,D);
+                    Dmat(D,D) *= 1.0/(wavespeed*wavespeed);
+                    Dmat *= mir[imip].GetWeight();
+                    elmat += dshape*Dmat*Trans(dshape) ;
 
                     // Integration over bot of tent
                     n = TentFaceNormal<D+1>(vbot,-1);
@@ -105,23 +99,23 @@ namespace ngcomp
                     tel.CalcShape(mir[imip],shape);
                     tel.CalcDShape(mir[imip],dshape);
 
+                    Dmat = Id<D+1>();
+                    Dmat *= -n(D); // fix signes for grad(U)=-tau
+                    Dmat.Row(D).Range(0,D) = n.Range(0,D);
+                    Dmat.Col(D).Range(0,D) = -n.Range(0,D);
+                    Dmat(D,D) *= -1.0/(wavespeed*wavespeed);
+                    Dmat *= mir[imip].GetWeight();
+                    
                     int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
-                    for(int j=0;j<nbasis;j++)
-                    {
-                        Vec<D> tau = -dshape.Row(j).Range(0,D);
-                        elvec(j) += mir[imip].GetWeight() * (- wavefront(offset+D+1)*dshape(j,D)*n(D) * (1/(wavespeed*wavespeed))
-                                                             - InnerProduct(wavefront.Range(offset+1,offset+D+1),tau)*n(D)
-                                                             - wavefront(offset+D+1)*InnerProduct(tau,n.Range(0,D))
-                                                             - dshape(j,D)*InnerProduct(wavefront.Range(offset+1,offset+D+1),n.Range(0,D))
-                                                             + wavefront(offset)*shape(j) );
+                    elvec -= dshape*Dmat*wavefront.Range(offset+1,offset+D+2);
+                    // stabilization to recover second order solution
+                    shape *= sqrt(mir[imip].GetWeight());
+                    elmat += (shape)*Trans(shape);
+                    shape *= sqrt(mir[imip].GetWeight())*wavefront(offset);
+                    elvec += shape;
 
-                        for(int i=0;i<nbasis;i++)
-                        {
-                            elmat(j,i) += mir[imip].GetWeight() * ( shape(i)*shape(j) );
-                        }
-                    }
                 }
-            tint.Stop();
+                tint.Stop();
             } // close loop over tent elements
 
             //Integrate over side of tent
