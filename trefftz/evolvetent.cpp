@@ -192,21 +192,10 @@ namespace ngcomp
                     wavefront(offset) = InnerProduct(shape,sol);
                     wavefront.Range(offset+1,offset+D+2) = Trans(dshape)*sol;
                     wavefront.Range(offset+1,offset+D+1) *= (-1);
-
                     //p[D] += timeshift;
                     //tenterror += (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight() * A;
                 }
             }
-
-            //Vec<D> v = ma->GetPoint<D>(tent->vertex);
-            //for(int n=0;n<tent->nbv.Size();n++)
-            //{
-            //Vec<D> vn = ma->GetPoint<D>(tent->nbv[n]);
-            //double h = L2Norm(vn-v);
-            //if(tent->ttop - tent->nbtime[n]/h > 1/wavespeed )
-            //cout<<"nb: "<<n<<"/"<<tent->nbv.Size()<<" slope: "<< tent->ttop - tent->nbtime[n]/h << " but " << 1/wavespeed << " ";
-
-            //}
             //cout << "error tent: " << sqrt(tenterror) << endl;
         }); // end loop over tents
         cout << "...done" << endl;
