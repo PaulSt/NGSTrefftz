@@ -67,9 +67,10 @@ namespace ngcomp
       elvec = 0;
       for (auto elnr : tent->els)
         {
+          tint.Start ();
           INT<D + 1> vnr = ma->GetEdgePNums (elnr);
-          MappedIntegrationRule<D, D> mir (ir, ma->GetTrafo (elnr, lh),
-                                           lh); // <dim  el, dim space>
+          MappedIntegrationRule<D, D + 1> mir (ir, ma->GetTrafo (elnr, lh),
+                                               lh); // <dim  el, dim space>
 
           Mat<D + 1, D + 1> vtop = TentFaceVerts<D> (tent, elnr, ma, 1);
           Vec<D + 1> linearbasis_top = vtop.Row (D);
@@ -77,23 +78,18 @@ namespace ngcomp
           Vec<D + 1> linearbasis_bot = vbot.Row (D);
           for (int imip = 0; imip < mir.Size (); imip++)
             {
-              Vec<D + 1> p;
-              p.Range (0, D) = mir[imip].GetPoint ();
-
               FlatVector<> shape (nbasis, lh);
               FlatMatrix<> dshape (nbasis, D + 1, lh);
 
               // Integration over top of tent
               Vec<D + 1> n = TentFaceNormal<D + 1> (vtop, 1);
               mir[imip].SetMeasure (TentFaceArea<D> (vtop));
-              p (D) = faceint.Evaluate (ir[imip], linearbasis_top);
+              mir[imip].Point () (D)
+                  = faceint.Evaluate (ir[imip], linearbasis_top);
 
-              tcalcshape.Start ();
-              tel.CalcShape (p, shape);
-              tel.CalcDShape (p, dshape);
-              tcalcshape.Stop ();
+              tel.CalcShape (mir[imip], shape);
+              tel.CalcDShape (mir[imip], dshape);
 
-              tint.Start ();
               for (int i = 0; i < nbasis; i++)
                 {
                   for (int j = 0; j < nbasis; j++)
@@ -111,15 +107,15 @@ namespace ngcomp
                                       * InnerProduct (sig, n.Range (0, D)));
                     }
                 }
-              tint.Stop ();
 
               // Integration over bot of tent
               n = TentFaceNormal<D + 1> (vbot, -1);
               mir[imip].SetMeasure (TentFaceArea<D> (vbot));
-              p (D) = faceint.Evaluate (ir[imip], linearbasis_bot);
+              mir[imip].Point () (D)
+                  = faceint.Evaluate (ir[imip], linearbasis_bot);
 
-              tel.CalcShape (p, shape);
-              tel.CalcDShape (p, dshape);
+              tel.CalcShape (mir[imip], shape);
+              tel.CalcDShape (mir[imip], dshape);
 
               int offset = elnr * ir.Size () * (D + 2) + imip * (D + 2);
               for (int j = 0; j < nbasis; j++)
@@ -149,6 +145,7 @@ namespace ngcomp
                     }
                 }
             }
+          tint.Stop ();
         } // close loop over tent elements
 
       // Integrate over side of tent
@@ -221,14 +218,12 @@ namespace ngcomp
           double A = TentFaceArea<D> (v);
           for (int imip = 0; imip < mir.Size (); imip++)
             {
-              Vec<D + 1> p;
-              p.Range (0, D) = mir[imip].GetPoint ();
-              p (D) = faceint.Evaluate (ir[imip], bs);
+              mir[imip].Point () (D) = faceint.Evaluate (ir[imip], bs);
 
               Matrix<> dshape (nbasis, D + 1);
-              tel.CalcDShape (p, dshape);
+              tel.CalcDShape (mir[imip], dshape);
               Vector<> shape (nbasis);
-              tel.CalcShape (p, shape);
+              tel.CalcShape (mir[imip], shape);
 
               int offset = elnr * ir.Size () * (D + 2) + imip * (D + 2);
               wavefront (offset) = InnerProduct (shape, sol);
