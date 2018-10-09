@@ -360,14 +360,12 @@ namespace ngcomp
         Vector<> ic(ir.Size() * ma->GetNE() * (D+2));
         for(int elnr=0;elnr<ma->GetNE();elnr++){
             HeapReset hr(lh);
-            MappedIntegrationRule<D,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
+            MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
             for(int imip=0;imip<mir.Size();imip++)
             {
-                Vec<D+1> p;
-                p.Range(0,D) = mir[imip].GetPoint();
-                p[D] = time;
+                mir[imip].Point()(D) = time;
                 int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
-                ic.Range(offset,offset+D+2) = TestSolution<D>(p,wavespeed);
+                ic.Range(offset,offset+D+2) = TestSolution<D>(mir[imip].Point(),wavespeed);
             }
         }
         return ic;
@@ -383,11 +381,10 @@ namespace ngcomp
         for(int elnr=0;elnr<ma->GetNE();elnr++)
         {
             HeapReset hr(lh);
-            MappedIntegrationRule<D,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
             for(int imip=0;imip<ir.Size();imip++)
             {
                 int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
-                l2error += (wavefront(offset)-wavefront_corr(offset))*(wavefront(offset)-wavefront_corr(offset))*mir[imip].GetWeight();
+                l2error += (wavefront(offset)-wavefront_corr(offset))*(wavefront(offset)-wavefront_corr(offset))*ir[imip].Weight();
             }
         }
         return sqrt(l2error);
