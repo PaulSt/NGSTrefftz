@@ -11,14 +11,13 @@ import scipy.linalg
 import time
 from scipy.io import savemat
 from scipy.io import loadmat
-from ngsolve.bla import VectorD
 from ngsolve import *
 
 def GetFESTrefftz(mesh,c=1):
     return FESpace("trefftzfespace", mesh, order = 4, wavespeed = c, dgjumps=True, basistype=0)
 
 order = 4
-c = 2
+c = 1
 t_start = 0
 t_step = 0.1
 
@@ -32,29 +31,23 @@ if D==3: eltyp = ET.TET
 elif D==2: eltyp = ET.TRIG
 elif D==1: eltyp = ET.SEGM
 intrule = IntegrationRule(eltyp,2*order)
+irsize = len(intrule.points)
 
 
 fes = H1(initmesh, order=order)
-u = fes.TrialFunction()  # symbolic object
-v = fes.TestFunction()   # symbolic object
-gfu = GridFunction(fes)  # solution
+u,v = fes.TnT()
+gfu = GridFunction(fes)  
 a = BilinearForm(fes)
 a += SymbolicBFI(u*v)
 a.Assemble()
 Draw(gfu,initmesh,'sol',autoscale=True,min=-1,max=1)
 wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start)
 
-for t in range(0,500):
+for t in range(0,50):
     wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start)
     print(EvolveTentsPostProcess(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step)))
 
-    wavefront_nograd = VectorD(int(wavefront.NumPy().size/(D+2)))
-    irsize = len(intrule.points)
-    for n in range(0,initmesh.ne):
-        for i in range(0,irsize):
-            wavefront_nograd[n*irsize + i] = wavefront[n*irsize*(D+2) + i*(D+2)]
-
-    ipfct=IntegrationPointFunction(initmesh,intrule,wavefront_nograd)
+    ipfct=IntegrationPointFunction(initmesh,intrule,wavefront[::D+2])
     f = LinearForm(fes)
     f += SymbolicLFI(ipfct*v, intrule=intrule)
     f.Assemble()
