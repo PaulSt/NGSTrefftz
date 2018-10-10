@@ -359,6 +359,11 @@ namespace ngcomp
         sol[1] = -sq * cos (wavespeed * t + sq * (x + y));
         sol[2] = -sq * cos (wavespeed * t + sq * (x + y));
         sol[3] = wavespeed * cos (wavespeed * t + sq * (x + y));
+
+        sol[0] = exp (-100 * ((x - 0.5) * (x - 0.5) + (y - 0.5) * (y - 0.5)));
+        sol[1] = 200 * (x - 0.5) * sol[0];
+        sol[2] = 200 * (y - 0.5) * sol[0];
+        sol[3] = 0;
       }
     else if (D == 3)
       {
