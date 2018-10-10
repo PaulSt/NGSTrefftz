@@ -161,19 +161,12 @@ namespace ngcomp
               tel.CalcDShape (p, dshape);
               p[D] += timeshift;
               double weight = A * ir[imip].Weight ();
-              for (int j = 0; j < nbasis; j++)
-                {
-                  Vec<D> tau = -dshape.Row (j).Range (0, D);
-                  elvec (j) -= weight * InnerProduct (tau, n.Range (0, D))
-                               * TestSolution<D> (p, wavespeed)[D + 1];
-                  for (int i = 0; i < nbasis; i++)
-                    {
-                      Vec<D> sig = -dshape.Row (i).Range (0, D);
-                      elmat (j, i) += weight
-                                      * InnerProduct (sig, n.Range (0, D))
-                                      * dshape (j, D);
-                    }
-                }
+              Mat<D + 1> Dmat = 0;
+              Dmat.Row (D).Range (0, D) = -n.Range (0, D);
+              Dmat *= weight;
+              elmat += dshape * Dmat * Trans (dshape);
+              elvec -= dshape * Trans (Dmat)
+                       * TestSolution<D> (p, wavespeed).Range (1, D + 2);
             }
         }
 
