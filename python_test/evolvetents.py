@@ -41,12 +41,10 @@ gfu = GridFunction(fes)  # solution
 a = BilinearForm(fes)
 a += SymbolicBFI(u*v)
 a.Assemble()
-Draw(gfu,initmesh,'sol',autoscale=False,min=-1,max=1)
-# VTKOutput object
-vtk = VTKOutput(ma=initmesh, coefs=[gfu], names = ["sol"], filename="result", subdivision=3)
+Draw(gfu,initmesh,'sol',autoscale=True,min=-1,max=1)
+wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start)
 
-for t in range(0,50):
-    wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start)
+for t in range(0,500):
     wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start)
     print(EvolveTentsPostProcess(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step)))
 
@@ -56,17 +54,12 @@ for t in range(0,50):
         for i in range(0,irsize):
             wavefront_nograd[n*irsize + i] = wavefront[n*irsize*(D+2) + i*(D+2)]
 
-
-    test=IntegrationPointFunction(initmesh,intrule,wavefront_nograd)
-
-
+    ipfct=IntegrationPointFunction(initmesh,intrule,wavefront_nograd)
     f = LinearForm(fes)
-    f += SymbolicLFI(test*v, intrule=intrule)
+    f += SymbolicLFI(ipfct*v, intrule=intrule)
     f.Assemble()
     gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs()) * f.vec
     Redraw()
-    # Exporting the results:
-    # vtk.Do()
 
     t_start += t_step
 
