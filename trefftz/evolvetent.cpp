@@ -105,7 +105,7 @@ namespace ngcomp
                     Dmat.Col(D).Range(0,D) = -n.Range(0,D);
                     Dmat(D,D) *= -1.0/(wavespeed*wavespeed);
                     Dmat *= mir[imip].GetWeight();
-                    
+
                     int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
                     elvec -= dshape*Dmat*wavefront.Range(offset+1,offset+D+2);
                     // stabilization to recover second order solution
@@ -321,6 +321,11 @@ namespace ngcomp
             sol[1] = -sq*cos(wavespeed*t+sq*(x+y));
             sol[2] = -sq*cos(wavespeed*t+sq*(x+y));
             sol[3] = wavespeed*cos(wavespeed*t+sq*(x+y));
+
+            sol[0] = exp(-100*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)) );
+            sol[1] = 200 * (x-0.5) * sol[0];
+            sol[2] = 200 * (y-0.5) * sol[0];
+            sol[3] = 0;
         } else if(D==3) {
             double y = p[1];
             double z = p[2];
