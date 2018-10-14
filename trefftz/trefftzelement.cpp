@@ -88,6 +88,14 @@ namespace ngfem
   }
 
   template <int D>
+  void T_TrefftzElement<D>::CalcDShape (const BaseMappedIntegrationRule &mir,
+                                        SliceMatrix<> dshapes) const
+  {
+    for (int i = 0; i < mir.Size (); i++)
+      CalcDShape (mir[i], dshapes.Cols (i * D, (i + 1) * D));
+  }
+
+  template <int D>
   Matrix<double> T_TrefftzElement<D>::GetDerTrefftzBasis (int der) const
   {
     static int order;
