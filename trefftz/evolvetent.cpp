@@ -33,6 +33,7 @@ namespace ngcomp
 
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         IntegrationRule ir(eltyp, order*2);
+        int nip = ir.Size();
 
         ScalarFE<eltyp,1> faceint; //linear basis for tent faces
         T_TrefftzElement<D+1> tel(order,wavespeed);
@@ -71,25 +72,42 @@ namespace ngcomp
                 Vec<D+1> linearbasis_top = vtop.Row(D);
                 Mat<D+1,D+1> vbot = TentFaceVerts<D>(tent, elnr, ma, 0);
                 Vec<D+1> linearbasis_bot = vbot.Row(D);
+
+
+                FlatMatrix<> shapes(nbasis,nip,lh);
+                FlatMatrix<> dshapes(nbasis,(D+1)*nip,lh);
+
+                // Integration over top of tent
+                for(int imip=0;imip<nip;imip++)
+                {
+                    mir[imip].Point()(D) = faceint.Evaluate(ir[imip], linearbasis_top);
+                }
+
+                tel.CalcDShape(mir,dshapes);
+
+                Vec<D+1> n = TentFaceNormal<D+1>(vtop,1);
+                Mat<D+1> Dmat = Id<D+1>();
+                Dmat *= n(D);
+                Dmat.Row(D).Range(0,D) = -n.Range(0,D);
+                Dmat.Col(D).Range(0,D) = -n.Range(0,D);
+                Dmat(D,D) *= 1.0/(wavespeed*wavespeed);
+                Dmat *= TentFaceArea<D>(vtop);
+
+                Matrix<> DMM((D+1)*nip);
+                DMM = 0;
+                for(int i=0;i<nip;i++)
+                {
+                    DMM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1))=Dmat;
+                    DMM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1))*= ir[i].Weight();
+                }
+
+                elmat += dshapes*(DMM*Trans(dshapes)) ;
+
+
                 for(int imip=0;imip<mir.Size();imip++)
                 {
                     FlatVector<> shape(nbasis,lh);
                     FlatMatrix<> dshape(nbasis,D+1,lh);
-
-                    // Integration over top of tent
-                    Vec<D+1> n = TentFaceNormal<D+1>(vtop,1);
-                    mir[imip].SetMeasure(TentFaceArea<D>(vtop));
-                    mir[imip].Point()(D) = faceint.Evaluate(ir[imip], linearbasis_top);
-
-                    tel.CalcDShape(mir[imip],dshape);
-
-                    Mat<D+1> Dmat = Id<D+1>();
-                    Dmat *= n(D);
-                    Dmat.Row(D).Range(0,D) = -n.Range(0,D);
-                    Dmat.Col(D).Range(0,D) = -n.Range(0,D);
-                    Dmat(D,D) *= 1.0/(wavespeed*wavespeed);
-                    Dmat *= mir[imip].GetWeight();
-                    elmat += dshape*Dmat*Trans(dshape) ;
 
                     // Integration over bot of tent
                     n = TentFaceNormal<D+1>(vbot,-1);
@@ -317,10 +335,10 @@ namespace ngcomp
             sol[2] = -sq*cos(wavespeed*t+sq*(x+y));
             sol[3] = wavespeed*cos(wavespeed*t+sq*(x+y));
 
-            sol[0] = exp(-100*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)) );
-            sol[1] = 200 * (x-0.5) * sol[0];
-            sol[2] = 200 * (y-0.5) * sol[0];
-            sol[3] = 0;
+            //sol[0] = exp(-100*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)) );
+            //sol[1] = 200 * (x-0.5) * sol[0];
+            //sol[2] = 200 * (y-0.5) * sol[0];
+            //sol[3] = 0;
         } else if(D==3) {
             double y = p[1];
             double z = p[2];
@@ -330,6 +348,12 @@ namespace ngcomp
             sol[2] = -sq*cos(wavespeed*t+sq*(x+y+z));
             sol[3] = -sq*cos(wavespeed*t+sq*(x+y+z));
             sol[4] = wavespeed*cos(wavespeed*t+sq*(x+y+z));
+
+            //sol[0] = exp(-100*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5)) );
+            //sol[1] = 200 * (x-0.5) * sol[0];
+            //sol[2] = 200 * (y-0.5) * sol[0];
+            //sol[3] = 200 * (z-0.5) * sol[0];
+            //sol[4] = 0;
         }
         return sol;
     }
