@@ -66,6 +66,7 @@ namespace ngcomp
       FlatVector<> elvec (nbasis, lh);
       elmat = 0;
       elvec = 0;
+
       for (auto elnr : tent->els)
         {
           tint.Start ();
@@ -83,34 +84,29 @@ namespace ngcomp
 
           // Integration over top of tent
           for (int imip = 0; imip < nip; imip++)
-            {
-              mir[imip].Point () (D)
-                  = faceint.Evaluate (ir[imip], linearbasis_top);
-            }
+            mir[imip].Point () (D)
+                = faceint.Evaluate (ir[imip], linearbasis_top);
 
           tel.CalcDShape (mir, dshapes);
 
           Vec<D + 1> n = TentFaceNormal<D + 1> (vtop, 1);
-          Mat<D + 1> Dmat = Id<D + 1> ();
-          Dmat *= n (D);
+          Mat<D + 1> Dmat = n (D) * Id<D + 1> ();
           Dmat.Row (D).Range (0, D) = -n.Range (0, D);
           Dmat.Col (D).Range (0, D) = -n.Range (0, D);
           Dmat (D, D) *= 1.0 / (wavespeed * wavespeed);
           Dmat *= TentFaceArea<D> (vtop);
 
-          Matrix<> DMM ((D + 1) * nip);
-          DMM = 0;
+          Matrix<> DM ((D + 1) * nip);
+          DM = 0;
           for (int i = 0; i < nip; i++)
-            {
-              DMM.Cols (i * (D + 1), (i + 1) * (D + 1))
-                  .Rows (i * (D + 1), (i + 1) * (D + 1))
-                  = Dmat;
-              DMM.Cols (i * (D + 1), (i + 1) * (D + 1))
-                  .Rows (i * (D + 1), (i + 1) * (D + 1))
-                  *= ir[i].Weight ();
-            }
+            DM.Cols (i * (D + 1), (i + 1) * (D + 1))
+                .Rows (i * (D + 1), (i + 1) * (D + 1))
+                = ir[i].Weight () * Dmat;
 
-          elmat += dshapes * (DMM * Trans (dshapes));
+          FlatMatrix<> DMxdshapest ((D + 1) * nip, nbasis, lh);
+          DMxdshapest = 0;
+          AddABt (DM, dshapes, DMxdshapest);
+          elmat += dshapes * DMxdshapest;
 
           for (int imip = 0; imip < mir.Size (); imip++)
             {
@@ -126,8 +122,7 @@ namespace ngcomp
               tel.CalcShape (mir[imip], shape);
               tel.CalcDShape (mir[imip], dshape);
 
-              Dmat = Id<D + 1> ();
-              Dmat *= -n (D); // fix signes for grad(U)=-tau
+              Dmat = -n (D) * Id<D + 1> (); // fix signes for grad(U)=-tau
               Dmat.Row (D).Range (0, D) = n.Range (0, D);
               Dmat.Col (D).Range (0, D) = -n.Range (0, D);
               Dmat (D, D) *= -1.0 / (wavespeed * wavespeed);
