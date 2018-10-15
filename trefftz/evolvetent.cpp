@@ -128,13 +128,16 @@ namespace ngcomp
               Dmat (D, D) *= -1.0 / (wavespeed * wavespeed);
               Dmat *= mir[imip].GetWeight ();
 
-              int offset = elnr * nip * (D + 2) + imip * (D + 2);
+              int offset_solgrad
+                  = ma->GetNE () * nip + elnr * nip * (D + 1) + imip * (D + 1);
+              int offset_sol = elnr * nip + imip;
               elvec -= dshape * Dmat
-                       * wavefront.Range (offset + 1, offset + D + 2);
+                       * wavefront.Range (offset_solgrad,
+                                          offset_solgrad + D + 1);
               // stabilization to recover second order solution
               shape *= sqrt (mir[imip].GetWeight ());
               elmat += (shape)*Trans (shape);
-              shape *= sqrt (mir[imip].GetWeight ()) * wavefront (offset);
+              shape *= sqrt (mir[imip].GetWeight ()) * wavefront (offset_sol);
               elvec += shape;
             }
           tint.Stop ();
@@ -210,11 +213,13 @@ namespace ngcomp
               Vector<> shape (nbasis);
               tel.CalcShape (mir[imip], shape);
 
-              int offset = elnr * nip * (D + 2) + imip * (D + 2);
-              wavefront (offset) = InnerProduct (shape, sol);
-              wavefront.Range (offset + 1, offset + D + 2)
+              int offset_solgrad
+                  = ma->GetNE () * nip + elnr * nip * (D + 1) + imip * (D + 1);
+              int offset_sol = elnr * nip + imip;
+              wavefront (offset_sol) = InnerProduct (shape, sol);
+              wavefront.Range (offset_solgrad, offset_solgrad + D + 1)
                   = Trans (dshape) * sol;
-              wavefront.Range (offset + 1, offset + D + 1) *= (-1);
+              wavefront.Range (offset_solgrad, offset_solgrad + D) *= (-1);
               // p[D] += timeshift;
               // tenterror +=
               // (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight()
@@ -400,18 +405,24 @@ namespace ngcomp
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     IntegrationRule ir (eltyp, order * 2);
-    Vector<> ic (ir.Size () * ma->GetNE () * (D + 2));
+    int nip = ir.Size ();
+    Vector<> ic (nip * ma->GetNE () * (D + 2));
     for (int elnr = 0; elnr < ma->GetNE (); elnr++)
       {
         HeapReset hr (lh);
         MappedIntegrationRule<D, D + 1> mir (ir, ma->GetTrafo (elnr, lh),
                                              lh); // <dim  el, dim space>
-        for (int imip = 0; imip < ir.Size (); imip++)
+        for (int imip = 0; imip < nip; imip++)
           {
             mir[imip].Point () (D) = time;
-            int offset = elnr * ir.Size () * (D + 2) + imip * (D + 2);
-            ic.Range (offset, offset + D + 2)
-                = TestSolution<D> (mir[imip].Point (), wavespeed);
+            int offset_sol = elnr * nip + imip;
+            ic (offset_sol)
+                = TestSolution<D> (mir[imip].Point (), wavespeed)[0];
+            int offset_solgrad
+                = ma->GetNE () * nip + elnr * nip * (D + 1) + imip * (D + 1);
+            ic.Range (offset_solgrad, offset_solgrad + D + 1)
+                = TestSolution<D> (mir[imip].Point (), wavespeed)
+                      .Range (1, D + 2);
           }
       }
     return ic;
@@ -431,9 +442,9 @@ namespace ngcomp
         HeapReset hr (lh);
         for (int imip = 0; imip < ir.Size (); imip++)
           {
-            int offset = elnr * ir.Size () * (D + 2) + imip * (D + 2);
-            l2error += (wavefront (offset) - wavefront_corr (offset))
-                       * (wavefront (offset) - wavefront_corr (offset))
+            int offset_sol = elnr * ir.Size () + imip;
+            l2error += (wavefront (offset_sol) - wavefront_corr (offset_sol))
+                       * (wavefront (offset_sol) - wavefront_corr (offset_sol))
                        * ir[imip].Weight ();
           }
       }
