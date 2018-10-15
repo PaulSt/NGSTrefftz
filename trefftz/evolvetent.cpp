@@ -98,7 +98,7 @@ namespace ngcomp
                 AddABt(DM,dshapes,DMxdshapest);
                 elmat += dshapes * DMxdshapest;
 
-                for(int imip=0;imip<mir.Size();imip++)
+                for(int imip=0;imip<nip;imip++)
                 {
                     FlatVector<> shape(nbasis,lh);
                     FlatMatrix<> dshape(nbasis,D+1,lh);
@@ -117,7 +117,7 @@ namespace ngcomp
                     Dmat(D,D) *= -1.0/(wavespeed*wavespeed);
                     Dmat *= mir[imip].GetWeight();
 
-                    int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
+                    int offset = elnr*nip*(D+2) + imip*(D+2);
                     elvec -= dshape*Dmat*wavefront.Range(offset+1,offset+D+2);
                     // stabilization to recover second order solution
                     shape *= sqrt(mir[imip].GetWeight());
@@ -155,7 +155,7 @@ namespace ngcomp
                     map.Col(i) = v.Col(i+1) - v.Col(0);
                 Vec<D+1> shift = v.Col(0);
 
-                for(int imip=0;imip<ir.Size();imip++)
+                for(int imip=0;imip<nip;imip++)
                 {
                     Vec<D+1> p = map * ir[imip].Point() + shift;
                     FlatMatrix<> dshape(nbasis,D+1,lh);
@@ -185,7 +185,7 @@ namespace ngcomp
                 Vec<D+1> n = TentFaceNormal<D+1>(v,1);
                 Vec<D+1> bs = v.Row(D);
                 double A = TentFaceArea<D>(v);
-                for(int imip=0;imip<mir.Size();imip++)
+                for(int imip=0;imip<nip;imip++)
                 {
                     mir[imip].Point()(D) = faceint.Evaluate(ir[imip], bs);
 
@@ -194,7 +194,7 @@ namespace ngcomp
                     Vector<> shape(nbasis);
                     tel.CalcShape(mir[imip],shape);
 
-                    int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
+                    int offset = elnr*nip*(D+2) + imip*(D+2);
                     wavefront(offset) = InnerProduct(shape,sol);
                     wavefront.Range(offset+1,offset+D+2) = Trans(dshape)*sol;
                     wavefront.Range(offset+1,offset+D+1) *= (-1);
@@ -361,7 +361,7 @@ namespace ngcomp
         for(int elnr=0;elnr<ma->GetNE();elnr++){
             HeapReset hr(lh);
             MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
-            for(int imip=0;imip<mir.Size();imip++)
+            for(int imip=0;imip<ir.Size();imip++)
             {
                 mir[imip].Point()(D) = time;
                 int offset = elnr*ir.Size()*(D+2) + imip*(D+2);
