@@ -37,7 +37,7 @@ irsize = len(intrule.points)
 
 fes = H1(initmesh, order=order)
 u,v = fes.TnT()
-gfu = GridFunction(fes)  
+gfu = GridFunction(fes)
 a = BilinearForm(fes)
 a += SymbolicBFI(u*v)
 a.Assemble()
@@ -48,7 +48,7 @@ for t in range(0,500):
     wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start)
     print(EvolveTentsPostProcess(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step)))
 
-    ipfct=IntegrationPointFunction(initmesh,intrule,wavefront[::D+2])
+    ipfct=IntegrationPointFunction(initmesh,intrule,wavefront[0:initmesh.ne*irsize])
     f = LinearForm(fes)
     f += SymbolicLFI(ipfct*v, intrule=intrule)
     f.Assemble()
@@ -56,8 +56,8 @@ for t in range(0,500):
     Redraw()
 
     t_start += t_step
-    filename = "results/mov/sol"+str(t).zfill(3) +".jpg"
-    Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
+    # filename = "results/mov/sol"+str(t).zfill(3) +".jpg"
+    # Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
 
 # A = mat.NumPy()[:,1:12]
 # scipy.io.savemat('arrdata.mat', mdict={'arr': arr})
