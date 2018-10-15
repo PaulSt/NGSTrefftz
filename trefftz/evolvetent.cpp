@@ -47,7 +47,6 @@ namespace ngcomp
         static Timer tint("tentint",2);
         static Timer tcalcshape("tentcalcshape",2);
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
-            // LocalHeap slh = lh.Split();  // split to threads
             HeapReset hr(lh);
             Tent* tent = tps.tents[tentnr];
 
@@ -63,19 +62,22 @@ namespace ngcomp
             FlatVector<> elvec(nbasis,lh);
             elmat = 0; elvec = 0;
 
+            LocalHeap slh = lh.Split();  // split to threads
             for(auto elnr: tent->els)
             {
                 tint.Start();
+                HeapReset hr(slh);
                 INT<D+1> vnr = ma->GetEdgePNums(elnr);
-                MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
+                MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(elnr,slh), slh); // <dim  el, dim space>
 
                 Mat<D+1,D+1> vtop = TentFaceVerts<D>(tent, elnr, ma, 1);
                 Vec<D+1> linearbasis_top = vtop.Row(D);
                 Mat<D+1,D+1> vbot = TentFaceVerts<D>(tent, elnr, ma, 0);
                 Vec<D+1> linearbasis_bot = vbot.Row(D);
 
-                FlatMatrix<> shapes(nbasis,nip,lh);
-                FlatMatrix<> dshapes(nbasis,(D+1)*nip,lh);
+                FlatMatrix<> shapes(nbasis,nip,slh);
+                FlatMatrix<> dshapes(nbasis,(D+1)*nip,slh);
+                FlatMatrix<> DM((D+1)*nip,(D+1)*nip,slh); 
 
                 // Integration over top of tent
                 for(int imip=0;imip<nip;imip++)
@@ -90,43 +92,46 @@ namespace ngcomp
                 Dmat(D,D) *= 1.0/(wavespeed*wavespeed);
                 Dmat *= TentFaceArea<D>(vtop);
 
-                Matrix<> DM((D+1)*nip); DM = 0;
+                DM = 0;
                 for(int i=0;i<nip;i++)
                     DM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1)) = ir[i].Weight() * Dmat ; 
 
-                FlatMatrix<> DMxdshapest((D+1)*nip,nbasis,lh); DMxdshapest=0;
+                FlatMatrix<> DMxdshapest((D+1)*nip,nbasis,slh); DMxdshapest=0;
                 AddABt(DM,dshapes,DMxdshapest);
                 elmat += dshapes * DMxdshapest;
 
+                // Integration over bot of tent
                 for(int imip=0;imip<nip;imip++)
-                {
-                    FlatVector<> shape(nbasis,lh);
-                    FlatMatrix<> dshape(nbasis,D+1,lh);
-
-                    // Integration over bot of tent
-                    n = TentFaceNormal<D+1>(vbot,-1);
-                    mir[imip].SetMeasure(TentFaceArea<D>(vbot));
                     mir[imip].Point()(D) = faceint.Evaluate(ir[imip], linearbasis_bot);
 
-                    tel.CalcShape(mir[imip],shape);
-                    tel.CalcDShape(mir[imip],dshape);
+                tel.CalcShape(mir,shapes);
+                tel.CalcDShape(mir,dshapes);
 
-                    Dmat = -n(D) * Id<D+1>(); // fix signes for grad(U)=-tau
-                    Dmat.Row(D).Range(0,D) = n.Range(0,D);
-                    Dmat.Col(D).Range(0,D) = -n.Range(0,D);
-                    Dmat(D,D) *= -1.0/(wavespeed*wavespeed);
-                    Dmat *= mir[imip].GetWeight();
+                n = TentFaceNormal<D+1>(vbot,-1);
+                Dmat = -n(D) * Id<D+1>(); // fix signes for grad(U)=-tau
+                Dmat.Row(D).Range(0,D) = n.Range(0,D);
+                Dmat.Col(D).Range(0,D) = -n.Range(0,D);
+                Dmat(D,D) *= -1.0/(wavespeed*wavespeed);
+                Dmat *= TentFaceArea<D>(vbot);
 
-                    int offset_solgrad = ma->GetNE()*nip + elnr*nip*(D+1) + imip*(D+1);
-                    int offset_sol = elnr*nip + imip;
-                    elvec -= dshape*Dmat*wavefront.Range(offset_solgrad,offset_solgrad+D+1);
-                    // stabilization to recover second order solution
-                    shape *= sqrt(mir[imip].GetWeight());
-                    elmat += (shape)*Trans(shape);
-                    shape *= sqrt(mir[imip].GetWeight())*wavefront(offset_sol);
-                    elvec += shape;
+                DM = 0;
+                for(int i=0;i<nip;i++)
+                    DM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1)) = ir[i].Weight() * Dmat ; 
 
-                }
+                FlatVector<> DMxwp((D+1)*nip,slh);
+                FlatVector<> wp((D+1)*nip, &wavefront( ma->GetNE()*nip + elnr*nip*(D+1) ) ) ;
+                MultMatVec(DM, wp, DMxwp);
+                elvec -= dshapes*DMxwp;
+
+                // stabilization to recover second order solution
+                for(int imip=0;imip<nip;imip++)
+                    shapes.Col(imip) *= sqrt(TentFaceArea<D>(vbot))*sqrt(ir[imip].Weight());
+                //elmat += (shapes)*Trans(shapes);
+                AddABt(shapes,shapes,elmat);
+                for(int imip=0;imip<nip;imip++)
+                    shapes.Col(imip) *= sqrt(TentFaceArea<D>(vbot))*sqrt(ir[imip].Weight());
+                elvec += shapes*wavefront.Range(elnr*nip,(elnr*1)*nip);
+
                 tint.Stop();
             } // close loop over tent elements
 
@@ -159,7 +164,7 @@ namespace ngcomp
                 for(int imip=0;imip<nip;imip++)
                 {
                     Vec<D+1> p = map * ir[imip].Point() + shift;
-                    FlatMatrix<> dshape(nbasis,D+1,lh);
+                    FlatMatrix<> dshape(nbasis,D+1,slh);
                     tel.CalcDShape(p,dshape);
                     p[D] += timeshift;
                     double weight = A*ir[imip].Weight();
@@ -180,7 +185,7 @@ namespace ngcomp
             for(auto elnr: tent->els)
             {
                 INT<D+1> vnr = ma->GetEdgePNums(elnr);
-                MappedIntegrationRule<D,D> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
+                MappedIntegrationRule<D,D> mir(ir, ma->GetTrafo(elnr,slh), slh); // <dim  el, dim space>
 
                 Mat<D+1,D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
                 Vec<D+1> n = TentFaceNormal<D+1>(v,1);
