@@ -25,9 +25,7 @@ namespace ngfem
   void T_TrefftzElement<D>::CalcShape (const BaseMappedIntegrationPoint &mip,
                                        BareSliceVector<> shape) const
   {
-    Vec<D> cpoint;
-    for (int i = 0; i < D; i++)
-      cpoint (i) = mip.GetPoint () (i);
+    Vec<D> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
     cpoint *= (2.0 / elsize);
     cpoint[D - 1] *= c;
@@ -39,7 +37,6 @@ namespace ngfem
           coeff.Row (pascal (D + 1, j - 1) + k)
               += cpoint[i]
                  * coeff.Row (pascal (D + 1, j) + pascal (i, j + 1) + k);
-    // coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
 
     for (int b = 0; b < nbasis; b++)
       shape (b) = coeff.Row (0) (b);
@@ -49,9 +46,7 @@ namespace ngfem
   void T_TrefftzElement<D>::CalcDShape (const BaseMappedIntegrationPoint &mip,
                                         SliceMatrix<> dshape) const
   {
-    Vec<D> cpoint;
-    for (int i = 0; i < D; i++)
-      cpoint (i) = mip.GetPoint () (i);
+    Vec<D> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
     cpoint *= (2.0 / elsize);
     cpoint[D - 1] *= c;
@@ -65,7 +60,6 @@ namespace ngfem
               coeff.Row (pascal (D + 1, j - 1) + k)
                   += cpoint[i]
                      * coeff.Row (pascal (D + 1, j) + pascal (i, j + 1) + k);
-        // coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
         dshape.Col (d) = coeff.Row (0);
       }
 
