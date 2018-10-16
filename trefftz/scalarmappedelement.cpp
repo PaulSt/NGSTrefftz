@@ -38,9 +38,6 @@ namespace ngfem
   {
     VectorMem<20, double> shape (ndof);
     CalcShape (mip, shape);
-    // cout << "shape: " << shape << endl;
-    // cout << "x: " << x(0) << x(1) << endl;
-    // cout << "innter prod: " << InnerProduct (shape, x) << endl;
     return InnerProduct (shape, x);
   }
 
@@ -155,17 +152,20 @@ namespace ngfem
   }
 
   template <int D>
+  void
+  ScalarMappedElement<D>::CalcDShape (const BaseMappedIntegrationRule &mir,
+                                      SliceMatrix<> dshapes) const
+  {
+    for (int i = 0; i < mir.Size (); i++)
+      CalcDShape (mir[i], dshapes.Cols (i * D, (i + 1) * D));
+  }
+
+  template <int D>
   void ScalarMappedElement<D>::CalcMappedDShape (
       const MappedIntegrationPoint<D, D> &mip, SliceMatrix<> dshape) const
   {
+    // no mapping - no inner derivative
     CalcDShape (mip, dshape);
-    /* no mapping - no inner derivative
-       for (int i = 0; i < dshape.Height(); i++)
-       {
-       Vec<D> hv = dshape.Row(i);
-       FlatVec<D> (&dshape(i,0)) = Trans (mip.GetJacobianInverse ()) * hv;
-       }
-       */
   }
 
   template <int D>
@@ -229,76 +229,6 @@ namespace ngfem
                      + ClassName ());
 #endif
   }
-  /*
-     template<int D>
-     void ScalarMappedElement<D> :: CalcDDShape (const IntegrationPoint & ip,
-     FlatMatrix<> ddshape) const
-     {
-     int nd = GetNDof();
-     int sdim = D;
-
-     double eps = 1e-7;
-     Matrix<> dshape1(nd, sdim), dshape2(nd, sdim);
-
-     for (int i = 0; i < sdim; i++)
-     {
-     IntegrationPoint ip1 = ip;
-     IntegrationPoint ip2 = ip;
-
-     ip1(i) -= eps;
-     ip2(i) += eps;
-
-     CalcDShape (ip1, dshape1);
-     CalcDShape (ip2, dshape2);
-     dshape2 -= dshape1;
-     dshape2 *= (0.5 / eps);
-     for (int j = 0; j < nd; j++)
-     for (int k = 0; k < sdim; k++)
-     ddshape(j,sdim*i+k) = dshape2(j,k);
-     }
-     }
-
-
-     template<int D>
-     void ScalarMappedElement<D> :: CalcMappedDDShape (const
-   MappedIntegrationPoint<D,D> & mip, SliceMatrix<> ddshape) const
-     {
-     int nd = GetNDof();
-
-     double eps = 1e-7;
-     MatrixFixWidth<D> dshape1(nd), dshape2(nd);
-     const ElementTransformation & eltrans = mip.GetTransformation();
-
-     for (int i = 0; i < D; i++)
-     {
-     IntegrationPoint ip1 = mip.IP();
-     IntegrationPoint ip2 = mip.IP();
-     ip1(i) -= eps;
-     ip2(i) += eps;
-     MappedIntegrationPoint<D,D> mip1(ip1, eltrans);
-     MappedIntegrationPoint<D,D> mip2(ip2, eltrans);
-
-     CalcMappedDShape (mip1, dshape1);
-     CalcMappedDShape (mip2, dshape2);
-
-     ddshape.Cols(D*i,D*(i+1)) = (0.5/eps) * (dshape2-dshape1);
-     }
-
-     for (int j = 0; j < D; j++)
-     {
-     for (int k = 0; k < nd; k++)
-     for (int l = 0; l < D; l++)
-     dshape1(k,l) = ddshape(k, l*D+j);
-
-     dshape2 = dshape1 * mip.GetJacobianInverse();
-
-     for (int k = 0; k < nd; k++)
-     for (int l = 0; l < D; l++)
-     ddshape(k, l*D+j) = dshape2(k,l);
-     }
-
-     }
-   **/
 
   template class ScalarMappedElement<1>;
   template class ScalarMappedElement<2>;
