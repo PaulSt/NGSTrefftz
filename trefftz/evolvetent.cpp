@@ -161,17 +161,19 @@ namespace ngcomp
                     map.Col(i) = v.Col(i+1) - v.Col(0);
                 Vec<D+1> shift = v.Col(0);
 
+                MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(0,slh), slh); // <dim  el, dim space>
                 for(int imip=0;imip<nip;imip++)
                 {
-                    Vec<D+1> p = map * ir[imip].Point() + shift;
+                    mir[imip].Point() = map * ir[imip].Point() + shift;
                     FlatMatrix<> dshape(nbasis,D+1,slh);
-                    tel.CalcDShape(p,dshape);
-                    p[D] += timeshift;
+                    tel.CalcDShape(mir[imip],dshape);
                     double weight = A*ir[imip].Weight();
                     Mat<D+1> Dmat = 0;
                     Dmat.Row(D).Range(0,D) = -n.Range(0,D);
                     Dmat *= weight;
                     elmat += dshape*Dmat*Trans(dshape);
+                    Vec<D+1> p = map * ir[imip].Point() + shift;
+                    p[D] += timeshift;
                     elvec -= dshape*Trans(Dmat)*TestSolution<D>(p,wavespeed).Range(1,D+2);
                 }
             }
