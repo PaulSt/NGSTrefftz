@@ -1,5 +1,5 @@
 #include "evolvetent.hpp"
-#include "trefftzelement.hpp"
+#include "trefftzwavefe.hpp"
 #include "tents/tents.hpp"
 #include <comp.hpp>    // provides FESpace, ...
 #include <h1lofe.hpp>
@@ -36,7 +36,7 @@ namespace ngcomp
         int nip = ir.Size();
 
         ScalarFE<eltyp,1> faceint; //linear basis for tent faces
-        T_TrefftzElement<D+1> tel(order,wavespeed);
+        TrefftzWaveFE<D+1> tel(order,wavespeed);
         int nbasis = tel.GetNBasis();
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
@@ -77,7 +77,7 @@ namespace ngcomp
 
                 FlatMatrix<> shapes(nbasis,nip,slh);
                 FlatMatrix<> dshapes(nbasis,(D+1)*nip,slh);
-                FlatMatrix<> DM((D+1)*nip,(D+1)*nip,slh); 
+                FlatMatrix<> DM((D+1)*nip,(D+1)*nip,slh);
 
                 // Integration over top of tent
                 for(int imip=0;imip<nip;imip++)
@@ -94,7 +94,7 @@ namespace ngcomp
 
                 DM = 0;
                 for(int i=0;i<nip;i++)
-                    DM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1)) = ir[i].Weight() * Dmat ; 
+                    DM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1)) = ir[i].Weight() * Dmat ;
 
                 FlatMatrix<> DMxdshapest((D+1)*nip,nbasis,slh); DMxdshapest=0;
                 AddABt(DM,dshapes,DMxdshapest);
@@ -116,7 +116,7 @@ namespace ngcomp
 
                 DM = 0;
                 for(int i=0;i<nip;i++)
-                    DM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1)) = ir[i].Weight() * Dmat ; 
+                    DM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1)) = ir[i].Weight() * Dmat ;
 
                 FlatVector<> DMxwp((D+1)*nip,slh);
                 FlatVector<> wp((D+1)*nip, &wavefront( ma->GetNE()*nip + elnr*nip*(D+1) ) ) ;

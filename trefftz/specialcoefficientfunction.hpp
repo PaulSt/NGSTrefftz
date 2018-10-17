@@ -6,7 +6,7 @@
 #include <multigrid.hpp>
 #include <h1lofe.hpp>
 #include <regex>
-#include "trefftzelement.hpp"
+#include "trefftzwavefe.hpp"
 
 using namespace ngcomp;
 namespace ngfem
@@ -86,7 +86,7 @@ namespace ngfem
     class TrefftzCoefficientFunction : public CoefficientFunction
     {
         int basisfunction;
-        T_TrefftzElement<3> treff = T_TrefftzElement<3>(4,1,ET_TRIG,0);
+        TrefftzWaveFE<3> treff = TrefftzWaveFE<3>(4,1,ET_TRIG,0);
 
         public:
         TrefftzCoefficientFunction()

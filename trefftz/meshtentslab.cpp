@@ -1,5 +1,5 @@
 #include "meshtentslab.hpp"
-#include "trefftzelement.hpp"
+#include "trefftzwavefe.hpp"
 #include "tents/tents.hpp"
 #include <comp.hpp>    // provides FESpace, ...
 #include <h1lofe.hpp>

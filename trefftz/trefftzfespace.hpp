@@ -1,6 +1,6 @@
 #ifndef FILE_TREFFTZFESPACE_HPP
 #define FILE_TREFFTZFESPACE_HPP
-#include "trefftzelement.hpp"
+#include "trefftzwavefe.hpp"
 
 
 namespace ngcomp

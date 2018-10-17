@@ -3,12 +3,12 @@
 
 #include <fem.hpp>
 #include "helpers.hpp"
-#include "scalarmappedelement.hpp"
+#include "scalarmappedfe.hpp"
 
 namespace ngfem
 {
     template <int D>
-    class T_TrefftzElement : public ScalarMappedElement<D>
+    class TrefftzWaveFE : public ScalarMappedElement<D>
     {
         private:
             const int ord;
@@ -23,8 +23,8 @@ namespace ngfem
             ELEMENT_TYPE eltype;
 
         public:
-            // T_TrefftzElement();
-            T_TrefftzElement(int aord = 1, float ac = 1.0, ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0);
+            // TrefftzWaveFE();
+            TrefftzWaveFE(int aord = 1, float ac = 1.0, ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0);
 
             virtual ELEMENT_TYPE ElementType() const { return eltype; }
 
@@ -36,9 +36,9 @@ namespace ngfem
 
             int GetNBasis() const { return nbasis; }
 
-            T_TrefftzElement<D> * SetCenter(Vec<D> acenter) {elcenter = acenter; return this;}
-            T_TrefftzElement<D> * SetElSize(double aelsize) {elsize = aelsize; return this;}
-            // T_TrefftzElement<D> * SetWavespeed(float ac) {c = ac; return this;}
+            TrefftzWaveFE<D> * SetCenter(Vec<D> acenter) {elcenter = acenter; return this;}
+            TrefftzWaveFE<D> * SetElSize(double aelsize) {elsize = aelsize; return this;}
+            // TrefftzWaveFE<D> * SetWavespeed(float ac) {c = ac; return this;}
 
         protected:
             constexpr void MakeIndices_inner(Matrix<int> &indice, Vec<D, int> numbers, int &count, int ordr, int dim = D);
