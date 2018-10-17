@@ -1,5 +1,5 @@
 #include "evolvetent.hpp"
-#include "trefftzelement.hpp"
+#include "trefftzwavefe.hpp"
 #include "tents/tents.hpp"
 #include <comp.hpp> // provides FESpace, ...
 #include <h1lofe.hpp>
@@ -38,7 +38,7 @@ namespace ngcomp
     int nip = ir.Size ();
 
     ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
-    T_TrefftzElement<D + 1> tel (order, wavespeed);
+    TrefftzWaveFE<D + 1> tel (order, wavespeed);
     int nbasis = tel.GetNBasis ();
 
     TentPitchedSlab<D> tps

@@ -1,4 +1,4 @@
-#include "trefftzelement.hpp"
+#include "trefftzwavefe.hpp"
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
 #include "helpers.hpp"
@@ -8,8 +8,8 @@
 namespace ngfem
 {
   template <int D>
-  T_TrefftzElement<D>::T_TrefftzElement (int aord, float ac,
-                                         ELEMENT_TYPE aeltype, int abasistype)
+  TrefftzWaveFE<D>::TrefftzWaveFE (int aord, float ac, ELEMENT_TYPE aeltype,
+                                   int abasistype)
       : ScalarMappedElement<D> (BinCoeff (D - 1 + aord, aord)
                                     + BinCoeff (D - 1 + aord - 1, aord - 1),
                                 aord),
@@ -22,8 +22,8 @@ namespace ngfem
   }
 
   template <int D>
-  void T_TrefftzElement<D>::CalcShape (const BaseMappedIntegrationPoint &mip,
-                                       BareSliceVector<> shape) const
+  void TrefftzWaveFE<D>::CalcShape (const BaseMappedIntegrationPoint &mip,
+                                    BareSliceVector<> shape) const
   {
     Vec<D> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
@@ -43,8 +43,8 @@ namespace ngfem
   }
 
   template <int D>
-  void T_TrefftzElement<D>::CalcDShape (const BaseMappedIntegrationPoint &mip,
-                                        SliceMatrix<> dshape) const
+  void TrefftzWaveFE<D>::CalcDShape (const BaseMappedIntegrationPoint &mip,
+                                     SliceMatrix<> dshape) const
   {
     Vec<D> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
@@ -68,7 +68,7 @@ namespace ngfem
   }
 
   template <int D>
-  Matrix<double> T_TrefftzElement<D>::GetDerTrefftzBasis (int der) const
+  Matrix<double> TrefftzWaveFE<D>::GetDerTrefftzBasis (int der) const
   {
     static int order;
     static int btype;
@@ -91,7 +91,7 @@ namespace ngfem
     return basisstorage[der];
   }
 
-  template <int D> Matrix<double> T_TrefftzElement<D>::TrefftzBasis () const
+  template <int D> Matrix<double> TrefftzWaveFE<D>::TrefftzBasis () const
   {
     static int order;
     static int btype;
@@ -166,9 +166,9 @@ namespace ngfem
 
   template <int D>
   constexpr void
-  T_TrefftzElement<D>::MakeIndices_inner (Matrix<int> &indice,
-                                          Vec<D, int> numbers, int &count,
-                                          int ordr, int dim)
+  TrefftzWaveFE<D>::MakeIndices_inner (Matrix<int> &indice,
+                                       Vec<D, int> numbers, int &count,
+                                       int ordr, int dim)
   {
     if (dim > 0)
       {
@@ -192,7 +192,7 @@ namespace ngfem
       }
   }
 
-  template <int D> Matrix<int> T_TrefftzElement<D>::GetIndices ()
+  template <int D> Matrix<int> TrefftzWaveFE<D>::GetIndices ()
   {
     static int order;
     static Matrix<int> indice;
@@ -210,7 +210,7 @@ namespace ngfem
   }
 
   template <int D>
-  constexpr int T_TrefftzElement<D>::IndexMap (Vec<D, int> index) const
+  constexpr int TrefftzWaveFE<D>::IndexMap (Vec<D, int> index) const
   {
     int sum = 0;
     int indexleng = 0;
@@ -226,7 +226,7 @@ namespace ngfem
     return sum;
   }
 
-  template <int D> Matrix<int> T_TrefftzElement<D>::pascal_sym () const
+  template <int D> Matrix<int> TrefftzWaveFE<D>::pascal_sym () const
   {
     static int order;
     static Matrix<int> pascalstorage;
@@ -249,10 +249,10 @@ namespace ngfem
     return pascalstorage;
   }
 
-  template class T_TrefftzElement<1>;
-  template class T_TrefftzElement<2>;
-  template class T_TrefftzElement<3>;
-  template class T_TrefftzElement<4>;
+  template class TrefftzWaveFE<1>;
+  template class TrefftzWaveFE<2>;
+  template class TrefftzWaveFE<3>;
+  template class TrefftzWaveFE<4>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -260,16 +260,16 @@ namespace ngfem
 #ifdef NGS_PYTHON
 void ExportTrefftzElement (py::module m)
 {
-  // py::class_<T_TrefftzElement<3>, shared_ptr<T_TrefftzElement<3>>,
-  // FiniteElement> 	(m, "T_TrefftzElement3", "Trefftz space for wave eq")
+  // py::class_<TrefftzWaveFE<3>, shared_ptr<TrefftzWaveFE<3>>, FiniteElement>
+  // 	(m, "TrefftzWaveFE3", "Trefftz space for wave eq")
   // 	.def(py::init<>())
   // 	;
-  // py::class_<T_TrefftzElement<2>, shared_ptr<T_TrefftzElement<2>>,
-  // FiniteElement> 	(m, "T_TrefftzElement2", "Trefftz space for wave eq")
+  // py::class_<TrefftzWaveFE<2>, shared_ptr<TrefftzWaveFE<2>>, FiniteElement>
+  // 	(m, "TrefftzWaveFE2", "Trefftz space for wave eq")
   // 	.def(py::init<>())
   // 	;
-  // py::class_<T_TrefftzElement<1>, shared_ptr<T_TrefftzElement<1>>,
-  // FiniteElement> 	(m, "T_TrefftzElement1", "Trefftz space for wave eq")
+  // py::class_<TrefftzWaveFE<1>, shared_ptr<TrefftzWaveFE<1>>, FiniteElement>
+  // 	(m, "TrefftzWaveFE1", "Trefftz space for wave eq")
   // 	.def(py::init<>())
   // 	;
 }
