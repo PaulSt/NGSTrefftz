@@ -203,22 +203,22 @@ namespace ngcomp
                 Vec<D+1> bs = v.Row(D);
                 double A = TentFaceArea<D>(v);
                 for(int imip=0;imip<nip;imip++)
-                {
                     mir[imip].Point()(D) = faceint.Evaluate(ir[imip], bs);
 
-                    Matrix<> dshape(nbasis,D+1);
-                    tel.CalcDShape(mir[imip],dshape);
-                    Vector<> shape(nbasis);
-                    tel.CalcShape(mir[imip],shape);
+                FlatMatrix<> shapes(nbasis,nip,slh);
+                FlatMatrix<> dshapes(nbasis,(D+1)*nip,slh);
+                tel.CalcDShape(mir,dshapes);
+                tel.CalcShape(mir,shapes);
 
+                wavefront.Range(elnr*nip,(elnr+1)*nip) = Trans(shapes)*sol;
+                wavefront.Range(ma->GetNE()*nip+elnr*nip*(D+1),ma->GetNE()*nip+(elnr+1)*nip*(D+1)) = Trans(dshapes)*sol;
+                for(int imip=0;imip<nip;imip++)
+                {
                     int offset_solgrad = ma->GetNE()*nip + elnr*nip*(D+1) + imip*(D+1);
-                    int offset_sol = elnr*nip + imip;
-                    wavefront(offset_sol) = InnerProduct(shape,sol);
-                    wavefront.Range(offset_solgrad,offset_solgrad+D+1) = Trans(dshape)*sol;
                     wavefront.Range(offset_solgrad,offset_solgrad+D) *= (-1);
-                    //p[D] += timeshift;
-                    //tenterror += (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight() * A;
                 }
+                //p[D] += timeshift;
+                //tenterror += (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight() * A;
             }
             //cout << "error tent: " << sqrt(tenterror) << endl;
         }); // end loop over tents
