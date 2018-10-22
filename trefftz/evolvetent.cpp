@@ -143,10 +143,10 @@ namespace ngcomp
           tel.CalcDShape (mir, dshapes);
 
           n = TentFaceNormal<D + 1> (vbot, -1);
-          Dmat = -n (D) * Id<D + 1> (); // fix signes for grad(U)=-tau
-          Dmat.Row (D).Range (0, D) = n.Range (0, D);
+          Dmat = n (D) * Id<D + 1> (); // fix signes for grad(U)=-tau
+          Dmat.Row (D).Range (0, D) = -n.Range (0, D);
           Dmat.Col (D).Range (0, D) = -n.Range (0, D);
-          Dmat (D, D) *= -1.0 / (wavespeed * wavespeed);
+          Dmat (D, D) *= 1.0 / (wavespeed * wavespeed);
           Dmat *= TentFaceArea<D> (vbot);
 
           FlatMatrix<> DM ((D + 1) * nip, (D + 1) * nip, slh);
@@ -261,12 +261,6 @@ namespace ngcomp
           wavefront.Range (ma->GetNE () * nip + elnr * nip * (D + 1),
                            ma->GetNE () * nip + (elnr + 1) * nip * (D + 1))
               = Trans (dshapes) * sol;
-          for (int imip = 0; imip < nip; imip++)
-            {
-              int offset_solgrad
-                  = ma->GetNE () * nip + elnr * nip * (D + 1) + imip * (D + 1);
-              wavefront.Range (offset_solgrad, offset_solgrad + D) *= (-1);
-            }
           // p[D] += timeshift;
           // tenterror +=
           // (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight()
@@ -407,7 +401,7 @@ namespace ngcomp
     if (D == 1)
       {
         sol[0] = sin (k * (wavespeed * t + x));
-        sol[1] = -k * cos (k * (wavespeed * t + x));
+        sol[1] = k * cos (k * (wavespeed * t + x));
         sol[2] = wavespeed * k * cos (k * (wavespeed * t + x));
       }
     else if (D == 2)
@@ -415,8 +409,8 @@ namespace ngcomp
         double y = p[1];
         double sq = sqrt (0.5);
         sol[0] = sin (wavespeed * t + sq * (x + y));
-        sol[1] = -sq * cos (wavespeed * t + sq * (x + y));
-        sol[2] = -sq * cos (wavespeed * t + sq * (x + y));
+        sol[1] = sq * cos (wavespeed * t + sq * (x + y));
+        sol[2] = sq * cos (wavespeed * t + sq * (x + y));
         sol[3] = wavespeed * cos (wavespeed * t + sq * (x + y));
 
         // sol[0] = exp(-100*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)) );
@@ -430,9 +424,9 @@ namespace ngcomp
         double z = p[2];
         double sq = sqrt (1.0 / 3.0);
         sol[0] = sin (wavespeed * t + sq * (x + y + z));
-        sol[1] = -sq * cos (wavespeed * t + sq * (x + y + z));
-        sol[2] = -sq * cos (wavespeed * t + sq * (x + y + z));
-        sol[3] = -sq * cos (wavespeed * t + sq * (x + y + z));
+        sol[1] = sq * cos (wavespeed * t + sq * (x + y + z));
+        sol[2] = sq * cos (wavespeed * t + sq * (x + y + z));
+        sol[3] = sq * cos (wavespeed * t + sq * (x + y + z));
         sol[4] = wavespeed * cos (wavespeed * t + sq * (x + y + z));
 
         // sol[0] = exp(-100*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5))
