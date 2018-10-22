@@ -209,7 +209,7 @@ namespace ngcomp
 
             // solve
             LapackSolve(elmat,elvec);
-            Vector<> sol = elvec;
+            FlatVector<> sol(nbasis, &elvec(0));
 
             double tenterror = 0;
             // eval solution on top of tent
