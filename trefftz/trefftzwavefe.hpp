@@ -30,9 +30,11 @@ namespace ngfem
 
             using ScalarMappedElement<D>::CalcShape;
             virtual void CalcShape (const BaseMappedIntegrationPoint & mip, BareSliceVector<> shape) const;
+            virtual void CalcShape (const SIMD_MappedIntegrationRule<D-1,D> & smir, BareSliceMatrix<SIMD<double>> shape) const;
 
             using ScalarMappedElement<D>::CalcDShape;
             virtual void CalcDShape (const BaseMappedIntegrationPoint & mip, SliceMatrix<> dshape) const;
+            virtual void CalcDShape (const SIMD_MappedIntegrationRule<D-1,D> & smir, SliceMatrix<SIMD<double>> dshape) const;
 
             int GetNBasis() const { return nbasis; }
 
