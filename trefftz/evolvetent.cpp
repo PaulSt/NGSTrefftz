@@ -37,6 +37,8 @@ namespace ngcomp
     IntegrationRule ir (eltyp, order * 2);
     int nip = ir.Size ();
 
+    SIMD_IntegrationRule sir (eltyp, order * 2);
+
     ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
     TrefftzWaveFE<D + 1> tel (order, wavespeed);
     int nbasis = tel.GetNBasis ();
@@ -72,24 +74,29 @@ namespace ngcomp
           tint.Start ();
           HeapReset hr (slh);
           INT<D + 1> vnr = ma->GetEdgePNums (elnr);
-          MappedIntegrationRule<D, D + 1> mir (ir, ma->GetTrafo (elnr, slh),
-                                               slh); // <dim  el, dim space>
+
+          SIMD_MappedIntegrationRule<D, D + 1> smir (
+              sir, ma->GetTrafo (elnr, slh), slh);
+          SIMD_MappedIntegrationRule<D, D> smir_fix (
+              sir, ma->GetTrafo (elnr, slh), slh);
+          for (int imip = 0; imip < sir.Size (); imip++)
+            smir[imip].Point ().Range (0, D)
+                = smir_fix[imip].Point ().Range (0, D);
 
           Mat<D + 1, D + 1> vtop = TentFaceVerts<D> (tent, elnr, ma, 1);
           Vec<D + 1> linearbasis_top = vtop.Row (D);
-          Mat<D + 1, D + 1> vbot = TentFaceVerts<D> (tent, elnr, ma, 0);
-          Vec<D + 1> linearbasis_bot = vbot.Row (D);
 
-          FlatMatrix<> shapes (nbasis, nip, slh);
-          FlatMatrix<> dshapes (nbasis, (D + 1) * nip, slh);
-          FlatMatrix<> DM ((D + 1) * nip, (D + 1) * nip, slh);
+          FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
+          FlatMatrix<SIMD<double>> simddshapes (nbasis, (D + 1) * sir.Size (),
+                                                slh);
 
           // Integration over top of tent
-          for (int imip = 0; imip < nip; imip++)
-            mir[imip].Point () (D)
-                = faceint.Evaluate (ir[imip], linearbasis_top);
+          FlatVector<SIMD<double>> mirtimes (sir.Size (), slh);
+          faceint.Evaluate (sir, linearbasis_top, mirtimes);
+          for (int imip = 0; imip < sir.Size (); imip++)
+            smir[imip].Point () (D) = mirtimes[imip];
 
-          tel.CalcDShape (mir, dshapes);
+          tel.CalcDShape (smir, simddshapes);
 
           Vec<D + 1> n = TentFaceNormal<D + 1> (vtop, 1);
           Mat<D + 1> Dmat = n (D) * Id<D + 1> ();
@@ -98,23 +105,41 @@ namespace ngcomp
           Dmat (D, D) *= 1.0 / (wavespeed * wavespeed);
           Dmat *= TentFaceArea<D> (vtop);
 
-          DM = 0;
-          for (int i = 0; i < nip; i++)
-            DM.Cols (i * (D + 1), (i + 1) * (D + 1))
+          FlatMatrix<SIMD<double>> sDM ((D + 1) * sir.Size (),
+                                        (D + 1) * sir.Size (), slh);
+          sDM = 0;
+          for (int i = 0; i < sir.Size (); i++)
+            sDM.Cols (i * (D + 1), (i + 1) * (D + 1))
                 .Rows (i * (D + 1), (i + 1) * (D + 1))
-                = ir[i].Weight () * Dmat;
+                = sir[i].Weight () * Dmat;
 
-          FlatMatrix<> DMxdshapest ((D + 1) * nip, nbasis, slh);
-          DMxdshapest = 0;
-          AddABt (DM, dshapes, DMxdshapest);
-          elmat += dshapes * DMxdshapest;
+          FlatMatrix<SIMD<double>> sDMxdshapest (nbasis, (D + 1) * ir.Size (),
+                                                 slh);
+          sDMxdshapest = 0;
+          // AddABt(sDM,simddshapes,sDMxdshapest);
+          // elmat += simddshapes * sDMxdshapest;
+          sDMxdshapest = simddshapes * sDM;
+          AddABt (simddshapes, sDMxdshapest, elmat);
 
           // Integration over bot of tent
+          FlatMatrix<> shapes (nbasis, nip, slh);
+          FlatMatrix<> dshapes (nbasis, (D + 1) * nip, slh);
+          MappedIntegrationRule<D, D + 1> mir (ir, ma->GetTrafo (elnr, slh),
+                                               slh); // <dim  el, dim space>
+
+          Mat<D + 1, D + 1> vbot = TentFaceVerts<D> (tent, elnr, ma, 0);
+          Vec<D + 1> linearbasis_bot = vbot.Row (D);
+
           for (int imip = 0; imip < nip; imip++)
             mir[imip].Point () (D)
                 = faceint.Evaluate (ir[imip], linearbasis_bot);
 
+          faceint.Evaluate (sir, linearbasis_bot, mirtimes);
+          for (int imip = 0; imip < sir.Size (); imip++)
+            smir[imip].Point () (D) = mirtimes[imip];
+
           tel.CalcShape (mir, shapes);
+          tel.CalcShape (smir, simdshapes);
           tel.CalcDShape (mir, dshapes);
 
           n = TentFaceNormal<D + 1> (vbot, -1);
@@ -138,15 +163,14 @@ namespace ngcomp
           elvec -= dshapes * DMxwp;
 
           // stabilization to recover second order solution
-          for (int imip = 0; imip < nip; imip++)
-            shapes.Col (imip)
-                *= sqrt (TentFaceArea<D> (vbot)) * sqrt (ir[imip].Weight ());
+          for (int imip = 0; imip < sir.Size (); imip++)
+            simdshapes.Col (imip)
+                *= sqrt (TentFaceArea<D> (vbot)) * sqrt (sir[imip].Weight ());
           // elmat += (shapes)*Trans(shapes);
-          AddABt (shapes, shapes, elmat);
+          AddABt (simdshapes, simdshapes, elmat);
           for (int imip = 0; imip < nip; imip++)
-            shapes.Col (imip)
-                *= sqrt (TentFaceArea<D> (vbot)) * sqrt (ir[imip].Weight ());
-          elvec += shapes * wavefront.Range (elnr * nip, (elnr * 1) * nip);
+            shapes.Col (imip) *= TentFaceArea<D> (vbot) * ir[imip].Weight ();
+          elvec += shapes * wavefront.Range (elnr * nip, (elnr + 1) * nip);
 
           tint.Stop ();
         } // close loop over tent elements
