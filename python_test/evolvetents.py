@@ -1,6 +1,3 @@
-from ngsolve.fem import *
-from ngsolve.comp import *
-from ngsolve.TensorProductTools import *
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from trefftzngs import *
@@ -12,7 +9,6 @@ import time
 from scipy.io import savemat
 from scipy.io import loadmat
 from ngsolve import *
-from ngsolve.solve import Tcl_Eval # for snapshots
 
 def GetFESTrefftz(mesh,c=1):
     return FESpace("trefftzfespace", mesh, order = 4, wavespeed = c, dgjumps=True, basistype=0)
