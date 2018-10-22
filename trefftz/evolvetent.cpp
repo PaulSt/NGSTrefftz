@@ -114,6 +114,7 @@ namespace ngcomp
                 Dmat(D,D) *= -1.0/(wavespeed*wavespeed);
                 Dmat *= TentFaceArea<D>(vbot);
 
+                FlatMatrix<> DM((D+1)*nip,(D+1)*nip,slh);
                 DM = 0;
                 for(int i=0;i<nip;i++)
                     DM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1)) = ir[i].Weight() * Dmat ;
@@ -163,19 +164,27 @@ namespace ngcomp
 
                 MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(0,slh), slh); // <dim  el, dim space>
                 for(int imip=0;imip<nip;imip++)
-                {
                     mir[imip].Point() = map * ir[imip].Point() + shift;
-                    FlatMatrix<> dshape(nbasis,D+1,slh);
-                    tel.CalcDShape(mir[imip],dshape);
-                    double weight = A*ir[imip].Weight();
-                    Mat<D+1> Dmat = 0;
-                    Dmat.Row(D).Range(0,D) = -n.Range(0,D);
-                    Dmat *= weight;
-                    elmat += dshape*Dmat*Trans(dshape);
-                    Vec<D+1> p = map * ir[imip].Point() + shift;
-                    p[D] += timeshift;
-                    elvec -= dshape*Trans(Dmat)*TestSolution<D>(p,wavespeed).Range(1,D+2);
-                }
+
+                FlatMatrix<> dshapes(nbasis,nip*(D+1),slh);
+                tel.CalcDShape(mir,dshapes);
+
+                Mat<D+1> Dmat = 0;
+                Dmat.Row(D).Range(0,D) = -n.Range(0,D);
+                Dmat *= A;
+                FlatMatrix<> DM((D+1)*nip,(D+1)*nip,slh);
+                DM = 0;
+                for(int i=0;i<nip;i++)
+                    DM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1)) = ir[i].Weight() * Dmat ;
+
+                FlatMatrix<double> DMxdshapes(nbasis,(D+1)*ir.Size(),slh);
+                DMxdshapes = dshapes * DM;
+                AddABt(DMxdshapes,dshapes,elmat);
+
+                for(int imip=0;imip<nip;imip++)
+                    mir[imip].Point()[D] += timeshift;
+
+                elvec -= dshapes * (Trans(DM) * EvalBC<D>(mir,wavespeed));
             }
 
             // solve
@@ -358,6 +367,16 @@ namespace ngcomp
             //sol[4] = 0;
         }
         return sol;
+    }
+
+
+    template<int D> 
+    Vector<> EvalBC(const BaseMappedIntegrationRule & mir, double wavespeed)
+    {
+        Vector<> bc((D+1)*mir.Size());
+        for(int imip = 0;imip < mir.Size();imip++)
+            bc.Range(imip*(D+1),(imip+1)*(D+1)) = TestSolution<D>(mir[imip].GetPoint(),wavespeed).Range(1,D+2);
+        return bc;
     }
 
 

@@ -24,7 +24,10 @@ namespace ngcomp
     Vec<D> TentFaceNormal( Mat<D,D> v, int dir );
 
     template<int D>
-    Vec<D+2> TestSolution(Vec<D+1> p, double wavespeed);
+    Vec<D+2,double> TestSolution(Vec<D+1,double> p, double wavespeed);
+
+    template<int D>
+    Vector<> EvalBC(const BaseMappedIntegrationRule & mir, double wavespeed);
 
     template<typename T=double>
     void SwapIfGreater(T& a, T& b);
