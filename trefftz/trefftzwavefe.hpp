@@ -14,7 +14,6 @@ namespace ngfem
             const int ord;
             const int nbasis;
             const int npoly;
-            const Matrix<int> indices;
             const Matrix<int> pascal;
             const int basistype;
             Vec<D> elcenter=0;
@@ -43,8 +42,8 @@ namespace ngfem
             // TrefftzWaveFE<D> * SetWavespeed(float ac) {c = ac; return this;}
 
         protected:
-            constexpr void MakeIndices_inner(Matrix<int> &indice, Vec<D, int> numbers, int &count, int ordr, int dim = D);
-            Matrix<int> GetIndices();
+            void MakeIndices_inner(Matrix<int> &indice, Vec<D, int> numbers, int &count, int ordr, int dim) const;
+            Matrix<int> MakeIndices() const;
 
             constexpr int IndexMap(Vec<D, int> index) const;
             Matrix<double> TrefftzBasis() const;

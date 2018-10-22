@@ -14,7 +14,6 @@ namespace ngfem
     c(ac),
     nbasis(BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1)),
     npoly(BinCoeff(D + ord, ord)),
-    indices(GetIndices()),
     basistype(abasistype),
     eltype(aeltype),
     pascal(pascal_sym())
@@ -109,6 +108,7 @@ namespace ngfem
         static int btype;
         static Vec<D,Matrix<double>> basisstorage;
         if(order != ord || btype != basistype){
+            Matrix<int> indices = MakeIndices();
             for(int d=0;d<D;d++){
                 basisstorage[d].SetSize(pascal(D+1,ord), nbasis);
                 for(int i=0, count=0;i<npoly;i++)
@@ -136,6 +136,7 @@ namespace ngfem
 
             basisstorage = 0;
             int setbasis = 0;
+            Matrix<int> indices = MakeIndices();
             for(int l=0;l<nbasis;l++) //loop over basis functions
             {
                 for(int i=0;i<npoly;i++)//loop over indices BinCoeff(D + ord, ord)
@@ -182,7 +183,7 @@ namespace ngfem
 
 
     template<int D>
-    constexpr void TrefftzWaveFE<D> :: MakeIndices_inner(Matrix<int> &indice, Vec<D, int> numbers, int &count, int ordr, int dim)
+    void TrefftzWaveFE<D> :: MakeIndices_inner(Matrix<int> &indice, Vec<D, int> numbers, int &count, int ordr, int dim) const
     {
         if (dim>0)
         {
@@ -196,30 +197,21 @@ namespace ngfem
         {
             int sum=0;
             for(int i=0;i<D;i++)
-            {
                 sum += numbers(i);
-            }
-            if(sum==ordr){
+            if(sum==ordr)
                 indice.Row(count++) = numbers;
-            }
         }
     }
 
 
     template<int D>
-    Matrix<int> TrefftzWaveFE<D> :: GetIndices()
+    Matrix<int> TrefftzWaveFE<D> :: MakeIndices() const
     {
-        static int order;
-        static Matrix<int> indice;
-        if(order != ord)
-        {
-            indice.SetSize(npoly,D);
-            Vec<D, int>  numbers = 0;
-            int count = 0;
-            for(int o=0;o<=ord;o++){
-                MakeIndices_inner(indice, numbers, count, o);
-            }
-        }
+        Matrix<int> indice(npoly,D);
+        Vec<D, int>  numbers = 0;
+        int count = 0;
+        for(int o=0;o<=ord;o++)
+            MakeIndices_inner(indice, numbers, count, o, D);
         return indice;
     }
 
