@@ -68,6 +68,64 @@ namespace ngfem
   }
 
   template <int D>
+  void TrefftzWaveFE<D>::CalcShape (
+      const SIMD_MappedIntegrationRule<D - 1, D> &smir,
+      BareSliceMatrix<SIMD<double>> shape) const
+  {
+    // auto & smir = static_cast<const SIMD_MappedIntegrationRule<D,D+1>&>
+    // (mir);
+    for (int imip = 0; imip < smir.Size (); imip++)
+      {
+        Vec<D, SIMD<double>> cpoint = smir[imip].GetPoint ();
+        cpoint -= elcenter;
+        cpoint *= (2.0 / elsize);
+        cpoint (D - 1) *= c;
+        Matrix<SIMD<double>> coeff (TrefftzBasis ());
+
+        for (int j = ord; j > 0; j--)
+          for (int i = 0; i < D; i++)
+            for (int k = pascal (i + 1, j) - 1; k >= 0; k--)
+              coeff.Row (pascal (D + 1, j - 1) + k)
+                  += cpoint[i]
+                     * coeff.Row (pascal (D + 1, j) + pascal (i, j + 1) + k);
+
+        for (int b = 0; b < nbasis; b++)
+          shape.Col (imip) (b) = coeff.Row (0) (b);
+      }
+  }
+
+  template <int D>
+  void TrefftzWaveFE<D>::CalcDShape (
+      const SIMD_MappedIntegrationRule<D - 1, D> &smir,
+      SliceMatrix<SIMD<double>> dshape) const
+  {
+    // auto & smir = static_cast<const SIMD_MappedIntegrationRule<D,D+1>&>
+    // (mir);
+    for (int imip = 0; imip < smir.Size (); imip++)
+      {
+        Vec<D, SIMD<double>> cpoint = smir[imip].GetPoint ();
+        cpoint -= elcenter;
+        cpoint *= (2.0 / elsize);
+        cpoint[D - 1] *= c;
+
+        for (int d = 0; d < D; d++)
+          { // loop over derivatives/dimensions
+            Matrix<SIMD<double>> coeff (GetDerTrefftzBasis (d));
+            for (int j = ord - 1; j > 0; j--)
+              for (int i = 0; i < D; i++)
+                for (int k = pascal (i + 1, j) - 1; k >= 0; k--)
+                  coeff.Row (pascal (D + 1, j - 1) + k)
+                      += cpoint[i]
+                         * coeff.Row (pascal (D + 1, j) + pascal (i, j + 1)
+                                      + k);
+            dshape.Col (imip * D + d) = coeff.Row (0);
+          }
+        dshape.Col (imip * D + D - 1) *= c; // inner derivative
+      }
+    dshape *= (2.0 / elsize); // inner derivative
+  }
+
+  template <int D>
   Matrix<double> TrefftzWaveFE<D>::GetDerTrefftzBasis (int der) const
   {
     static int order;
