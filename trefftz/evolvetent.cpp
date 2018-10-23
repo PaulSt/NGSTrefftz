@@ -31,6 +31,9 @@ namespace ngcomp
     {
         LocalHeap lh(100000000);
 
+        SIMD<double> a;
+        int simdsize = a.Size();
+
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         IntegrationRule ir(eltyp, order*2);
         int nip = ir.Size();
@@ -109,8 +112,6 @@ namespace ngcomp
                 AddABt(simddshapes,sDMxdshapest,elmat);
 
                 // Integration over bot of tent
-                FlatMatrix<> shapes(nbasis,nip,slh);
-                FlatMatrix<> dshapes(nbasis,(D+1)*nip,slh);
                 MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(elnr,slh), slh); // <dim  el, dim space>
 
                 Mat<D+1,D+1> vbot = TentFaceVerts<D>(tent, elnr, ma, 0);
@@ -123,8 +124,9 @@ namespace ngcomp
                 for(int imip=0;imip<sir.Size();imip++)
                     smir[imip].Point()(D) = mirtimes[imip];
 
-                tel.CalcShape(mir,shapes);
                 tel.CalcShape(smir,simdshapes);
+                tel.CalcDShape(smir,simddshapes);
+                FlatMatrix<> dshapes(nbasis,(D+1)*nip,slh);
                 tel.CalcDShape(mir,dshapes);
 
                 n = TentFaceNormal<D+1>(vbot,-1);
@@ -147,10 +149,10 @@ namespace ngcomp
                 // stabilization to recover second order solution
                 for(int imip=0;imip<sir.Size();imip++)
                     simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vbot))*sqrt(sir[imip].Weight());
-                //elmat += (shapes)*Trans(shapes);
                 AddABt(simdshapes,simdshapes,elmat);
-                for(int imip=0;imip<nip;imip++)
-                    shapes.Col(imip) *= TentFaceArea<D>(vbot)*ir[imip].Weight();
+                for(int imip=0;imip<sir.Size();imip++)
+                    simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vbot))*sqrt(sir[imip].Weight());
+                FlatMatrix<> shapes(nbasis,sir.Size()*simdsize,&simdshapes(0,0)[0]);
                 elvec += shapes*wavefront.Range(elnr*nip,(elnr+1)*nip);
 
                 tint.Stop();
@@ -191,11 +193,10 @@ namespace ngcomp
 
                 Mat<D+1> Dmat = 0;
                 Dmat.Row(D).Range(0,D) = -n.Range(0,D);
-                Dmat *= A;
                 FlatMatrix<> DM((D+1)*nip,(D+1)*nip,slh);
                 DM = 0;
                 for(int i=0;i<nip;i++)
-                    DM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1)) = ir[i].Weight() * Dmat ;
+                    DM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1)) = ir[i].Weight() * A * Dmat ;
 
                 FlatMatrix<double> DMxdshapes(nbasis,(D+1)*ir.Size(),slh);
                 DMxdshapes = dshapes * DM;
