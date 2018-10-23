@@ -44,7 +44,7 @@ for t in range(0,500):
     wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start)
     print(EvolveTentsPostProcess(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step)))
 
-    ipfct=IntegrationPointFunction(initmesh,intrule,wavefront[0:initmesh.ne*irsize])
+    ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
     f = LinearForm(fes)
     f += SymbolicLFI(ipfct*v, intrule=intrule)
     f.Assemble()
