@@ -45,7 +45,25 @@ namespace ngfem
                     vec.resize(intrule.GetNIP());
                     for (int i = 0;i < vec.size();i++)
                     {
-                        vec[i] = ipdata[intrule.Size()*elnr+i]; //input data or something
+                        // input data from vector with mip values sorted per element
+                        vec[i] = ipdata[intrule.Size()*elnr+i];
+                    }
+                    elnr++;
+                }
+            }
+
+            IntegrationPointFunction(shared_ptr<MeshAccess> mesh, IntegrationRule& intrule, Matrix<> ipdata)
+                : CoefficientFunction(1)
+            {
+                values.resize(mesh->GetNE());
+                int elnr=0;
+                for (auto& vec : values)
+                {
+                    vec.resize(intrule.GetNIP());
+                    for (int i = 0;i < vec.size();i++)
+                    {
+                        // input data from matrix with elnr in rows, mip values in cols
+                        vec[i] = ipdata(elnr,i);
                     }
                     elnr++;
                 }
