@@ -28,7 +28,7 @@ namespace ngcomp
 
   template <int D>
   void EvolveTents (int order, shared_ptr<MeshAccess> ma, double wavespeed,
-                    double dt, SliceVector<double> wavefront, double timeshift)
+                    double dt, SliceMatrix<double> wavefront, double timeshift)
   {
     LocalHeap lh (100000000);
 
@@ -49,6 +49,9 @@ namespace ngcomp
     TentPitchedSlab<D> tps
         = TentPitchedSlab<D> (ma);      // collection of tents in timeslab
     tps.PitchTents (dt, wavespeed + 1); // adt = time slab height, wavespeed
+
+    // FlatVector<SIMD<double>> simd_wavefront(sir.Size()*ma->GetNE()*(D+2),
+    // &wavefront[0]);
 
     cout << "solving tents";
     static Timer ttent ("tent", 2);
@@ -159,8 +162,7 @@ namespace ngcomp
                 = ir[i].Weight () * Dmat;
 
           FlatVector<> DMxwp ((D + 1) * nip, slh);
-          FlatVector<> wp ((D + 1) * nip, &wavefront (ma->GetNE () * nip
-                                                      + elnr * nip * (D + 1)));
+          FlatVector<> wp ((D + 1) * nip, &wavefront (elnr, nip));
           MultMatVec (DM, wp, DMxwp);
           elvec -= dshapes * DMxwp;
 
@@ -174,7 +176,7 @@ namespace ngcomp
                 *= sqrt (TentFaceArea<D> (vbot)) * sqrt (sir[imip].Weight ());
           FlatMatrix<> shapes (nbasis, sir.Size () * simdsize,
                                &simdshapes (0, 0)[0]);
-          elvec += shapes * wavefront.Range (elnr * nip, (elnr + 1) * nip);
+          elvec += shapes * wavefront.Row (elnr).Range (0, nip);
 
           tint.Stop ();
         } // close loop over tent elements
@@ -259,10 +261,8 @@ namespace ngcomp
           tel.CalcDShape (mir, dshapes);
           tel.CalcShape (mir, shapes);
 
-          wavefront.Range (elnr * nip, (elnr + 1) * nip)
-              = Trans (shapes) * sol;
-          wavefront.Range (ma->GetNE () * nip + elnr * nip * (D + 1),
-                           ma->GetNE () * nip + (elnr + 1) * nip * (D + 1))
+          wavefront.Row (elnr).Range (0, nip) = Trans (shapes) * sol;
+          wavefront.Row (elnr).Range (nip, nip + nip * (D + 1))
               = Trans (dshapes) * sol;
           // p[D] += timeshift;
           // tenterror +=
@@ -452,7 +452,7 @@ namespace ngcomp
   }
 
   template <int D>
-  Vector<> MakeWavefront (int order, shared_ptr<MeshAccess> ma,
+  Matrix<> MakeWavefront (int order, shared_ptr<MeshAccess> ma,
                           double wavespeed, double time)
   {
     LocalHeap lh (10000000);
@@ -460,7 +460,7 @@ namespace ngcomp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     IntegrationRule ir (eltyp, order * 2);
     int nip = ir.Size ();
-    Vector<> ic (nip * ma->GetNE () * (D + 2));
+    Matrix<> ic (ma->GetNE (), nip * (D + 2));
     for (int elnr = 0; elnr < ma->GetNE (); elnr++)
       {
         HeapReset hr (lh);
@@ -469,12 +469,10 @@ namespace ngcomp
         for (int imip = 0; imip < nip; imip++)
           {
             mir[imip].Point () (D) = time;
-            int offset_sol = elnr * nip + imip;
-            ic (offset_sol)
+            ic (elnr, imip)
                 = TestSolution<D> (mir[imip].Point (), wavespeed)[0];
-            int offset_solgrad
-                = ma->GetNE () * nip + elnr * nip * (D + 1) + imip * (D + 1);
-            ic.Range (offset_solgrad, offset_solgrad + D + 1)
+            ic.Row (elnr).Range (nip + imip * (D + 1),
+                                 nip + (imip + 1) * (D + 1))
                 = TestSolution<D> (mir[imip].Point (), wavespeed)
                       .Range (1, D + 2);
           }
@@ -483,8 +481,8 @@ namespace ngcomp
   }
 
   template <int D>
-  double Postprocess (int order, shared_ptr<MeshAccess> ma, Vector<> wavefront,
-                      Vector<> wavefront_corr)
+  double Postprocess (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
+                      Matrix<> wavefront_corr)
   {
     double l2error = 0;
     LocalHeap lh (10000000);
@@ -496,9 +494,8 @@ namespace ngcomp
         HeapReset hr (lh);
         for (int imip = 0; imip < ir.Size (); imip++)
           {
-            int offset_sol = elnr * ir.Size () + imip;
-            l2error += (wavefront (offset_sol) - wavefront_corr (offset_sol))
-                       * (wavefront (offset_sol) - wavefront_corr (offset_sol))
+            l2error += (wavefront (elnr, imip) - wavefront_corr (elnr, imip))
+                       * (wavefront (elnr, imip) - wavefront_corr (elnr, imip))
                        * ir[imip].Weight ();
           }
       }
@@ -550,8 +547,8 @@ void ExportEvolveTent (py::module m)
 {
   m.def ("EvolveTents",
          [] (int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt,
-             Vector<> wavefront,
-             double timeshift = 0) -> Vector<> //-> shared_ptr<MeshAccess>
+             Matrix<> wavefront,
+             double timeshift = 0) -> Matrix<> //-> shared_ptr<MeshAccess>
          {
            int D = ma->GetDimension ();
            if (D == 1)
@@ -565,10 +562,10 @@ void ExportEvolveTent (py::module m)
   );
   m.def ("EvolveTentsMakeWavefront",
          [] (int order, shared_ptr<MeshAccess> ma, double wavespeed,
-             double time) -> Vector<> //-> shared_ptr<MeshAccess>
+             double time) -> Matrix<> //-> shared_ptr<MeshAccess>
          {
            int D = ma->GetDimension ();
-           Vector<> wavefront;
+           Matrix<> wavefront;
            if (D == 1)
              wavefront = MakeWavefront<1> (order, ma, wavespeed, time);
            else if (D == 2)
@@ -578,8 +575,8 @@ void ExportEvolveTent (py::module m)
            return wavefront;
          });
   m.def ("EvolveTentsPostProcess",
-         [] (int order, shared_ptr<MeshAccess> ma, Vector<> wavefront,
-             Vector<> wavefront_corr) -> double {
+         [] (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
+             Matrix<> wavefront_corr) -> double {
            int D = ma->GetDimension ();
            double l2error;
            if (D == 1)

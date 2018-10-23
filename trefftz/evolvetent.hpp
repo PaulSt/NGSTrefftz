@@ -13,7 +13,7 @@ namespace ngcomp
 
   template <int D>
   void EvolveTents (int order, shared_ptr<MeshAccess> ma, double wavespeed,
-                    double dt, SliceVector<> wavefront, double timeshift = 0);
+                    double dt, SliceMatrix<> wavefront, double timeshift = 0);
 
   template <int D>
   Mat<D + 1, D + 1>
