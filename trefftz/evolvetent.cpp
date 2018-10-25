@@ -94,21 +94,12 @@ namespace ngcomp
           Vec<D + 1> linearbasis_top = vtop.Row (D);
 
           FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
-          FlatMatrix<SIMD<double>> simddshapes ((D + 1) * nbasis, sir.Size (),
-                                                slh);
 
           // Integration over top of tent
           FlatVector<SIMD<double>> mirtimes (sir.Size (), slh);
           faceint.Evaluate (sir, linearbasis_top, mirtimes);
           for (int imip = 0; imip < sir.Size (); imip++)
             smir[imip].Point () (D) = mirtimes[imip];
-
-          tel.CalcDShape (smir, simddshapes);
-          FlatMatrix<SIMD<double>> simddshapes_reshape (
-              nbasis, sir.Size () * (D + 1), &simddshapes (0, 0));
-          FlatMatrix<SIMD<double>> sbdbmat (sir.Size () * (D + 1), nbasis,
-                                            slh);
-          sbdbmat = 0;
 
           Vec<D + 1> n = TentFaceNormal<D + 1> (vtop, 1);
           Mat<D + 1> Dmat = n (D) * Id<D + 1> ();
@@ -125,6 +116,9 @@ namespace ngcomp
                 .Rows (i * (D + 1), (i + 1) * (D + 1))
                 = sir[i].Weight () * Dmat;
 
+          FlatMatrix<SIMD<double>> simddshapes ((D + 1) * nbasis, sir.Size (),
+                                                slh);
+          tel.CalcDShape (smir, simddshapes);
           FlatMatrix<double> bbmat (nbasis, (D + 1) * snip,
                                     &simddshapes (0, 0)[0]);
           FlatMatrix<double> bdbmat ((D + 1) * snip, nbasis, slh);
