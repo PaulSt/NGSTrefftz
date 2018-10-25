@@ -82,17 +82,15 @@ namespace ngcomp
                 for(int imip=0;imip<sir.Size();imip++)
                     smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
 
-                Mat<D+1,D+1> vtop = TentFaceVerts<D>(tent, elnr, ma, 1);
-                Vec<D+1> linearbasis_top = vtop.Row(D);
 
-                FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
 
                 // Integration over top of tent
+                Mat<D+1,D+1> vtop = TentFaceVerts<D>(tent, elnr, ma, 1);
+                Vec<D+1> linearbasis_top = vtop.Row(D);
                 FlatVector<SIMD<double>> mirtimes(sir.Size(),slh);
                 faceint.Evaluate(sir, linearbasis_top, mirtimes);
                 for(int imip=0;imip<sir.Size();imip++)
                     smir[imip].Point()(D) = mirtimes[imip];
-
 
                 Vec<D+1> n = TentFaceNormal<D+1>(vtop,1);
                 Mat<D+1> Dmat = n(D) * Id<D+1>();
@@ -101,23 +99,19 @@ namespace ngcomp
                 Dmat(D,D) *= 1.0/(wavespeed*wavespeed);
                 Dmat *= TentFaceArea<D>(vtop);
 
-                FlatMatrix<SIMD<double>> sDM((D+1)*sir.Size(),(D+1)*sir.Size(),slh);
-                sDM = 0;
-                for(int i=0;i<sir.Size();i++)
-                    sDM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1)) = sir[i].Weight() * Dmat ;
-
                 FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
                 tel.CalcDShape(smir,simddshapes);
                 FlatMatrix<double> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
                 FlatMatrix<double> bdbmat((D+1)*snip,nbasis,slh);
                 bdbmat = 0;
 
-                for(int r=0;r<(D+1)*snip;r++)
-                    for(int d=0;d<D+1;d++)
-                        bdbmat.Row(r) += Dmat(r/snip,d) * sir[r%sir.Size()].Weight()[r%(D+1)] * bbmat.Col(d*snip+r/(D+1));
+                for(int imip=0;imip<snip;imip++)
+                    for(int r=0;r<(D+1);r++)
+                        for(int d=0;d<D+1;d++)
+                            bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip);
 
                 elmat += bbmat * bdbmat;
-                        
+
 
                 //FlatMatrix<> sdshapes(nbasis,(D+1)*sir.Size()*nsimd,&simddshapes(0,0)[0]);
                 //Matrix<> ssdshapes = sdshapes;
@@ -142,8 +136,8 @@ namespace ngcomp
                 for(int imip=0;imip<sir.Size();imip++)
                     smir[imip].Point()(D) = mirtimes[imip];
 
+                FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
                 tel.CalcShape(smir,simdshapes);
-                tel.CalcDShape(smir,simddshapes);
                 FlatMatrix<> dshapes(nbasis,(D+1)*nip,slh);
                 tel.CalcDShape(mir,dshapes);
 
