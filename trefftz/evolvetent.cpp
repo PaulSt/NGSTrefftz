@@ -1,6 +1,7 @@
 #include "evolvetent.hpp"
 #include "trefftzwavefe.hpp"
 #include "tents/tents.hpp"
+#include "testcases.hpp"
 #include <comp.hpp> // provides FESpace, ...
 #include <h1lofe.hpp>
 #include <regex>
@@ -393,51 +394,6 @@ namespace ngcomp
     else if (top == -1)
       normv *= (-sgn_nozero<double> (normv[D - 1]));
     return normv;
-  }
-
-  template <int D> Vec<D + 2> TestSolution (Vec<D + 1> p, double wavespeed)
-  {
-    double x = p[0];
-    double t = p[D];
-    Vec<D + 2> sol;
-    int k = 1;
-    if (D == 1)
-      {
-        sol[0] = sin (k * (wavespeed * t + x));
-        sol[1] = k * cos (k * (wavespeed * t + x));
-        sol[2] = wavespeed * k * cos (k * (wavespeed * t + x));
-      }
-    else if (D == 2)
-      {
-        double y = p[1];
-        double sq = sqrt (0.5);
-        sol[0] = sin (wavespeed * t + sq * (x + y));
-        sol[1] = sq * cos (wavespeed * t + sq * (x + y));
-        sol[2] = sq * cos (wavespeed * t + sq * (x + y));
-        sol[3] = wavespeed * cos (wavespeed * t + sq * (x + y));
-
-        // sol[0] = exp(-100*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)) );
-        // sol[1] = 200 * (x-0.5) * sol[0];
-        // sol[2] = 200 * (y-0.5) * sol[0];
-        // sol[3] = 0;
-      }
-    else if (D == 3)
-      {
-        double y = p[1];
-        double z = p[2];
-        double sq = sqrt (1.0 / 3.0);
-        sol[0] = sin (wavespeed * t + sq * (x + y + z));
-        sol[1] = sq * cos (wavespeed * t + sq * (x + y + z));
-        sol[2] = sq * cos (wavespeed * t + sq * (x + y + z));
-        sol[3] = sq * cos (wavespeed * t + sq * (x + y + z));
-        sol[4] = wavespeed * cos (wavespeed * t + sq * (x + y + z));
-
-        // sol[0] = exp(-100*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5))
-        // ); sol[1] = 200 * (x-0.5) * sol[0]; sol[2] = 200 * (y-0.5) * sol[0];
-        // sol[3] = 200 * (z-0.5) * sol[0];
-        // sol[4] = 0;
-      }
-    return sol;
   }
 
   template <int D>
