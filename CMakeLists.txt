@@ -20,6 +20,7 @@ add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
     trefftz/scalarmappedfe.cpp
     trefftz/specialcoefficientfunction.cpp
     trefftz/tents/tents.cpp
+    trefftz/testcases.hpp
     trefftz/evolvetent.cpp
     trefftz/meshtentslab.cpp
     )

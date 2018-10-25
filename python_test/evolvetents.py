@@ -16,7 +16,7 @@ def GetFESTrefftz(mesh,c=1):
 order = 4
 c = 1
 t_start = 0
-t_step = 0.1
+t_step = 0.01
 
 # ngmesh = SegMesh(4,0,1)
 # ngmesh = QadSegMesh(4,0,1)
@@ -37,7 +37,8 @@ gfu = GridFunction(fes)
 a = BilinearForm(fes)
 a += SymbolicBFI(u*v)
 a.Assemble()
-Draw(gfu,initmesh,'sol',autoscale=True,min=-1,max=1)
+# Draw(gfu,initmesh,'sol',autoscale=True,min=-1,max=1)
+Draw(gfu,initmesh,'sol',autoscale=False,min=-0.2,max=0.2)
 wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start)
 
 for t in range(0,500):
