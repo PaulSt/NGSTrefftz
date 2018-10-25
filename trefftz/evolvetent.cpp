@@ -33,8 +33,7 @@ namespace ngcomp
   {
     LocalHeap lh (100000000);
 
-    SIMD<double> a;
-    int simdsize = a.Size ();
+    int nsimd = SIMD<double>::Size ();
 
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
@@ -42,6 +41,7 @@ namespace ngcomp
     int nip = ir.Size ();
 
     SIMD_IntegrationRule sir (eltyp, order * 2);
+    int snip = sir.Size () * nsimd;
 
     ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
     TrefftzWaveFE<D + 1> tel (order, wavespeed);
@@ -94,7 +94,7 @@ namespace ngcomp
           Vec<D + 1> linearbasis_top = vtop.Row (D);
 
           FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
-          FlatMatrix<SIMD<double>> simddshapes (nbasis, (D + 1) * sir.Size (),
+          FlatMatrix<SIMD<double>> simddshapes ((D + 1) * nbasis, sir.Size (),
                                                 slh);
 
           // Integration over top of tent
@@ -104,6 +104,11 @@ namespace ngcomp
             smir[imip].Point () (D) = mirtimes[imip];
 
           tel.CalcDShape (smir, simddshapes);
+          FlatMatrix<SIMD<double>> simddshapes_reshape (
+              nbasis, sir.Size () * (D + 1), &simddshapes (0, 0));
+          FlatMatrix<SIMD<double>> sbdbmat (sir.Size () * (D + 1), nbasis,
+                                            slh);
+          sbdbmat = 0;
 
           Vec<D + 1> n = TentFaceNormal<D + 1> (vtop, 1);
           Mat<D + 1> Dmat = n (D) * Id<D + 1> ();
@@ -120,13 +125,30 @@ namespace ngcomp
                 .Rows (i * (D + 1), (i + 1) * (D + 1))
                 = sir[i].Weight () * Dmat;
 
-          FlatMatrix<SIMD<double>> sDMxdshapest (nbasis, (D + 1) * ir.Size (),
-                                                 slh);
-          sDMxdshapest = 0;
+          FlatMatrix<double> bbmat (nbasis, (D + 1) * snip,
+                                    &simddshapes (0, 0)[0]);
+          FlatMatrix<double> bdbmat ((D + 1) * snip, nbasis, slh);
+          bdbmat = 0;
+
+          for (int r = 0; r < (D + 1) * snip; r++)
+            for (int d = 0; d < D + 1; d++)
+              bdbmat.Row (r) += Dmat (r / snip, d)
+                                * sir[r % sir.Size ()].Weight ()[r % (D + 1)]
+                                * bbmat.Col (d * snip + r / (D + 1));
+
+          elmat += bbmat * bdbmat;
+
+          // FlatMatrix<>
+          // sdshapes(nbasis,(D+1)*sir.Size()*nsimd,&simddshapes(0,0)[0]);
+          // Matrix<> ssdshapes = sdshapes;
+          // FlatMatrix<>
+          // ssDM((D+1)*sir.Size()*nsimd,(D+1)*sir.Size()*nsimd,&sDM(0,0)[0]);
+          // elmat+=ssdshapes*(ssDM*Trans(sdshapes));
           // AddABt(sDM,simddshapes,sDMxdshapest);
           // elmat += simddshapes * sDMxdshapest;
-          sDMxdshapest = simddshapes * sDM;
-          AddABt (simddshapes, sDMxdshapest, elmat);
+          // FlatMatrix<SIMD<double>> sDMxdshapest(nbasis,(D+1)*ir.Size(),slh);
+          // sDMxdshapest = simddshapes * sDM;
+          // AddABt(simddshapes,sDMxdshapest,elmat);
 
           // Integration over bot of tent
           MappedIntegrationRule<D, D + 1> mir (ir, ma->GetTrafo (elnr, slh),
@@ -175,7 +197,7 @@ namespace ngcomp
           for (int imip = 0; imip < sir.Size (); imip++)
             simdshapes.Col (imip)
                 *= sqrt (TentFaceArea<D> (vbot)) * sqrt (sir[imip].Weight ());
-          FlatMatrix<> shapes (nbasis, sir.Size () * simdsize,
+          FlatMatrix<> shapes (nbasis, sir.Size () * nsimd,
                                &simdshapes (0, 0)[0]);
           elvec += shapes * wavefront.Row (elnr).Range (0, nip);
 
