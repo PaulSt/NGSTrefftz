@@ -140,7 +140,7 @@ namespace ngcomp
           FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
           tel.CalcShape (smir, simdshapes);
           FlatMatrix<> dshapes (nbasis, (D + 1) * nip, slh);
-          tel.CalcDShape (mir, dshapes);
+          tel.CalcDShape (smir, simddshapes);
 
           n = TentFaceNormal<D + 1> (vbot, -1);
           Dmat = n (D) * Id<D + 1> (); // fix signes for grad(U)=-tau
@@ -149,17 +149,16 @@ namespace ngcomp
           Dmat (D, D) *= 1.0 / (wavespeed * wavespeed);
           Dmat *= TentFaceArea<D> (vbot);
 
-          FlatMatrix<> DM ((D + 1) * nip, (D + 1) * nip, slh);
-          DM = 0;
-          for (int i = 0; i < nip; i++)
-            DM.Cols (i * (D + 1), (i + 1) * (D + 1))
-                .Rows (i * (D + 1), (i + 1) * (D + 1))
-                = ir[i].Weight () * Dmat;
+          FlatVector<> bdbvec ((D + 1) * snip, slh);
+          bdbvec = 0;
+          for (int imip = 0; imip < snip; imip++)
+            for (int r = 0; r < (D + 1); r++)
+              for (int d = 0; d < D + 1; d++)
+                bdbvec (r * snip + imip)
+                    += Dmat (r, d) * sir[imip / nsimd].Weight ()[imip % nsimd]
+                       * wavefront (elnr, nip + imip * (D + 1) + d);
 
-          FlatVector<> DMxwp ((D + 1) * nip, slh);
-          FlatVector<> wp ((D + 1) * nip, &wavefront (elnr, nip));
-          MultMatVec (DM, wp, DMxwp);
-          elvec -= dshapes * DMxwp;
+          elvec -= bbmat * bdbvec;
 
           // stabilization to recover second order solution
           for (int imip = 0; imip < sir.Size (); imip++)
