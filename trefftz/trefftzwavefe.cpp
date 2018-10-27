@@ -94,9 +94,9 @@ namespace ngfem
                     for(int i=0;i<D;i++)
                         for(int k=pascal(i+1,j)-1; k>=0; k--)
                             coeff.Row( pascal(D+1,j-1)+k ) += cpoint[i] * coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k );
-                dshape.Col(imip*D + d) = coeff.Row(0);
+                for(int n=0;n<nbasis;n++)
+                    dshape(n*D+d,imip) = coeff(0,n) * (d==D-1 ? c : 1);
             }
-            dshape.Col(imip*D + D-1) *= c; //inner derivative
         }
         dshape *= (2.0/elsize); //inner derivative
     }
