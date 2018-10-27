@@ -103,25 +103,14 @@ namespace ngcomp
                 tel.CalcDShape(smir,simddshapes);
                 FlatMatrix<double> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
                 FlatMatrix<double> bdbmat((D+1)*snip,nbasis,slh);
-                bdbmat = 0;
 
+                bdbmat = 0;
                 for(int imip=0;imip<snip;imip++)
                     for(int r=0;r<(D+1);r++)
                         for(int d=0;d<D+1;d++)
                             bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip);
 
                 elmat += bbmat * bdbmat;
-
-
-                //FlatMatrix<> sdshapes(nbasis,(D+1)*sir.Size()*nsimd,&simddshapes(0,0)[0]);
-                //Matrix<> ssdshapes = sdshapes;
-                //FlatMatrix<> ssDM((D+1)*sir.Size()*nsimd,(D+1)*sir.Size()*nsimd,&sDM(0,0)[0]);
-                //elmat+=ssdshapes*(ssDM*Trans(sdshapes));
-                //AddABt(sDM,simddshapes,sDMxdshapest);
-                //elmat += simddshapes * sDMxdshapest;
-                //FlatMatrix<SIMD<double>> sDMxdshapest(nbasis,(D+1)*ir.Size(),slh);
-                //sDMxdshapest = simddshapes * sDM;
-                //AddABt(simddshapes,sDMxdshapest,elmat);
 
                 // Integration over bot of tent
                 MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(elnr,slh), slh); // <dim  el, dim space>
