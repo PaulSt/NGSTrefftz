@@ -127,8 +127,8 @@ namespace ngcomp
   template <int D> Vec<D + 2> TestSolution (Vec<D + 1> p, double wavespeed)
   {
     Vec<D + 2> sol;
-    // sol = simplesin<D>(p,wavespeed);
-    sol = standingwave<D> (p, wavespeed);
+    sol = simplesin<D> (p, wavespeed);
+    // sol = standingwave<D>(p,wavespeed);
     return sol;
   }
 }
