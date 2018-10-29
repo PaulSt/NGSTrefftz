@@ -76,24 +76,25 @@ namespace ngcomp
         double x = p[0]; double t = p[D];
         Vec<D+2> sol;
         int k = 1;
+        double sq = sqrt(D);
         if(D==1){
-            sol[0] = cos(M_PI*x)*sin(M_PI*t*sqrt(2))/(sqrt(2)*M_PI);
-            sol[1] = -sin(M_PI*x)*sin(M_PI*t*sqrt(2))/sqrt(2);
-            sol[2] = cos(M_PI*x)*cos(M_PI*t*sqrt(2));
+            sol[0] = cos(M_PI*x)*sin(M_PI*t*wavespeed*sq)/(sq*M_PI);
+            sol[1] = -sin(M_PI*x)*sin(M_PI*t*wavespeed*sq)/sq;
+            sol[2] = cos(M_PI*x)*cos(M_PI*t*wavespeed*sq)*wavespeed;
         } else if(D==2) {
             double y = p[1];
-            sol[0] = cos(M_PI*x)*cos(M_PI*y)*sin(M_PI*t*sqrt(2))/(sqrt(2)*M_PI);
-            sol[1] = -sin(M_PI*x)*cos(M_PI*y)*sin(M_PI*t*sqrt(2))/sqrt(2);
-            sol[2] = -cos(M_PI*x)*sin(M_PI*y)*sin(M_PI*t*sqrt(2))/sqrt(2);
-            sol[3] = cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*t*sqrt(2));
+            sol[0] = cos(M_PI*x)*cos(M_PI*y)*sin(M_PI*t*wavespeed*sq)/(sq*M_PI);
+            sol[1] = -sin(M_PI*x)*cos(M_PI*y)*sin(M_PI*t*wavespeed*sq)/sq;
+            sol[2] = -cos(M_PI*x)*sin(M_PI*y)*sin(M_PI*t*wavespeed*sq)/sq;
+            sol[3] = cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*t*wavespeed*sq)*wavespeed;
         } else if(D==3) {
             double y = p[1];
             double z = p[2];
-            sol[0] = cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*z)*sin(M_PI*t*sqrt(2))/(sqrt(2)*M_PI);
-            sol[1] = -sin(M_PI*x)*cos(M_PI*y)*cos(M_PI*z)*sin(M_PI*t*sqrt(2))/sqrt(2);
-            sol[2] = -cos(M_PI*x)*sin(M_PI*y)*cos(M_PI*z)*sin(M_PI*t*sqrt(2))/sqrt(2);
-            sol[3] = -cos(M_PI*x)*cos(M_PI*y)*sin(M_PI*z)*sin(M_PI*t*sqrt(2))/sqrt(2);
-            sol[4] = cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*z)*cos(M_PI*t*sqrt(2));
+            sol[0] = cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*z)*sin(M_PI*t*wavespeed*sq)/(sq*M_PI);
+            sol[1] = -sin(M_PI*x)*cos(M_PI*y)*cos(M_PI*z)*sin(M_PI*t*wavespeed*sq)/sq;
+            sol[2] = -cos(M_PI*x)*sin(M_PI*y)*cos(M_PI*z)*sin(M_PI*t*wavespeed*sq)/sq;
+            sol[3] = -cos(M_PI*x)*cos(M_PI*y)*sin(M_PI*z)*sin(M_PI*t*wavespeed*sq)/sq;
+            sol[4] = cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*z)*cos(M_PI*t*wavespeed*sq)*wavespeed;
         }
         return sol;
     }
