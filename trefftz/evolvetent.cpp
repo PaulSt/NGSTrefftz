@@ -171,8 +171,6 @@ namespace ngcomp
                     v(D,n+1) = tent->vertex==sel_verts[n] ? tent->ttop : tent->nbtime[tent->nbv.Pos(sel_verts[n])];
                 }
 
-                double A = TentFaceArea<D>(v);
-
                 Vec<D+1> n;
                 n.Range(0,D) = TentFaceNormal<D>(v.Cols(1,D+1).Rows(0,D),0);
                 if(D==1)
@@ -184,28 +182,42 @@ namespace ngcomp
                     map.Col(i) = v.Col(i+1) - v.Col(0);
                 Vec<D+1> shift = v.Col(0);
 
+                Mat<D+1> Dmat = 0;
+                Dmat.Row(D).Range(0,D) = -TentFaceArea<D>(v)*n.Range(0,D);
+
+                SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(0,slh),slh);
+                for(int imip=0;imip<ir.Size();imip++)
+                    smir[imip].Point() = map * sir[imip].operator Vec<D,SIMD<double>>() + shift;
+
+                FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
+                tel.CalcDShape(smir,simddshapes);
+                FlatMatrix<double> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
+                FlatMatrix<double> bdbmat((D+1)*snip,nbasis,slh);
+
+                bdbmat = 0;
+                for(int imip=0;imip<snip;imip++)
+                    for(int r=0;r<(D+1);r++)
+                        for(int d=0;d<D+1;d++)
+                            bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip);
+
+                elmat += bbmat * bdbmat;
+
                 MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(0,slh), slh); // <dim  el, dim space>
                 for(int imip=0;imip<nip;imip++)
+                {
                     mir[imip].Point() = map * ir[imip].Point() + shift;
-
-                FlatMatrix<> dshapes(nbasis,nip*(D+1),slh);
-                tel.CalcDShape(mir,dshapes);
-
-                Mat<D+1> Dmat = 0;
-                Dmat.Row(D).Range(0,D) = -n.Range(0,D);
-                FlatMatrix<> DM((D+1)*nip,(D+1)*nip,slh);
-                DM = 0;
-                for(int i=0;i<nip;i++)
-                    DM.Cols(i*(D+1),(i+1)*(D+1)).Rows(i*(D+1),(i+1)*(D+1)) = ir[i].Weight() * A * Dmat ;
-
-                FlatMatrix<double> DMxdshapes(nbasis,(D+1)*ir.Size(),slh);
-                DMxdshapes = dshapes * DM;
-                AddABt(DMxdshapes,dshapes,elmat);
-
-                for(int imip=0;imip<nip;imip++)
                     mir[imip].Point()[D] += timeshift;
+                }
+                Vector<> bc = EvalBC<D>(mir,wavespeed);
+                FlatVector<> bdbvec((D+1)*snip, slh ) ;
+                bdbvec = 0;
+                for(int imip=0;imip<snip;imip++)
+                    for(int r=0;r<(D+1);r++)
+                        for(int d=0;d<D+1;d++)
+                            // use Dmat transposed
+                            bdbvec(r*snip+imip) += Dmat(d,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bc((imip%nip)*(D+1)+d);
 
-                elvec -= dshapes * (Trans(DM) * EvalBC<D>(mir,wavespeed));
+                elvec -= bbmat * bdbvec;
             }
 
             // solve
