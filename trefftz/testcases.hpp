@@ -89,11 +89,11 @@ namespace ngcomp
         } else if(D==3) {
             double y = p[1];
             double z = p[2];
-            sol[0] = exp(-100*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5)) );
-            sol[1] = 200 * (x-0.5) * sol[0];
-            sol[2] = 200 * (y-0.5) * sol[0];
-            sol[3] = 200 * (z-0.5) * sol[0];
-            sol[4] = 0;
+            sol[0] = cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*z)*sin(M_PI*t*sqrt(2))/(sqrt(2)*M_PI);
+            sol[1] = -sin(M_PI*x)*cos(M_PI*y)*cos(M_PI*z)*sin(M_PI*t*sqrt(2))/sqrt(2);
+            sol[2] = -cos(M_PI*x)*sin(M_PI*y)*cos(M_PI*z)*sin(M_PI*t*sqrt(2))/sqrt(2);
+            sol[3] = -cos(M_PI*x)*cos(M_PI*y)*sin(M_PI*z)*sin(M_PI*t*sqrt(2))/sqrt(2);
+            sol[4] = cos(M_PI*x)*cos(M_PI*y)*cos(M_PI*z)*cos(M_PI*t*sqrt(2));
         }
         return sol;
     }
