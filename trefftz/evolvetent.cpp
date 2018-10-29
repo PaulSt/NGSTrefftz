@@ -142,7 +142,7 @@ namespace ngcomp
                 for(int imip=0;imip<snip;imip++)
                     for(int r=0;r<(D+1);r++)
                         for(int d=0;d<D+1;d++)
-                            bdbvec(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * wavefront(elnr, nip+imip*(D+1)+d);
+                            bdbvec(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * wavefront(elnr, nip+(imip%nip)*(D+1)+d);
 
                 elvec -= bbmat * bdbvec;
 
