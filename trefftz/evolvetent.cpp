@@ -59,10 +59,10 @@ namespace ngcomp
             Tent* tent = tps.tents[tentnr];
 
             RegionTimer reg(ttent);
+
             Vec<D+1> center;
             center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
             center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
-
             tel.SetCenter(center);
             tel.SetElSize(TentAdiam<D>(tent, ma));
 
@@ -82,8 +82,6 @@ namespace ngcomp
                 for(int imip=0;imip<sir.Size();imip++)
                     smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
 
-
-
                 // Integration over top of tent
                 Mat<D+1,D+1> vtop = TentFaceVerts<D>(tent, elnr, ma, 1);
                 Vec<D+1> linearbasis_top = vtop.Row(D);
@@ -101,8 +99,8 @@ namespace ngcomp
 
                 FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
                 tel.CalcDShape(smir,simddshapes);
-                FlatMatrix<double> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
-                FlatMatrix<double> bdbmat((D+1)*snip,nbasis,slh);
+                FlatMatrix<> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
+                FlatMatrix<> bdbmat((D+1)*snip,nbasis,slh);
 
                 bdbmat = 0;
                 for(int imip=0;imip<snip;imip++)
@@ -117,18 +115,9 @@ namespace ngcomp
 
                 Mat<D+1,D+1> vbot = TentFaceVerts<D>(tent, elnr, ma, 0);
                 Vec<D+1> linearbasis_bot = vbot.Row(D);
-
-                for(int imip=0;imip<nip;imip++)
-                    mir[imip].Point()(D) = faceint.Evaluate(ir[imip], linearbasis_bot);
-
                 faceint.Evaluate(sir, linearbasis_bot, mirtimes);
                 for(int imip=0;imip<sir.Size();imip++)
                     smir[imip].Point()(D) = mirtimes[imip];
-
-                FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
-                tel.CalcShape(smir,simdshapes);
-                FlatMatrix<> dshapes(nbasis,(D+1)*nip,slh);
-                tel.CalcDShape(smir,simddshapes);
 
                 n = TentFaceNormal<D+1>(vbot,-1);
                 Dmat = n(D) * Id<D+1>(); // fix signes for grad(U)=-tau
@@ -136,6 +125,10 @@ namespace ngcomp
                 Dmat.Col(D).Range(0,D) = -n.Range(0,D);
                 Dmat(D,D) *= 1.0/(wavespeed*wavespeed);
                 Dmat *= TentFaceArea<D>(vbot);
+
+                FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
+                tel.CalcShape(smir,simdshapes);
+                tel.CalcDShape(smir,simddshapes);
 
                 FlatVector<> bdbvec((D+1)*snip, slh ) ;
                 bdbvec = 0;
@@ -232,9 +225,7 @@ namespace ngcomp
                 MappedIntegrationRule<D,D> mir(ir, ma->GetTrafo(elnr,slh), slh); // <dim  el, dim space>
 
                 Mat<D+1,D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
-                Vec<D+1> n = TentFaceNormal<D+1>(v,1);
                 Vec<D+1> bs = v.Row(D);
-                double A = TentFaceArea<D>(v);
                 for(int imip=0;imip<nip;imip++)
                     mir[imip].Point()(D) = faceint.Evaluate(ir[imip], bs);
 
