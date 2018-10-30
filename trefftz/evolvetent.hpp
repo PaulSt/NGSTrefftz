@@ -16,6 +16,9 @@ namespace ngcomp
     Mat<D+1,D+1> TentFaceVerts(Tent* tent, int elnr, shared_ptr<MeshAccess> ma);
 
     template<int D>
+    void TentDmat(Mat<D+1> &Dmat, Mat<D+1> v, int top, double wavespeed);
+
+    template<int D>
     double TentFaceArea( Mat<D+1,D+1> v );
 
     template<int D>
