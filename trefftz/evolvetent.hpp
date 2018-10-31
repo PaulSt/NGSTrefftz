@@ -28,7 +28,7 @@ namespace ngcomp
     Vec<D+2,double> TestSolution(Vec<D+1,double> p, double wavespeed);
 
     template<int D>
-    Vector<> EvalBC(const BaseMappedIntegrationRule & mir, double wavespeed);
+    Vector<> EvalBC(const SIMD_MappedIntegrationRule<D,D+1> & mir, double wavespeed, double timeshift);
 
     template<typename T=double>
     void SwapIfGreater(T& a, T& b);
