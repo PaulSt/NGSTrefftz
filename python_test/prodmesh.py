@@ -3,6 +3,7 @@ import netgen.meshing as ngm
 from ngsolve import *
 from netgen.geom2d import unit_square
 from ngsolve import TensorProductTools
+import netgen.geom2d as ngeom2d
 
 def QadSegMesh(n,x0,x1):
     ngmesh = ngm.Mesh(dim=1)
@@ -180,3 +181,20 @@ def CartSquare(N,t_steps):
 	mesh = Mesh(ngmesh)
 	# print("boundaries" + str(mesh.GetBoundaries()))
 	return mesh
+
+def LshapeMesh(maxh = 0.5):
+    geo = ngeom2d.SplineGeometry()
+    p1 = geo.AppendPoint (0,0)
+    p2 = geo.AppendPoint (0.5,0)
+    p3 = geo.AppendPoint (0.5,0.5)
+    p4 = geo.AppendPoint (1,0.5)
+    p5 = geo.AppendPoint (1,1)
+    p6 = geo.AppendPoint (0,1)
+    geo.Append (["line", p1, p2])
+    geo.Append (["line", p2, p3])
+    geo.Append (["line", p3, p4])
+    geo.Append (["line", p4, p5])
+    geo.Append (["line", p5, p6])
+    geo.Append (["line", p6, p1])
+    mesh = geo.GenerateMesh (maxh=maxh)
+    return mesh

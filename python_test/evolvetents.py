@@ -9,6 +9,7 @@ import time
 from scipy.io import savemat
 from scipy.io import loadmat
 from ngsolve import *
+from prodmesh import *
 
 def GetFESTrefftz(mesh,c=1):
     return FESpace("trefftzfespace", mesh, order = 4, wavespeed = c, dgjumps=True, basistype=0)
@@ -23,6 +24,7 @@ t_step = 0.01
 # initmesh = Mesh(ngmesh)
 initmesh = Mesh(unit_square.GenerateMesh(maxh=0.2))
 # initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.5))
+# initmesh = Mesh( LshapeMesh(0.1) )
 D = initmesh.dim
 if D==3: eltyp = ET.TET
 elif D==2: eltyp = ET.TRIG
@@ -37,6 +39,7 @@ gfu = GridFunction(fes)
 a = BilinearForm(fes)
 a += SymbolicBFI(u*v)
 a.Assemble()
+# Draw(gfu,initmesh,'sol')
 # Draw(gfu,initmesh,'sol',autoscale=True,min=-1,max=1)
 Draw(gfu,initmesh,'sol',autoscale=False,min=-0.2,max=0.2)
 wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start)
