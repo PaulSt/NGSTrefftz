@@ -117,7 +117,7 @@ namespace ngcomp
           elmat += bbmat * bdbmat;
 
           /// Integration over bot of tent
-          vert = TentFaceVerts<D> (tent, elnr, ma, 0);
+          vert = TentFaceVerts<D> (tent, elnr, ma, -1);
           linbasis = vert.Row (D);
           faceint.Evaluate (sir, linbasis, mirtimes);
           for (int imip = 0; imip < sir.Size (); imip++)
@@ -154,29 +154,20 @@ namespace ngcomp
       // Integrate over side of tent
       for (auto surfel : ma->GetVertexSurfaceElements (tent->vertex))
         {
-          auto sel_verts = ma->GetElVertices (ElementId (BND, surfel));
-          Mat<D + 1, D + 1> v;
-          v.Col (0).Range (0, D) = ma->GetPoint<D> (tent->vertex);
-          v (D, 0) = tent->tbot;
-          for (int n = 0; n < D; n++)
-            {
-              v.Col (n + 1).Range (0, D) = ma->GetPoint<D> (sel_verts[n]);
-              v (D, n + 1) = tent->vertex == sel_verts[n]
-                                 ? tent->ttop
-                                 : tent->nbtime[tent->nbv.Pos (sel_verts[n])];
-            }
+          Mat<D + 1> vert = TentFaceVerts<D> (tent, surfel, ma,
+                                              0); // vertices of tent face
 
           Vec<D + 1> n;
           n.Range (0, D)
-              = TentFaceNormal<D> (v.Cols (1, D + 1).Rows (0, D), 0);
+              = TentFaceNormal<D> (vert.Cols (1, D + 1).Rows (0, D), 0);
           if (D == 1)
             n[0] = sgn_nozero<int> (tent->vertex - tent->nbv[0]);
           n[D] = 0;
 
           Mat<D + 1, D> map;
           for (int i = 0; i < D; i++)
-            map.Col (i) = v.Col (i + 1) - v.Col (0);
-          Vec<D + 1> shift = v.Col (0);
+            map.Col (i) = vert.Col (i + 1) - vert.Col (0);
+          Vec<D + 1> shift = vert.Col (0);
 
           SIMD_MappedIntegrationRule<D, D + 1> smir (
               sir, ma->GetTrafo (0, slh), slh);
@@ -191,7 +182,7 @@ namespace ngcomp
                                     &simddshapes (0, 0)[0]);
 
           Mat<D + 1> Dmat = 0;
-          Dmat.Row (D).Range (0, D) = -TentFaceArea<D> (v) * n.Range (0, D);
+          Dmat.Row (D).Range (0, D) = -TentFaceArea<D> (vert) * n.Range (0, D);
           FlatMatrix<double> bdbmat ((D + 1) * snip, nbasis, slh);
           bdbmat = 0;
           for (int imip = 0; imip < snip; imip++)
@@ -266,20 +257,36 @@ namespace ngcomp
   // space-time element
   template <int D>
   Mat<D + 1, D + 1>
-  TentFaceVerts (Tent *tent, int elnr, shared_ptr<MeshAccess> ma, bool top)
+  TentFaceVerts (Tent *tent, int elnr, shared_ptr<MeshAccess> ma, int top)
   {
-    INT<D + 1> vnr = ma->GetElVertices (elnr);
     Mat<D + 1, D + 1> v;
-    // determine linear basis function coeffs to use for tent face
-    for (int ivert = 0; ivert < vnr.Size (); ivert++)
+    if (top == 0) // boundary element
       {
-        if (vnr[ivert] == tent->vertex)
-          v (D, ivert) = top ? tent->ttop : tent->tbot;
-        else
-          for (int k = 0; k < tent->nbv.Size (); k++)
-            if (vnr[ivert] == tent->nbv[k])
-              v (D, ivert) = tent->nbtime[k];
-        v.Col (ivert).Range (0, D) = ma->GetPoint<D> (vnr[ivert]);
+        auto sel_verts = ma->GetElVertices (ElementId (BND, elnr));
+        v.Col (0).Range (0, D) = ma->GetPoint<D> (tent->vertex);
+        v (D, 0) = tent->tbot;
+        for (int n = 0; n < D; n++)
+          {
+            v.Col (n + 1).Range (0, D) = ma->GetPoint<D> (sel_verts[n]);
+            v (D, n + 1) = tent->vertex == sel_verts[n]
+                               ? tent->ttop
+                               : tent->nbtime[tent->nbv.Pos (sel_verts[n])];
+          }
+      }
+    else // top or bot of tent
+      {
+        INT<D + 1> vnr = ma->GetElVertices (elnr);
+        // determine linear basis function coeffs to use for tent face
+        for (int ivert = 0; ivert < vnr.Size (); ivert++)
+          {
+            v.Col (ivert).Range (0, D) = ma->GetPoint<D> (vnr[ivert]);
+            if (vnr[ivert] == tent->vertex)
+              v (D, ivert) = top == 1 ? tent->ttop : tent->tbot;
+            else
+              for (int k = 0; k < tent->nbv.Size (); k++)
+                if (vnr[ivert] == tent->nbv[k])
+                  v (D, ivert) = tent->nbtime[k];
+          }
       }
     return v;
   }
