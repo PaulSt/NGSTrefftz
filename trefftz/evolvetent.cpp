@@ -203,14 +203,7 @@ namespace ngcomp
 
           elmat += bbmat * bdbmat;
 
-          MappedIntegrationRule<D, D + 1> mir (ir, ma->GetTrafo (0, slh),
-                                               slh); // <dim  el, dim space>
-          for (int imip = 0; imip < nip; imip++)
-            {
-              mir[imip].Point () = map * ir[imip].Point () + shift;
-              mir[imip].Point ()[D] += timeshift;
-            }
-          Vector<> bc = EvalBC<D> (mir, wavespeed);
+          Vector<> bc = EvalBC<D> (smir, wavespeed, timeshift);
           FlatVector<> bdbvec ((D + 1) * snip, slh);
           bdbvec = 0;
           for (int imip = 0; imip < snip; imip++)
@@ -391,13 +384,25 @@ namespace ngcomp
   }
 
   template <int D>
-  Vector<> EvalBC (const BaseMappedIntegrationRule &mir, double wavespeed)
+  Vector<> EvalBC (const SIMD_MappedIntegrationRule<D, D + 1> &mir,
+                   double wavespeed, double timeshift)
   {
-    Vector<> bc ((D + 1) * mir.Size ());
+    int nsimd = SIMD<double>::Size ();
+    Vector<> bc ((D + 1) * mir.Size () * nsimd);
     for (int imip = 0; imip < mir.Size (); imip++)
-      bc.Range (imip * (D + 1), (imip + 1) * (D + 1))
-          = TestSolution<D> (mir[imip].GetPoint (), wavespeed)
-                .Range (1, D + 2);
+      {
+        Vector<SIMD<double>> sp = mir[imip].GetPoint ();
+        sp[D] += timeshift;
+        Vec<D + 1> p;
+        for (int s = 0; s < nsimd; s++)
+          {
+            for (int d = 0; d < D + 1; d++)
+              p[d] = sp[d][s];
+            bc.Range (imip * (D + 1) * nsimd + s * (D + 1),
+                      (imip) * (D + 1) * nsimd + (s + 1) * (D + 1))
+                = TestSolution<D> (p, wavespeed).Range (1, D + 2);
+          }
+      }
     return bc;
   }
 
