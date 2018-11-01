@@ -51,15 +51,15 @@ namespace ngcomp
     if (D == 1)
       {
         sol[0] = exp (-100 * ((x - 0.5) * (x - 0.5)));
-        sol[1] = 200 * (x - 0.5) * sol[0];
+        sol[1] = -200 * (x - 0.5) * sol[0];
         sol[2] = 0;
       }
     else if (D == 2)
       {
         double y = p[1];
         sol[0] = exp (-100 * ((x - 0.5) * (x - 0.5) + (y - 0.5) * (y - 0.5)));
-        sol[1] = 200 * (x - 0.5) * sol[0];
-        sol[2] = 200 * (y - 0.5) * sol[0];
+        sol[1] = -200 * (x - 0.5) * sol[0];
+        sol[2] = -200 * (y - 0.5) * sol[0];
         sol[3] = 0;
       }
     else if (D == 3)
@@ -69,9 +69,9 @@ namespace ngcomp
         sol[0] = exp (-100
                       * ((x - 0.5) * (x - 0.5) + (y - 0.5) * (y - 0.5)
                          + (z - 0.5) * (z - 0.5)));
-        sol[1] = 200 * (x - 0.5) * sol[0];
-        sol[2] = 200 * (y - 0.5) * sol[0];
-        sol[3] = 200 * (z - 0.5) * sol[0];
+        sol[1] = -200 * (x - 0.5) * sol[0];
+        sol[2] = -200 * (y - 0.5) * sol[0];
+        sol[3] = -200 * (z - 0.5) * sol[0];
         sol[4] = 0;
       }
     return sol;
@@ -86,14 +86,14 @@ namespace ngcomp
     if (D == 1)
       {
         sol[0] = exp (-100 * ((x - 0.5) * (x - 0.5)));
-        sol[1] = 200 * (x - 0.5) * sol[0];
+        sol[1] = -200 * (x - 0.5) * sol[0];
         sol[2] = 0;
       }
     else if (D == 2)
       {
         double y = p[1];
         sol[0] = exp (-100 * ((x - 0.25) * (x - 0.25)));
-        sol[1] = 200 * (x - 0.25) * sol[0];
+        sol[1] = -200 * (x - 0.25) * sol[0];
         sol[2] = 0;
         sol[3] = 0;
       }
@@ -102,7 +102,7 @@ namespace ngcomp
         double y = p[1];
         double z = p[2];
         sol[0] = exp (-100 * ((x - 0.25) * (x - 0.25)));
-        sol[1] = 200 * (x - 0.25) * sol[0];
+        sol[1] = -200 * (x - 0.25) * sol[0];
         sol[2] = 0;
         sol[3] = 0;
         sol[4] = 0;
