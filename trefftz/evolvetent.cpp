@@ -166,7 +166,8 @@ namespace ngcomp
                 for(int imip=0;imip<snip;imip++)
                     for(int r=0;r<(D+1);r++)
                         for(int d=0;d<D+1;d++)
-                            bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip);
+                            //bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip); //dirichlet
+                            bdbmat.Row(r*snip+imip) += Dmat(d,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip); //neumann
 
                 elmat += bbmat * bdbmat;
 
@@ -177,9 +178,9 @@ namespace ngcomp
                     for(int r=0;r<(D+1);r++)
                         for(int d=0;d<D+1;d++)
                             // use Dmat transposed
-                            bdbvec(r*snip+imip) += Dmat(d,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bc((imip%nip)*(D+1)+d);
+                            bdbvec(r*snip+imip) += Dmat(d,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bc((imip%nip)*(D+1)+d); //dirichlet
 
-                elvec -= bbmat * bdbvec;
+                //elvec -= bbmat * bdbvec;
             }
 
             // solve
