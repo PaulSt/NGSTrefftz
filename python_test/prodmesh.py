@@ -198,3 +198,9 @@ def LshapeMesh(maxh = 0.5):
     geo.Append (["line", p6, p1])
     mesh = geo.GenerateMesh (maxh=maxh)
     return mesh
+
+def CircleMesh(maxh=0.5):
+    geo = ngeom2d.SplineGeometry()
+    geo.AddCircle((0.5,0.5),1,bc="circle")
+    ngmesh = geo.GenerateMesh(maxh=maxh)
+    return ngmesh

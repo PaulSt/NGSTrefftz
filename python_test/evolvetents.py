@@ -22,9 +22,10 @@ t_step = 0.01
 # ngmesh = SegMesh(4,0,1)
 # ngmesh = QadSegMesh(4,0,1)
 # initmesh = Mesh(ngmesh)
-initmesh = Mesh(unit_square.GenerateMesh(maxh=0.2))
+# initmesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 # initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.5))
-# initmesh = Mesh( LshapeMesh(0.1) )
+initmesh = Mesh( LshapeMesh(0.1) )
+# initmesh = Mesh( CircleMesh(0.2) )
 D = initmesh.dim
 if D==3: eltyp = ET.TET
 elif D==2: eltyp = ET.TRIG
