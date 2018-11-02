@@ -204,3 +204,19 @@ def CircleMesh(maxh=0.5):
     geo.AddCircle((0.5,0.5),1,bc="circle")
     ngmesh = geo.GenerateMesh(maxh=maxh)
     return ngmesh
+
+def RefineAround(center,r,mesh):
+    for el in mesh.Elements():
+        for v in el.vertices:
+            dist = 0
+            p = mesh.ngmesh.Points()[v.nr+1]
+            for n,pn in enumerate(p):
+                dist += (pn-center[n])*(pn-center[n])
+            dist = sqrt(dist)
+            if(dist<r):
+                mesh.SetRefinementFlag(el,1)
+                break
+            else:
+                mesh.SetRefinementFlag(el,0)
+    mesh.Refine()
+    return mesh
