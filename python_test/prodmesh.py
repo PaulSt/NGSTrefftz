@@ -205,6 +205,35 @@ def CircleMesh(maxh=0.5):
     ngmesh = geo.GenerateMesh(maxh=maxh)
     return ngmesh
 
+def TunnelMesh(maxh = 0.5):
+    geo = ngeom2d.SplineGeometry()
+    p1 = geo.AppendPoint (-0.5,-1.25)
+    p2 = geo.AppendPoint (0.5,-1.25)
+    p3 = geo.AppendPoint (0.5,-0.3)
+    p4 = geo.AppendPoint (0.002,-0.3)
+    p5 = geo.AppendPoint (0.002,-0.2)
+    p6 = geo.AppendPoint (0.5,-0.2)
+    p7 = geo.AppendPoint (0.5,0.75)
+    p8 = geo.AppendPoint (-0.5,0.75)
+    p9 = geo.AppendPoint (-0.5,-0.2)
+    p10 = geo.AppendPoint (-0.002,-0.2)
+    p11 = geo.AppendPoint (-0.002,-0.3)
+    p12 = geo.AppendPoint (-0.5,-0.3)
+    geo.Append (["line", p1, p2])
+    geo.Append (["line", p2, p3])
+    geo.Append (["line", p3, p4])
+    geo.Append (["line", p4, p5])
+    geo.Append (["line", p5, p6])
+    geo.Append (["line", p6, p7])
+    geo.Append (["line", p7, p8])
+    geo.Append (["line", p8, p9])
+    geo.Append (["line", p9, p10])
+    geo.Append (["line", p10, p11])
+    geo.Append (["line", p11, p12])
+    geo.Append (["line", p12, p1])
+    mesh = geo.GenerateMesh (maxh=maxh)
+    return mesh
+
 def RefineAround(center,r,mesh):
     for el in mesh.Elements():
         for v in el.vertices:
