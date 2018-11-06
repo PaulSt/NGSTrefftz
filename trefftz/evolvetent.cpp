@@ -138,7 +138,7 @@ namespace ngcomp
             //Integrate over side of tent
             for(auto surfel : ma->GetVertexSurfaceElements(tent->vertex))
             {
-                Mat<D+1> vert = TentFaceVerts<D>(tent, surfel, ma, 0);//vertices of tent face 
+                Mat<D+1> vert = TentFaceVerts<D>(tent, surfel, ma, 0);//vertices of tent face
 
                 Vec<D+1> n;
                 n.Range(0,D) = TentFaceNormal<D>(vert.Cols(1,D+1).Rows(0,D),0);
@@ -166,8 +166,8 @@ namespace ngcomp
                 for(int imip=0;imip<snip;imip++)
                     for(int r=0;r<(D+1);r++)
                         for(int d=0;d<D+1;d++)
-                            //bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip); //dirichlet
-                            bdbmat.Row(r*snip+imip) += Dmat(d,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip); //neumann
+                            bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip); //dirichlet
+                            //bdbmat.Row(r*snip+imip) += Dmat(d,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip); //neumann
 
                 elmat += bbmat * bdbmat;
 
@@ -180,7 +180,7 @@ namespace ngcomp
                             // use Dmat transposed
                             bdbvec(r*snip+imip) += Dmat(d,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bc((imip%nip)*(D+1)+d); //dirichlet
 
-                //elvec -= bbmat * bdbvec;
+                elvec -= bbmat * bdbvec;
             }
 
             // solve
@@ -383,7 +383,7 @@ namespace ngcomp
     }
 
     template<int D>
-    double Postprocess(int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, Matrix<> wavefront_corr)
+    double L2Error(int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, Matrix<> wavefront_corr)
     {
         double l2error=0;
         LocalHeap lh(10000000);
@@ -398,6 +398,24 @@ namespace ngcomp
             }
         }
         return sqrt(l2error);
+    }
+
+    template<int D>
+    double Energy(int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront)
+    {
+        double energy=0;
+        LocalHeap lh(10000000);
+        const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
+        IntegrationRule ir(eltyp, order*2);
+        for(int elnr=0;elnr<ma->GetNE();elnr++)
+        {
+            HeapReset hr(lh);
+            for(int imip=0;imip<ir.Size();imip++)
+            {
+                energy += 0.5*(wavefront(elnr,ir.Size() + (D+1)*(imip+1) - 1) + L2Norm2(wavefront.Row(elnr).Range(ir.Size() + (D+1)*imip, ir.Size()+(D+1)*(imip+1))) )*ir[imip].Weight();
+            }
+        }
+        return energy;
     }
 
     template<typename T>
@@ -468,17 +486,30 @@ void ExportEvolveTent(py::module m)
               return wavefront;
           }
          );
-    m.def("EvolveTentsPostProcess", [](int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, Matrix<> wavefront_corr) -> double
+    m.def("EvolveTentsL2Error", [](int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, Matrix<> wavefront_corr) -> double
           {
               int D = ma->GetDimension();
               double l2error;
               if(D==1)
-                  l2error = Postprocess<1>(order, ma, wavefront, wavefront_corr);
+                  l2error = L2Error<1>(order, ma, wavefront, wavefront_corr);
               else if(D == 2)
-                  l2error = Postprocess<2>(order, ma, wavefront, wavefront_corr);
+                  l2error = L2Error<2>(order, ma, wavefront, wavefront_corr);
               else if(D == 3)
-                  l2error = Postprocess<3>(order, ma, wavefront, wavefront_corr);
+                  l2error = L2Error<3>(order, ma, wavefront, wavefront_corr);
               return l2error;
+          }
+         );
+    m.def("EvolveTentsEnergy", [](int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront) -> double
+          {
+              int D = ma->GetDimension();
+              double energy;
+              if(D==1)
+                  energy = Energy<1>(order, ma, wavefront);
+              else if(D == 2)
+                  energy = Energy<2>(order, ma, wavefront);
+              else if(D == 3)
+                  energy = Energy<3>(order, ma, wavefront);
+              return energy;
           }
          );
 }
