@@ -415,7 +415,7 @@ namespace ngcomp
             HeapReset hr(lh);
             for(int imip=0;imip<ir.Size();imip++)
             {
-                energy += 0.5*(wavefront(elnr,ir.Size() + (D+1)*(imip+1) - 1) + L2Norm2(wavefront.Row(elnr).Range(ir.Size() + (D+1)*imip, ir.Size()+(D+1)*(imip+1))) )*ir[imip].Weight();
+                energy += 0.5*(wavefront(elnr,ir.Size()+(D+1)*(imip+1)-1)*wavefront(elnr,ir.Size()+(D+1)*(imip+1)-1) + L2Norm2(wavefront.Row(elnr).Range(ir.Size() + (D+1)*imip, ir.Size()+(D+1)*(imip+1))) )*ir[imip].Weight();
             }
         }
         return energy;
