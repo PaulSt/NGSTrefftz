@@ -154,13 +154,18 @@ namespace ngcomp
     return sol;
   }
 
-  template <int D> Vec<D + 2> TestSolution (Vec<D + 1> p, double wavespeed)
+  template <int D>
+  Vec<D + 2> TestSolution (Vec<D + 1> p, double wavespeed, char const *solname)
   {
     Vec<D + 2> sol;
-    // sol = simplesin<D>(p,wavespeed);
-    sol = standingwave<D> (p, wavespeed);
-    // sol = gausspw<D>(p,wavespeed);
-    // sol = vertgausspw<D>(p,wavespeed);
+    if (strcmp (solname, "gausspw") == 0)
+      sol = gausspw<D> (p, wavespeed);
+    else if (strcmp (solname, "standingwave") == 0)
+      sol = standingwave<D> (p, wavespeed);
+    else if (strcmp (solname, "vertgausspw") == 0)
+      sol = vertgausspw<D> (p, wavespeed);
+    else
+      sol = simplesin<D> (p, wavespeed);
     return sol;
   }
 }
