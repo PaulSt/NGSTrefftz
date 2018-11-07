@@ -492,6 +492,8 @@ namespace ngcomp
             energy
                 += 0.5
                    * (wavefront (elnr, ir.Size () + (D + 1) * (imip + 1) - 1)
+                          * wavefront (elnr,
+                                       ir.Size () + (D + 1) * (imip + 1) - 1)
                       + L2Norm2 (wavefront.Row (elnr).Range (
                           ir.Size () + (D + 1) * imip,
                           ir.Size () + (D + 1) * (imip + 1))))
