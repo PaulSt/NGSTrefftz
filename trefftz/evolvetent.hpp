@@ -10,7 +10,7 @@
 namespace ngcomp
 {
     template<int D>
-    void EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, SliceMatrix<> wavefront, double timeshift = 0);
+    void EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, SliceMatrix<> wavefront, double timeshift, char const *solname);
 
     template<int D>
     Mat<D+1,D+1> TentFaceVerts(Tent* tent, int elnr, shared_ptr<MeshAccess> ma, int top);
@@ -28,7 +28,7 @@ namespace ngcomp
     Vec<D+2,double> TestSolution(Vec<D+1,double> p, double wavespeed);
 
     template<int D>
-    Vector<> EvalBC(const SIMD_MappedIntegrationRule<D,D+1> & mir, double wavespeed, double timeshift);
+    Vector<> EvalBC(const SIMD_MappedIntegrationRule<D,D+1> & mir, double wavespeed, double timeshift, char const *solname);
 
     template<typename T=double>
     void SwapIfGreater(T& a, T& b);
