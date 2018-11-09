@@ -50,10 +50,10 @@ namespace ngcomp
 
         //FlatVector<SIMD<double>> simd_wavefront(sir.Size()*ma->GetNE()*(D+2), &wavefront[0]);
 
-        cout << "solving tents";
+        cout << "solving " << tps.tents.Size() << " tents" << endl;
         static Timer ttent("tent",2);
-        static Timer tint("tentint",2);
-        static Timer tcalcshape("tentcalcshape",2);
+        static Timer tsolve("tentsolve",2);
+        static Timer teval("tent eval",2);
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             HeapReset hr(lh);
             Tent* tent = tps.tents[tentnr];
@@ -181,15 +181,18 @@ namespace ngcomp
                         for(int d=0;d<D+1;d++)
                             if(ma->GetMaterial(ElementId(BND,surfel)) == "neumann");
                             else
-                                bdbvec(r*snip+imip) += Dmat(d,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bc((imip%nip)*(D+1)+d); //dirichlet // use Dmat transposed 
+                                bdbvec(r*snip+imip) += Dmat(d,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bc((imip%nip)*(D+1)+d); //dirichlet // use Dmat transposed
 
                 elvec -= bbmat * bdbvec;
             }
 
             // solve
+            tsolve.Start();
             LapackSolve(elmat,elvec);
             FlatVector<> sol(nbasis, &elvec(0));
+            tsolve.Stop();
 
+            teval.Start();
             double tenterror = 0;
             // eval solution on top of tent
             for(auto elnr: tent->els)
@@ -211,6 +214,7 @@ namespace ngcomp
                 //p[D] += timeshift;
                 //tenterror += (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight() * A;
             }
+            teval.Stop();
             //cout << "error tent: " << sqrt(tenterror) << endl;
         }); // end loop over tents
         cout << "...done" << endl;
@@ -404,20 +408,17 @@ namespace ngcomp
     }
 
     template<int D>
-    double Energy(int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront)
+    double Energy(int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, double wavenumber)
     {
         double energy=0;
         LocalHeap lh(10000000);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         IntegrationRule ir(eltyp, order*2);
+        int nip = ir.Size();
         for(int elnr=0;elnr<ma->GetNE();elnr++)
-        {
-            HeapReset hr(lh);
-            for(int imip=0;imip<ir.Size();imip++)
-            {
-                energy += 0.5*(wavefront(elnr,ir.Size()+(D+1)*(imip+1)-1)*wavefront(elnr,ir.Size()+(D+1)*(imip+1)-1) + L2Norm2(wavefront.Row(elnr).Range(ir.Size() + (D+1)*imip, ir.Size()+(D+1)*(imip+1))) )*ir[imip].Weight();
-            }
-        }
+            for(int imip=0;imip<nip;imip++)
+                energy += 0.5*( (1/pow(wavenumber,2)) * pow(wavefront(elnr,nip+(D+1)*imip+D),2)
+                               + L2Norm2(wavefront.Row(elnr).Range(nip+(D+1)*imip, nip+(D+1)*imip+D)) )*ir[imip].Weight();
         return energy;
     }
 
@@ -475,7 +476,7 @@ void ExportEvolveTent(py::module m)
                   EvolveTents<3>(order,ma,wavespeed,dt,wavefront, timeshift, solname);
               return wavefront;
           },//, py::call_guard<py::gil_scoped_release>()
-          py::arg("oder"),py::arg("ma"),py::arg("ws"),py::arg("finaltime"), py::arg("wavefront"), py::arg("timeshift"), py::arg("solname") = "" 
+          py::arg("oder"),py::arg("ma"),py::arg("ws"),py::arg("finaltime"), py::arg("wavefront"), py::arg("timeshift"), py::arg("solname") = ""
          );
     m.def("EvolveTentsMakeWavefront", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, double time, char const *solname) -> Matrix<>//-> shared_ptr<MeshAccess>
           {
@@ -489,7 +490,7 @@ void ExportEvolveTent(py::module m)
                   wavefront = MakeWavefront<3>(order, ma, wavespeed, time, solname);
               return wavefront;
           },
-          py::arg("oder"),py::arg("ma"),py::arg("ws"),py::arg("time"), py::arg("solname") = "" 
+          py::arg("oder"),py::arg("ma"),py::arg("ws"),py::arg("time"), py::arg("solname") = ""
          );
     m.def("EvolveTentsL2Error", [](int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, Matrix<> wavefront_corr) -> double
           {
@@ -504,16 +505,16 @@ void ExportEvolveTent(py::module m)
               return l2error;
           }
          );
-    m.def("EvolveTentsEnergy", [](int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront) -> double
+    m.def("EvolveTentsEnergy", [](int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, double wavenumber) -> double
           {
               int D = ma->GetDimension();
               double energy;
               if(D==1)
-                  energy = Energy<1>(order, ma, wavefront);
+                  energy = Energy<1>(order, ma, wavefront, wavenumber);
               else if(D == 2)
-                  energy = Energy<2>(order, ma, wavefront);
+                  energy = Energy<2>(order, ma, wavefront, wavenumber);
               else if(D == 3)
-                  energy = Energy<3>(order, ma, wavefront);
+                  energy = Energy<3>(order, ma, wavefront, wavenumber);
               return energy;
           }
          );
