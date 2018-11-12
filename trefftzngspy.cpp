@@ -1,7 +1,7 @@
 #include <solve.hpp>
 using namespace ngsolve;
 #include <python_ngstd.hpp>
-//#include "trefftz/trefftzelement.hpp"
+//#include "trefftz/trefftzwavefe.hpp"
 #include "trefftz/trefftzfespace.hpp"
 #include "trefftz/diffopmapped.hpp"
 #include "trefftz/specialcoefficientfunction.hpp"

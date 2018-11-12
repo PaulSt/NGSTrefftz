@@ -3,6 +3,7 @@ import netgen.meshing as ngm
 from ngsolve import *
 from netgen.geom2d import unit_square
 from ngsolve import TensorProductTools
+import netgen.geom2d as ngeom2d
 
 def QadSegMesh(n,x0,x1):
     ngmesh = ngm.Mesh(dim=1)
@@ -180,3 +181,73 @@ def CartSquare(N,t_steps):
 	mesh = Mesh(ngmesh)
 	# print("boundaries" + str(mesh.GetBoundaries()))
 	return mesh
+
+def LshapeMesh(maxh = 0.5):
+    geo = ngeom2d.SplineGeometry()
+    p1 = geo.AppendPoint (0,0)
+    p2 = geo.AppendPoint (0.5,0)
+    p3 = geo.AppendPoint (0.5,0.5)
+    p4 = geo.AppendPoint (1,0.5)
+    p5 = geo.AppendPoint (1,1)
+    p6 = geo.AppendPoint (0,1)
+    geo.Append (["line", p1, p2])
+    geo.Append (["line", p2, p3])
+    geo.Append (["line", p3, p4])
+    geo.Append (["line", p4, p5])
+    geo.Append (["line", p5, p6])
+    geo.Append (["line", p6, p1])
+    mesh = geo.GenerateMesh (maxh=maxh)
+    return mesh
+
+def CircleMesh(maxh=0.5):
+    geo = ngeom2d.SplineGeometry()
+    geo.AddCircle((0.5,0.5),1,bc="circle")
+    ngmesh = geo.GenerateMesh(maxh=maxh)
+    return ngmesh
+
+def TunnelMesh(maxh = 0.5):
+    geo = ngeom2d.SplineGeometry()
+    xshift = 0.5
+    yshift = 0.25
+    p1 = geo.AppendPoint (-0.5+xshift,-1.25+yshift)
+    p2 = geo.AppendPoint (0.5+xshift,-1.25+yshift)
+    p3 = geo.AppendPoint (0.5+xshift,-0.3+yshift)
+    p4 = geo.AppendPoint (0.002+xshift,-0.3+yshift)
+    p5 = geo.AppendPoint (0.002+xshift,-0.2+yshift)
+    p6 = geo.AppendPoint (0.5+xshift,-0.2+yshift)
+    p7 = geo.AppendPoint (0.5+xshift,0.75+yshift)
+    p8 = geo.AppendPoint (-0.5+xshift,0.75+yshift)
+    p9 = geo.AppendPoint (-0.5+xshift,-0.2+yshift)
+    p10 = geo.AppendPoint (-0.002+xshift,-0.2+yshift)
+    p11 = geo.AppendPoint (-0.002+xshift,-0.3+yshift)
+    p12 = geo.AppendPoint (-0.5+xshift,-0.3+yshift)
+    geo.Append (["line", p1, p2])
+    geo.Append (["line", p2, p3])
+    geo.Append (["line", p3, p4])
+    geo.Append (["line", p4, p5])
+    geo.Append (["line", p5, p6])
+    geo.Append (["line", p6, p7])
+    geo.Append (["line", p7, p8])
+    geo.Append (["line", p8, p9])
+    geo.Append (["line", p9, p10])
+    geo.Append (["line", p10, p11])
+    geo.Append (["line", p11, p12])
+    geo.Append (["line", p12, p1])
+    mesh = geo.GenerateMesh (maxh=maxh)
+    return mesh
+
+def RefineAround(center,r,mesh):
+    for el in mesh.Elements():
+        for v in el.vertices:
+            dist = 0
+            p = mesh.ngmesh.Points()[v.nr+1]
+            for n,pn in enumerate(p):
+                dist += (pn-center[n])*(pn-center[n])
+            dist = sqrt(dist)
+            if(dist<r):
+                mesh.SetRefinementFlag(el,1)
+                break
+            else:
+                mesh.SetRefinementFlag(el,0)
+    mesh.Refine()
+    return mesh

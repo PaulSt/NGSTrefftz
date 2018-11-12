@@ -8,7 +8,7 @@ from DGeq import *
 import time
 from ngsolve.TensorProductTools import *
 from ngsolve.comp import *
-from testsolve import TestSolution2D
+from solve12d import TestSolution2D
 
 
 def SolveTentSlab(fes,U0,gD=0,c=1):
