@@ -40,15 +40,15 @@ public:
   // Matrix<> propagate;   // propagate * (current u) = u at new time
   
   Array< Matrix<> > gradphi_bot, gradphi_top;
-  Array< AFlatMatrix<> > agradphi_bot, agradphi_top;
+  // Array< AFlatMatrix<> > agradphi_bot, agradphi_top;
   Array< Vector<double> > delta;
-  Array< AVector<double> > adelta;  
+  // Array< AVector<double> > adelta;  
   Array< Vector<> > graddelta;
 
   Table< Matrix<> > gradphi_facet_bot, gradphi_facet_top;
-  Table< AFlatMatrix<> > agradphi_facet_bot, agradphi_facet_top;
+  // Table< AFlatMatrix<> > agradphi_facet_bot, agradphi_facet_top;
   Table< Vector<double> > delta_facet;
-  Table< AVector<double> > adelta_facet;
+  // Table< AVector<double> > adelta_facet;
   
   int level;            
   int nd_u;             // num internal dofs 
@@ -72,16 +72,16 @@ public:
 
   ~Tent()
   {
-    for(auto grad : agradphi_bot)
-      free(&grad(0,0));
-    for(auto grad : agradphi_top)
-      free(&grad(0,0));
-    for(auto elgrad : agradphi_facet_bot)
-      for(auto grad : elgrad)
-        free(&grad(0,0));
-    for(auto elgrad : agradphi_facet_top)
-      for(auto grad : elgrad)
-        free(&grad(0,0));
+    // for(auto grad : agradphi_bot)
+    //   free(&grad(0,0));
+    // for(auto grad : agradphi_top)
+    //   free(&grad(0,0));
+    // for(auto elgrad : agradphi_facet_bot)
+    //   for(auto grad : elgrad)
+    //     free(&grad(0,0));
+    // for(auto elgrad : agradphi_facet_top)
+    //   for(auto grad : elgrad)
+    //     free(&grad(0,0));
   }
 };
 
@@ -103,8 +103,13 @@ public:
   Array<Vec<2,SIMD_IntegrationRule*>> firi;      // facet integration rules for all facets in the tent
                                                  // transformed to local coordinated of the
                                                  // neighboring elements
-  Array<SIMD_BaseMappedIntegrationRule*> mfiri;  // mapped facet integration rules for all facets
-                                                 // (only for the first neighbor)
+  Array<SIMD_BaseMappedIntegrationRule*> mfiri1; // mapped facet integration rules for all facets
+  Array<SIMD_BaseMappedIntegrationRule*> mfiri2; // mapped facet integration rules for all facets
+  Array<FlatMatrix<SIMD<double>>> agradphi_botf1; // gradient phi face first and second element
+  Array<FlatMatrix<SIMD<double>>> agradphi_topf1; 
+  Array<FlatMatrix<SIMD<double>>> agradphi_botf2; 
+  Array<FlatMatrix<SIMD<double>>> agradphi_topf2; 
+
   Array<FlatMatrix<SIMD<double>>> anormals;      // normal vectors in the IP's
   // Array<int> facetorder;
   Array<FlatVector<SIMD<double>>> adelta_facet;  // height of the tent in the IP's
