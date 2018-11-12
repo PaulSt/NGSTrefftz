@@ -1,4 +1,4 @@
-#include "trefftzelement.hpp"
+#include "trefftzwavefe.hpp"
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
 #include "helpers.hpp"
@@ -8,26 +8,24 @@
 namespace ngfem
 {
   template <int D>
-  T_TrefftzElement<D>::T_TrefftzElement (int aord, float ac,
-                                         ELEMENT_TYPE aeltype, int abasistype)
+  TrefftzWaveFE<D>::TrefftzWaveFE (int aord, float ac, ELEMENT_TYPE aeltype,
+                                   int abasistype)
       : ScalarMappedElement<D> (BinCoeff (D - 1 + aord, aord)
                                     + BinCoeff (D - 1 + aord - 1, aord - 1),
                                 aord),
         ord (aord), c (ac), nbasis (BinCoeff (D - 1 + ord, ord)
                                     + BinCoeff (D - 1 + ord - 1, ord - 1)),
-        npoly (BinCoeff (D + ord, ord)), indices (GetIndices ()),
-        basistype (abasistype), eltype (aeltype), pascal (pascal_sym ())
+        npoly (BinCoeff (D + ord, ord)), basistype (abasistype),
+        eltype (aeltype), pascal (pascal_sym ())
   {
-    ;
+    cout << "nbasis: " << nbasis << endl;
   }
 
   template <int D>
-  void T_TrefftzElement<D>::CalcShape (BareSliceVector<> point,
-                                       BareSliceVector<> shape) const
+  void TrefftzWaveFE<D>::CalcShape (const BaseMappedIntegrationPoint &mip,
+                                    BareSliceVector<> shape) const
   {
-    Vec<D> cpoint;
-    for (int i = 0; i < D; i++)
-      cpoint (i) = point (i);
+    Vec<D> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
     cpoint *= (2.0 / elsize);
     cpoint[D - 1] *= c;
@@ -39,19 +37,16 @@ namespace ngfem
           coeff.Row (pascal (D + 1, j - 1) + k)
               += cpoint[i]
                  * coeff.Row (pascal (D + 1, j) + pascal (i, j + 1) + k);
-    // coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
 
     for (int b = 0; b < nbasis; b++)
       shape (b) = coeff.Row (0) (b);
   }
 
   template <int D>
-  void T_TrefftzElement<D>::CalcDShape (BareSliceVector<> point,
-                                        SliceMatrix<> dshape) const
+  void TrefftzWaveFE<D>::CalcDShape (const BaseMappedIntegrationPoint &mip,
+                                     SliceMatrix<> dshape) const
   {
-    Vec<D> cpoint;
-    for (int i = 0; i < D; i++)
-      cpoint (i) = point (i);
+    Vec<D> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
     cpoint *= (2.0 / elsize);
     cpoint[D - 1] *= c;
@@ -65,7 +60,6 @@ namespace ngfem
               coeff.Row (pascal (D + 1, j - 1) + k)
                   += cpoint[i]
                      * coeff.Row (pascal (D + 1, j) + pascal (i, j + 1) + k);
-        // coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k ) = 0;
         dshape.Col (d) = coeff.Row (0);
       }
 
@@ -74,27 +68,72 @@ namespace ngfem
   }
 
   template <int D>
-  void T_TrefftzElement<D>::CalcShape (const BaseMappedIntegrationPoint &mip,
-                                       BareSliceVector<> shape) const
+  void TrefftzWaveFE<D>::CalcShape (
+      const SIMD_MappedIntegrationRule<D - 1, D> &smir,
+      BareSliceMatrix<SIMD<double>> shape) const
   {
-    CalcShape (mip.GetPoint (), shape);
+    // auto & smir = static_cast<const SIMD_MappedIntegrationRule<D,D+1>&>
+    // (mir);
+    for (int imip = 0; imip < smir.Size (); imip++)
+      {
+        Vec<D, SIMD<double>> cpoint = smir[imip].GetPoint ();
+        cpoint -= elcenter;
+        cpoint *= (2.0 / elsize);
+        cpoint (D - 1) *= c;
+        Matrix<SIMD<double>> coeff (TrefftzBasis ());
+
+        for (int j = ord; j > 0; j--)
+          for (int i = 0; i < D; i++)
+            for (int k = pascal (i + 1, j) - 1; k >= 0; k--)
+              coeff.Row (pascal (D + 1, j - 1) + k)
+                  += cpoint[i]
+                     * coeff.Row (pascal (D + 1, j) + pascal (i, j + 1) + k);
+
+        for (int b = 0; b < nbasis; b++)
+          shape.Col (imip) (b) = coeff.Row (0) (b);
+      }
   }
 
   template <int D>
-  void T_TrefftzElement<D>::CalcDShape (const BaseMappedIntegrationPoint &mip,
-                                        SliceMatrix<> dshape) const
+  void TrefftzWaveFE<D>::CalcDShape (
+      const SIMD_MappedIntegrationRule<D - 1, D> &smir,
+      SliceMatrix<SIMD<double>> dshape) const
   {
-    CalcDShape (mip.GetPoint (), dshape);
+    // auto & smir = static_cast<const SIMD_MappedIntegrationRule<D,D+1>&>
+    // (mir);
+    for (int imip = 0; imip < smir.Size (); imip++)
+      {
+        Vec<D, SIMD<double>> cpoint = smir[imip].GetPoint ();
+        cpoint -= elcenter;
+        cpoint *= (2.0 / elsize);
+        cpoint[D - 1] *= c;
+
+        for (int d = 0; d < D; d++)
+          { // loop over derivatives/dimensions
+            Matrix<SIMD<double>> coeff (GetDerTrefftzBasis (d));
+            for (int j = ord - 1; j > 0; j--)
+              for (int i = 0; i < D; i++)
+                for (int k = pascal (i + 1, j) - 1; k >= 0; k--)
+                  coeff.Row (pascal (D + 1, j - 1) + k)
+                      += cpoint[i]
+                         * coeff.Row (pascal (D + 1, j) + pascal (i, j + 1)
+                                      + k);
+            for (int n = 0; n < nbasis; n++)
+              dshape (n * D + d, imip) = coeff (0, n) * (d == D - 1 ? c : 1);
+          }
+      }
+    dshape *= (2.0 / elsize); // inner derivative
   }
 
   template <int D>
-  Matrix<double> T_TrefftzElement<D>::GetDerTrefftzBasis (int der) const
+  Matrix<double> TrefftzWaveFE<D>::GetDerTrefftzBasis (int der) const
   {
     static int order;
     static int btype;
     static Vec<D, Matrix<double>> basisstorage;
     if (order != ord || btype != basistype)
       {
+        Matrix<int> indices = MakeIndices ();
         for (int d = 0; d < D; d++)
           {
             basisstorage[d].SetSize (pascal (D + 1, ord), nbasis);
@@ -111,7 +150,7 @@ namespace ngfem
     return basisstorage[der];
   }
 
-  template <int D> Matrix<double> T_TrefftzElement<D>::TrefftzBasis () const
+  template <int D> Matrix<double> TrefftzWaveFE<D>::TrefftzBasis () const
   {
     static int order;
     static int btype;
@@ -123,6 +162,7 @@ namespace ngfem
 
         basisstorage = 0;
         int setbasis = 0;
+        Matrix<int> indices = MakeIndices ();
         for (int l = 0; l < nbasis; l++) // loop over basis functions
           {
             for (int i = 0; i < npoly;
@@ -185,10 +225,9 @@ namespace ngfem
   }
 
   template <int D>
-  constexpr void
-  T_TrefftzElement<D>::MakeIndices_inner (Matrix<int> &indice,
-                                          Vec<D, int> numbers, int &count,
-                                          int ordr, int dim)
+  void TrefftzWaveFE<D>::MakeIndices_inner (Matrix<int> &indice,
+                                            Vec<D, int> numbers, int &count,
+                                            int ordr, int dim) const
   {
     if (dim > 0)
       {
@@ -202,35 +241,24 @@ namespace ngfem
       {
         int sum = 0;
         for (int i = 0; i < D; i++)
-          {
-            sum += numbers (i);
-          }
+          sum += numbers (i);
         if (sum == ordr)
-          {
-            indice.Row (count++) = numbers;
-          }
+          indice.Row (count++) = numbers;
       }
   }
 
-  template <int D> Matrix<int> T_TrefftzElement<D>::GetIndices ()
+  template <int D> Matrix<int> TrefftzWaveFE<D>::MakeIndices () const
   {
-    static int order;
-    static Matrix<int> indice;
-    if (order != ord)
-      {
-        indice.SetSize (npoly, D);
-        Vec<D, int> numbers = 0;
-        int count = 0;
-        for (int o = 0; o <= ord; o++)
-          {
-            MakeIndices_inner (indice, numbers, count, o);
-          }
-      }
+    Matrix<int> indice (npoly, D);
+    Vec<D, int> numbers = 0;
+    int count = 0;
+    for (int o = 0; o <= ord; o++)
+      MakeIndices_inner (indice, numbers, count, o, D);
     return indice;
   }
 
   template <int D>
-  constexpr int T_TrefftzElement<D>::IndexMap (Vec<D, int> index) const
+  constexpr int TrefftzWaveFE<D>::IndexMap (Vec<D, int> index) const
   {
     int sum = 0;
     int indexleng = 0;
@@ -246,7 +274,7 @@ namespace ngfem
     return sum;
   }
 
-  template <int D> Matrix<int> T_TrefftzElement<D>::pascal_sym () const
+  template <int D> Matrix<int> TrefftzWaveFE<D>::pascal_sym () const
   {
     static int order;
     static Matrix<int> pascalstorage;
@@ -269,10 +297,10 @@ namespace ngfem
     return pascalstorage;
   }
 
-  template class T_TrefftzElement<1>;
-  template class T_TrefftzElement<2>;
-  template class T_TrefftzElement<3>;
-  template class T_TrefftzElement<4>;
+  template class TrefftzWaveFE<1>;
+  template class TrefftzWaveFE<2>;
+  template class TrefftzWaveFE<3>;
+  template class TrefftzWaveFE<4>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -280,16 +308,16 @@ namespace ngfem
 #ifdef NGS_PYTHON
 void ExportTrefftzElement (py::module m)
 {
-  // py::class_<T_TrefftzElement<3>, shared_ptr<T_TrefftzElement<3>>,
-  // FiniteElement> 	(m, "T_TrefftzElement3", "Trefftz space for wave eq")
+  // py::class_<TrefftzWaveFE<3>, shared_ptr<TrefftzWaveFE<3>>, FiniteElement>
+  // 	(m, "TrefftzWaveFE3", "Trefftz space for wave eq")
   // 	.def(py::init<>())
   // 	;
-  // py::class_<T_TrefftzElement<2>, shared_ptr<T_TrefftzElement<2>>,
-  // FiniteElement> 	(m, "T_TrefftzElement2", "Trefftz space for wave eq")
+  // py::class_<TrefftzWaveFE<2>, shared_ptr<TrefftzWaveFE<2>>, FiniteElement>
+  // 	(m, "TrefftzWaveFE2", "Trefftz space for wave eq")
   // 	.def(py::init<>())
   // 	;
-  // py::class_<T_TrefftzElement<1>, shared_ptr<T_TrefftzElement<1>>,
-  // FiniteElement> 	(m, "T_TrefftzElement1", "Trefftz space for wave eq")
+  // py::class_<TrefftzWaveFE<1>, shared_ptr<TrefftzWaveFE<1>>, FiniteElement>
+  // 	(m, "TrefftzWaveFE1", "Trefftz space for wave eq")
   // 	.def(py::init<>())
   // 	;
 }

@@ -9,21 +9,28 @@
 
 namespace ngcomp
 {
-  typedef map<netgen::Point3d, netgen::PointIndex> Point2IndexMap;
-
   template <int D>
   void EvolveTents (int order, shared_ptr<MeshAccess> ma, double wavespeed,
-                    double dt, SliceVector<> wavefront, double timeshift = 0);
+                    double dt, SliceMatrix<> wavefront, double timeshift,
+                    char const *solname);
 
   template <int D>
   Mat<D + 1, D + 1>
-  TentFaceVerts (Tent *tent, int elnr, shared_ptr<MeshAccess> ma);
+  TentFaceVerts (Tent *tent, int elnr, shared_ptr<MeshAccess> ma, int top);
+
+  template <int D>
+  void TentDmat (Mat<D + 1> &Dmat, Mat<D + 1> v, int top, double wavespeed);
 
   template <int D> double TentFaceArea (Mat<D + 1, D + 1> v);
 
   template <int D> Vec<D> TentFaceNormal (Mat<D, D> v, int dir);
 
-  template <int D> Vec<D + 2> TestSolution (Vec<D + 1> p, double wavespeed);
+  template <int D>
+  Vec<D + 2, double> TestSolution (Vec<D + 1, double> p, double wavespeed);
+
+  template <int D>
+  Vector<> EvalBC (const SIMD_MappedIntegrationRule<D, D + 1> &mir,
+                   double wavespeed, double timeshift, char const *solname);
 
   template <typename T = double> void SwapIfGreater (T &a, T &b);
 

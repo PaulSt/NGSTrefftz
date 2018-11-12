@@ -3,17 +3,16 @@
 
 #include <fem.hpp>
 #include "helpers.hpp"
-#include "scalarmappedelement.hpp"
+#include "scalarmappedfe.hpp"
 
 namespace ngfem
 {
-  template <int D> class T_TrefftzElement : public ScalarMappedElement<D>
+  template <int D> class TrefftzWaveFE : public ScalarMappedElement<D>
   {
   private:
     const int ord;
     const int nbasis;
     const int npoly;
-    const Matrix<int> indices;
     const Matrix<int> pascal;
     const int basistype;
     Vec<D> elcenter = 0;
@@ -22,40 +21,42 @@ namespace ngfem
     ELEMENT_TYPE eltype;
 
   public:
-    // T_TrefftzElement();
-    T_TrefftzElement (int aord = 1, float ac = 1.0,
-                      ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0);
+    // TrefftzWaveFE();
+    TrefftzWaveFE (int aord = 1, float ac = 1.0,
+                   ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0);
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
 
-    void CalcShape (BareSliceVector<> point, BareSliceVector<> shape) const;
     using ScalarMappedElement<D>::CalcShape;
     virtual void CalcShape (const BaseMappedIntegrationPoint &mip,
                             BareSliceVector<> shape) const;
+    virtual void CalcShape (const SIMD_MappedIntegrationRule<D - 1, D> &smir,
+                            BareSliceMatrix<SIMD<double>> shape) const;
 
-    void CalcDShape (BareSliceVector<> point, SliceMatrix<> dshape) const;
     using ScalarMappedElement<D>::CalcDShape;
     virtual void CalcDShape (const BaseMappedIntegrationPoint &mip,
                              SliceMatrix<> dshape) const;
+    virtual void CalcDShape (const SIMD_MappedIntegrationRule<D - 1, D> &smir,
+                             SliceMatrix<SIMD<double>> dshape) const;
 
     int GetNBasis () const { return nbasis; }
 
-    T_TrefftzElement<D> *SetCenter (Vec<D> acenter)
+    TrefftzWaveFE<D> *SetCenter (Vec<D> acenter)
     {
       elcenter = acenter;
       return this;
     }
-    T_TrefftzElement<D> *SetElSize (double aelsize)
+    TrefftzWaveFE<D> *SetElSize (double aelsize)
     {
       elsize = aelsize;
       return this;
     }
-    // T_TrefftzElement<D> * SetWavespeed(float ac) {c = ac; return this;}
+    // TrefftzWaveFE<D> * SetWavespeed(float ac) {c = ac; return this;}
 
   protected:
-    constexpr void MakeIndices_inner (Matrix<int> &indice, Vec<D, int> numbers,
-                                      int &count, int ordr, int dim = D);
-    Matrix<int> GetIndices ();
+    void MakeIndices_inner (Matrix<int> &indice, Vec<D, int> numbers,
+                            int &count, int ordr, int dim) const;
+    Matrix<int> MakeIndices () const;
 
     constexpr int IndexMap (Vec<D, int> index) const;
     Matrix<double> TrefftzBasis () const;

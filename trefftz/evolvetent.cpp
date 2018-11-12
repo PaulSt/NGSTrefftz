@@ -1,6 +1,7 @@
 #include "evolvetent.hpp"
-#include "trefftzelement.hpp"
+#include "trefftzwavefe.hpp"
 #include "tents/tents.hpp"
+#include "testcases.hpp"
 #include <comp.hpp> // provides FESpace, ...
 #include <h1lofe.hpp>
 #include <regex>
@@ -28,36 +29,45 @@ namespace ngcomp
 
   template <int D>
   void EvolveTents (int order, shared_ptr<MeshAccess> ma, double wavespeed,
-                    double dt, SliceVector<double> wavefront, double timeshift)
+                    double dt, SliceMatrix<double> wavefront, double timeshift,
+                    char const *solname)
   {
     LocalHeap lh (100000000);
+
+    int nsimd = SIMD<double>::Size ();
 
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     IntegrationRule ir (eltyp, order * 2);
+    int nip = ir.Size ();
+
+    SIMD_IntegrationRule sir (eltyp, order * 2);
+    int snip = sir.Size () * nsimd;
 
     ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
-    T_TrefftzElement<D + 1> tel (order, wavespeed);
+    TrefftzWaveFE<D + 1> tel (order, wavespeed);
     int nbasis = tel.GetNBasis ();
 
     TentPitchedSlab<D> tps
         = TentPitchedSlab<D> (ma);      // collection of tents in timeslab
     tps.PitchTents (dt, wavespeed + 1); // adt = time slab height, wavespeed
 
-    cout << "solving tents";
+    // FlatVector<SIMD<double>> simd_wavefront(sir.Size()*ma->GetNE()*(D+2),
+    // &wavefront[0]);
+
+    cout << "solving " << tps.tents.Size () << " tents" << endl;
     static Timer ttent ("tent", 2);
-    static Timer tint ("tentint", 2);
-    static Timer tcalcshape ("tentcalcshape", 2);
+    static Timer tsolve ("tentsolve", 2);
+    static Timer teval ("tent eval", 2);
     RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
-      // LocalHeap slh = lh.Split();  // split to threads
       HeapReset hr (lh);
       Tent *tent = tps.tents[tentnr];
 
       RegionTimer reg (ttent);
+
       Vec<D + 1> center;
       center.Range (0, D) = ma->GetPoint<D> (tent->vertex);
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
-
       tel.SetCenter (center);
       tel.SetElSize (TentAdiam<D> (tent, ma));
 
@@ -65,217 +75,234 @@ namespace ngcomp
       FlatVector<> elvec (nbasis, lh);
       elmat = 0;
       elvec = 0;
+
+      LocalHeap slh = lh.Split (); // split to threads
       for (auto elnr : tent->els)
         {
-          INT<D + 1> vnr = ma->GetEdgePNums (elnr);
-          MappedIntegrationRule<D, D> mir (ir, ma->GetTrafo (elnr, lh),
-                                           lh); // <dim  el, dim space>
+          HeapReset hr (slh);
 
-          Mat<D + 1, D + 1> vtop = TentFaceVerts<D> (tent, elnr, ma, 1);
-          Vec<D + 1> linearbasis_top = vtop.Row (D);
-          Mat<D + 1, D + 1> vbot = TentFaceVerts<D> (tent, elnr, ma, 0);
-          Vec<D + 1> linearbasis_bot = vbot.Row (D);
-          for (int imip = 0; imip < mir.Size (); imip++)
-            {
-              Vec<D + 1> p;
-              p.Range (0, D) = mir[imip].GetPoint ();
+          SIMD_MappedIntegrationRule<D, D + 1> smir (
+              sir, ma->GetTrafo (elnr, slh), slh);
+          SIMD_MappedIntegrationRule<D, D> smir_fix (
+              sir, ma->GetTrafo (elnr, slh), slh);
+          for (int imip = 0; imip < sir.Size (); imip++)
+            smir[imip].Point ().Range (0, D)
+                = smir_fix[imip].Point ().Range (0, D);
 
-              FlatVector<> shape (nbasis, lh);
-              FlatMatrix<> dshape (nbasis, D + 1, lh);
+          Mat<D + 1> vert;     // vertices of tent face
+          Vec<D + 1> linbasis; // coeffs for linear face fct
+          Mat<D + 1> Dmat;
+          FlatVector<SIMD<double>> mirtimes (sir.Size (), slh);
 
-              // Integration over top of tent
-              Vec<D + 1> n = TentFaceNormal<D + 1> (vtop, 1);
-              mir[imip].SetMeasure (TentFaceArea<D> (vtop));
-              p (D) = faceint.Evaluate (ir[imip], linearbasis_top);
+          /// Integration over top of tent
+          vert = TentFaceVerts<D> (tent, elnr, ma, 1);
+          linbasis = vert.Row (D);
+          faceint.Evaluate (sir, linbasis, mirtimes);
+          for (int imip = 0; imip < sir.Size (); imip++)
+            smir[imip].Point () (D) = mirtimes[imip];
 
-              tcalcshape.Start ();
-              tel.CalcShape (p, shape);
-              tel.CalcDShape (p, dshape);
-              tcalcshape.Stop ();
+          FlatMatrix<SIMD<double>> simddshapes ((D + 1) * nbasis, sir.Size (),
+                                                slh);
+          tel.CalcDShape (smir, simddshapes);
+          FlatMatrix<> bbmat (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
 
-              tint.Start ();
-              for (int i = 0; i < nbasis; i++)
-                {
-                  for (int j = 0; j < nbasis; j++)
-                    {
-                      Vec<D> sig = -dshape.Row (i).Range (0, D);
-                      Vec<D> tau = -dshape.Row (j).Range (0, D);
-                      elmat (j, i)
-                          += mir[imip].GetWeight ()
-                             * (dshape (i, D) * dshape (j, D) * n (D)
-                                    * (1 / (wavespeed * wavespeed))
-                                + InnerProduct (sig, tau) * n (D)
-                                + dshape (i, D)
-                                      * InnerProduct (tau, n.Range (0, D))
-                                + dshape (j, D)
-                                      * InnerProduct (sig, n.Range (0, D)));
-                    }
-                }
-              tint.Stop ();
+          TentDmat<D> (Dmat, vert, 1, wavespeed);
+          FlatMatrix<> bdbmat ((D + 1) * snip, nbasis, slh);
+          bdbmat = 0;
+          for (int imip = 0; imip < snip; imip++)
+            for (int r = 0; r < (D + 1); r++)
+              for (int d = 0; d < D + 1; d++)
+                bdbmat.Row (r * snip + imip)
+                    += Dmat (r, d) * sir[imip / nsimd].Weight ()[imip % nsimd]
+                       * bbmat.Col (d * snip + imip);
+          elmat += bbmat * bdbmat;
 
-              // Integration over bot of tent
-              n = TentFaceNormal<D + 1> (vbot, -1);
-              mir[imip].SetMeasure (TentFaceArea<D> (vbot));
-              p (D) = faceint.Evaluate (ir[imip], linearbasis_bot);
+          /// Integration over bot of tent
+          vert = TentFaceVerts<D> (tent, elnr, ma, -1);
+          linbasis = vert.Row (D);
+          faceint.Evaluate (sir, linbasis, mirtimes);
+          for (int imip = 0; imip < sir.Size (); imip++)
+            smir[imip].Point () (D) = mirtimes[imip];
 
-              tel.CalcShape (p, shape);
-              tel.CalcDShape (p, dshape);
+          FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
+          tel.CalcShape (smir, simdshapes);
+          tel.CalcDShape (smir, simddshapes);
 
-              int offset = elnr * ir.Size () * (D + 2) + imip * (D + 2);
-              for (int j = 0; j < nbasis; j++)
-                {
-                  Vec<D> tau = -dshape.Row (j).Range (0, D);
-                  elvec (j)
-                      += mir[imip].GetWeight ()
-                         * (-wavefront (offset + D + 1) * dshape (j, D) * n (D)
-                                * (1 / (wavespeed * wavespeed))
-                            - InnerProduct (
-                                  wavefront.Range (offset + 1, offset + D + 1),
-                                  tau)
-                                  * n (D)
-                            - wavefront (offset + D + 1)
-                                  * InnerProduct (tau, n.Range (0, D))
-                            - dshape (j, D)
-                                  * InnerProduct (
-                                      wavefront.Range (offset + 1,
-                                                       offset + D + 1),
-                                      n.Range (0, D))
-                            + wavefront (offset) * shape (j));
+          TentDmat<D> (Dmat, vert, -1, wavespeed);
+          FlatVector<> bdbvec ((D + 1) * snip, slh);
+          bdbvec = 0;
+          for (int imip = 0; imip < snip; imip++)
+            for (int r = 0; r < (D + 1); r++)
+              for (int d = 0; d < D + 1; d++)
+                bdbvec (r * snip + imip)
+                    += Dmat (r, d) * sir[imip / nsimd].Weight ()[imip % nsimd]
+                       * wavefront (elnr, nip + (imip % nip) * (D + 1) + d);
+          elvec -= bbmat * bdbvec;
 
-                  for (int i = 0; i < nbasis; i++)
-                    {
-                      elmat (j, i)
-                          += mir[imip].GetWeight () * (shape (i) * shape (j));
-                    }
-                }
-            }
+          // stabilization to recover second order solution
+          for (int imip = 0; imip < sir.Size (); imip++)
+            simdshapes.Col (imip)
+                *= sqrt (TentFaceArea<D> (vert)) * sqrt (sir[imip].Weight ());
+          AddABt (simdshapes, simdshapes, elmat);
+          for (int imip = 0; imip < sir.Size (); imip++)
+            simdshapes.Col (imip)
+                *= sqrt (TentFaceArea<D> (vert)) * sqrt (sir[imip].Weight ());
+          FlatMatrix<> shapes (nbasis, sir.Size () * nsimd,
+                               &simdshapes (0, 0)[0]);
+          elvec += shapes * wavefront.Row (elnr).Range (0, nip);
         } // close loop over tent elements
 
       // Integrate over side of tent
       for (auto surfel : ma->GetVertexSurfaceElements (tent->vertex))
         {
-          auto sel_verts = ma->GetElVertices (ElementId (BND, surfel));
-          Mat<D + 1, D + 1> v;
-          v.Col (0).Range (0, D) = ma->GetPoint<D> (tent->vertex);
-          v (D, 0) = tent->tbot;
-          for (int n = 0; n < D; n++)
-            {
-              v.Col (n + 1).Range (0, D) = ma->GetPoint<D> (sel_verts[n]);
-              v (D, n + 1) = tent->vertex == sel_verts[n]
-                                 ? tent->ttop
-                                 : tent->nbtime[tent->nbv.Pos (sel_verts[n])];
-            }
-
-          double A = TentFaceArea<D> (v);
+          Mat<D + 1> vert = TentFaceVerts<D> (tent, surfel, ma,
+                                              0); // vertices of tent face
 
           Vec<D + 1> n;
           n.Range (0, D)
-              = TentFaceNormal<D> (v.Cols (1, D + 1).Rows (0, D), 0);
+              = TentFaceNormal<D> (vert.Cols (1, D + 1).Rows (0, D), 0);
           if (D == 1)
             n[0] = sgn_nozero<int> (tent->vertex - tent->nbv[0]);
           n[D] = 0;
 
           Mat<D + 1, D> map;
           for (int i = 0; i < D; i++)
-            map.Col (i) = v.Col (i + 1) - v.Col (0);
-          Vec<D + 1> shift = v.Col (0);
+            map.Col (i) = vert.Col (i + 1) - vert.Col (0);
+          Vec<D + 1> shift = vert.Col (0);
 
+          SIMD_MappedIntegrationRule<D, D + 1> smir (
+              sir, ma->GetTrafo (0, slh), slh);
           for (int imip = 0; imip < ir.Size (); imip++)
-            {
-              Vec<D + 1> p = map * ir[imip].Point () + shift;
-              FlatMatrix<> dshape (nbasis, D + 1, lh);
-              tel.CalcDShape (p, dshape);
-              p[D] += timeshift;
-              double weight = A * ir[imip].Weight ();
-              for (int j = 0; j < nbasis; j++)
-                {
-                  Vec<D> tau = -dshape.Row (j).Range (0, D);
-                  elvec (j) -= weight * InnerProduct (tau, n.Range (0, D))
-                               * TestSolution<D> (p, wavespeed)[D + 1];
-                  for (int i = 0; i < nbasis; i++)
-                    {
-                      Vec<D> sig = -dshape.Row (i).Range (0, D);
-                      elmat (j, i) += weight
-                                      * InnerProduct (sig, n.Range (0, D))
-                                      * dshape (j, D);
-                    }
-                }
-            }
+            smir[imip].Point ()
+                = map * sir[imip].operator Vec<D, SIMD<double>> () + shift;
+
+          FlatMatrix<SIMD<double>> simddshapes ((D + 1) * nbasis, sir.Size (),
+                                                slh);
+          tel.CalcDShape (smir, simddshapes);
+          FlatMatrix<double> bbmat (nbasis, (D + 1) * snip,
+                                    &simddshapes (0, 0)[0]);
+
+          Mat<D + 1> Dmat = 0;
+          Dmat.Row (D).Range (0, D) = -TentFaceArea<D> (vert) * n.Range (0, D);
+          FlatMatrix<double> bdbmat ((D + 1) * snip, nbasis, slh);
+          bdbmat = 0;
+          for (int imip = 0; imip < snip; imip++)
+            for (int r = 0; r < (D + 1); r++)
+              for (int d = 0; d < D + 1; d++)
+                if (ma->GetMaterial (ElementId (BND, surfel)) == "neumann")
+                  bdbmat.Row (r * snip + imip)
+                      += Dmat (d, r)
+                         * sir[imip / nsimd].Weight ()[imip % nsimd]
+                         * bbmat.Col (d * snip + imip); // neumann
+                else
+                  bdbmat.Row (r * snip + imip)
+                      += Dmat (r, d)
+                         * sir[imip / nsimd].Weight ()[imip % nsimd]
+                         * bbmat.Col (d * snip + imip); // dirichlet
+
+          elmat += bbmat * bdbmat;
+
+          Vector<> bc = EvalBC<D> (smir, wavespeed, timeshift, solname);
+          FlatVector<> bdbvec ((D + 1) * snip, slh);
+          bdbvec = 0;
+          for (int imip = 0; imip < snip; imip++)
+            for (int r = 0; r < (D + 1); r++)
+              for (int d = 0; d < D + 1; d++)
+                if (ma->GetMaterial (ElementId (BND, surfel)) == "neumann")
+                  ;
+                else
+                  bdbvec (r * snip + imip)
+                      += Dmat (d, r)
+                         * sir[imip / nsimd].Weight ()[imip % nsimd]
+                         * bc ((imip % nip) * (D + 1)
+                               + d); // dirichlet // use Dmat transposed
+
+          elvec -= bbmat * bdbvec;
         }
 
       // solve
+      tsolve.Start ();
       LapackSolve (elmat, elvec);
-      Vector<> sol = elvec;
+      FlatVector<> sol (nbasis, &elvec (0));
+      tsolve.Stop ();
 
+      teval.Start ();
       double tenterror = 0;
       // eval solution on top of tent
       for (auto elnr : tent->els)
         {
-          INT<D + 1> vnr = ma->GetEdgePNums (elnr);
-          MappedIntegrationRule<D, D> mir (ir, ma->GetTrafo (elnr, lh),
-                                           lh); // <dim  el, dim space>
+          MappedIntegrationRule<D, D> mir (ir, ma->GetTrafo (elnr, slh),
+                                           slh); // <dim  el, dim space>
 
           Mat<D + 1, D + 1> v = TentFaceVerts<D> (tent, elnr, ma, 1);
-          Vec<D + 1> n = TentFaceNormal<D + 1> (v, 1);
           Vec<D + 1> bs = v.Row (D);
-          double A = TentFaceArea<D> (v);
-          for (int imip = 0; imip < mir.Size (); imip++)
-            {
-              Vec<D + 1> p;
-              p.Range (0, D) = mir[imip].GetPoint ();
-              p (D) = faceint.Evaluate (ir[imip], bs);
+          for (int imip = 0; imip < nip; imip++)
+            mir[imip].Point () (D) = faceint.Evaluate (ir[imip], bs);
 
-              Matrix<> dshape (nbasis, D + 1);
-              tel.CalcDShape (p, dshape);
-              Vector<> shape (nbasis);
-              tel.CalcShape (p, shape);
+          FlatMatrix<> shapes (nbasis, nip, slh);
+          FlatMatrix<> dshapes (nbasis, (D + 1) * nip, slh);
+          tel.CalcDShape (mir, dshapes);
+          tel.CalcShape (mir, shapes);
 
-              int offset = elnr * ir.Size () * (D + 2) + imip * (D + 2);
-              wavefront (offset) = InnerProduct (shape, sol);
-              wavefront.Range (offset + 1, offset + D + 2)
-                  = Trans (dshape) * sol;
-              wavefront.Range (offset + 1, offset + D + 1) *= (-1);
-
-              // p[D] += timeshift;
-              // tenterror +=
-              // (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight()
-              // * A;
-            }
+          wavefront.Row (elnr).Range (0, nip) = Trans (shapes) * sol;
+          wavefront.Row (elnr).Range (nip, nip + nip * (D + 1))
+              = Trans (dshapes) * sol;
+          // p[D] += timeshift;
+          // tenterror +=
+          // (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight()
+          // * A;
         }
-
-      // Vec<D> v = ma->GetPoint<D>(tent->vertex);
-      // for(int n=0;n<tent->nbv.Size();n++)
-      //{
-      // Vec<D> vn = ma->GetPoint<D>(tent->nbv[n]);
-      // double h = L2Norm(vn-v);
-      // if(tent->ttop - tent->nbtime[n]/h > 1/wavespeed )
-      // cout<<"nb: "<<n<<"/"<<tent->nbv.Size()<<" slope: "<< tent->ttop -
-      // tent->nbtime[n]/h << " but " << 1/wavespeed << " ";
-
-      //}
+      teval.Stop ();
       // cout << "error tent: " << sqrt(tenterror) << endl;
     }); // end loop over tents
     cout << "...done" << endl;
+  }
+
+  template <int D>
+  void TentDmat (Mat<D + 1> &Dmat, Mat<D + 1> v, int top, double wavespeed)
+  {
+    Vec<D + 1> n = TentFaceNormal<D + 1> (v, top);
+    Dmat = n (D) * Id<D + 1> ();
+    Dmat.Row (D).Range (0, D) = -n.Range (0, D);
+    Dmat.Col (D).Range (0, D) = -n.Range (0, D);
+    Dmat (D, D) *= 1.0 / (wavespeed * wavespeed);
+    Dmat *= TentFaceArea<D> (v);
   }
 
   // returns matrix where cols correspond to vertex coordinates of the
   // space-time element
   template <int D>
   Mat<D + 1, D + 1>
-  TentFaceVerts (Tent *tent, int elnr, shared_ptr<MeshAccess> ma, bool top)
+  TentFaceVerts (Tent *tent, int elnr, shared_ptr<MeshAccess> ma, int top)
   {
-    INT<D + 1> vnr = ma->GetElVertices (elnr);
     Mat<D + 1, D + 1> v;
-    // determine linear basis function coeffs to use for tent face
-    for (int ivert = 0; ivert < vnr.Size (); ivert++)
+    if (top == 0) // boundary element
       {
-        if (vnr[ivert] == tent->vertex)
-          v (D, ivert) = top ? tent->ttop : tent->tbot;
-        else
-          for (int k = 0; k < tent->nbv.Size (); k++)
-            if (vnr[ivert] == tent->nbv[k])
-              v (D, ivert) = tent->nbtime[k];
-        v.Col (ivert).Range (0, D) = ma->GetPoint<D> (vnr[ivert]);
+        auto sel_verts = ma->GetElVertices (ElementId (BND, elnr));
+        v.Col (0).Range (0, D) = ma->GetPoint<D> (tent->vertex);
+        v (D, 0) = tent->tbot;
+        for (int n = 0; n < D; n++)
+          {
+            v.Col (n + 1).Range (0, D) = ma->GetPoint<D> (sel_verts[n]);
+            v (D, n + 1) = tent->vertex == sel_verts[n]
+                               ? tent->ttop
+                               : tent->nbtime[tent->nbv.Pos (sel_verts[n])];
+          }
+      }
+    else // top or bot of tent
+      {
+        INT<D + 1> vnr = ma->GetElVertices (elnr);
+        // determine linear basis function coeffs to use for tent face
+        for (int ivert = 0; ivert < vnr.Size (); ivert++)
+          {
+            v.Col (ivert).Range (0, D) = ma->GetPoint<D> (vnr[ivert]);
+            if (vnr[ivert] == tent->vertex)
+              v (D, ivert) = top == 1 ? tent->ttop : tent->tbot;
+            else
+              for (int k = 0; k < tent->nbv.Size (); k++)
+                if (vnr[ivert] == tent->nbv[k])
+                  v (D, ivert) = tent->nbtime[k];
+          }
       }
     return v;
   }
@@ -379,70 +406,61 @@ namespace ngcomp
     return normv;
   }
 
-  template <int D> Vec<D + 2> TestSolution (Vec<D + 1> p, double wavespeed)
+  template <int D>
+  Vector<> EvalBC (const SIMD_MappedIntegrationRule<D, D + 1> &mir,
+                   double wavespeed, double timeshift, char const *solname)
   {
-    double x = p[0];
-    double t = p[D];
-    Vec<D + 2> sol;
-    int k = 1;
-    if (D == 1)
+    int nsimd = SIMD<double>::Size ();
+    Vector<> bc ((D + 1) * mir.Size () * nsimd);
+    for (int imip = 0; imip < mir.Size (); imip++)
       {
-        sol[0] = sin (k * (wavespeed * t + x));
-        sol[1] = -k * cos (k * (wavespeed * t + x));
-        sol[2] = wavespeed * k * cos (k * (wavespeed * t + x));
+        Vector<SIMD<double>> sp = mir[imip].GetPoint ();
+        sp[D] += timeshift;
+        Vec<D + 1> p;
+        for (int s = 0; s < nsimd; s++)
+          {
+            for (int d = 0; d < D + 1; d++)
+              p[d] = sp[d][s];
+            bc.Range (imip * (D + 1) * nsimd + s * (D + 1),
+                      (imip) * (D + 1) * nsimd + (s + 1) * (D + 1))
+                = TestSolution<D> (p, wavespeed, solname).Range (1, D + 2);
+          }
       }
-    else if (D == 2)
-      {
-        double y = p[1];
-        double sq = sqrt (0.5);
-        sol[0] = sin (wavespeed * t + sq * (x + y));
-        sol[1] = -sq * cos (wavespeed * t + sq * (x + y));
-        sol[2] = -sq * cos (wavespeed * t + sq * (x + y));
-        sol[3] = wavespeed * cos (wavespeed * t + sq * (x + y));
-      }
-    else if (D == 3)
-      {
-        double y = p[1];
-        double z = p[2];
-        double sq = sqrt (1.0 / 3.0);
-        sol[0] = sin (wavespeed * t + sq * (x + y + z));
-        sol[1] = -sq * cos (wavespeed * t + sq * (x + y + z));
-        sol[2] = -sq * cos (wavespeed * t + sq * (x + y + z));
-        sol[3] = -sq * cos (wavespeed * t + sq * (x + y + z));
-        sol[4] = wavespeed * cos (wavespeed * t + sq * (x + y + z));
-      }
-    return sol;
+    return bc;
   }
 
   template <int D>
-  Vector<> MakeWavefront (int order, shared_ptr<MeshAccess> ma,
-                          double wavespeed, double time)
+  Matrix<> MakeWavefront (int order, shared_ptr<MeshAccess> ma,
+                          double wavespeed, double time, char const *solname)
   {
     LocalHeap lh (10000000);
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     IntegrationRule ir (eltyp, order * 2);
-    Vector<> ic (ir.Size () * ma->GetNE () * (D + 2));
+    int nip = ir.Size ();
+    Matrix<> ic (ma->GetNE (), nip * (D + 2));
     for (int elnr = 0; elnr < ma->GetNE (); elnr++)
       {
         HeapReset hr (lh);
-        MappedIntegrationRule<D, D> mir (ir, ma->GetTrafo (elnr, lh),
-                                         lh); // <dim  el, dim space>
-        for (int imip = 0; imip < mir.Size (); imip++)
+        MappedIntegrationRule<D, D + 1> mir (ir, ma->GetTrafo (elnr, lh),
+                                             lh); // <dim  el, dim space>
+        for (int imip = 0; imip < nip; imip++)
           {
-            Vec<D + 1> p;
-            p.Range (0, D) = mir[imip].GetPoint ();
-            p[D] = time;
-            int offset = elnr * ir.Size () * (D + 2) + imip * (D + 2);
-            ic.Range (offset, offset + D + 2) = TestSolution<D> (p, wavespeed);
+            mir[imip].Point () (D) = time;
+            ic (elnr, imip)
+                = TestSolution<D> (mir[imip].Point (), wavespeed, solname)[0];
+            ic.Row (elnr).Range (nip + imip * (D + 1),
+                                 nip + (imip + 1) * (D + 1))
+                = TestSolution<D> (mir[imip].Point (), wavespeed, solname)
+                      .Range (1, D + 2);
           }
       }
     return ic;
   }
 
   template <int D>
-  double Postprocess (int order, shared_ptr<MeshAccess> ma, Vector<> wavefront,
-                      Vector<> wavefront_corr)
+  double L2Error (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
+                  Matrix<> wavefront_corr)
   {
     double l2error = 0;
     LocalHeap lh (10000000);
@@ -452,17 +470,35 @@ namespace ngcomp
     for (int elnr = 0; elnr < ma->GetNE (); elnr++)
       {
         HeapReset hr (lh);
-        MappedIntegrationRule<D, D> mir (ir, ma->GetTrafo (elnr, lh),
-                                         lh); // <dim  el, dim space>
         for (int imip = 0; imip < ir.Size (); imip++)
           {
-            int offset = elnr * ir.Size () * (D + 2) + imip * (D + 2);
-            l2error += (wavefront (offset) - wavefront_corr (offset))
-                       * (wavefront (offset) - wavefront_corr (offset))
-                       * mir[imip].GetWeight ();
+            l2error += (wavefront (elnr, imip) - wavefront_corr (elnr, imip))
+                       * (wavefront (elnr, imip) - wavefront_corr (elnr, imip))
+                       * ir[imip].Weight ();
           }
       }
     return sqrt (l2error);
+  }
+
+  template <int D>
+  double Energy (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
+                 double wavenumber)
+  {
+    double energy = 0;
+    LocalHeap lh (10000000);
+    const ELEMENT_TYPE eltyp
+        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
+    IntegrationRule ir (eltyp, order * 2);
+    int nip = ir.Size ();
+    for (int elnr = 0; elnr < ma->GetNE (); elnr++)
+      for (int imip = 0; imip < nip; imip++)
+        energy += 0.5
+                  * ((1 / pow (wavenumber, 2))
+                         * pow (wavefront (elnr, nip + (D + 1) * imip + D), 2)
+                     + L2Norm2 (wavefront.Row (elnr).Range (
+                         nip + (D + 1) * imip, nip + (D + 1) * imip + D)))
+                  * ir[imip].Weight ();
+    return energy;
   }
 
   template <typename T> void SwapIfGreater (T &a, T &b)
@@ -508,47 +544,68 @@ namespace ngcomp
 #include <python_ngstd.hpp>
 void ExportEvolveTent (py::module m)
 {
-  m.def ("EvolveTents",
-         [] (int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt,
-             Vector<> wavefront,
-             double timeshift = 0) -> Vector<> //-> shared_ptr<MeshAccess>
-         {
-           int D = ma->GetDimension ();
-           if (D == 1)
-             EvolveTents<1> (order, ma, wavespeed, dt, wavefront, timeshift);
-           else if (D == 2)
-             EvolveTents<2> (order, ma, wavespeed, dt, wavefront, timeshift);
-           else if (D == 3)
-             EvolveTents<3> (order, ma, wavespeed, dt, wavefront, timeshift);
-           return wavefront;
-         } //, py::call_guard<py::gil_scoped_release>()
-  );
-  m.def ("EvolveTentsMakeWavefront",
-         [] (int order, shared_ptr<MeshAccess> ma, double wavespeed,
-             double time) -> Vector<> //-> shared_ptr<MeshAccess>
-         {
-           int D = ma->GetDimension ();
-           Vector<> wavefront;
-           if (D == 1)
-             wavefront = MakeWavefront<1> (order, ma, wavespeed, time);
-           else if (D == 2)
-             wavefront = MakeWavefront<2> (order, ma, wavespeed, time);
-           else if (D == 3)
-             wavefront = MakeWavefront<3> (order, ma, wavespeed, time);
-           return wavefront;
-         });
-  m.def ("EvolveTentsPostProcess",
-         [] (int order, shared_ptr<MeshAccess> ma, Vector<> wavefront,
-             Vector<> wavefront_corr) -> double {
+  m.def (
+      "EvolveTents",
+      [] (int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt,
+          Matrix<> wavefront, double timeshift,
+          char const *solname) -> Matrix<> //-> shared_ptr<MeshAccess>
+      {
+        int D = ma->GetDimension ();
+        if (D == 1)
+          EvolveTents<1> (order, ma, wavespeed, dt, wavefront, timeshift,
+                          solname);
+        else if (D == 2)
+          EvolveTents<2> (order, ma, wavespeed, dt, wavefront, timeshift,
+                          solname);
+        else if (D == 3)
+          EvolveTents<3> (order, ma, wavespeed, dt, wavefront, timeshift,
+                          solname);
+        return wavefront;
+      }, //, py::call_guard<py::gil_scoped_release>()
+      py::arg ("oder"), py::arg ("ma"), py::arg ("ws"), py::arg ("finaltime"),
+      py::arg ("wavefront"), py::arg ("timeshift"), py::arg ("solname") = "");
+  m.def (
+      "EvolveTentsMakeWavefront",
+      [] (int order, shared_ptr<MeshAccess> ma, double wavespeed, double time,
+          char const *solname) -> Matrix<> //-> shared_ptr<MeshAccess>
+      {
+        int D = ma->GetDimension ();
+        Matrix<> wavefront;
+        if (D == 1)
+          wavefront = MakeWavefront<1> (order, ma, wavespeed, time, solname);
+        else if (D == 2)
+          wavefront = MakeWavefront<2> (order, ma, wavespeed, time, solname);
+        else if (D == 3)
+          wavefront = MakeWavefront<3> (order, ma, wavespeed, time, solname);
+        return wavefront;
+      },
+      py::arg ("oder"), py::arg ("ma"), py::arg ("ws"), py::arg ("time"),
+      py::arg ("solname") = "");
+  m.def ("EvolveTentsL2Error",
+         [] (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
+             Matrix<> wavefront_corr) -> double {
            int D = ma->GetDimension ();
            double l2error;
            if (D == 1)
-             l2error = Postprocess<1> (order, ma, wavefront, wavefront_corr);
+             l2error = L2Error<1> (order, ma, wavefront, wavefront_corr);
            else if (D == 2)
-             l2error = Postprocess<2> (order, ma, wavefront, wavefront_corr);
+             l2error = L2Error<2> (order, ma, wavefront, wavefront_corr);
            else if (D == 3)
-             l2error = Postprocess<3> (order, ma, wavefront, wavefront_corr);
+             l2error = L2Error<3> (order, ma, wavefront, wavefront_corr);
            return l2error;
+         });
+  m.def ("EvolveTentsEnergy",
+         [] (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
+             double wavenumber) -> double {
+           int D = ma->GetDimension ();
+           double energy;
+           if (D == 1)
+             energy = Energy<1> (order, ma, wavefront, wavenumber);
+           else if (D == 2)
+             energy = Energy<2> (order, ma, wavefront, wavenumber);
+           else if (D == 3)
+             energy = Energy<3> (order, ma, wavefront, wavenumber);
+           return energy;
          });
 }
 #endif // NGS_PYTHON

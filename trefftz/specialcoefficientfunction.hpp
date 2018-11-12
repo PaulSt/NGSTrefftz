@@ -6,7 +6,7 @@
 #include <multigrid.hpp>
 #include <h1lofe.hpp>
 #include <regex>
-#include "trefftzelement.hpp"
+#include "trefftzwavefe.hpp"
 
 using namespace ngcomp;
 namespace ngfem
@@ -42,19 +42,38 @@ namespace ngfem
   {
   public:
     IntegrationPointFunction (shared_ptr<MeshAccess> mesh,
-                              IntegrationRule &intrule)
+                              IntegrationRule &intrule, Vector<> ipdata)
         : CoefficientFunction (1)
     {
       values.resize (mesh->GetNE ());
-
+      int elnr = 0;
       for (auto &vec : values)
         {
           vec.resize (intrule.GetNIP ());
-
           for (int i = 0; i < vec.size (); i++)
             {
-              vec[i] = i; // input data or something
+              // input data from vector with mip values sorted per element
+              vec[i] = ipdata[intrule.Size () * elnr + i];
             }
+          elnr++;
+        }
+    }
+
+    IntegrationPointFunction (shared_ptr<MeshAccess> mesh,
+                              IntegrationRule &intrule, Matrix<> ipdata)
+        : CoefficientFunction (1)
+    {
+      values.resize (mesh->GetNE ());
+      int elnr = 0;
+      for (auto &vec : values)
+        {
+          vec.resize (intrule.GetNIP ());
+          for (int i = 0; i < vec.size (); i++)
+            {
+              // input data from matrix with elnr in rows, mip values in cols
+              vec[i] = ipdata (elnr, i);
+            }
+          elnr++;
         }
     }
 
@@ -92,7 +111,7 @@ namespace ngfem
   class TrefftzCoefficientFunction : public CoefficientFunction
   {
     int basisfunction;
-    T_TrefftzElement<3> treff = T_TrefftzElement<3> (4, 1, ET_TRIG, 0);
+    TrefftzWaveFE<3> treff = TrefftzWaveFE<3> (4, 1, ET_TRIG, 0);
 
   public:
     TrefftzCoefficientFunction () : CoefficientFunction (1) { ; }

@@ -4,7 +4,7 @@
 #include <fem.hpp>
 #include <multigrid.hpp>
 
-#include "trefftzelement.hpp"
+#include "trefftzwavefe.hpp"
 #include "trefftzfespace.hpp"
 #include "diffopmapped.hpp"
 
@@ -97,8 +97,7 @@ namespace ngcomp
       {
       case ET_SEGM:
         {
-          return *(new (alloc)
-                       T_TrefftzElement<1> (order, c, ET_SEGM, basistype))
+          return *(new (alloc) TrefftzWaveFE<1> (order, c, ET_SEGM, basistype))
                       ->SetCenter (ElCenter<1> (ei))
                       ->SetElSize (Adiam<1> (ei));
           break;
@@ -106,8 +105,8 @@ namespace ngcomp
       case ET_QUAD:
       case ET_TRIG:
         {
-          return *(new (alloc) T_TrefftzElement<2> (
-                       order, c, ma->GetElType (ei), basistype))
+          return *(new (alloc) TrefftzWaveFE<2> (order, c, ma->GetElType (ei),
+                                                 basistype))
                       ->SetCenter (ElCenter<2> (ei))
                       ->SetElSize (Adiam<2> (ei));
           break;
@@ -117,14 +116,14 @@ namespace ngcomp
       case ET_PYRAMID:
       case ET_TET:
         {
-          return *(new (alloc) T_TrefftzElement<3> (
-                       order, c, ma->GetElType (ei), basistype))
+          return *(new (alloc) TrefftzWaveFE<3> (order, c, ma->GetElType (ei),
+                                                 basistype))
                       ->SetCenter (ElCenter<3> (ei))
                       ->SetElSize (Adiam<3> (ei));
           break;
         }
       }
-    return *(new (alloc) T_TrefftzElement<1> ());
+    return *(new (alloc) TrefftzWaveFE<1> ());
   }
 
   template <int D> double TrefftzFESpace ::Adiam (ElementId ei) const
