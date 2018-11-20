@@ -467,14 +467,21 @@ namespace ngcomp
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     IntegrationRule ir (eltyp, order * 2);
+    int nip = ir.Size ();
     for (int elnr = 0; elnr < ma->GetNE (); elnr++)
       {
         HeapReset hr (lh);
         for (int imip = 0; imip < ir.Size (); imip++)
           {
-            l2error += (wavefront (elnr, imip) - wavefront_corr (elnr, imip))
-                       * (wavefront (elnr, imip) - wavefront_corr (elnr, imip))
-                       * ir[imip].Weight ();
+            l2error
+                += L2Norm2 (
+                       wavefront.Row (elnr).Range (nip + (D + 1) * imip,
+                                                   nip + (D + 1) * (imip + 1))
+                       - wavefront_corr.Row (elnr).Range (
+                           nip + (D + 1) * imip, nip + (D + 1) * (imip + 1)))
+                   * ir[imip].Weight ();
+            // l2error +=
+            // (wavefront(elnr,imip)-wavefront_corr(elnr,imip))*(wavefront(elnr,imip)-wavefront_corr(elnr,imip))*ir[imip].Weight();
           }
       }
     return sqrt (l2error);
