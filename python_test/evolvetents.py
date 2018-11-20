@@ -6,7 +6,7 @@ from ngsolve import *
 from prodmesh import *
 from ngsolve.solve import Tcl_Eval # for snapshots
 
-order = 3
+order = 5
 c = 1
 t_start = 0
 t_step = 0.02
@@ -38,11 +38,11 @@ Draw(gfu,initmesh,'sol')
 # Draw(gfu,initmesh,'sol',autoscale=False,min=-0.01,max=0.01)
 wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start)
 
-for t in range(0,200):
+for t in range(0,20):
     wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start)
     print("L2Error: " + str(EvolveTentsL2Error(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step))))
-    print("Energy: " + str(EvolveTentsEnergy(order,initmesh,wavefront)))
-    print("Energy_corr: " + str(EvolveTentsEnergy(order,initmesh,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step))))
+    # print("Energy: " + str(EvolveTentsEnergy(order,initmesh,wavefront)))
+    # print("Energy_corr: " + str(EvolveTentsEnergy(order,initmesh,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step))))
 
     ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
     f = LinearForm(fes)
