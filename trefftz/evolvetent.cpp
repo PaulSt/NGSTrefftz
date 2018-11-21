@@ -48,9 +48,7 @@ namespace ngcomp
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
         tps.PitchTents(dt, wavespeed+1); // adt = time slab height, wavespeed
 
-        //FlatVector<SIMD<double>> simd_wavefront(sir.Size()*ma->GetNE()*(D+2), &wavefront[0]);
-
-        cout << "solving " << tps.tents.Size() << " tents" << endl;
+        cout << "solving " << tps.tents.Size() << " tents ";
         static Timer ttent("tent",2);
         static Timer tsolve("tentsolve",2);
         static Timer teval("tent eval",2);
@@ -122,7 +120,7 @@ namespace ngcomp
                 for(int imip=0;imip<snip;imip++)
                     for(int r=0;r<(D+1);r++)
                         for(int d=0;d<D+1;d++)
-                            bdbvec(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * wavefront(elnr, nip+(imip%nip)*(D+1)+d);
+                            bdbvec(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * wavefront(elnr, snip+d*snip+imip);
                 elvec -= bbmat * bdbvec;
 
                 // stabilization to recover second order solution
@@ -197,20 +195,27 @@ namespace ngcomp
             // eval solution on top of tent
             for(auto elnr: tent->els)
             {
-                MappedIntegrationRule<D,D> mir(ir, ma->GetTrafo(elnr,slh), slh); // <dim  el, dim space>
+                SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,slh),slh);
+                SIMD_MappedIntegrationRule<D,D> smir_fix(sir,ma->GetTrafo(elnr,slh),slh);
+                for(int imip=0;imip<sir.Size();imip++)
+                    smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
 
                 Mat<D+1,D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
                 Vec<D+1> bs = v.Row(D);
-                for(int imip=0;imip<nip;imip++)
-                    mir[imip].Point()(D) = faceint.Evaluate(ir[imip], bs);
+                FlatVector<SIMD<double>> mirtimes(sir.Size(),slh);
+                faceint.Evaluate(sir, bs, mirtimes);
+                for(int imip=0;imip<sir.Size();imip++)
+                    smir[imip].Point()(D) = mirtimes[imip];
 
-                FlatMatrix<> shapes(nbasis,nip,slh);
-                FlatMatrix<> dshapes(nbasis,(D+1)*nip,slh);
-                tel.CalcDShape(mir,dshapes);
-                tel.CalcShape(mir,shapes);
+                FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
+                FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
+                tel.CalcShape(smir,simdshapes);
+                tel.CalcDShape(smir,simddshapes);
+                FlatMatrix<> dshapes(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
+                FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
 
-                wavefront.Row(elnr).Range(0,nip) = Trans(shapes)*sol;
-                wavefront.Row(elnr).Range(nip,nip+nip*(D+1)) = Trans(dshapes)*sol;
+                wavefront.Row(elnr).Range(0,nip) = Trans(shapes.Cols(0,nip))*sol;
+                wavefront.Row(elnr).Range(snip,snip+snip*(D+1)) = Trans(dshapes)*sol;
                 //p[D] += timeshift;
                 //tenterror += (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight() * A;
             }
@@ -374,19 +379,22 @@ namespace ngcomp
         LocalHeap lh(10000000);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         IntegrationRule ir(eltyp, order*2);
-        int nip = ir.Size();
-        Matrix<> ic(ma->GetNE(),nip * (D+2));
+        int nsimd = SIMD<double>::Size();
+        int snip = ir.Size() + (ir.Size()%nsimd==0?0:nsimd-ir.Size()%nsimd);
+        Matrix<> wavefront(ma->GetNE(),snip * (D+2));
         for(int elnr=0;elnr<ma->GetNE();elnr++){
             HeapReset hr(lh);
             MappedIntegrationRule<D,D+1> mir(ir, ma->GetTrafo(elnr,lh), lh); // <dim  el, dim space>
-            for(int imip=0;imip<nip;imip++)
+            for(int imip=0;imip<snip;imip++)
             {
-                mir[imip].Point()(D) = time;
-                ic(elnr,imip) = TestSolution<D>(mir[imip].Point(),wavespeed,solname)[0];
-                ic.Row(elnr).Range(nip + imip*(D+1),nip + (imip+1)*(D+1)) = TestSolution<D>(mir[imip].Point(),wavespeed,solname).Range(1,D+2);
+                mir[imip%ir.Size()].Point()(D) = time;
+                wavefront(elnr,imip) = TestSolution<D>(mir[imip%ir.Size()].Point(),wavespeed,solname)[0];
+                for(int d=0;d<D+1;d++){
+                    wavefront(elnr,snip + d*snip+imip) = TestSolution<D>(mir[imip%ir.Size()].Point(),wavespeed,solname)[d+1];
+                }
             }
         }
-        return ic;
+        return wavefront;
     }
 
     template<int D>
@@ -397,13 +405,17 @@ namespace ngcomp
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         IntegrationRule ir(eltyp, order*2);
         int nip = ir.Size();
+        int nsimd = SIMD<double>::Size();
+        int snip = ir.Size() + (ir.Size()%nsimd==0?0:nsimd-ir.Size()%nsimd);
         for(int elnr=0;elnr<ma->GetNE();elnr++)
         {
             HeapReset hr(lh);
-            for(int imip=0;imip<ir.Size();imip++)
+            for(int imip=0;imip<snip;imip++)
             {
-                l2error += L2Norm2(wavefront.Row(elnr).Range(nip+(D+1)*imip, nip+(D+1)*(imip+1))-wavefront_corr.Row(elnr).Range(nip+(D+1)*imip, nip+(D+1)*(imip+1)))*ir[imip].Weight();
-                //l2error += (wavefront(elnr,imip)-wavefront_corr(elnr,imip))*(wavefront(elnr,imip)-wavefront_corr(elnr,imip))*ir[imip].Weight();
+                l2error += (wavefront(elnr,imip)-wavefront_corr(elnr,imip))*(wavefront(elnr,imip)-wavefront_corr(elnr,imip))*ir[imip].Weight();
+                //for(int d=0;d<D+1;d++){
+                    //l2error += L2Norm2(wavefront(elnr,snip+d*snip+imip)-wavefront_corr(elnr,snip+d*snip+imip))*ir[imip].Weight();
+                //}
             }
         }
         return sqrt(l2error);
@@ -416,11 +428,12 @@ namespace ngcomp
         LocalHeap lh(10000000);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         IntegrationRule ir(eltyp, order*2);
-        int nip = ir.Size();
+        int nsimd = SIMD<double>::Size();
+        int snip = ir.Size() + (ir.Size()%nsimd==0?0:nsimd-ir.Size()%nsimd);
         for(int elnr=0;elnr<ma->GetNE();elnr++)
-            for(int imip=0;imip<nip;imip++)
-                energy += 0.5*( (1/pow(wavenumber,2)) * pow(wavefront(elnr,nip+(D+1)*imip+D),2)
-                               + L2Norm2(wavefront.Row(elnr).Range(nip+(D+1)*imip, nip+(D+1)*imip+D)) )*ir[imip].Weight();
+            for(int imip=0;imip<snip;imip++)
+                energy += 0.5*( (1/pow(wavenumber,2)) * pow(wavefront(elnr,snip+(D+1)*imip+D),2)
+                               + L2Norm2(wavefront.Row(elnr).Range(snip+(D+1)*imip, snip+(D+1)*imip+D)) )*ir[imip].Weight();
         return energy;
     }
 
