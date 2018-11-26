@@ -14,8 +14,7 @@ t_step = 0.02
 # ngmesh = SegMesh(4,0,1)
 # ngmesh = QadSegMesh(4,0,1)
 # initmesh = Mesh(ngmesh)
-m = unit_square.GenerateMesh(maxh=0.3)
-initmesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
+initmesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 # initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.5))
 # initmesh = Mesh( CircleMesh(0.2) )
 
@@ -36,11 +35,11 @@ a.Assemble()
 Draw(gfu,initmesh,'sol')
 # Draw(gfu,initmesh,'sol',autoscale=False,min=-1,max=1)
 # Draw(gfu,initmesh,'sol',autoscale=False,min=-0.01,max=0.01)
-wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start)
+wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,"gausspw")
 
-for t in range(0,20):
-    wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start)
-    print("L2Error: " + str(EvolveTentsL2Error(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step))))
+for t in range(0,200):
+    wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,"gausspw")
+    print("L2Error: " + str(EvolveTentsL2Error(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step,"gausspw"))))
     # print("Energy: " + str(EvolveTentsEnergy(order,initmesh,wavefront)))
     # print("Energy_corr: " + str(EvolveTentsEnergy(order,initmesh,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step))))
 

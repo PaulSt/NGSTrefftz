@@ -53,10 +53,9 @@ namespace ngcomp
         static Timer tsolve("tentsolve",2);
         static Timer teval("tent eval",2);
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
+            RegionTimer reg(ttent);
             HeapReset hr(lh);
             Tent* tent = tps.tents[tentnr];
-
-            RegionTimer reg(ttent);
 
             Vec<D+1> center;
             center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
@@ -164,7 +163,7 @@ namespace ngcomp
                 for(int imip=0;imip<snip;imip++)
                     for(int r=0;r<(D+1);r++)
                         for(int d=0;d<D+1;d++)
-                            if(ma->GetMaterial(ElementId(BND,surfel)) == "neumann")
+                            if(D>1 && ma->GetMaterial(ElementId(BND,surfel)) == "neumann")
                                 bdbmat.Row(r*snip+imip) += Dmat(d,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip); //neumann
                             else
                                 bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip); //dirichlet
@@ -177,7 +176,7 @@ namespace ngcomp
                 for(int imip=0;imip<snip;imip++)
                     for(int r=0;r<(D+1);r++)
                         for(int d=0;d<D+1;d++)
-                            if(ma->GetMaterial(ElementId(BND,surfel)) == "neumann");
+                            if(D>1 && ma->GetMaterial(ElementId(BND,surfel)) == "neumann");
                             else
                                 bdbvec(r*snip+imip) += Dmat(d,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bc((imip%nip)*(D+1)+d); //dirichlet // use Dmat transposed
 
@@ -409,8 +408,7 @@ namespace ngcomp
         int snip = ir.Size() + (ir.Size()%nsimd==0?0:nsimd-ir.Size()%nsimd);
         for(int elnr=0;elnr<ma->GetNE();elnr++)
         {
-            HeapReset hr(lh);
-            for(int imip=0;imip<snip;imip++)
+            for(int imip=0;imip<ir.Size();imip++)
             {
                 l2error += (wavefront(elnr,imip)-wavefront_corr(elnr,imip))*(wavefront(elnr,imip)-wavefront_corr(elnr,imip))*ir[imip].Weight();
                 //for(int d=0;d<D+1;d++){
@@ -431,9 +429,10 @@ namespace ngcomp
         int nsimd = SIMD<double>::Size();
         int snip = ir.Size() + (ir.Size()%nsimd==0?0:nsimd-ir.Size()%nsimd);
         for(int elnr=0;elnr<ma->GetNE();elnr++)
-            for(int imip=0;imip<snip;imip++)
-                energy += 0.5*( (1/pow(wavenumber,2)) * pow(wavefront(elnr,snip+(D+1)*imip+D),2)
-                               + L2Norm2(wavefront.Row(elnr).Range(snip+(D+1)*imip, snip+(D+1)*imip+D)) )*ir[imip].Weight();
+            for(int imip=0;imip<ir.Size();imip++)
+                for(int d=0;d<D+1;d++)
+                    energy += 0.5*( ((d==D?1.0:0.0)/pow(wavenumber,2))*wavefront(elnr,snip+d*snip+imip)*wavefront(elnr,snip+d*snip+imip))*ir[imip].Weight();
+
         return energy;
     }
 
