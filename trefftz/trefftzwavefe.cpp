@@ -17,7 +17,7 @@ namespace ngfem
     basistype(abasistype),
     eltype(aeltype),
     pascal(pascal_sym())
-    {cout << "nbasis: " << nbasis << endl;}
+    {;}
 
 
     template<int D>
