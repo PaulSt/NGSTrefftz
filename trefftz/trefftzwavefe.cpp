@@ -18,7 +18,7 @@ namespace ngfem
         npoly (BinCoeff (D + ord, ord)), basistype (abasistype),
         eltype (aeltype), pascal (pascal_sym ())
   {
-    cout << "nbasis: " << nbasis << endl;
+    ;
   }
 
   template <int D>
