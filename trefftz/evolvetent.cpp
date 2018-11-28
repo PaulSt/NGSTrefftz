@@ -11,7 +11,6 @@
 
 namespace ngcomp
 {
-
     inline void LapackSolve(SliceMatrix<double> a, SliceVector<double> b)
     {
         integer n = a.Width();
@@ -70,7 +69,7 @@ namespace ngcomp
             for(auto elnr: tent->els)
             {
                 HeapReset hr(slh);
-                SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,slh),slh);
+                SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,slh),-1,slh);
                 SIMD_MappedIntegrationRule<D,D> smir_fix(sir,ma->GetTrafo(elnr,slh),slh);
                 for(int imip=0;imip<sir.Size();imip++)
                     smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
@@ -146,7 +145,7 @@ namespace ngcomp
                     map.Col(i) = vert.Col(i+1) - vert.Col(0);
                 Vec<D+1> shift = vert.Col(0);
 
-                SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(0,slh),slh);
+                SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(0,slh),-1,slh);
                 for(int imip=0;imip<ir.Size();imip++)
                     smir[imip].Point() = map * sir[imip].operator Vec<D,SIMD<double>>() + shift;
 
@@ -192,7 +191,7 @@ namespace ngcomp
             // eval solution on top of tent
             for(auto elnr: tent->els)
             {
-                SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,slh),slh);
+                SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,slh),-1,slh);
                 SIMD_MappedIntegrationRule<D,D> smir_fix(sir,ma->GetTrafo(elnr,slh),slh);
                 for(int imip=0;imip<sir.Size();imip++)
                     smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
