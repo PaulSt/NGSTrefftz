@@ -58,7 +58,7 @@ namespace ngcomp
     static Timer teval ("tent eval", 2);
     RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
       RegionTimer reg (ttent);
-      HeapReset hr (lh);
+      LocalHeap slh = lh.Split (); // split to threads
       Tent *tent = tps.tents[tentnr];
 
       Vec<D + 1> center;
@@ -67,16 +67,14 @@ namespace ngcomp
       tel.SetCenter (center);
       tel.SetElSize (TentAdiam<D> (tent, ma));
 
-      FlatMatrix<> elmat (nbasis, lh);
-      FlatVector<> elvec (nbasis, lh);
+      FlatMatrix<> elmat (nbasis, slh);
+      FlatVector<> elvec (nbasis, slh);
       elmat = 0;
       elvec = 0;
 
-      LocalHeap slh = lh.Split (); // split to threads
       for (auto elnr : tent->els)
         {
           HeapReset hr (slh);
-
           SIMD_MappedIntegrationRule<D, D + 1> smir (
               sir, ma->GetTrafo (elnr, slh), slh);
           SIMD_MappedIntegrationRule<D, D> smir_fix (
