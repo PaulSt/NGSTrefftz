@@ -45,8 +45,6 @@ namespace ngcomp
     int snip = sir.Size () * nsimd;
 
     ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
-    TrefftzWaveFE<D + 1> tel (order, wavespeed);
-    int nbasis = tel.GetNBasis ();
 
     TentPitchedSlab<D> tps
         = TentPitchedSlab<D> (ma);      // collection of tents in timeslab
@@ -61,6 +59,8 @@ namespace ngcomp
       LocalHeap slh = lh.Split (); // split to threads
       Tent *tent = tps.tents[tentnr];
 
+      TrefftzWaveFE<D + 1> tel (order, wavespeed);
+      int nbasis = tel.GetNBasis ();
       Vec<D + 1> center;
       center.Range (0, D) = ma->GetPoint<D> (tent->vertex);
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
