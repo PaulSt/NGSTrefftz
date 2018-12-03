@@ -2,13 +2,24 @@
 import netgen.gui
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
-from ngsolve import *
 from trefftzngs import *
+from ngsolve.TensorProductTools import *
+from ngsolve import *
+import sys
+sys.path.append("..")
+from prodmesh import *
 
+import netgen.gui
 # mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
-mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.41))
+# mesh = Mesh(unit_cube.GenerateMesh(maxh = 0.41))
+ngmesh = SegMesh(2,0,1)
+# ngmesh = QadSegMesh(2,0,1)
+initmesh = Mesh(ngmesh)
 
-order = 4
+mesh = NgsTPmesh(initmesh,2,0.6)
+Draw(mesh)
+
+order = 9
 fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = 1, dgjumps=True)
 # fes = FESpace("l2", mesh, order = order, dgjumps = True) #L2(mesh, order=order, flags = { "dgjumps" : True })
 
