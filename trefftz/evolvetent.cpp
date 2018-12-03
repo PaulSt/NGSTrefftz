@@ -52,6 +52,12 @@ namespace ngcomp
     cout << "solving " << tps.tents.Size () << " tents ";
     static Timer ttent ("tent", 2);
     static Timer tsolve ("tentsolve", 2);
+    static Timer tint ("tent int", 2);
+    static Timer tint1 ("tent int top calcdshape", 2);
+    static Timer tint2 ("tent int top elmat", 2);
+    static Timer tint3 ("tent int bot calcdshape", 2);
+    static Timer tint4 ("tent int bot elvec", 2);
+    static Timer tbnd ("tent bnd", 2);
     static Timer teval ("tent eval", 2);
     RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
       RegionTimer reg (ttent);
@@ -71,6 +77,7 @@ namespace ngcomp
       elmat = 0;
       elvec = 0;
 
+      tint.Start ();
       for (auto elnr : tent->els)
         {
           HeapReset hr (slh);
@@ -94,11 +101,14 @@ namespace ngcomp
           for (int imip = 0; imip < sir.Size (); imip++)
             smir[imip].Point () (D) = mirtimes[imip];
 
+          tint1.Start ();
           FlatMatrix<SIMD<double>> simddshapes ((D + 1) * nbasis, sir.Size (),
                                                 slh);
           tel.CalcDShape (smir, simddshapes);
           FlatMatrix<> bbmat (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
+          tint1.Stop ();
 
+          tint2.Start ();
           TentDmat<D> (Dmat, vert, 1, wavespeed);
           FlatMatrix<> bdbmat ((D + 1) * snip, nbasis, slh);
           bdbmat = 0;
@@ -109,6 +119,7 @@ namespace ngcomp
                     += Dmat (r, d) * sir[imip / nsimd].Weight ()[imip % nsimd]
                        * bbmat.Col (d * snip + imip);
           elmat += bbmat * bdbmat;
+          tint2.Stop ();
 
           /// Integration over bot of tent
           vert = TentFaceVerts<D> (tent, elnr, ma, -1);
@@ -117,10 +128,13 @@ namespace ngcomp
           for (int imip = 0; imip < sir.Size (); imip++)
             smir[imip].Point () (D) = mirtimes[imip];
 
+          tint3.Start ();
           FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
           tel.CalcShape (smir, simdshapes);
           tel.CalcDShape (smir, simddshapes);
+          tint3.Stop ();
 
+          tint4.Start ();
           TentDmat<D> (Dmat, vert, -1, wavespeed);
           FlatVector<> bdbvec ((D + 1) * snip, slh);
           bdbvec = 0;
@@ -143,9 +157,12 @@ namespace ngcomp
           FlatMatrix<> shapes (nbasis, sir.Size () * nsimd,
                                &simdshapes (0, 0)[0]);
           elvec += shapes * wavefront.Row (elnr).Range (0, nip);
+          tint4.Stop ();
         } // close loop over tent elements
+      tint.Stop ();
 
       // Integrate over side of tent
+      tbnd.Start ();
       for (auto surfel : ma->GetVertexSurfaceElements (tent->vertex))
         {
           Mat<D + 1> vert = TentFaceVerts<D> (tent, surfel, ma,
@@ -214,6 +231,7 @@ namespace ngcomp
 
           elvec -= bbmat * bdbvec;
         }
+      tbnd.Stop ();
 
       // solve
       tsolve.Start ();
