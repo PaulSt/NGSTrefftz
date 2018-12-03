@@ -26,7 +26,7 @@ namespace ngfem
     {
         Vec<D> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[D-1] *= c;
-        Matrix<double> coeff(TrefftzBasis());
+        Matrix<> coeff(TrefftzBasis());
 
         for(int j=ord;j>0;j--)
             for(int i=0;i<D;i++)
@@ -39,7 +39,7 @@ namespace ngfem
 
     template<int D>
     void TrefftzWaveFE<D> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
-                                            SliceMatrix<> dshape) const
+                                         SliceMatrix<> dshape) const
     {
         Vec<D> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[D-1] *= c;
@@ -253,6 +253,61 @@ namespace ngfem
             order = ord;
         }
         return pascalstorage;
+    }
+
+    template<int D>
+    void TrefftzWaveFE<D> :: TB_inner(Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis, int ordr, int dim, int &tracker) const
+    {
+        if (dim>0)
+        {
+            while(coeffnum(dim-1)<=ordr)
+            {
+                TB_inner(trefftzbasis,coeffnum,basis, ordr, dim-1, tracker);
+                coeffnum(dim-1)++;
+            }
+        }
+        else
+        {
+            int sum=0;
+            for(int i=0;i<D;i++)
+                sum += coeffnum(i);
+            if(sum<=ordr)
+            {
+                if(tracker >= 0) tracker++;
+                int indexmap = IndexMap(coeffnum);
+                if((coeffnum(D-1)==0 || coeffnum(D-1)==1) && tracker>basis)
+                {
+                    trefftzbasis(indexmap,basis) = 1;
+                    tracker = -1;
+                }
+                else if(coeffnum(D-1)>1)
+                {
+                    int k = coeffnum(D-1);
+                    for(int m=0;m<D-1;m++) //rekursive sum
+                    {
+                        Vec<D, int> get_coeff = coeffnum;
+                        get_coeff[D-1] = get_coeff[D-1] - 2;
+                        get_coeff[m] = get_coeff[m] + 2;
+                        trefftzbasis( indexmap, basis ) += (coeffnum(m)+1) * (coeffnum(m)+2) * trefftzbasis( IndexMap(get_coeff), basis );
+                    }
+                    trefftzbasis( indexmap, basis) *= 1.0/(k * (k-1));
+                }
+            }
+        }
+    }
+    template<int D>
+    Matrix<> TrefftzWaveFE<D> :: TB() const
+    {
+        Matrix<> trefftzbasis(npoly,nbasis);
+        trefftzbasis = 0;
+        Vec<D, int>  coeff = 0;
+        int count = 0;
+        for(int b=0;b<nbasis;b++)
+        {
+            int tracker = 0;
+            TB_inner(trefftzbasis, coeff, b, ord, D, tracker);
+        }
+        return trefftzbasis;
     }
 
 
