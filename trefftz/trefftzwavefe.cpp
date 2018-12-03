@@ -83,6 +83,10 @@ namespace ngfem
                                          SliceMatrix<SIMD<double>> dshape) const
     {
         //auto & smir = static_cast<const SIMD_MappedIntegrationRule<D,D+1>&> (mir);
+
+        constexpr int sw = SIMD<double>::Size();
+        static Timer calcdshape("calcdshape",2);
+        RegionTimer T(calcdshape);
         for (int imip = 0; imip < smir.Size(); imip++)
         {
             Vec<D,SIMD<double>> cpoint = smir[imip].GetPoint();
@@ -93,12 +97,17 @@ namespace ngfem
                 for(int j=ord-1;j>0;j--)
                     for(int i=0;i<D;i++)
                         for(int k=pascal(i+1,j)-1; k>=0; k--)
+                        {
                             coeff.Row( pascal(D+1,j-1)+k ) += cpoint[i] * coeff.Row( pascal(D+1,j)+pascal(i,j+1)+k );
+                            //calcdshape.AddFlops(coeff.Width()*sw);
+                        }
                 for(int n=0;n<nbasis;n++)
                     dshape(n*D+d,imip) = coeff(0,n) * (d==D-1 ? c : 1);
+                //calcdshape.AddFlops(nbasis*sw);
             }
         }
         dshape *= (2.0/elsize); //inner derivative
+        //calcdshape.AddFlops(nbasis*(D+1)*sw);
     }
 
     template<int D>
