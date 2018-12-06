@@ -11,7 +11,7 @@ from ngsolve.comp import *
 from solve12d import TestSolution2D
 
 
-def SolveTentSlab(fes,U0,gD=0,c=1):
+def AssembleTentSlab(fes,U0,gD=0,c=1):
     v0 = grad(U0)[1]
     sig0 = -grad(U0)[0]
 
@@ -96,7 +96,11 @@ fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True
 
 [truesol,U0,sig0,v0,gD] = TestSolution2D(fes,c)
 
-[a,f] = SolveTentSlab(fes,U0,gD,c)
+import time
+start = time.time()
+[a,f] = AssembleTentSlab(fes,U0,gD,c)
+end = time.time()
+print(end - start)
 
 [gfu,cond] = DGsolve(fes,a,f)
 
