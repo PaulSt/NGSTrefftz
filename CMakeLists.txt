@@ -22,6 +22,7 @@ add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
     trefftz/testcases.hpp
     trefftz/evolvetent.cpp
     trefftz/meshtentslab.cpp
+    trefftz/trefftzwavebasis.cpp
     )
 
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
