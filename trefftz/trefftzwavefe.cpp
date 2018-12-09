@@ -2,6 +2,7 @@
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
 #include "helpers.hpp"
+#include "trefftzwavebasis.hpp"
 
 #include <ctime>
 
@@ -264,59 +265,65 @@ namespace ngfem
         return pascalstorage;
     }
 
-    template<int D>
-    void TrefftzWaveFE<D> :: TB_inner(Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis, int ordr, int dim, int &tracker) const
+    template<>
+    void TrefftzWaveFE<2> :: CalcShape (const BaseMappedIntegrationPoint & mip,
+                                        BareSliceVector<> shape) const
     {
-        if (dim>0)
-        {
-            while(coeffnum(dim-1)<=ordr)
+        Vec<2> cpoint = mip.GetPoint();
+        cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[1] *= c;
+        double x = cpoint[0], t = cpoint[1];
+
+        STACK_ARRAY(double, mem, 2*ord+2);
+        double * polx = &mem[0];
+        double * polt = &mem[ord+1];
+
+        Monomial (ord, x, polx);
+        Monomial (ord, t, polt);
+
+        Matrix<> localmat = *TB<2>(ord);
+        Vector<> tempshape(nbasis);
+        tempshape=0;
+        for (size_t i = 0, ii = 0; i <= ord; i++)
+            for (size_t j = 0; j <= ord-i; j++)
             {
-                TB_inner(trefftzbasis,coeffnum,basis, ordr, dim-1, tracker);
-                coeffnum(dim-1)++;
+                    double pol = polx[i] * polt[j];
+                    tempshape += pol * localmat.Col(ii++);
             }
-        }
-        else
-        {
-            int sum=0;
-            for(int i=0;i<D;i++)
-                sum += coeffnum(i);
-            if(sum<=ordr)
-            {
-                if(tracker >= 0) tracker++;
-                int indexmap = IndexMap(coeffnum);
-                if((coeffnum(D-1)==0 || coeffnum(D-1)==1) && tracker>basis)
-                {
-                    trefftzbasis(indexmap,basis) = 1;
-                    tracker = -1;
-                }
-                else if(coeffnum(D-1)>1)
-                {
-                    int k = coeffnum(D-1);
-                    for(int m=0;m<D-1;m++) //rekursive sum
-                    {
-                        Vec<D, int> get_coeff = coeffnum;
-                        get_coeff[D-1] = get_coeff[D-1] - 2;
-                        get_coeff[m] = get_coeff[m] + 2;
-                        trefftzbasis( indexmap, basis ) += (coeffnum(m)+1) * (coeffnum(m)+2) * trefftzbasis( IndexMap(get_coeff), basis );
-                    }
-                    trefftzbasis( indexmap, basis) *= 1.0/(k * (k-1));
-                }
-            }
-        }
+        for(int b=0;b<nbasis;b++) shape(b) = tempshape(b);
     }
-    template<int D>
-    Matrix<> TrefftzWaveFE<D> :: TB() const
+
+    template<>
+    void TrefftzWaveFE<2> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
+                                         SliceMatrix<> dshape) const
     {
-        Matrix<> trefftzbasis(npoly,nbasis);
-        trefftzbasis = 0;
-        Vec<D, int>  coeff = 0;
-        int count = 0;
-        for(int b=0;b<nbasis;b++)
+        Vec<2> cpoint = mip.GetPoint();
+        cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[1] *= c;
+        double x = cpoint[0], t = cpoint[1];
+
+        STACK_ARRAY(double, mem, 2*ord+2);
+        double * polx = &mem[0];
+        double * polt = &mem[ord+1];
+
+        Monomial (ord, x, polx);
+        Monomial (ord, t, polt);
+
+        Matrix<> localmat = *TB<2>(ord);
+        Vector<> tempdshape(nbasis);
+        for(int d=0;d<2;d++)
         {
-            int tracker = 0;
-            TB_inner(trefftzbasis, coeff, b, ord, D, tracker);
+            tempdshape=0;
+            for (size_t i = 0, ii = 0; i <=ord; i++)
+                for (size_t j = 0; j <= ord-i; j++)
+                {
+                    ii++;
+                    if((d==0&&i==0)||(d==1&&j==0)) continue;
+                    double pol = polx[i-(d==0)] * polt[j-(d==1)] * (d==0?i:j);
+                    tempdshape += pol * localmat.Col(ii-1);
+                }
+            dshape.Col(d) = tempdshape;
         }
-        return trefftzbasis;
+        dshape.Col(1) *= c; //inner derivative
+        dshape *= (2.0/elsize); //inner derivative
     }
 
 

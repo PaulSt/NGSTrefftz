@@ -50,9 +50,10 @@ namespace ngfem
             Matrix<double> GetDerTrefftzBasis(int der) const;
             Matrix<int> pascal_sym() const;
 
+    };
 
-            Matrix<> TB() const;
-            void TB_inner(Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int nbasis, int ordr, int dim, int &tracker) const;
+
+
     class Monomial : public RecursivePolynomial<Monomial>
     {
         public:
