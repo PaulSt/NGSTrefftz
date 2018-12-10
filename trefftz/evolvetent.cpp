@@ -27,7 +27,7 @@ namespace ngcomp
 
 
     template<int D>
-    void EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, SliceMatrix<double> wavefront, double timeshift, char const *solname, shared_ptr<CoefficientFunction> bddatum)
+    void EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, SliceMatrix<double> wavefront, double timeshift, shared_ptr<CoefficientFunction> bddatum)
     {
         LocalHeap lh(100000000);
 
@@ -373,27 +373,6 @@ namespace ngcomp
 
 
     template<int D>
-    Vector<> EvalBC(const SIMD_MappedIntegrationRule<D,D+1> & mir, double wavespeed, double timeshift, char const *solname)
-    {
-        int nsimd = SIMD<double>::Size();
-        Vector<> bc((D+1)*mir.Size()*nsimd);
-        for(int imip = 0;imip < mir.Size();imip++)
-        {
-            Vector<SIMD<double>> sp = mir[imip].GetPoint();
-            sp[D] += timeshift;
-            Vec<D+1> p;
-            for(int s=0;s<nsimd;s++)
-            {
-                for(int d=0;d<D+1;d++)
-                    p[d]=sp[d][s];
-                bc.Range(imip*(D+1)*nsimd+s*(D+1),(imip)*(D+1)*nsimd+(s+1)*(D+1)) = TestSolution<D>(p,wavespeed,solname).Range(1,D+2);
-            }
-        }
-        return bc;
-    }
-
-
-    template<int D>
     Matrix<> MakeWavefront(int order, shared_ptr<MeshAccess> ma, double wavespeed, double time, char const *solname){
         LocalHeap lh(10000000);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
@@ -499,15 +478,15 @@ namespace ngcomp
 #include <python_ngstd.hpp>
 void ExportEvolveTent(py::module m)
 {
-    m.def("EvolveTents", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, Matrix<> wavefront, double timeshift, char const *solname, shared_ptr<CoefficientFunction> bddatum ) -> Matrix<>//-> shared_ptr<MeshAccess>
+    m.def("EvolveTents", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, Matrix<> wavefront, double timeshift, shared_ptr<CoefficientFunction> bddatum ) -> Matrix<>//-> shared_ptr<MeshAccess>
           {
               int D = ma->GetDimension();
               if(D == 1)
-                  EvolveTents<1>(order,ma,wavespeed,dt,wavefront, timeshift, solname, bddatum);
+                  EvolveTents<1>(order,ma,wavespeed,dt,wavefront, timeshift, bddatum);
               else if(D == 2)
-                  EvolveTents<2>(order,ma,wavespeed,dt,wavefront, timeshift, solname, bddatum);
+                  EvolveTents<2>(order,ma,wavespeed,dt,wavefront, timeshift, bddatum);
               else if(D == 3)
-                  EvolveTents<3>(order,ma,wavespeed,dt,wavefront, timeshift, solname, bddatum);
+                  EvolveTents<3>(order,ma,wavespeed,dt,wavefront, timeshift, bddatum);
               return wavefront;
           }//, py::call_guard<py::gil_scoped_release>()
           //py::arg("oder"),py::arg("ma"),py::arg("ws"),py::arg("finaltime"), py::arg("wavefront"), py::arg("timeshift"), py::arg("solname") = ""
