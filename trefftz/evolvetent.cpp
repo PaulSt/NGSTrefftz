@@ -1,7 +1,6 @@
 #include "evolvetent.hpp"
 #include "trefftzwavefe.hpp"
 #include "tents/tents.hpp"
-#include "testcases.hpp"
 #include <comp.hpp> // provides FESpace, ...
 #include <h1lofe.hpp>
 #include <regex>
