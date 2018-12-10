@@ -5,6 +5,7 @@ import netgen.gui
 from ngsolve import *
 from prodmesh import *
 from ngsolve.solve import Tcl_Eval # for snapshots
+from testcases import *
 
 from ngsolve import *
 from netgen.geom2d import unit_square
@@ -23,7 +24,6 @@ order = 3
 c = 1
 t_start = 0
 t_step = 0.01
-testcase = "vertgausspw"
 
 initmesh = Mesh( LshapeMesh(maxh,mp) )
 # RefineAround([0.5,0.5,0],0.1,initmesh)
@@ -49,10 +49,11 @@ a.Assemble()
 # Draw(gfu,initmesh,'sol')
 # Draw(gfu,initmesh,'sol',autoscale=False,min=-1,max=1)
 Draw(gfu,initmesh,'sol',autoscale=False,min=-0.1,max=0.2)
-wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,testcase )
+bdd = vertgausspw(D,c)
+wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,bdd )
 
 for t in range(0,100):
-    wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start )
+    wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start, bdd )
 
     ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
     f = LinearForm(fes)
@@ -63,5 +64,5 @@ for t in range(0,100):
 
     t_start += t_step
     print("time: " + str(t_start))
-    filename = "results/mov/sol"+str(t).zfill(3)
-    Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
+    # filename = "results/mov/sol"+str(t).zfill(3)
+    # Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
