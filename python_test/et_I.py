@@ -5,6 +5,7 @@ import netgen.gui
 from ngsolve import *
 from prodmesh import *
 from ngsolve.solve import Tcl_Eval # for snapshots
+from testcases import *
 
 order = 3
 c = 1
@@ -31,11 +32,12 @@ a = BilinearForm(fes)
 a += SymbolicBFI(u*v)
 a.Assemble()
 Draw(gfu,initmesh,'sol',autoscale=False,min=-0.002,max=0.002)
-wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,"gausspw")
+bdd = gausspw(D,c)
+wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,bdd)
 
 input()
 for t in range(0,200):
-    wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,"gausspw")
+    wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
 
     ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
     f = LinearForm(fes)
