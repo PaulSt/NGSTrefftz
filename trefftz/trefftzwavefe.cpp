@@ -326,13 +326,15 @@ namespace ngfem
 
     Matrix<> localmat = *TB<2> (ord);
     Vector<> tempshape (nbasis);
-    tempshape = 0;
+    Vector<> pol (npoly);
+    // tempshape=0;
     for (size_t i = 0, ii = 0; i <= ord; i++)
       for (size_t j = 0; j <= ord - i; j++)
         {
-          double pol = polx[i] * polt[j];
-          tempshape += pol * localmat.Col (ii++);
+          pol[ii++] = polx[i] * polt[j];
+          // tempshape += pol * localmat.Col(ii++);
         }
+    tempshape = localmat * pol;
     for (int b = 0; b < nbasis; b++)
       shape (b) = tempshape (b);
   }
