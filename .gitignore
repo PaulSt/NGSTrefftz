@@ -7,6 +7,7 @@ python_test/cone/
 python_test/notebooks/.ipynb_checkpoints/
 python_test/notebooks/results/
 python_test/__pycache__
+python_test/cartsolve/__pycache__/
 python_test/ng.opt
 python_test/results
 python_test/notebooks/results/
