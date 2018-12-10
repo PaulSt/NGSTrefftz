@@ -42,8 +42,6 @@ wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,bdd)
 for t in range(0,200):
     wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
     print("L2Error: " + str(EvolveTentsL2Error(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step,bdd))))
-    # print("Energy: " + str(EvolveTentsEnergy(order,initmesh,wavefront)))
-    # print("Energy_corr: " + str(EvolveTentsEnergy(order,initmesh,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step))))
 
     ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
     f = LinearForm(fes)

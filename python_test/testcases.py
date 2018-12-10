@@ -27,7 +27,7 @@ def simplesin(D, wavespeed):
             wavespeed*cos(wavespeed*t+sq*(x+y))
             ))
         return sol
-    elif(D==3): 
+    elif(D==3):
         sq = sqrt(1.0/3.0);
         sol = CoefficientFunction((
             sin( wavespeed*t+sq*(x+y+z) ),
@@ -71,26 +71,26 @@ def gausspw(D, wavespeed):
 def vertgausspw(D, wavespeed):
     t = CoordCF(D)
     k = 1
-    delta = 8000
+    delta = 20000
     if(D==1):
         sol = CoefficientFunction((
-            exp( -delta*((x-0.5)*(x-0.5)) ),
-            -2*delta * (x-0.5) * exp( -delta*((x-0.5)*(x-0.5)) ),
+            exp( -delta*((x-0.25)*(x-0.25)) ),
+            -2*delta * (x-0.25) * exp( -delta*((x-0.25)*(x-0.25)) ),
             0
             ))
         return sol
     elif(D==2):
         sol = CoefficientFunction((
-            exp(-delta*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)) ),
-            -2*delta * (x-0.5) * exp(-delta*((x-0.5)*(x-0.5)) ),
+            exp(-delta*((x-0.25)*(x-0.25)) ),
+            -2*delta * (x-0.25) * exp(-delta*((x-0.25)*(x-0.25)) ),
             0,
             0
             ))
         return sol
     elif(D==2):
         sol = CoefficientFunction((
-            exp(-delta*((x-0.5)*(x-0.5)) ),
-            -2*delta * (x-0.5) * exp(-delta*((x-0.5)*(x-0.5)) ),
+            exp(-delta*((x-0.25)*(x-0.25)) ),
+            -2*delta * (x-0.25) * exp(-delta*((x-0.25)*(x-0.25)) ),
             0,
             0,
             0
