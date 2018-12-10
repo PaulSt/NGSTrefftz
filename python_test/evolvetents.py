@@ -5,8 +5,9 @@ import netgen.gui
 from ngsolve import *
 from prodmesh import *
 from ngsolve.solve import Tcl_Eval # for snapshots
+from testcases import *
 
-order = 5
+order = 4
 c = 1
 t_start = 0
 t_step = 0.02
@@ -19,7 +20,6 @@ initmesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 # initmesh = Mesh( CircleMesh(0.2) )
 
 D = initmesh.dim
-t = CoordCF(D)
 if D==3: eltyp = ET.TET
 elif D==2: eltyp = ET.TRIG
 elif D==1: eltyp = ET.SEGM
@@ -33,14 +33,15 @@ gfu = GridFunction(fes)
 a = BilinearForm(fes)
 a += SymbolicBFI(u*v)
 a.Assemble()
-Draw(gfu,initmesh,'sol')
-# Draw(gfu,initmesh,'sol',autoscale=False,min=-1,max=1)
+# Draw(gfu,initmesh,'sol')
+Draw(gfu,initmesh,'sol',autoscale=False,min=-0.1,max=0.1)
 # Draw(gfu,initmesh,'sol',autoscale=False,min=-0.01,max=0.01)
-wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,"gausspw")
+bdd = standingwave(D,c)
+wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,bdd)
 
 for t in range(0,200):
-    wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,"gausspw")
-    print("L2Error: " + str(EvolveTentsL2Error(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step,"gausspw"))))
+    wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
+    print("L2Error: " + str(EvolveTentsL2Error(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step,bdd))))
     # print("Energy: " + str(EvolveTentsEnergy(order,initmesh,wavefront)))
     # print("Energy_corr: " + str(EvolveTentsEnergy(order,initmesh,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step))))
 
