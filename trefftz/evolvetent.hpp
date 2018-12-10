@@ -10,7 +10,7 @@
 namespace ngcomp
 {
     template<int D>
-    void EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, SliceMatrix<> wavefront, double timeshift, char const *solname);
+    void EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, SliceMatrix<> wavefront, double timeshift, char const *solname, shared_ptr<CoefficientFunction> bddatum);
 
     template<int D>
     Mat<D+1,D+1> TentFaceVerts(Tent* tent, int elnr, shared_ptr<MeshAccess> ma, int top);
