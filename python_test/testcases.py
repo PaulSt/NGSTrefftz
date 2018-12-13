@@ -58,7 +58,7 @@ def gausspw(D, wavespeed):
             0
             ))
         return sol
-    elif(D==2):
+    elif(D==3):
         sol = CoefficientFunction((
             exp(-delta*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5)) ),
             -2*delta * (x-0.5) * exp(-delta*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5)) ),
@@ -87,7 +87,7 @@ def vertgausspw(D, wavespeed):
             0
             ))
         return sol
-    elif(D==2):
+    elif(D==3):
         sol = CoefficientFunction((
             exp(-delta*((x-0.25)*(x-0.25)) ),
             -2*delta * (x-0.25) * exp(-delta*((x-0.25)*(x-0.25)) ),
@@ -116,7 +116,7 @@ def standingwave(D, wavespeed):
             cos(math.pi*x)*cos(math.pi*y)*cos(math.pi*t*wavespeed*sq)*wavespeed
             ))
         return sol
-    elif(D==2):
+    elif(D==3):
         sol = CoefficientFunction((
             cos(math.pi*x)*cos(math.pi*y)*cos(math.pi*z)*sin(math.pi*t*wavespeed*sq)/(sq*math.pi),
             -sin(math.pi*x)*cos(math.pi*y)*cos(math.pi*z)*sin(math.pi*t*wavespeed*sq)/sq,
