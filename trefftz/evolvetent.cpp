@@ -245,6 +245,15 @@ namespace ngcomp
       FlatVector<> sol (nbasis, &elvec (0));
       tsolve.Stop ();
 
+      // modifications for first order solver
+      // Matrix<> elmat2 = elmat.Rows(1,nbasis).Cols(1,nbasis);
+      // Vector<> elvec2 = elvec.Range(1,nbasis);
+      // LapackSolve(elmat2,elvec2);
+      // Vector<> sol(nbasis);
+      // sol[0] = 0;
+      // for(int i = 1; i<nbasis;i++)
+      // sol[i]=elvec2[i-1];
+
       teval.Start ();
       double tenterror = 0;
       // eval solution on top of tent
@@ -476,11 +485,9 @@ namespace ngcomp
                   Matrix<> wavefront_corr)
   {
     double l2error = 0;
-    LocalHeap lh (10000000);
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     IntegrationRule ir (eltyp, order * 2);
-    int nip = ir.Size ();
     int nsimd = SIMD<double>::Size ();
     int snip = ir.Size ()
                + (ir.Size () % nsimd == 0 ? 0 : nsimd - ir.Size () % nsimd);
@@ -488,13 +495,14 @@ namespace ngcomp
       {
         for (int imip = 0; imip < ir.Size (); imip++)
           {
-            l2error += (wavefront (elnr, imip) - wavefront_corr (elnr, imip))
-                       * (wavefront (elnr, imip) - wavefront_corr (elnr, imip))
-                       * ir[imip].Weight ();
-            // for(int d=0;d<D+1;d++){
             // l2error +=
-            // L2Norm2(wavefront(elnr,snip+d*snip+imip)-wavefront_corr(elnr,snip+d*snip+imip))*ir[imip].Weight();
-            //}
+            // (wavefront(elnr,imip)-wavefront_corr(elnr,imip))*(wavefront(elnr,imip)-wavefront_corr(elnr,imip))*ir[imip].Weight();
+            for (int d = 0; d < D + 1; d++)
+              l2error
+                  += pow (wavefront (elnr, snip + d * snip + imip)
+                              - wavefront_corr (elnr, snip + d * snip + imip),
+                          2)
+                     * ir[imip].Weight ();
           }
       }
     return sqrt (l2error);
