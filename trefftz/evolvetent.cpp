@@ -225,7 +225,6 @@ namespace ngcomp
             //sol[i]=elvec2[i-1];
 
             teval.Start();
-            double tenterror = 0;
             // eval solution on top of tent
             for(auto elnr: tent->els)
             {
@@ -250,11 +249,8 @@ namespace ngcomp
 
                 wavefront.Row(elnr).Range(0,snip) = Trans(shapes.Cols(0,snip))*sol;
                 wavefront.Row(elnr).Range(snip,snip+snip*(D+1)) = Trans(dshapes)*sol;
-                //p[D] += timeshift;
-                //tenterror += (wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*(wavefront(offset)-TestSolution<D>(p,wavespeed)[0])*ir[imip].Weight() * A;
             }
             teval.Stop();
-            //cout << "error tent: " << sqrt(tenterror) << endl;
         }); // end loop over tents
         cout << "...done" << endl;
     }
