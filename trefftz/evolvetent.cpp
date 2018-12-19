@@ -191,22 +191,6 @@ namespace ngcomp
           Dmat.Row (D).Range (0, D) = -TentFaceArea<D> (vert) * n.Range (0, D);
           FlatMatrix<double> bdbmat ((D + 1) * snip, nbasis, slh);
           bdbmat = 0;
-          for (int imip = 0; imip < snip; imip++)
-            for (int r = 0; r < (D + 1); r++)
-              for (int d = 0; d < D + 1; d++)
-                if (D > 1
-                    && ma->GetMaterial (ElementId (BND, surfel)) == "neumann")
-                  bdbmat.Row (r * snip + imip)
-                      += Dmat (d, r)
-                         * sir[imip / nsimd].Weight ()[imip % nsimd]
-                         * bbmat.Col (d * snip + imip); // neumann
-                else
-                  bdbmat.Row (r * snip + imip)
-                      += Dmat (r, d)
-                         * sir[imip / nsimd].Weight ()[imip % nsimd]
-                         * bbmat.Col (d * snip + imip); // dirichlet
-
-          elmat += bbmat * bdbmat;
 
           for (int imip = 0; imip < smir.Size (); imip++)
             smir[imip].Point ()[D] += timeshift;
@@ -216,22 +200,49 @@ namespace ngcomp
 
           FlatVector<> bdbvec ((D + 1) * snip, slh);
           bdbvec = 0;
-          for (int imip = 0; imip < snip; imip++)
-            for (int r = 0; r < (D + 1); r++)
-              for (int d = 0; d < D + 1; d++)
-                if (D > 1
-                    && ma->GetMaterial (ElementId (BND, surfel)) == "neumann")
-                  ;
-                else
+          if (D > 1 && ma->GetMaterial (ElementId (BND, surfel)) == "neumann")
+            {
+              for (int imip = 0; imip < snip; imip++)
+                for (int r = 0; r < (D + 1); r++)
+                  bdbmat.Row (r * snip + imip)
+                      += Dmat (D, r)
+                         * sir[imip / nsimd].Weight ()[imip % nsimd]
+                         * bbmat.Col (D * snip + imip); // neumann
+              elmat += bbmat * bdbmat;
+
+              for (int imip = 0; imip < snip; imip++)
+                for (int d = 0; d < D + 1; d++)
+                  bdbvec (D * snip + imip)
+                      += Dmat (D, d)
+                         * sir[imip / nsimd].Weight ()[imip % nsimd]
+                         * bdeval (d + 1, imip / nsimd)[imip % nsimd];
+              elvec -= bbmat * bdbvec;
+            }
+          else
+            { // dirichlet
+              double alpha = 0.5;
+              Dmat (D, D) = TentFaceArea<D> (vert) * alpha;
+              for (int imip = 0; imip < snip; imip++)
+                // for(int r=0;r<(D+1);r++) // r=D since only last row non-zero
+                for (int d = 0; d < D + 1; d++)
+                  bdbmat.Row (D * snip + imip)
+                      += Dmat (D, d)
+                         * sir[imip / nsimd].Weight ()[imip % nsimd]
+                         * bbmat.Col (d * snip + imip);
+              elmat += bbmat * bdbmat;
+
+              Dmat (D, D) *= -1.0;
+              for (int imip = 0; imip < snip; imip++)
+                for (int r = 0; r < (D + 1); r++)
                   bdbvec (r * snip + imip)
-                      += Dmat (d, r)
+                      += Dmat (D, r)
                          * sir[imip / nsimd].Weight ()[imip % nsimd]
                          * bdeval (
-                             d + 1,
-                             imip / nsimd)[imip % nsimd]; // dirichlet // use
-                                                          // Dmat transposed
-
-          elvec -= bbmat * bdbvec;
+                             D + 1,
+                             imip
+                                 / nsimd)[imip % nsimd]; // use Dmat transposed
+              elvec -= bbmat * bdbvec;
+            }
         }
       tbnd.Stop ();
 
