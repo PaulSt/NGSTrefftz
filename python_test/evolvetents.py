@@ -10,14 +10,16 @@ from testcases import *
 order = 4
 c = 1
 t_start = 0
-t_step = 0.02
+t_step = 0.01
 
 # ngmesh = SegMesh(4,0,1)
 # ngmesh = QadSegMesh(4,0,1)
 # initmesh = Mesh(ngmesh)
 initmesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
-# initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.5))
+# initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 # initmesh = Mesh( CircleMesh(0.2) )
+for i in range(0,len(initmesh.GetBoundaries())):
+   initmesh.ngmesh.SetBCName(i,"neumann")
 
 D = initmesh.dim
 if D==3: eltyp = ET.TET
