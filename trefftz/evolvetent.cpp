@@ -32,13 +32,10 @@ namespace ngcomp
   {
     LocalHeap lh (100000000);
 
-    int nsimd = SIMD<double>::Size ();
-
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
-    IntegrationRule ir (eltyp, order * 2);
-    int nip = ir.Size ();
 
+    int nsimd = SIMD<double>::Size ();
     SIMD_IntegrationRule sir (eltyp, order * 2);
     int snip = sir.Size () * nsimd;
 
@@ -153,9 +150,8 @@ namespace ngcomp
           for (int imip = 0; imip < sir.Size (); imip++)
             simdshapes.Col (imip)
                 *= sqrt (TentFaceArea<D> (vert)) * sqrt (sir[imip].Weight ());
-          FlatMatrix<> shapes (nbasis, sir.Size () * nsimd,
-                               &simdshapes (0, 0)[0]);
-          elvec += shapes * wavefront.Row (elnr).Range (0, nip);
+          FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
+          elvec += shapes * wavefront.Row (elnr).Range (0, snip);
           tint4.Stop ();
         } // close loop over tent elements
       tint.Stop ();
@@ -164,16 +160,16 @@ namespace ngcomp
       tbnd.Start ();
       for (auto surfel : ma->GetVertexSurfaceElements (tent->vertex))
         {
-          Mat<D + 1> vert = TentFaceVerts<D> (tent, surfel, ma,
-                                              0); // vertices of tent face
-
+          // get vertices of tent face
+          Mat<D + 1> vert = TentFaceVerts<D> (tent, surfel, ma, 0);
+          // build normal vector
           Vec<D + 1> n;
           n.Range (0, D)
               = TentFaceNormal<D> (vert.Cols (1, D + 1).Rows (0, D), 0);
-          if (D == 1)
+          if (D == 1) // D=1 special case
             n[0] = sgn_nozero<int> (tent->vertex - tent->nbv[0]);
-          n[D] = 0;
-
+          n[D] = 0; // time-like faces only
+          // build mapping to physical boundary simplex
           Mat<D + 1, D> map;
           for (int i = 0; i < D; i++)
             map.Col (i) = vert.Col (i + 1) - vert.Col (0);
@@ -181,7 +177,7 @@ namespace ngcomp
 
           SIMD_MappedIntegrationRule<D, D + 1> smir (
               sir, ma->GetTrafo (0, slh), -1, slh);
-          for (int imip = 0; imip < ir.Size (); imip++)
+          for (int imip = 0; imip < snip; imip++)
             smir[imip].Point ()
                 = map * sir[imip].operator Vec<D, SIMD<double>> () + shift;
 
@@ -283,8 +279,8 @@ namespace ngcomp
                                 &simddshapes (0, 0)[0]);
           FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
 
-          wavefront.Row (elnr).Range (0, nip)
-              = Trans (shapes.Cols (0, nip)) * sol;
+          wavefront.Row (elnr).Range (0, snip)
+              = Trans (shapes.Cols (0, snip)) * sol;
           wavefront.Row (elnr).Range (snip, snip + snip * (D + 1))
               = Trans (dshapes) * sol;
           // p[D] += timeshift;
