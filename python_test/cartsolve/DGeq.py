@@ -131,22 +131,22 @@ def DGsolve(fes,a,f):
     # print(cond)
     # print(a.mat.height)
     # print(a.mat.width)
-	# nmat = np.zeros((a.mat.height,a.mat.width))
-	# nvec = np.zeros(a.mat.width)
-	#
-	# for i in range(a.mat.width):
-	# 	nvec[i] = f.vec[i]/sqrt(a.mat[i,i])
-	# 	for j in range(a.mat.height):
-	# 		nmat[j,i] = a.mat[j,i]/sqrt(a.mat[i,i]*a.mat[j,j])
-	# sol = scipy.linalg.solve(nmat,nvec)
-	#
-	# for i in range(a.mat.height):
-	# 	gfu.vec[i] = sol[i]/sqrt(a.mat[i,i])
-	# cond = np.linalg.cond(nmat)
+    # nmat = np.zeros((a.mat.height,a.mat.width))
+    # nvec = np.zeros(a.mat.width)
+    
+    # for i in range(a.mat.width):
+            # nvec[i] = f.vec[i]/sqrt(a.mat[i,i])
+            # for j in range(a.mat.height):
+                    # nmat[j,i] = a.mat[j,i]/sqrt(a.mat[i,i]*a.mat[j,j])
+    # sol = scipy.linalg.solve(nmat,nvec)
+    
+    # for i in range(a.mat.height):
+            # gfu.vec[i] = sol[i]/sqrt(a.mat[i,i])
+    # cond = np.linalg.cond(nmat)
 
-	#print(min(np.linalg.eigvalsh(0.5*(nmat + nmat.transpose()))))
-	#nmatinv = np.linalg.inv(nmat)
-	#print(min(np.linalg.eigvalsh(0.5*(nmatinv + nmatinv.transpose()))))
+    #print(min(np.linalg.eigvalsh(0.5*(nmat + nmat.transpose()))))
+    #nmatinv = np.linalg.inv(nmat)
+    #print(min(np.linalg.eigvalsh(0.5*(nmatinv + nmatinv.transpose()))))
     gfu.vec.data = a.mat.Inverse()*f.vec
 
     return [gfu,cond]
