@@ -10,14 +10,16 @@ from testcases import *
 order = 4
 c = 1
 t_start = 0
-t_step = 0.02
+t_step = 0.01
 
 # ngmesh = SegMesh(4,0,1)
 # ngmesh = QadSegMesh(4,0,1)
 # initmesh = Mesh(ngmesh)
 initmesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
-# initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.5))
+# initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 # initmesh = Mesh( CircleMesh(0.2) )
+# for i in range(0,len(initmesh.GetBoundaries())):
+   # initmesh.ngmesh.SetBCName(i,"neumann")
 
 D = initmesh.dim
 if D==3: eltyp = ET.TET
@@ -33,10 +35,10 @@ gfu = GridFunction(fes)
 a = BilinearForm(fes)
 a += SymbolicBFI(u*v)
 a.Assemble()
-# Draw(gfu,initmesh,'sol')
-Draw(gfu,initmesh,'sol',autoscale=False,min=-0.1,max=0.1)
+Draw(gfu,initmesh,'sol')
+# Draw(gfu,initmesh,'sol',autoscale=False,min=-0.1,max=0.1)
 # Draw(gfu,initmesh,'sol',autoscale=False,min=-0.01,max=0.01)
-bdd = standingwave(D,c)
+bdd = simplesin(D,c)
 wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,bdd)
 
 for t in range(0,200):
