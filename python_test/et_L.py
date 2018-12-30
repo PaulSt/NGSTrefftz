@@ -14,16 +14,17 @@ from netgen.meshing import MeshingParameters
 maxh=0.01
 minh=0.0005
 mp = MeshingParameters (maxh = maxh)
-for i in range(0, 101):
-    for j in range(0, 101):
-        xk = i/100
-        yk = j/100
-        mp.RestrictH (x=xk, y=yk, z=0, h=(1/8)*max(minh,sqrt((xk-0.5)*(xk-0.5)+(yk-0.5)*(yk-0.5))))
+refpoints = 500
+for i in range(0, refpoints+1):
+    for j in range(0, refpoints+1):
+        xk = i/refpoints
+        yk = j/refpoints
+        mp.RestrictH (x=xk, y=yk, z=0, h=max(minh,sqrt(0.005*((xk-0.5)*(xk-0.5)+(yk-0.5)*(yk-0.5)))))
 
 order = 3
 c = 1
 t_start = 0
-t_step = 0.01
+t_step = 0.05
 
 initmesh = Mesh( LshapeMesh(maxh,mp) )
 # RefineAround([0.5,0.5,0],0.1,initmesh)
@@ -48,7 +49,7 @@ a += SymbolicBFI(u*v)
 a.Assemble()
 # Draw(gfu,initmesh,'sol')
 # Draw(gfu,initmesh,'sol',autoscale=False,min=-1,max=1)
-Draw(gfu,initmesh,'sol',autoscale=False,min=-0.1,max=0.2)
+Draw(gfu,initmesh,'sol',autoscale=False,min=-0.05,max=0.1)
 bdd = vertgausspw(D,c)
 wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,bdd )
 
@@ -64,5 +65,5 @@ for t in range(0,100):
 
     t_start += t_step
     print("time: " + str(t_start))
-    # filename = "results/mov/sol"+str(t).zfill(3)
-    # Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
+    filename = "results/mov/sol"+str(t).zfill(3)
+    Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
