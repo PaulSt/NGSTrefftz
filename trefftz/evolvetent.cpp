@@ -482,10 +482,10 @@ namespace ngcomp
   }
 
   template <int D>
-  double L2Error (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
-                  Matrix<> wavefront_corr)
+  double Error (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
+                Matrix<> wavefront_corr)
   {
-    double l2error = 0;
+    double error = 0;
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     IntegrationRule ir (eltyp, order * 2);
@@ -499,14 +499,14 @@ namespace ngcomp
             // l2error +=
             // (wavefront(elnr,imip)-wavefront_corr(elnr,imip))*(wavefront(elnr,imip)-wavefront_corr(elnr,imip))*ir[imip].Weight();
             for (int d = 0; d < D + 1; d++)
-              l2error
+              error
                   += pow (wavefront (elnr, snip + d * snip + imip)
                               - wavefront_corr (elnr, snip + d * snip + imip),
                           2)
                      * ir[imip].Weight ();
           }
       }
-    return sqrt (l2error);
+    return sqrt (error);
   }
 
   template <int D>
@@ -613,18 +613,18 @@ void ExportEvolveTent (py::module m)
           wavefront = MakeWavefront<3> (order, ma, wavespeed, time, bddatum);
         return wavefront;
       });
-  m.def ("EvolveTentsL2Error",
+  m.def ("EvolveTentsError",
          [] (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
              Matrix<> wavefront_corr) -> double {
            int D = ma->GetDimension ();
-           double l2error;
+           double error;
            if (D == 1)
-             l2error = L2Error<1> (order, ma, wavefront, wavefront_corr);
+             error = Error<1> (order, ma, wavefront, wavefront_corr);
            else if (D == 2)
-             l2error = L2Error<2> (order, ma, wavefront, wavefront_corr);
+             error = Error<2> (order, ma, wavefront, wavefront_corr);
            else if (D == 3)
-             l2error = L2Error<3> (order, ma, wavefront, wavefront_corr);
-           return l2error;
+             error = Error<3> (order, ma, wavefront, wavefront_corr);
+           return error;
          });
   m.def ("EvolveTentsEnergy",
          [] (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
