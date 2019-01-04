@@ -23,6 +23,121 @@ namespace ngfem
   }
 
   template <int D>
+  void TrefftzWaveFE<D>::CalcShape (
+      const SIMD_MappedIntegrationRule<D - 1, D> &smir,
+      BareSliceMatrix<SIMD<double>> shape) const
+  {
+    // auto & smir = static_cast<const SIMD_MappedIntegrationRule<D-1,D>&>
+    // (mir);
+    for (int imip = 0; imip < smir.Size (); imip++)
+      {
+        Vec<D, SIMD<double>> cpoint = smir[imip].GetPoint ();
+        cpoint -= elcenter;
+        cpoint *= (2.0 / elsize);
+        cpoint[1] *= c;
+        SIMD<double> x = cpoint[0], t = cpoint[1];
+
+        STACK_ARRAY (SIMD<double>, mem, D * (ord + 1));
+        Vec<D, SIMD<double> *> polxt;
+        for (size_t d = 0; d < D; d++)
+          {
+            polxt[d] = &mem[d * (ord + 1)];
+            Monomial (ord, cpoint[d], polxt[d]);
+          }
+
+        Matrix<double> localmat = *TB<2> (ord);
+        Vector<SIMD<double>> tempshape (nbasis);
+        Vector<SIMD<double>> pol (npoly);
+        pol = 1;
+        // tempshape=0;
+        //
+        Vec<D + 1, int> ind = 0; // if "n" is not known before hand, then this
+                                 // array will need to be created dynamically.
+        int p = 0; // Used to increment all of the indicies correctly, at the
+                   // end of each loop.
+        int ii = 0; // keep track of runs
+        while (ind[D] == 0)
+          {
+            int sum = 0;
+            for (int i = 0; i <= D; i++)
+              sum += ind (i);
+            if (sum <= ord)
+              {
+                for (int d = 0; d < D; d++)
+                  pol[ii] = pol[ii] * polxt[d][ind[d]];
+                ii++;
+                // cout << ind << endl;
+              }
+            // increment all of the indicies correctly.
+            ind[0]++;
+            p = 0;
+            while (ind[p] > ord)
+              {
+                ind[p] = 0;
+                ind[++p]++; // increase p by 1, and increase the next (p+1)th
+                            // index
+                // if(ind[p] != ord)
+                // p=0; // only reset p when it actually needs to be reset!
+              }
+          }
+        // cout << endl << endl;
+        // for (size_t i = 0, ii = 0; i <= ord; i++)
+        // for (size_t j = 0; j <= ord-i; j++)
+        //{
+        // pol[ii++] = polx[i] * polt[j];
+        ////tempshape += pol * localmat.Col(ii++);
+        //}
+        tempshape = localmat * pol;
+        for (int b = 0; b < nbasis; b++)
+          shape.Col (imip) (b) = tempshape (b);
+      }
+  }
+
+  template <>
+  void
+  TrefftzWaveFE<2>::CalcDShape (const SIMD_MappedIntegrationRule<1, 2> &smir,
+                                SliceMatrix<SIMD<double>> dshape) const
+  {
+    for (int imip = 0; imip < smir.Size (); imip++)
+      {
+        Vec<2, SIMD<double>> cpoint = smir[imip].GetPoint ();
+        cpoint -= elcenter;
+        cpoint *= (2.0 / elsize);
+        cpoint[1] *= c;
+        SIMD<double> x = cpoint[0], t = cpoint[1];
+
+        STACK_ARRAY (SIMD<double>, mem, 2 * ord + 2);
+        SIMD<double> *polx = &mem[0];
+        SIMD<double> *polt = &mem[ord + 1];
+
+        Monomial (ord, x, polx);
+        Monomial (ord, t, polt);
+
+        Matrix<> localmat = *TB<2> (ord);
+        Vector<SIMD<double>> tempdshape (nbasis);
+        for (int d = 0; d < 2; d++)
+          {
+            tempdshape = 0;
+            for (size_t i = 0, ii = 0; i <= ord; i++)
+              for (size_t j = 0; j <= ord - i; j++)
+                {
+                  ii++;
+                  if ((d == 0 && j == 0) || (d == 1 && i == 0))
+                    continue;
+                  SIMD<double> pol = polx[j - (d == 0)] * polt[i - (d == 1)]
+                                     * (d == 0 ? j : i);
+                  tempdshape += pol * localmat.Col (ii - 1);
+                }
+            // dshape.Col(d) = tempdshape;
+            for (int n = 0; n < nbasis; n++)
+              dshape (n * 2 + d, imip) = tempdshape (n) * (d == 1 ? c : 1);
+          }
+      }
+    // dshape.Col(1) *= c; //inner derivative
+    dshape *= (2.0 / elsize); // inner derivative
+  }
+
+  template <int D>
   void TrefftzWaveFE<D>::CalcShape (const BaseMappedIntegrationPoint &mip,
                                     BareSliceVector<> shape) const
   {
@@ -68,32 +183,28 @@ namespace ngfem
     dshape *= (2.0 / elsize); // inner derivative
   }
 
-  template <int D>
-  void TrefftzWaveFE<D>::CalcShape (
-      const SIMD_MappedIntegrationRule<D - 1, D> &smir,
-      BareSliceMatrix<SIMD<double>> shape) const
-  {
-    // auto & smir = static_cast<const SIMD_MappedIntegrationRule<D,D+1>&>
-    // (mir);
-    for (int imip = 0; imip < smir.Size (); imip++)
-      {
-        Vec<D, SIMD<double>> cpoint = smir[imip].GetPoint ();
-        cpoint -= elcenter;
-        cpoint *= (2.0 / elsize);
-        cpoint (D - 1) *= c;
-        Matrix<SIMD<double>> coeff (TrefftzBasis ());
+  // template<int D>
+  // void TrefftzWaveFE<D> :: CalcShape (const
+  // SIMD_MappedIntegrationRule<D-1,D> & smir, BareSliceMatrix<SIMD<double>>
+  // shape) const
+  //{
+  ////auto & smir = static_cast<const SIMD_MappedIntegrationRule<D,D+1>&>
+  ///(mir);
+  // for (int imip = 0; imip < smir.Size(); imip++)
+  //{
+  // Vec<D,SIMD<double>> cpoint = smir[imip].GetPoint();
+  // cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint(D-1) *= c;
+  // Matrix<SIMD<double>> coeff(TrefftzBasis());
 
-        for (int j = ord; j > 0; j--)
-          for (int i = 0; i < D; i++)
-            for (int k = pascal (i + 1, j) - 1; k >= 0; k--)
-              coeff.Row (pascal (D + 1, j - 1) + k)
-                  += cpoint[i]
-                     * coeff.Row (pascal (D + 1, j) + pascal (i, j + 1) + k);
+  // for(int j=ord;j>0;j--)
+  // for(int i=0;i<D;i++)
+  // for(int k=pascal(i+1,j)-1; k>=0; k--)
+  // coeff.Row( pascal(D+1,j-1)+k ) += cpoint[i] * coeff.Row(
+  // pascal(D+1,j)+pascal(i,j+1)+k );
 
-        for (int b = 0; b < nbasis; b++)
-          shape.Col (imip) (b) = coeff.Row (0) (b);
-      }
-  }
+  // for(int b = 0; b < nbasis; b++) shape.Col(imip)(b) = coeff.Row(0)(b);
+  // }
+  // }
 
   template <int D>
   void TrefftzWaveFE<D>::CalcDShape (
@@ -305,76 +416,6 @@ namespace ngfem
         order = ord;
       }
     return pascalstorage;
-  }
-
-  template <>
-  void TrefftzWaveFE<2>::CalcShape (const BaseMappedIntegrationPoint &mip,
-                                    BareSliceVector<> shape) const
-  {
-    Vec<2> cpoint = mip.GetPoint ();
-    cpoint -= elcenter;
-    cpoint *= (2.0 / elsize);
-    cpoint[1] *= c;
-    double x = cpoint[0], t = cpoint[1];
-
-    STACK_ARRAY (double, mem, 2 * ord + 2);
-    double *polx = &mem[0];
-    double *polt = &mem[ord + 1];
-
-    Monomial (ord, x, polx);
-    Monomial (ord, t, polt);
-
-    Matrix<> localmat = *TB<2> (ord);
-    Vector<> tempshape (nbasis);
-    Vector<> pol (npoly);
-    // tempshape=0;
-    for (size_t i = 0, ii = 0; i <= ord; i++)
-      for (size_t j = 0; j <= ord - i; j++)
-        {
-          pol[ii++] = polx[i] * polt[j];
-          // tempshape += pol * localmat.Col(ii++);
-        }
-    tempshape = localmat * pol;
-    for (int b = 0; b < nbasis; b++)
-      shape (b) = tempshape (b);
-  }
-
-  template <>
-  void TrefftzWaveFE<2>::CalcDShape (const BaseMappedIntegrationPoint &mip,
-                                     SliceMatrix<> dshape) const
-  {
-    Vec<2> cpoint = mip.GetPoint ();
-    cpoint -= elcenter;
-    cpoint *= (2.0 / elsize);
-    cpoint[1] *= c;
-    double x = cpoint[0], t = cpoint[1];
-
-    STACK_ARRAY (double, mem, 2 * ord + 2);
-    double *polx = &mem[0];
-    double *polt = &mem[ord + 1];
-
-    Monomial (ord, x, polx);
-    Monomial (ord, t, polt);
-
-    Matrix<> localmat = *TB<2> (ord);
-    Vector<> tempdshape (nbasis);
-    for (int d = 0; d < 2; d++)
-      {
-        tempdshape = 0;
-        for (size_t i = 0, ii = 0; i <= ord; i++)
-          for (size_t j = 0; j <= ord - i; j++)
-            {
-              ii++;
-              if ((d == 0 && i == 0) || (d == 1 && j == 0))
-                continue;
-              double pol
-                  = polx[i - (d == 0)] * polt[j - (d == 1)] * (d == 0 ? i : j);
-              tempdshape += pol * localmat.Col (ii - 1);
-            }
-        dshape.Col (d) = tempdshape;
-      }
-    dshape.Col (1) *= c;      // inner derivative
-    dshape *= (2.0 / elsize); // inner derivative
   }
 
   template class TrefftzWaveFE<1>;
