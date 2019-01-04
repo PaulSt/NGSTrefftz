@@ -11,12 +11,12 @@ from testcases import *
 order = 4
 c = 1
 t_start = 0
-t_step = 0.01
+t_step = 1
 
-# ngmesh = SegMesh(4,0,1)
+ngmesh = SegMesh(4,0,1)
 # ngmesh = QadSegMesh(4,0,1)
-# initmesh = Mesh(ngmesh)
-initmesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
+initmesh = Mesh(ngmesh)
+# initmesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 # initmesh = Mesh(unit_cube.GenerateMesh(maxh = 0.4))
 # initmesh = Mesh( CircleMesh(0.2) )
 # for i in range(0,len(initmesh.GetBoundaries())):
@@ -42,18 +42,19 @@ Draw(gfu,initmesh,'sol')
 bdd = simplesin(D,c)
 wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,bdd)
 
-for t in range(0,200):
-    wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
-    print("L2Error: " + str(EvolveTentsL2Error(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step,bdd))))
+# for t in range(0,200):
+# with TaskManager():
+wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
+print("Error: " + str(EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step,bdd))))
 
-    ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
-    f = LinearForm(fes)
-    f += SymbolicLFI(ipfct*v, intrule=intrule)
-    f.Assemble()
-    gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs()) * f.vec
-    Redraw()
+ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
+f = LinearForm(fes)
+f += SymbolicLFI(ipfct*v, intrule=intrule)
+f.Assemble()
+gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs()) * f.vec
+Redraw()
 
-    t_start += t_step
-    print("time: " + str(t_start))
-    # filename = "results/mov/sol"+str(t).zfill(3) +".jpg"
-    # Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
+t_start += t_step
+print("time: " + str(t_start))
+# filename = "results/mov/sol"+str(t).zfill(3) +".jpg"
+# Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
