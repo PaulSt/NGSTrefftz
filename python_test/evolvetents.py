@@ -2,6 +2,7 @@ from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from trefftzngs import *
 import netgen.gui
+from ngsolve.TensorProductTools import *
 from ngsolve import *
 from prodmesh import *
 from ngsolve.solve import Tcl_Eval # for snapshots

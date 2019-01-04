@@ -8,7 +8,7 @@
 namespace ngfem
 {
     template<int D>
-    void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis, int dim, int &tracker) 
+    void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis, int dim, int &tracker)
     {
         if (dim>0)
         {
@@ -49,12 +49,12 @@ namespace ngfem
     }
 
     template<int D>
-    const Matrix<>*  TB(int ord) 
+    const Matrix<>* TB(int ord)
     {
-        //static Matrix<> *tbstore[15] = {NULL};
-        static Matrix<> trefftzbasis;
         std::mutex m;
         std::lock_guard<std::mutex> lock{m};
+        //static Matrix<> *tbstore[15] = {NULL};
+        static Matrix<> trefftzbasis;
 
         //if(tbstore[ord]==NULL)
         if (trefftzbasis.Height()==0)
@@ -79,7 +79,7 @@ namespace ngfem
     }
 
     template<int D>
-    int IndexMap2(Vec<D, int> index, int ord) 
+    int IndexMap2(Vec<D, int> index, int ord)
     {
         int sum=0;
         int temp_size = 0;
@@ -92,5 +92,8 @@ namespace ngfem
         return sum;
     }
 
+    template const Matrix<>* TB<1>(int ord) ;
     template const Matrix<>* TB<2>(int ord) ;
+    template const Matrix<>* TB<3>(int ord) ;
+    template const Matrix<>* TB<4>(int ord) ;
 }
