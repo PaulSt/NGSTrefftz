@@ -14,8 +14,6 @@ namespace ngfem
             const int ord;
             const int nbasis;
             const int npoly;
-            const Matrix<int> pascal;
-            const int basistype;
             Vec<D> elcenter=0;
             double elsize=1;
             float c = 1.0;
