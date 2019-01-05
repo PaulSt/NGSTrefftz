@@ -57,7 +57,7 @@ namespace ngfem
         static Matrix<> trefftzbasis;
 
         //if(tbstore[ord]==NULL)
-        if (trefftzbasis.Height()==0)
+        if (trefftzbasis.Width() != BinCoeff(D + ord, ord))
         {
             const int nbasis = (BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1));
             const int npoly = (BinCoeff(D + ord, ord));
