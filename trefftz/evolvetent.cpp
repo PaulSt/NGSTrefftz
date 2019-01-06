@@ -51,6 +51,7 @@ namespace ngcomp
         static Timer tint4("tent int bot elvec",2);
         static Timer tbnd("tent bnd",2);
         static Timer teval("tent eval",2);
+
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             RegionTimer reg(ttent);
             LocalHeap slh = lh.Split();  // split to threads
