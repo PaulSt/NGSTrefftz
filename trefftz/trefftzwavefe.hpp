@@ -13,8 +13,6 @@ namespace ngfem
     const int ord;
     const int nbasis;
     const int npoly;
-    const Matrix<int> pascal;
-    const int basistype;
     Vec<D> elcenter = 0;
     double elsize = 1;
     float c = 1.0;
@@ -62,10 +60,37 @@ namespace ngfem
     Matrix<double> TrefftzBasis () const;
     Matrix<double> GetDerTrefftzBasis (int der) const;
     Matrix<int> pascal_sym () const;
+  };
 
-    Matrix<> TB () const;
-    void TB_inner (Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int nbasis,
-                   int ordr, int dim, int &tracker) const;
+  class Monomial : public RecursivePolynomial<Monomial>
+  {
+  public:
+    Monomial () { ; }
+
+    template <class S, class T> inline Monomial (int n, S x, T &&values)
+    {
+      Eval (n, x, values);
+    }
+
+    template <class S> static INLINE double P0 (S x) { return 1.0; }
+    template <class S> static INLINE S P1 (S x) { return x; }
+    template <class S, class Sy> static INLINE S P1 (S x, Sy y)
+    {
+      return P1 (x);
+    }
+
+    static INLINE double A (int i) { return 1.0; }
+    static INLINE double B (int i) { return 0; }
+    static INLINE double C (int i) { return 0; }
+
+    static INLINE double CalcA (int i) { return 1.0; }
+    static INLINE double CalcB (int i) { return 0; }
+    static INLINE double CalcC (int i) { return 0; }
+
+    enum
+    {
+      ZERO_B = 1
+    };
   };
 }
 
