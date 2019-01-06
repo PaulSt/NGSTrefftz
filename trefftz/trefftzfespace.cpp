@@ -105,7 +105,7 @@ namespace ngcomp
       case ET_TRIG:
         {
           return *(new (alloc) TrefftzWaveFE<2> (
-              order, c, ElCenter<1> (ei), Adiam<1> (ei), ma->GetElType (ei)));
+              order, c, ElCenter<2> (ei), Adiam<2> (ei), ma->GetElType (ei)));
           break;
         }
       case ET_HEX:
@@ -114,7 +114,7 @@ namespace ngcomp
       case ET_TET:
         {
           return *(new (alloc) TrefftzWaveFE<3> (
-              order, c, ElCenter<1> (ei), Adiam<1> (ei), ma->GetElType (ei)));
+              order, c, ElCenter<3> (ei), Adiam<3> (ei), ma->GetElType (ei)));
           break;
         }
       }
