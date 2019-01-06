@@ -9,12 +9,14 @@
 namespace ngfem
 {
     template<int D>
-    TrefftzWaveFE<D> :: TrefftzWaveFE(int aord, float ac, ELEMENT_TYPE aeltype, int abasistype)
+    TrefftzWaveFE<D> :: TrefftzWaveFE(int aord, float ac, Vec<D> aelcenter, double aelsize, ELEMENT_TYPE aeltype)
     : ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
     ord(aord),
     c(ac),
     nbasis(BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1)),
     npoly(BinCoeff(D + ord, ord)),
+    elcenter(aelcenter),
+    elsize(aelsize),
     eltype(aeltype)
     {;}
 
@@ -374,7 +376,7 @@ namespace ngfem
                     tempdshape += pol * localmat.Col(ii-1);
                 }
             dshape.Col(d) = tempdshape;
-        } 
+        }
         dshape.Col(1) *= c; //inner derivative
         dshape *= (2.0/elsize); //inner derivative
     }
@@ -409,7 +411,7 @@ namespace ngfem
                         tempdshape += pol * localmat.Col(ii-1);
                     }
             dshape.Col(d) = tempdshape;
-        } 
+        }
         dshape.Col(2) *= c; //inner derivative
         dshape *= (2.0/elsize); //inner derivative
     }
@@ -446,7 +448,7 @@ namespace ngfem
                             tempdshape += pol * localmat.Col(ii-1);
                         }
             dshape.Col(d) = tempdshape;
-        } 
+        }
         dshape.Col(3) *= c; //inner derivative
         dshape *= (2.0/elsize); //inner derivative
     }
