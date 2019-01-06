@@ -61,13 +61,12 @@ namespace ngcomp
       LocalHeap slh = lh.Split (); // split to threads
       Tent *tent = tps.tents[tentnr];
 
-      TrefftzWaveFE<D + 1> tel (order, wavespeed);
-      int nbasis = tel.GetNBasis ();
       Vec<D + 1> center;
       center.Range (0, D) = ma->GetPoint<D> (tent->vertex);
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
-      tel.SetCenter (center);
-      tel.SetElSize (TentAdiam<D> (tent, ma));
+      TrefftzWaveFE<D + 1> tel (order, wavespeed, center,
+                                TentAdiam<D> (tent, ma));
+      int nbasis = tel.GetNBasis ();
 
       FlatMatrix<> elmat (nbasis, slh);
       FlatVector<> elvec (nbasis, slh);

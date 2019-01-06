@@ -13,15 +13,15 @@ namespace ngfem
     const int ord;
     const int nbasis;
     const int npoly;
-    Vec<D> elcenter = 0;
-    double elsize = 1;
-    float c = 1.0;
+    Vec<D> elcenter;
+    double elsize;
+    float c;
     ELEMENT_TYPE eltype;
 
   public:
     // TrefftzWaveFE();
-    TrefftzWaveFE (int aord = 1, float ac = 1.0,
-                   ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0);
+    TrefftzWaveFE (int aord = 1, float ac = 1.0, Vec<D> aelcenter = 0,
+                   double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG);
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
 
@@ -39,17 +39,10 @@ namespace ngfem
 
     int GetNBasis () const { return nbasis; }
 
-    TrefftzWaveFE<D> *SetCenter (Vec<D> acenter)
-    {
-      elcenter = acenter;
-      return this;
-    }
-    TrefftzWaveFE<D> *SetElSize (double aelsize)
-    {
-      elsize = aelsize;
-      return this;
-    }
-    // TrefftzWaveFE<D> * SetWavespeed(float ac) {c = ac; return this;}
+    // TrefftzWaveFE<D> * SetCenter(Vec<D> acenter) {elcenter = acenter; return
+    // this;} TrefftzWaveFE<D> * SetElSize(double aelsize) {elsize = aelsize;
+    // return this;}
+    //  TrefftzWaveFE<D> * SetWavespeed(float ac) {c = ac; return this;}
 
   protected:
     void MakeIndices_inner (Matrix<int> &indice, Vec<D, int> numbers,
