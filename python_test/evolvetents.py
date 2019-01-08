@@ -51,7 +51,7 @@ for t in range(0,200):
     f += SymbolicLFI(ipfct*v, intrule=intrule)
     f.Assemble()
     gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs()) * f.vec
-    Redraw()
+    Redraw(blocking=True)
 
     t_start += t_step
     print("time: " + str(t_start))

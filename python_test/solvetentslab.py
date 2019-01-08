@@ -1,14 +1,14 @@
-from netgen.geom2d import unit_square
-from netgen.csg import unit_cube
+import netgen.gui
+import sys
+sys.path.append("./cartsolve/")
+
 from prodmesh import *
 from ngsolve import *
-import netgen.gui
 from trefftzngs import *
 from DGeq import *
-import time
 from ngsolve.TensorProductTools import *
-from ngsolve.comp import *
 from solve12d import TestSolution2D
+from ngsolve.solve import Tcl_Eval # for snapshots
 
 
 def AssembleTentSlab(fes,U0,gD=0,c=1):
@@ -82,21 +82,29 @@ def AssembleTentSlab(fes,U0,gD=0,c=1):
 c = 4
 order = 6
 
+import netgen.gui
+import math
+import time
 from ngsolve import *
 
-# ngmesh = SegMesh(4,0,1)
-ngmesh = QadSegMesh(4,0,1)
+ngmesh = SegMesh(5,0,1)
+# ngmesh = QadSegMesh(4,0,1)
 initmesh = Mesh(ngmesh)
 
 mesh = NgsTPmesh(initmesh,c,1)
-Draw(mesh)
-
+# Draw(mesh)
 
 fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0)
 
 [truesol,U0,sig0,v0,gD] = TestSolution2D(fes,c)
+wavespeed = c
+truesol = sin(math.pi*x)*sin(math.pi*y*wavespeed)
+U0 = GridFunction(fes)
+U0.Set(truesol)
+sig0 = cos(math.pi*x)*sin(math.pi*y*wavespeed)*math.pi,
+v0 = sin(math.pi*x)*cos(math.pi*y*wavespeed)*wavespeed*math.pi
+gD = sin(math.pi*x)*sin(math.pi*y*wavespeed)
 
-import time
 start = time.time()
 [a,f] = AssembleTentSlab(fes,U0,gD,c)
 end = time.time()
@@ -110,8 +118,6 @@ print("error=", sqrt(L2error))
 print("grad-error=", sqrt(sH1error))
 Draw(gfu,mesh,'sol')
 Draw(grad(gfu),mesh,'gradsol')
-
-
-
-
+filename = "results/tentslabsol.jpg"
+Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
 
