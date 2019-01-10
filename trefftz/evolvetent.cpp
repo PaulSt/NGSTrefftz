@@ -140,12 +140,17 @@ namespace ngcomp
             } // close loop over tent elements
             tint.Stop();
 
-            //Integrate over side of tent
+            //Integrate boundary tent
             tbnd.Start();
             for(auto surfel : ma->GetVertexSurfaceElements(tent->vertex))
             {
                 // get vertices of tent face
                 Mat<D+1> vert = TentFaceVerts<D>(tent, surfel, ma, 0);
+                //cout << "el: " << tentnr << " vert: " << vert << endl;
+                //int in;
+                //int out;
+                //ma->GetSElNeighbouringDomains(surfel, in, out);
+                //cout << "nbd: " << in << " " << out << endl;
                 // build normal vector
                 Vec<D+1> n;
                 n.Range(0,D) = TentFaceNormal<D>(vert.Cols(1,D+1).Rows(0,D),0);
