@@ -48,17 +48,19 @@ namespace ngfem
         }
     }
 
+    static std::mutex gentrefftzbasis;
+    //once_flag onceFlag;
     template<int D>
     const Matrix<>* TB(int ord)
     {
-        std::mutex m;
-        std::lock_guard<std::mutex> lock{m};
         //static Matrix<> *tbstore[15] = {NULL};
         static Matrix<> trefftzbasis;
 
+        lock_guard<mutex> lock(gentrefftzbasis);
         //if(tbstore[ord]==NULL)
         if (trefftzbasis.Width() != BinCoeff(D + ord, ord))
         {
+            //call_once(onceFlag, [ord]()
             const int nbasis = (BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1));
             const int npoly = (BinCoeff(D + ord, ord));
             //Matrix<> trefftzbasis(npoly,nbasis);
