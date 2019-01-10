@@ -52,7 +52,6 @@ namespace ngfem
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
-        Matrix<double> localmat = *TB<2> (ord);
         Vector<SIMD<double>> tempshape (nbasis);
         Vector<SIMD<double>> pol (npoly);
 
@@ -60,6 +59,7 @@ namespace ngfem
           for (size_t j = 0; j <= ord - i; j++)
             pol[ii++] = polxt[0][i] * polxt[1][j];
 
+        Matrix<> localmat = *(TrefftzWaveBasis<2>::getInstance ().TB (ord));
         tempshape = localmat * pol;
         for (int b = 0; b < nbasis; b++)
           shape.Col (imip) (b) = tempshape (b);
@@ -88,7 +88,6 @@ namespace ngfem
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
-        Matrix<double> localmat = *TB<3> (ord);
         Vector<SIMD<double>> tempshape (nbasis);
         Vector<SIMD<double>> pol (npoly);
 
@@ -97,6 +96,7 @@ namespace ngfem
             for (size_t k = 0; k <= ord - i - j; k++)
               pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
 
+        Matrix<> localmat = *(TrefftzWaveBasis<3>::getInstance ().TB (ord));
         tempshape = localmat * pol;
         for (int b = 0; b < nbasis; b++)
           shape.Col (imip) (b) = tempshape (b);
@@ -125,10 +125,8 @@ namespace ngfem
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
-        Matrix<double> localmat = *TB<4> (ord);
         Vector<SIMD<double>> tempshape (nbasis);
         Vector<SIMD<double>> pol (npoly);
-        pol = 1;
 
         for (size_t i = 0, ii = 0; i <= ord; i++)
           for (size_t j = 0; j <= ord - i; j++)
@@ -137,6 +135,7 @@ namespace ngfem
                 pol[ii++]
                     = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
 
+        Matrix<> localmat = *(TrefftzWaveBasis<4>::getInstance ().TB (ord));
         tempshape = localmat * pol;
         for (int b = 0; b < nbasis; b++)
           shape.Col (imip) (b) = tempshape (b);
@@ -170,7 +169,7 @@ namespace ngfem
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
-        Matrix<> localmat = *TB<2> (ord);
+        Matrix<> localmat = *(TrefftzWaveBasis<2>::getInstance ().TB (ord));
         Vector<SIMD<double>> tempdshape (nbasis);
         for (int d = 0; d < 2; d++)
           {
@@ -213,7 +212,7 @@ namespace ngfem
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
-        Matrix<> localmat = *TB<3> (ord);
+        Matrix<> localmat = *(TrefftzWaveBasis<3>::getInstance ().TB (ord));
         Vector<SIMD<double>> tempdshape (nbasis);
         for (int d = 0; d < 3; d++)
           {
@@ -259,7 +258,7 @@ namespace ngfem
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
-        Matrix<> localmat = *TB<4> (ord);
+        Matrix<> localmat = *(TrefftzWaveBasis<4>::getInstance ().TB (ord));
         Vector<SIMD<double>> tempdshape (nbasis);
         for (int d = 0; d < 4; d++)
           {
@@ -314,7 +313,6 @@ namespace ngfem
         Monomial (ord, cpoint[d], polxt[d]);
       }
 
-    Matrix<> localmat = *TB<2> (ord);
     Vector<> tempshape (nbasis);
     Vector<> pol (npoly);
 
@@ -322,6 +320,7 @@ namespace ngfem
       for (size_t j = 0; j <= ord - i; j++)
         pol[ii++] = polxt[0][i] * polxt[1][j];
 
+    Matrix<> localmat = *(TrefftzWaveBasis<2>::getInstance ().TB (ord));
     tempshape = localmat * pol;
     for (int b = 0; b < nbasis; b++)
       shape (b) = tempshape (b);
@@ -346,7 +345,6 @@ namespace ngfem
         Monomial (ord, cpoint[d], polxt[d]);
       }
 
-    Matrix<> localmat = *TB<3> (ord);
     Vector<> tempshape (nbasis);
     Vector<> pol (npoly);
 
@@ -355,6 +353,7 @@ namespace ngfem
         for (size_t k = 0; k <= ord - i - j; k++)
           pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
 
+    Matrix<> localmat = *(TrefftzWaveBasis<3>::getInstance ().TB (ord));
     tempshape = localmat * pol;
     for (int b = 0; b < nbasis; b++)
       shape (b) = tempshape (b);
@@ -379,7 +378,6 @@ namespace ngfem
         Monomial (ord, cpoint[d], polxt[d]);
       }
 
-    Matrix<> localmat = *TB<4> (ord);
     Vector<> tempshape (nbasis);
     Vector<> pol (npoly);
     pol = 1;
@@ -390,6 +388,7 @@ namespace ngfem
           for (size_t l = 0; l <= ord - i - j - k; l++)
             pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
 
+    Matrix<> localmat = *(TrefftzWaveBasis<4>::getInstance ().TB (ord));
     tempshape = localmat * pol;
     for (int b = 0; b < nbasis; b++)
       shape (b) = tempshape (b);
@@ -418,7 +417,7 @@ namespace ngfem
         Monomial (ord, cpoint[d], polxt[d]);
       }
 
-    Matrix<> localmat = *TB<2> (ord);
+    Matrix<> localmat = *(TrefftzWaveBasis<2>::getInstance ().TB (ord));
     Vector<> tempdshape (nbasis);
     for (int d = 0; d < 2; d++)
       {
@@ -456,7 +455,7 @@ namespace ngfem
         Monomial (ord, cpoint[d], polxt[d]);
       }
 
-    Matrix<> localmat = *TB<3> (ord);
+    Matrix<> localmat = *(TrefftzWaveBasis<3>::getInstance ().TB (ord));
     Vector<> tempdshape (nbasis);
     for (int d = 0; d < 3; d++)
       {
@@ -497,7 +496,7 @@ namespace ngfem
         Monomial (ord, cpoint[d], polxt[d]);
       }
 
-    Matrix<> localmat = *TB<4> (ord);
+    Matrix<> localmat = *(TrefftzWaveBasis<4>::getInstance ().TB (ord));
     Vector<> tempdshape (nbasis);
     for (int d = 0; d < 4; d++)
       {
