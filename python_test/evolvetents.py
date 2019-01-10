@@ -7,6 +7,7 @@ from ngsolve import *
 from prodmesh import *
 from ngsolve.solve import Tcl_Eval # for snapshots
 from testcases import *
+import time
 
 order = 4
 c = 1
@@ -41,9 +42,11 @@ Draw(gfu,initmesh,'sol')
 bdd = standingwave(D,c)
 wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,bdd)
 
-for t in range(0,200):
 # with TaskManager():
+for t in range(0,200):
+    start = time.time()
     wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
+    print(time.time() - start)
     print("Error: " + str(EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step,bdd))))
 
     ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
