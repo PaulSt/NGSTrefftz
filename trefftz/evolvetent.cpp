@@ -237,7 +237,7 @@ namespace ngcomp
                 for(int imip=0;imip<sir.Size();imip++)
                     smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
 
-                Mat<D+1,D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
+                Mat<D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
                 Vec<D+1> bs = v.Row(D);
                 FlatVector<SIMD<double>> mirtimes(sir.Size(),slh);
                 faceint.Evaluate(sir, bs, mirtimes);
