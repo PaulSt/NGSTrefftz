@@ -86,7 +86,6 @@ namespace ngfem
     };
   };
 
-  static mutex gentrefftzbasis;
   template <int D> class TrefftzWaveBasis
   {
   public:
@@ -105,6 +104,7 @@ namespace ngfem
     TrefftzWaveBasis (const TrefftzWaveBasis &) = delete;
     TrefftzWaveBasis &operator= (const TrefftzWaveBasis &) = delete;
 
+    mutex gentrefftzbasis;
     Array<Matrix<>> tbstore;
     // once_flag tbonceflag;
     void TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum,
