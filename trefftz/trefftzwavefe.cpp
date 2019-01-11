@@ -2,7 +2,6 @@
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
 #include "helpers.hpp"
-#include "trefftzwavebasis.hpp"
 
 #include <ctime>
 
@@ -52,7 +51,6 @@ namespace ngfem
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
-        Matrix<double> localmat = *TB<2> (ord);
         Vector<SIMD<double>> tempshape (nbasis);
         Vector<SIMD<double>> pol (npoly);
 
@@ -60,6 +58,7 @@ namespace ngfem
           for (size_t j = 0; j <= ord - i; j++)
             pol[ii++] = polxt[0][i] * polxt[1][j];
 
+        Matrix<> localmat = *(TrefftzWaveBasis<2>::getInstance ().TB (ord));
         tempshape = localmat * pol;
         for (int b = 0; b < nbasis; b++)
           shape.Col (imip) (b) = tempshape (b);
@@ -88,7 +87,6 @@ namespace ngfem
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
-        Matrix<double> localmat = *TB<3> (ord);
         Vector<SIMD<double>> tempshape (nbasis);
         Vector<SIMD<double>> pol (npoly);
 
@@ -97,6 +95,7 @@ namespace ngfem
             for (size_t k = 0; k <= ord - i - j; k++)
               pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
 
+        Matrix<> localmat = *(TrefftzWaveBasis<3>::getInstance ().TB (ord));
         tempshape = localmat * pol;
         for (int b = 0; b < nbasis; b++)
           shape.Col (imip) (b) = tempshape (b);
@@ -125,10 +124,8 @@ namespace ngfem
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
-        Matrix<double> localmat = *TB<4> (ord);
         Vector<SIMD<double>> tempshape (nbasis);
         Vector<SIMD<double>> pol (npoly);
-        pol = 1;
 
         for (size_t i = 0, ii = 0; i <= ord; i++)
           for (size_t j = 0; j <= ord - i; j++)
@@ -137,6 +134,7 @@ namespace ngfem
                 pol[ii++]
                     = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
 
+        Matrix<> localmat = *(TrefftzWaveBasis<4>::getInstance ().TB (ord));
         tempshape = localmat * pol;
         for (int b = 0; b < nbasis; b++)
           shape.Col (imip) (b) = tempshape (b);
@@ -170,7 +168,7 @@ namespace ngfem
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
-        Matrix<> localmat = *TB<2> (ord);
+        Matrix<> localmat = *(TrefftzWaveBasis<2>::getInstance ().TB (ord));
         Vector<SIMD<double>> tempdshape (nbasis);
         for (int d = 0; d < 2; d++)
           {
@@ -213,7 +211,7 @@ namespace ngfem
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
-        Matrix<> localmat = *TB<3> (ord);
+        Matrix<> localmat = *(TrefftzWaveBasis<3>::getInstance ().TB (ord));
         Vector<SIMD<double>> tempdshape (nbasis);
         for (int d = 0; d < 3; d++)
           {
@@ -259,7 +257,7 @@ namespace ngfem
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
-        Matrix<> localmat = *TB<4> (ord);
+        Matrix<> localmat = *(TrefftzWaveBasis<4>::getInstance ().TB (ord));
         Vector<SIMD<double>> tempdshape (nbasis);
         for (int d = 0; d < 4; d++)
           {
@@ -314,7 +312,6 @@ namespace ngfem
         Monomial (ord, cpoint[d], polxt[d]);
       }
 
-    Matrix<> localmat = *TB<2> (ord);
     Vector<> tempshape (nbasis);
     Vector<> pol (npoly);
 
@@ -322,6 +319,7 @@ namespace ngfem
       for (size_t j = 0; j <= ord - i; j++)
         pol[ii++] = polxt[0][i] * polxt[1][j];
 
+    Matrix<> localmat = *(TrefftzWaveBasis<2>::getInstance ().TB (ord));
     tempshape = localmat * pol;
     for (int b = 0; b < nbasis; b++)
       shape (b) = tempshape (b);
@@ -346,7 +344,6 @@ namespace ngfem
         Monomial (ord, cpoint[d], polxt[d]);
       }
 
-    Matrix<> localmat = *TB<3> (ord);
     Vector<> tempshape (nbasis);
     Vector<> pol (npoly);
 
@@ -355,6 +352,7 @@ namespace ngfem
         for (size_t k = 0; k <= ord - i - j; k++)
           pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
 
+    Matrix<> localmat = *(TrefftzWaveBasis<3>::getInstance ().TB (ord));
     tempshape = localmat * pol;
     for (int b = 0; b < nbasis; b++)
       shape (b) = tempshape (b);
@@ -379,7 +377,6 @@ namespace ngfem
         Monomial (ord, cpoint[d], polxt[d]);
       }
 
-    Matrix<> localmat = *TB<4> (ord);
     Vector<> tempshape (nbasis);
     Vector<> pol (npoly);
     pol = 1;
@@ -390,6 +387,7 @@ namespace ngfem
           for (size_t l = 0; l <= ord - i - j - k; l++)
             pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
 
+    Matrix<> localmat = *(TrefftzWaveBasis<4>::getInstance ().TB (ord));
     tempshape = localmat * pol;
     for (int b = 0; b < nbasis; b++)
       shape (b) = tempshape (b);
@@ -418,7 +416,7 @@ namespace ngfem
         Monomial (ord, cpoint[d], polxt[d]);
       }
 
-    Matrix<> localmat = *TB<2> (ord);
+    Matrix<> localmat = *(TrefftzWaveBasis<2>::getInstance ().TB (ord));
     Vector<> tempdshape (nbasis);
     for (int d = 0; d < 2; d++)
       {
@@ -456,7 +454,7 @@ namespace ngfem
         Monomial (ord, cpoint[d], polxt[d]);
       }
 
-    Matrix<> localmat = *TB<3> (ord);
+    Matrix<> localmat = *(TrefftzWaveBasis<3>::getInstance ().TB (ord));
     Vector<> tempdshape (nbasis);
     for (int d = 0; d < 3; d++)
       {
@@ -497,7 +495,7 @@ namespace ngfem
         Monomial (ord, cpoint[d], polxt[d]);
       }
 
-    Matrix<> localmat = *TB<4> (ord);
+    Matrix<> localmat = *(TrefftzWaveBasis<4>::getInstance ().TB (ord));
     Vector<> tempdshape (nbasis);
     for (int d = 0; d < 4; d++)
       {
@@ -527,6 +525,118 @@ namespace ngfem
   template class TrefftzWaveFE<2>;
   template class TrefftzWaveFE<3>;
   template class TrefftzWaveFE<4>;
+
+  template <int D> const Matrix<> *TrefftzWaveBasis<D>::TB (int ord)
+  {
+
+    {
+      lock_guard<mutex> lock (gentrefftzbasis);
+      if (tbstore.Size () <= ord)
+        {
+          int oldsize = tbstore.Size ();
+          tbstore.SetSize (ord + 1);
+          for (int i = oldsize; i <= ord; i++)
+            tbstore[i] = Matrix<> ();
+        }
+
+      if (tbstore[ord].Height () == 0)
+        {
+          cout << "basis for ord: " << ord << endl;
+          const int nbasis = (BinCoeff (D - 1 + ord, ord)
+                              + BinCoeff (D - 1 + ord - 1, ord - 1));
+          const int npoly = (BinCoeff (D + ord, ord));
+          Matrix<> trefftzbasis (npoly, nbasis);
+          tbstore[ord].SetSize (nbasis, npoly);
+          tbstore[ord] = 0;
+          Vec<D, int> coeff = 0;
+          int count = 0;
+          for (int b = 0; b < nbasis; b++)
+            {
+              int tracker = 0;
+              TB_inner (ord, tbstore[ord], coeff, b, D, tracker);
+            }
+        }
+
+      if (tbstore[ord].Height () == 0)
+        {
+          stringstream str;
+          str << "failed to generate trefftz basis of order " << ord << endl;
+          throw Exception (str.str ());
+        }
+    }
+    const Matrix<> *tb = &tbstore[ord];
+    return tb;
+  }
+
+  template <int D>
+  void TrefftzWaveBasis<D>::TB_inner (int ord, Matrix<> &trefftzbasis,
+                                      Vec<D, int> coeffnum, int basis, int dim,
+                                      int &tracker)
+  {
+    if (dim > 0)
+      {
+        while (coeffnum (dim - 1) <= ord)
+          {
+            TB_inner (ord, trefftzbasis, coeffnum, basis, dim - 1, tracker);
+            coeffnum (dim - 1)++;
+          }
+      }
+    else
+      {
+        int sum = 0;
+        for (int i = 0; i < D; i++)
+          sum += coeffnum (i);
+        if (sum <= ord)
+          {
+            if (tracker >= 0)
+              tracker++;
+            int indexmap = IndexMap2 (coeffnum, ord);
+            if ((coeffnum (D - 1) == 0 || coeffnum (D - 1) == 1)
+                && tracker > basis)
+              {
+                trefftzbasis (basis, indexmap) = 1;
+                tracker = -1;
+              }
+            else if (coeffnum (D - 1) > 1)
+              {
+                int k = coeffnum (D - 1);
+                for (int m = 0; m < D - 1; m++) // rekursive sum
+                  {
+                    Vec<D, int> get_coeff = coeffnum;
+                    get_coeff[D - 1] = get_coeff[D - 1] - 2;
+                    get_coeff[m] = get_coeff[m] + 2;
+                    trefftzbasis (basis, indexmap)
+                        += (coeffnum (m) + 1) * (coeffnum (m) + 2)
+                           * trefftzbasis (basis, IndexMap2 (get_coeff, ord));
+                  }
+                trefftzbasis (basis, indexmap) *= 1.0 / (k * (k - 1));
+              }
+          }
+      }
+  }
+
+  template <int D>
+  int TrefftzWaveBasis<D>::IndexMap2 (Vec<D, int> index, int ord)
+  {
+    int sum = 0;
+    int temp_size = 0;
+    for (int d = 0; d < D; d++)
+      {
+        for (int p = 0; p < index (d); p++)
+          {
+            sum += BinCoeff (D - 1 - d + ord - p - temp_size,
+                             ord - p - temp_size);
+          }
+        temp_size += index (d);
+      }
+    return sum;
+  }
+
+  template class TrefftzWaveBasis<1>;
+  template class TrefftzWaveBasis<2>;
+  template class TrefftzWaveBasis<3>;
+  template class TrefftzWaveBasis<4>;
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
