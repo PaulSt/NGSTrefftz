@@ -42,21 +42,21 @@ Draw(gfu,initmesh,'sol')
 bdd = standingwave(D,c)
 wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,bdd)
 
-# with TaskManager():
-for t in range(0,200):
-    start = time.time()
-    wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
-    print(time.time() - start)
-    print("Error: " + str(EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step,bdd))))
+with TaskManager():
+    for t in range(0,200):
+        start = time.time()
+        wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
+        print("time evolvetent: " + str(time.time() - start))
+        print("Error: " + str(EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step,bdd))))
 
-    ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
-    f = LinearForm(fes)
-    f += SymbolicLFI(ipfct*v, intrule=intrule)
-    f.Assemble()
-    gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs()) * f.vec
-    Redraw(blocking=True)
+        ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
+        f = LinearForm(fes)
+        f += SymbolicLFI(ipfct*v, intrule=intrule)
+        f.Assemble()
+        gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs()) * f.vec
+        Redraw(blocking=True)
 
-    t_start += t_step
-    print("time: " + str(t_start))
+        t_start += t_step
+        print("time: " + str(t_start))
 # filename = "results/mov/sol"+str(t).zfill(3) +".jpg"
 # Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
