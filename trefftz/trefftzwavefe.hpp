@@ -85,6 +85,32 @@ namespace ngfem
       ZERO_B = 1
     };
   };
+
+  static mutex gentrefftzbasis;
+  template <int D> class TrefftzWaveBasis
+  {
+  public:
+    static TrefftzWaveBasis &getInstance ()
+    {
+      static TrefftzWaveBasis instance;
+      // volatile int dummy{};
+      return instance;
+    }
+
+    const Matrix<> *TB (int ord);
+
+  private:
+    TrefftzWaveBasis () = default;
+    ~TrefftzWaveBasis () = default;
+    TrefftzWaveBasis (const TrefftzWaveBasis &) = delete;
+    TrefftzWaveBasis &operator= (const TrefftzWaveBasis &) = delete;
+
+    Array<Matrix<>> tbstore;
+    // once_flag tbonceflag;
+    void TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum,
+                   int basis, int dim, int &tracker);
+    int IndexMap2 (Vec<D, int> index, int ord);
+  };
 }
 
 #ifdef NGS_PYTHON
