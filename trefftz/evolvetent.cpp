@@ -36,21 +36,12 @@ namespace ngcomp
         SIMD_IntegrationRule sir(eltyp, order*2);
         int snip = sir.Size()*nsimd;
 
-        ScalarFE<eltyp,1> faceint; //linear basis for tent faces
-
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
         tps.PitchTents(dt, wavespeed+1); // adt = time slab height, wavespeed
 
         cout << "solving " << tps.tents.Size() << " tents ";
         static Timer ttent("tent",2);
         static Timer tsolve("tentsolve",2);
-        static Timer tint("tent int",2);
-        static Timer tint1("tent int top calcdshape",2);
-        static Timer tint2("tent int top elmat",2);
-        static Timer tint3("tent int bot calcdshape",2);
-        static Timer tint4("tent int bot elvec",2);
-        static Timer tbnd("tent bnd",2);
-        static Timer teval("tent eval",2);
 
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             RegionTimer reg(ttent);
@@ -67,151 +58,17 @@ namespace ngcomp
             FlatVector<> elvec(nbasis,slh);
             elmat = 0; elvec = 0;
 
-            tint.Start();
+            // Integrate top and bottom space-like tent faces
             for(auto elnr: tent->els)
             {
-                HeapReset hr(slh);
-                SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,slh),-1,slh);
-                SIMD_MappedIntegrationRule<D,D> smir_fix(sir,ma->GetTrafo(elnr,slh),slh);
-                for(int imip=0;imip<sir.Size();imip++)
-                    smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
+                CalcTentEl<D>(elnr,tent,tel,ma,wavefront,sir,slh,elmat,elvec);
+            }
 
-                Mat<D+1> vert; //vertices of tent face
-                Vec<D+1> linbasis; //coeffs for linear face fct
-                Mat<D+1> Dmat;
-                FlatVector<SIMD<double>> mirtimes(sir.Size(),slh);
-
-                /// Integration over top of tent
-                vert = TentFaceVerts<D>(tent, elnr, ma, 1);
-                linbasis = vert.Row(D);
-                faceint.Evaluate(sir, linbasis, mirtimes);
-                for(int imip=0;imip<sir.Size();imip++)
-                    smir[imip].Point()(D) = mirtimes[imip];
-
-                tint1.Start();
-                FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
-                tel.CalcDShape(smir,simddshapes);
-                FlatMatrix<> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
-                tint1.Stop();
-
-                tint2.Start();
-                TentDmat<D>(Dmat, vert, 1, wavespeed);
-                FlatMatrix<> bdbmat((D+1)*snip,nbasis,slh);
-                bdbmat = 0;
-                for(int imip=0;imip<snip;imip++)
-                    for(int r=0;r<(D+1);r++)
-                        for(int d=0;d<D+1;d++)
-                            bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip);
-                elmat += bbmat * bdbmat;
-                tint2.Stop();
-
-                /// Integration over bot of tent
-                vert = TentFaceVerts<D>(tent, elnr, ma, -1);
-                linbasis = vert.Row(D);
-                faceint.Evaluate(sir, linbasis, mirtimes);
-                for(int imip=0;imip<sir.Size();imip++)
-                    smir[imip].Point()(D) = mirtimes[imip];
-
-                tint3.Start();
-                FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
-                tel.CalcShape(smir,simdshapes);
-                tel.CalcDShape(smir,simddshapes);
-                tint3.Stop();
-
-                tint4.Start();
-                TentDmat<D>(Dmat, vert, -1, wavespeed);
-                FlatVector<> bdbvec((D+1)*snip, slh ) ;
-                bdbvec = 0;
-                for(int imip=0;imip<snip;imip++)
-                    for(int r=0;r<(D+1);r++)
-                        for(int d=0;d<D+1;d++)
-                            bdbvec(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * wavefront(elnr, snip+d*snip+imip);
-                elvec -= bbmat * bdbvec;
-
-                // stabilization to recover second order solution
-                for(int imip=0;imip<sir.Size();imip++)
-                    simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vert))*sqrt(sir[imip].Weight());
-                AddABt(simdshapes,simdshapes,elmat);
-                for(int imip=0;imip<sir.Size();imip++)
-                    simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vert))*sqrt(sir[imip].Weight());
-                FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
-                elvec += shapes*wavefront.Row(elnr).Range(0,snip);
-                tint4.Stop();
-            } // close loop over tent elements
-            tint.Stop();
-
-            //Integrate boundary tent
-            tbnd.Start();
+            // Integrate boundary tent
             for(auto surfel : ma->GetVertexSurfaceElements(tent->vertex))
             {
-                // get vertices of tent face
-                Mat<D+1> vert = TentFaceVerts<D>(tent, surfel, ma, 0);
-                //cout << "el: " << tentnr << " vert: " << vert << endl;
-                //int in;
-                //int out;
-                //ma->GetSElNeighbouringDomains(surfel, in, out);
-                //cout << "nbd: " << in << " " << out << endl;
-                // build normal vector
-                Vec<D+1> n;
-                n.Range(0,D) = TentFaceNormal<D>(vert.Cols(1,D+1).Rows(0,D),0);
-                if(D==1) //D=1 special case
-                    n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]);
-                n[D] = 0; // time-like faces only
-                // build mapping to physical boundary simplex
-                Mat<D+1,D> map;
-                for(int i=0;i<D;i++)
-                    map.Col(i) = vert.Col(i+1) - vert.Col(0);
-                Vec<D+1> shift = vert.Col(0);
-
-                SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(0,slh),-1,slh);
-                for(int imip=0;imip<snip;imip++)
-                    smir[imip].Point() = map * sir[imip].operator Vec<D,SIMD<double>>() + shift;
-
-                FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
-                tel.CalcDShape(smir,simddshapes);
-                FlatMatrix<double> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
-
-                Mat<D+1> Dmat = 0;
-                Dmat.Row(D).Range(0,D) = -TentFaceArea<D>(vert)*n.Range(0,D);
-                FlatMatrix<double> bdbmat((D+1)*snip,nbasis,slh);
-                bdbmat = 0;
-
-                for(int imip=0;imip<smir.Size();imip++)
-                    smir[imip].Point()[D] += timeshift;
-                FlatMatrix<SIMD<double>> bdeval((D+2),sir.Size(),slh);
-                bdeval = 0;
-                bddatum->Evaluate(smir,bdeval);
-
-                    FlatVector<> bdbvec((D+1)*snip, slh ) ;
-                    bdbvec = 0;
-                if(D>1 && ma->GetMaterial(ElementId(BND,surfel)) == "neumann")
-                {
-                    for(int imip=0;imip<snip;imip++)
-                        for(int r=0;r<(D+1);r++)
-                            bdbmat.Row(r*snip+imip) += Dmat(D,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(D*snip+imip); //neumann
-                    elmat += bbmat * bdbmat;
-
-                    for(int imip=0;imip<snip;imip++)
-                        for(int d=0;d<D+1;d++)
-                            bdbvec(D*snip+imip) += Dmat(D,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bdeval(d+1,imip/nsimd)[imip%nsimd];
-                    elvec -= bbmat * bdbvec;
-                } else { // dirichlet
-                    double alpha = 0.5;
-                    Dmat(D,D) = TentFaceArea<D>(vert)*alpha;
-                    for(int imip=0;imip<snip;imip++)
-                        //for(int r=0;r<(D+1);r++) // r=D since only last row non-zero
-                        for(int d=0;d<D+1;d++)
-                            bdbmat.Row(D*snip+imip) += Dmat(D,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip);
-                    elmat += bbmat * bdbmat;
-
-                    Dmat(D,D) *= -1.0;
-                    for(int imip=0;imip<snip;imip++)
-                        for(int r=0;r<(D+1);r++)
-                            bdbvec(r*snip+imip) += Dmat(D,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bdeval(D+1,imip/nsimd)[imip%nsimd];//use Dmat transposed
-                    elvec -= bbmat * bdbvec;
-                }
+                CalcTentBndEl<D>(surfel,tent,tel,ma,bddatum,timeshift,sir,slh,elmat,elvec);
             }
-            tbnd.Stop();
 
             // solve
             tsolve.Start();
@@ -228,35 +85,213 @@ namespace ngcomp
             //for(int i = 1; i<nbasis;i++)
             //sol[i]=elvec2[i-1];
 
-            teval.Start();
             // eval solution on top of tent
             for(auto elnr: tent->els)
             {
-                SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,slh),-1,slh);
-                SIMD_MappedIntegrationRule<D,D> smir_fix(sir,ma->GetTrafo(elnr,slh),slh);
-                for(int imip=0;imip<sir.Size();imip++)
-                    smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
-
-                Mat<D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
-                Vec<D+1> bs = v.Row(D);
-                FlatVector<SIMD<double>> mirtimes(sir.Size(),slh);
-                faceint.Evaluate(sir, bs, mirtimes);
-                for(int imip=0;imip<sir.Size();imip++)
-                    smir[imip].Point()(D) = mirtimes[imip];
-
-                FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
-                FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
-                tel.CalcShape(smir,simdshapes);
-                tel.CalcDShape(smir,simddshapes);
-                FlatMatrix<> dshapes(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
-                FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
-
-                wavefront.Row(elnr).Range(0,snip) = Trans(shapes.Cols(0,snip))*sol;
-                wavefront.Row(elnr).Range(snip,snip+snip*(D+1)) = Trans(dshapes)*sol;
+                CalcTentElEval<D>(elnr, tent, tel, ma, wavefront, sir, slh, sol);
             }
-            teval.Stop();
         }); // end loop over tents
         cout << "...done" << endl;
+    }
+
+
+    template<int D>
+    void CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma, SliceMatrix<double> &wavefront,
+                    SIMD_IntegrationRule &sir, LocalHeap &slh, FlatMatrix<> &elmat, FlatVector<> &elvec)
+    {
+        static Timer tint1("tent int top calcdshape",2);
+        static Timer tint2("tent int top elmat",2);
+        static Timer tint3("tent int bot calcdshape",2);
+        static Timer tint4("tent int bot elvec",2);
+
+        HeapReset hr(slh);
+        const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
+        double wavespeed = tel.GetWavespeed();
+        int nbasis = tel.GetNBasis();
+        int nsimd = SIMD<double>::Size();
+        int snip = sir.Size()*nsimd;
+        ScalarFE<eltyp,1> faceint; //linear basis for tent faces
+
+        SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,slh),-1,slh);
+        SIMD_MappedIntegrationRule<D,D> smir_fix(sir,ma->GetTrafo(elnr,slh),slh);
+        for(int imip=0;imip<sir.Size();imip++)
+            smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
+
+        Mat<D+1> vert; //vertices of tent face
+        Vec<D+1> linbasis; //coeffs for linear face fct
+        Mat<D+1> Dmat;
+        FlatVector<SIMD<double>> mirtimes(sir.Size(),slh);
+
+        /// Integration over top of tent
+        vert = TentFaceVerts<D>(tent, elnr, ma, 1);
+        linbasis = vert.Row(D);
+        faceint.Evaluate(sir, linbasis, mirtimes);
+        for(int imip=0;imip<sir.Size();imip++)
+            smir[imip].Point()(D) = mirtimes[imip];
+
+        tint1.Start();
+        FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
+        tel.CalcDShape(smir,simddshapes);
+        FlatMatrix<> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
+        tint1.Stop();
+
+        tint2.Start();
+        TentDmat<D>(Dmat, vert, 1, wavespeed);
+        FlatMatrix<> bdbmat((D+1)*snip,nbasis,slh);
+        bdbmat = 0;
+        for(int imip=0;imip<snip;imip++)
+            for(int r=0;r<(D+1);r++)
+                for(int d=0;d<D+1;d++)
+                    bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip);
+        elmat += bbmat * bdbmat;
+        tint2.Stop();
+
+        /// Integration over bot of tent
+        vert = TentFaceVerts<D>(tent, elnr, ma, -1);
+        linbasis = vert.Row(D);
+        faceint.Evaluate(sir, linbasis, mirtimes);
+        for(int imip=0;imip<sir.Size();imip++)
+            smir[imip].Point()(D) = mirtimes[imip];
+
+        tint3.Start();
+        FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
+        tel.CalcShape(smir,simdshapes);
+        tel.CalcDShape(smir,simddshapes);
+        tint3.Stop();
+
+        tint4.Start();
+        TentDmat<D>(Dmat, vert, -1, wavespeed);
+        FlatVector<> bdbvec((D+1)*snip, slh ) ;
+        bdbvec = 0;
+        for(int imip=0;imip<snip;imip++)
+            for(int r=0;r<(D+1);r++)
+                for(int d=0;d<D+1;d++)
+                    bdbvec(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * wavefront(elnr, snip+d*snip+imip);
+        elvec -= bbmat * bdbvec;
+
+        // stabilization to recover second order solution
+        for(int imip=0;imip<sir.Size();imip++)
+            simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vert))*sqrt(sir[imip].Weight());
+        AddABt(simdshapes,simdshapes,elmat);
+        for(int imip=0;imip<sir.Size();imip++)
+            simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vert))*sqrt(sir[imip].Weight());
+        FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
+        elvec += shapes*wavefront.Row(elnr).Range(0,snip);
+        tint4.Stop();
+    }
+
+    template<int D>
+    void CalcTentBndEl(int surfel, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> bddatum,
+                       double timeshift, SIMD_IntegrationRule &sir, LocalHeap &slh, FlatMatrix<> &elmat, FlatVector<> &elvec)
+    {
+        HeapReset hr(slh);
+        const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
+        double wavespeed = tel.GetWavespeed();
+        int nbasis = tel.GetNBasis();
+        int nsimd = SIMD<double>::Size();
+        int snip = sir.Size()*nsimd;
+
+        // get vertices of tent face
+        Mat<D+1> vert = TentFaceVerts<D>(tent, surfel, ma, 0);
+        //cout << "el: " << tentnr << " vert: " << vert << endl;
+        //int in;
+        //int out;
+        //ma->GetSElNeighbouringDomains(surfel, in, out);
+        //cout << "nbd: " << in << " " << out << endl;
+        // build normal vector
+        Vec<D+1> n;
+        n.Range(0,D) = TentFaceNormal<D>(vert.Cols(1,D+1).Rows(0,D),0);
+        if(D==1) //D=1 special case
+            n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]);
+        n[D] = 0; // time-like faces only
+        // build mapping to physical boundary simplex
+        Mat<D+1,D> map;
+        for(int i=0;i<D;i++)
+            map.Col(i) = vert.Col(i+1) - vert.Col(0);
+        Vec<D+1> shift = vert.Col(0);
+
+        SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(0,slh),-1,slh);
+        for(int imip=0;imip<snip;imip++)
+            smir[imip].Point() = map * sir[imip].operator Vec<D,SIMD<double>>() + shift;
+
+        FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
+        tel.CalcDShape(smir,simddshapes);
+        FlatMatrix<double> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
+
+        Mat<D+1> Dmat = 0;
+        Dmat.Row(D).Range(0,D) = -TentFaceArea<D>(vert)*n.Range(0,D);
+        FlatMatrix<double> bdbmat((D+1)*snip,nbasis,slh);
+        bdbmat = 0;
+
+        for(int imip=0;imip<smir.Size();imip++)
+            smir[imip].Point()[D] += timeshift;
+        FlatMatrix<SIMD<double>> bdeval((D+2),sir.Size(),slh);
+        bdeval = 0;
+        bddatum->Evaluate(smir,bdeval);
+
+        FlatVector<> bdbvec((D+1)*snip, slh ) ;
+        bdbvec = 0;
+        if(D>1 && ma->GetMaterial(ElementId(BND,surfel)) == "neumann")
+        {
+            for(int imip=0;imip<snip;imip++)
+                for(int r=0;r<(D+1);r++)
+                    bdbmat.Row(r*snip+imip) += Dmat(D,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(D*snip+imip); //neumann
+            elmat += bbmat * bdbmat;
+
+            for(int imip=0;imip<snip;imip++)
+                for(int d=0;d<D+1;d++)
+                    bdbvec(D*snip+imip) += Dmat(D,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bdeval(d+1,imip/nsimd)[imip%nsimd];
+            elvec -= bbmat * bdbvec;
+        } else { // dirichlet
+            double alpha = 0.5;
+            Dmat(D,D) = TentFaceArea<D>(vert)*alpha;
+            for(int imip=0;imip<snip;imip++)
+                //for(int r=0;r<(D+1);r++) // r=D since only last row non-zero
+                for(int d=0;d<D+1;d++)
+                    bdbmat.Row(D*snip+imip) += Dmat(D,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip);
+            elmat += bbmat * bdbmat;
+
+            Dmat(D,D) *= -1.0;
+            for(int imip=0;imip<snip;imip++)
+                for(int r=0;r<(D+1);r++)
+                    bdbvec(r*snip+imip) += Dmat(D,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bdeval(D+1,imip/nsimd)[imip%nsimd];//use Dmat transposed
+            elvec -= bbmat * bdbvec;
+        }
+    }
+
+
+
+    template<int D>
+    void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma , SliceMatrix<> &wavefront, SIMD_IntegrationRule &sir, LocalHeap &slh, FlatVector<> &sol)
+    {
+        HeapReset hr(slh);
+        const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
+        int nbasis = tel.GetNBasis();
+        int nsimd = SIMD<double>::Size();
+        int snip = sir.Size()*nsimd;
+        ScalarFE<eltyp,1> faceint; //linear basis for tent faces
+
+        SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,slh),-1,slh);
+        SIMD_MappedIntegrationRule<D,D> smir_fix(sir,ma->GetTrafo(elnr,slh),slh);
+        for(int imip=0;imip<sir.Size();imip++)
+            smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
+
+        Mat<D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
+        Vec<D+1> bs = v.Row(D);
+        FlatVector<SIMD<double>> mirtimes(sir.Size(),slh);
+        faceint.Evaluate(sir, bs, mirtimes);
+        for(int imip=0;imip<sir.Size();imip++)
+            smir[imip].Point()(D) = mirtimes[imip];
+
+        FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
+        FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
+        tel.CalcShape(smir,simdshapes);
+        tel.CalcDShape(smir,simddshapes);
+        FlatMatrix<> dshapes(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
+        FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
+
+        wavefront.Row(elnr).Range(0,snip) = Trans(shapes.Cols(0,snip))*sol;
+        wavefront.Row(elnr).Range(snip,snip+snip*(D+1)) = Trans(dshapes)*sol;
     }
 
     template<int D>
