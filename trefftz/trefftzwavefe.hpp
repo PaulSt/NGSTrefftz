@@ -91,46 +91,7 @@ namespace ngfem
                 return instance;
             }
 
-            const Matrix<>* TB(int ord)
-            {
-
-                {
-                    lock_guard<mutex> lock(gentrefftzbasis);
-                    if (tbstore.Size() <= ord)
-                    {
-                        int oldsize = tbstore.Size();
-                        tbstore.SetSize (ord+1);
-                        for (int i = oldsize; i <= ord; i++)
-                            tbstore[i] = Matrix<>();
-                    }
-
-                    if ( tbstore[ord].Height() == 0)
-                    {
-                        cout << "basis for ord: " << ord << endl;
-                        const int nbasis = (BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1));
-                        const int npoly = (BinCoeff(D + ord, ord));
-                        Matrix<> trefftzbasis(npoly,nbasis);
-                        tbstore[ord].SetSize(nbasis,npoly);
-                        tbstore[ord] = 0;
-                        Vec<D, int>  coeff = 0;
-                        int count = 0;
-                        for(int b=0;b<nbasis;b++)
-                        {
-                            int tracker = 0;
-                            TB_inner(ord, tbstore[ord], coeff, b, D, tracker);
-                        }
-                    }
-
-                    if ( tbstore[ord].Height() == 0)
-                    {
-                        stringstream str;
-                        str << "failed to generate trefftz basis of order " << ord << endl;
-                        throw Exception (str.str());
-                    }
-                }
-                const Matrix<>* tb =& tbstore[ord];
-                return tb;
-            }
+            const Matrix<>* TB(int ord);
 
         private:
             TrefftzWaveBasis()= default;
@@ -139,68 +100,10 @@ namespace ngfem
             TrefftzWaveBasis& operator=(const TrefftzWaveBasis&)= delete;
 
             Array<Matrix<>> tbstore;
-
             //once_flag tbonceflag;
-
-            void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis, int dim, int &tracker)
-            {
-                if (dim>0)
-                {
-                    while(coeffnum(dim-1)<=ord)
-                    {
-                        TB_inner(ord,trefftzbasis,coeffnum,basis, dim-1, tracker);
-                        coeffnum(dim-1)++;
-                    }
-                }
-                else
-                {
-                    int sum=0;
-                    for(int i=0;i<D;i++)
-                        sum += coeffnum(i);
-                    if(sum<=ord)
-                    {
-                        if(tracker >= 0) tracker++;
-                        int indexmap = IndexMap2(coeffnum, ord);
-                        if((coeffnum(D-1)==0 || coeffnum(D-1)==1) && tracker>basis)
-                        {
-                            trefftzbasis(basis,indexmap) = 1;
-                            tracker = -1;
-                        }
-                        else if(coeffnum(D-1)>1)
-                        {
-                            int k = coeffnum(D-1);
-                            for(int m=0;m<D-1;m++) //rekursive sum
-                            {
-                                Vec<D, int> get_coeff = coeffnum;
-                                get_coeff[D-1] = get_coeff[D-1] - 2;
-                                get_coeff[m] = get_coeff[m] + 2;
-                                trefftzbasis( basis, indexmap) += (coeffnum(m)+1) * (coeffnum(m)+2) * trefftzbasis(basis, IndexMap2(get_coeff, ord));
-                            }
-                            trefftzbasis(basis, indexmap) *= 1.0/(k * (k-1));
-                        }
-                    }
-                }
-            }
-
-            int IndexMap2(Vec<D, int> index, int ord)
-            {
-                int sum=0;
-                int temp_size = 0;
-                for(int d=0;d<D;d++){
-                    for(int p=0;p<index(d);p++){
-                        sum+=BinCoeff(D-1 - d + ord - p - temp_size, ord - p - temp_size);
-                    }
-                    temp_size+=index(d);
-                }
-                return sum;
-            }
+            void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis, int dim, int &tracker);
+            int IndexMap2(Vec<D, int> index, int ord);
     };
-
-    template class TrefftzWaveBasis<1>;
-    template class TrefftzWaveBasis<2>;
-    template class TrefftzWaveBasis<3>;
-    template class TrefftzWaveBasis<4>;
-
 }
 
 
