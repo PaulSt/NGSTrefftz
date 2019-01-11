@@ -38,6 +38,7 @@ namespace ngfem
                              SliceMatrix<SIMD<double>> dshape) const;
 
     int GetNBasis () const { return nbasis; }
+    float GetWavespeed () const { return c; }
 
     // TrefftzWaveFE<D> * SetCenter(Vec<D> acenter) {elcenter = acenter; return
     // this;} TrefftzWaveFE<D> * SetElSize(double aelsize) {elsize = aelsize;
