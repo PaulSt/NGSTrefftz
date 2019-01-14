@@ -34,7 +34,6 @@ namespace ngcomp
 
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
-
     int nsimd = SIMD<double>::Size ();
     SIMD_IntegrationRule sir (eltyp, order * 2);
     int snip = sir.Size () * nsimd;
@@ -484,9 +483,8 @@ namespace ngcomp
   }
 
   template <int D>
-  Matrix<>
-  MakeWavefront (int order, shared_ptr<MeshAccess> ma, double wavespeed,
-                 double time, shared_ptr<CoefficientFunction> bddatum)
+  Matrix<> MakeWavefront (int order, shared_ptr<MeshAccess> ma, double time,
+                          shared_ptr<CoefficientFunction> bddatum)
   {
     LocalHeap lh (10000000);
     const ELEMENT_TYPE eltyp
@@ -633,22 +631,22 @@ void ExportEvolveTent (py::module m)
            // py::arg("oder"),py::arg("ma"),py::arg("ws"),py::arg("finaltime"),
          // py::arg("wavefront"), py::arg("timeshift"), py::arg("solname") = ""
   );
-  m.def (
-      "EvolveTentsMakeWavefront",
-      [] (int order, shared_ptr<MeshAccess> ma, double wavespeed, double time,
-          shared_ptr<CoefficientFunction> bddatum)
-          -> Matrix<> //-> shared_ptr<MeshAccess>
-      {
-        int D = ma->GetDimension ();
-        Matrix<> wavefront;
-        if (D == 1)
-          wavefront = MakeWavefront<1> (order, ma, wavespeed, time, bddatum);
-        else if (D == 2)
-          wavefront = MakeWavefront<2> (order, ma, wavespeed, time, bddatum);
-        else if (D == 3)
-          wavefront = MakeWavefront<3> (order, ma, wavespeed, time, bddatum);
-        return wavefront;
-      });
+  m.def ("EvolveTentsMakeWavefront",
+         [] (int order, shared_ptr<MeshAccess> ma, double wavespeed,
+             double time, shared_ptr<CoefficientFunction> bddatum)
+             -> Matrix<> //-> shared_ptr<MeshAccess>
+         {
+           int D = ma->GetDimension ();
+           Matrix<> wavefront;
+           if (D == 1)
+             wavefront = MakeWavefront<1> (order, ma, time, bddatum);
+           else if (D == 2)
+             wavefront = MakeWavefront<2> (order, ma, time, bddatum);
+           else if (D == 3)
+             wavefront = MakeWavefront<3> (order, ma, time, bddatum);
+           return wavefront;
+         });
+
   m.def ("EvolveTentsError",
          [] (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
              Matrix<> wavefront_corr) -> double {
@@ -662,6 +660,7 @@ void ExportEvolveTent (py::module m)
              error = Error<3> (order, ma, wavefront, wavefront_corr);
            return error;
          });
+
   m.def ("EvolveTentsEnergy",
          [] (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
              double wavenumber) -> double {
