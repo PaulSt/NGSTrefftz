@@ -93,6 +93,204 @@ namespace ngcomp
         cout << "...done" << endl;
     }
 
+    template<int D>
+    void EvolveTents(int order, shared_ptr<MeshAccess> ma, Vector<> wavespeed, double dt, SliceMatrix<double> wavefront, double timeshift, shared_ptr<CoefficientFunction> bddatum)
+    {
+        LocalHeap lh(100000000);
+
+        const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
+        int nsimd = SIMD<double>::Size();
+        SIMD_IntegrationRule sir(eltyp, order*2);
+        int snip = sir.Size()*nsimd;
+        int ndomains = ma->GetNDomains();
+
+        double min_wavespeed = wavespeed[0];
+        for(double c : wavespeed)
+            min_wavespeed = min(c,min_wavespeed);
+
+        TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
+        tps.PitchTents(dt, min_wavespeed+1); // adt = time slab height, wavespeed
+
+        cout << "solving " << tps.tents.Size() << " tents ";
+        RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
+            LocalHeap slh = lh.Split();  // split to threads
+            Tent* tent = tps.tents[tentnr];
+
+            Vec<D+1> center;
+            center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
+            center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
+            TrefftzWaveFE<D+1> tel(order,min_wavespeed,center,TentAdiam<D>(tent,ma));
+            int nbasis = tel.GetNBasis();
+
+            int ndomains = 1;
+            //cout << "el: " << tentnr << endl;
+            for(auto surfel : ma->GetVertexSurfaceElements(tent->vertex))
+            {
+                //cout << "surfel: " << surfel << endl;
+                int in;
+                int out;
+                ma->GetSElNeighbouringDomains(surfel, in, out);
+                //cout << "nbd: " << in << " " << out << endl;
+                if(out != 0) ndomains = 2;
+            }
+            //for(auto elnr: tent->els)
+                //cout << "material of el: " << ma->GetElIndex(ElementId(VOL,elnr)) << endl;
+            //cout << endl;
+
+            FlatMatrix<> elmat(ndomains*nbasis,slh);
+            FlatVector<> elvec(ndomains*nbasis,slh);
+            elmat = 0; elvec = 0;
+
+            // Integrate top and bottom space-like tent faces
+            for(auto elnr: tent->els)
+            {
+                int eli = ma->GetElIndex(ElementId(VOL,elnr));
+                tel.SetWavespeed(wavespeed[eli]);
+                if(ndomains == 1)
+                    eli = 0;
+                SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
+                SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
+                CalcTentEl<D>(elnr,tent,tel,ma,wavefront,sir,slh,subm,subv);
+            }
+
+            //cout << elmat << endl;
+
+            // Integrate boundary tent
+            for(auto surfel : ma->GetVertexSurfaceElements(tent->vertex))
+            {
+                int in;
+                int out;
+                ma->GetSElNeighbouringDomains(surfel, in, out);
+                cout << "inout " << in << " " << out << endl;
+                if(out == 0)
+                    CalcTentBndEl<D>(surfel,tent,tel,ma,bddatum,timeshift,sir,slh,elmat,elvec);
+                else
+                {
+                    Array<int> elnums;
+                    ma->GetFacetElements(surfel,elnums);
+                    cout << elnums ;
+                    int eli0 = ma->GetElIndex(ElementId(VOL,elnums[0]));
+                    int eli1 = ma->GetElIndex(ElementId(VOL,elnums[1]));
+                    cout << eli0 << eli1 << endl;
+
+                    const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
+                    int nbasis = tel.GetNBasis();
+                    int nsimd = SIMD<double>::Size();
+                    int snip = sir.Size()*nsimd;
+
+                    // get vertices of tent face
+                    Mat<D+1> vert = TentFaceVerts<D>(tent, surfel, ma, 0);
+                    // build normal vector
+                    Vec<D+1> n;
+                    n.Range(0,D) = TentFaceNormal<D>(vert.Cols(1,D+1).Rows(0,D),0);
+                    if(D==1) //D=1 special case
+                        n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]);
+                    n[D] = 0; // time-like faces only
+                    // build mapping to physical boundary simplex
+                    Mat<D+1,D> map;
+                    for(int i=0;i<D;i++)
+                        map.Col(i) = vert.Col(i+1) - vert.Col(0);
+                    Vec<D+1> shift = vert.Col(0);
+
+                    SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(0,slh),-1,slh);
+                    for(int imip=0;imip<snip;imip++)
+                        smir[imip].Point() = map * sir[imip].operator Vec<D,SIMD<double>>() + shift;
+
+
+                    //tel.SetWavespeed(wavespeed[eli0]);
+                    //FlatMatrix<SIMD<double>> simddshapes1((D+1)*nbasis,sir.Size(),slh);
+                    //tel.CalcDShape(smir,simddshapes1);
+                    //FlatMatrix<double> bbmat1(nbasis,(D+1)*snip,&simddshapes1(0,0)[0]);
+
+                    //tel.SetWavespeed(wavespeed[eli1]);
+                    //FlatMatrix<SIMD<double>> simddshapes2((D+1)*nbasis,sir.Size(),slh);
+                    //tel.CalcDShape(smir,simddshapes2);
+                    //FlatMatrix<double> bbmat2(nbasis,(D+1)*snip,&simddshapes2(0,0)[0]);
+
+                    //Mat<D+1> Dmat = 0;
+                    //Dmat.Row(D).Range(0,D) = -TentFaceArea<D>(vert)*n.Range(0,D);
+                    //Dmat.Col(D).Range(0,D) = -TentFaceArea<D>(vert)*n.Range(0,D);
+                    //double alpha = 0.5;
+
+                    //FlatMatrix<double> bdbmat((D+1)*snip,nbasis,slh);
+                    //bdbmat = 0;
+                    //for(int imip=0;imip<snip;imip++)
+                        //for(int r=0;r<(D+1);r++)
+                            //for(int d=0;d<D+1;d++)
+                                //bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat1.Col(d*snip+imip);
+                    //elmat += bbmat1 * bdbmat;
+                    //bdbmat = 0;
+                    //for(int imip=0;imip<snip;imip++)
+                        //for(int r=0;r<(D+1);r++)
+                            //for(int d=0;d<D+1;d++)
+                                //bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat2.Col(d*snip+imip);
+                    //elmat += bbmat1 * bdbmat;
+
+                    //Dmat *= -1;
+                    //bdbmat = 0;
+                    //for(int imip=0;imip<snip;imip++)
+                        //for(int r=0;r<(D+1);r++)
+                            //for(int d=0;d<D+1;d++)
+                                //bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat1.Col(d*snip+imip);
+                    //elmat += bbmat2 * bdbmat;
+                    //bdbmat = 0;
+                    //for(int imip=0;imip<snip;imip++)
+                        //for(int r=0;r<(D+1);r++)
+                            //for(int d=0;d<D+1;d++)
+                                //bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat2.Col(d*snip+imip);
+                    //elmat += bbmat2 * bdbmat;
+                }
+            }
+
+            // solve
+            LapackSolve(elmat,elvec);
+            FlatVector<> sol(ndomains*nbasis, &elvec(0));
+
+            // eval solution on top of tent
+            for(auto elnr: tent->els)
+            {
+                int eli = ma->GetElIndex(ElementId(VOL,elnr));
+                tel.SetWavespeed(wavespeed[eli]);
+
+                if(ndomains == 1)
+                {
+                    CalcTentElEval<D>(elnr, tent, tel, ma, wavefront, sir, slh, sol);
+                }
+                else
+                {
+                    HeapReset hr(slh);
+                    const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
+                    int nbasis = tel.GetNBasis();
+                    int nsimd = SIMD<double>::Size();
+                    int snip = sir.Size()*nsimd;
+                    ScalarFE<eltyp,1> faceint; //linear basis for tent faces
+
+                    SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,slh),-1,slh);
+                    SIMD_MappedIntegrationRule<D,D> smir_fix(sir,ma->GetTrafo(elnr,slh),slh);
+                    for(int imip=0;imip<sir.Size();imip++)
+                        smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
+
+                    Mat<D+1> v = TentFaceVerts<D>(tent, elnr, ma, 1);
+                    Vec<D+1> bs = v.Row(D);
+                    FlatVector<SIMD<double>> mirtimes(sir.Size(),slh);
+                    faceint.Evaluate(sir, bs, mirtimes);
+                    for(int imip=0;imip<sir.Size();imip++)
+                        smir[imip].Point()(D) = mirtimes[imip];
+
+                    FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
+                    FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
+                    tel.CalcShape(smir,simdshapes);
+                    tel.CalcDShape(smir,simddshapes);
+                    FlatMatrix<> dshapes(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
+                    FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
+
+                    wavefront.Row(elnr).Range(0,snip) = Trans(shapes.Cols(0,snip))*sol.Range(eli*nbasis,(eli+1)*nbasis);
+                    wavefront.Row(elnr).Range(snip,snip+snip*(D+1)) = Trans(dshapes)*sol.Range(eli*nbasis,(eli+1)*nbasis);
+                }
+            }
+        }); // end loop over tents
+        cout << "...done" << endl;
+    }
 
     template<int D>
     void CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma, SliceMatrix<double> &wavefront,
@@ -192,11 +390,6 @@ namespace ngcomp
 
         // get vertices of tent face
         Mat<D+1> vert = TentFaceVerts<D>(tent, surfel, ma, 0);
-        //cout << "el: " << tentnr << " vert: " << vert << endl;
-        //int in;
-        //int out;
-        //ma->GetSElNeighbouringDomains(surfel, in, out);
-        //cout << "nbd: " << in << " " << out << endl;
         // build normal vector
         Vec<D+1> n;
         n.Range(0,D) = TentFaceNormal<D>(vert.Cols(1,D+1).Rows(0,D),0);
