@@ -96,7 +96,7 @@ namespace ngcomp
 
     template<int D>
     void CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma, SliceMatrix<double> &wavefront,
-                    SIMD_IntegrationRule &sir, LocalHeap &slh, FlatMatrix<> &elmat, FlatVector<> &elvec)
+                    SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
     {
         static Timer tint1("tent int top calcdshape",2);
         static Timer tint2("tent int top elmat",2);
@@ -541,7 +541,21 @@ void ExportEvolveTent(py::module m)
           }//, py::call_guard<py::gil_scoped_release>()
           //py::arg("oder"),py::arg("ma"),py::arg("ws"),py::arg("finaltime"), py::arg("wavefront"), py::arg("timeshift"), py::arg("solname") = ""
          );
-    m.def("EvolveTentsMakeWavefront", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, double time, shared_ptr<CoefficientFunction> bddatum) -> Matrix<>//-> shared_ptr<MeshAccess>
+
+    m.def("EvolveTents", [](int order, shared_ptr<MeshAccess> ma, Vector<double> wavespeed, double dt, Matrix<> wavefront, double timeshift, shared_ptr<CoefficientFunction> bddatum ) -> Matrix<>
+          {
+              int D = ma->GetDimension();
+              if(D == 1)
+                  EvolveTents<1>(order,ma,wavespeed,dt,wavefront, timeshift, bddatum);
+              else if(D == 2)
+                  EvolveTents<2>(order,ma,wavespeed,dt,wavefront, timeshift, bddatum);
+              else if(D == 3)
+                  EvolveTents<3>(order,ma,wavespeed,dt,wavefront, timeshift, bddatum);
+              return wavefront;
+          }
+         );
+
+    m.def("EvolveTentsMakeWavefront", [](int order, shared_ptr<MeshAccess> ma, double time, shared_ptr<CoefficientFunction> bddatum) -> Matrix<>
           {
               int D = ma->GetDimension();
               Matrix<> wavefront;
