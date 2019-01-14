@@ -38,7 +38,13 @@ namespace ngcomp
     Vec<D> TentFaceNormal( Mat<D,D> v, int dir );
 
     template<int D>
-    Vec<D+2,double> TestSolution(Vec<D+1,double> p, double wavespeed);
+    Matrix<> MakeWavefront(int order, shared_ptr<MeshAccess> ma, double time, shared_ptr<CoefficientFunction> bddatum);
+
+    template<int D>
+    double Error(int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, Matrix<> wavefront_corr);
+
+    template<int D>
+    double Energy(int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, double wavenumber);
 
     template<typename T=double>
     void SwapIfGreater(T& a, T& b);

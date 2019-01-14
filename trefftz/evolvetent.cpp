@@ -31,7 +31,6 @@ namespace ngcomp
         LocalHeap lh(100000000);
 
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
-
         int nsimd = SIMD<double>::Size();
         SIMD_IntegrationRule sir(eltyp, order*2);
         int snip = sir.Size()*nsimd;
@@ -423,7 +422,8 @@ namespace ngcomp
 
 
     template<int D>
-    Matrix<> MakeWavefront(int order, shared_ptr<MeshAccess> ma, double wavespeed, double time, shared_ptr<CoefficientFunction> bddatum){
+    Matrix<> MakeWavefront(int order, shared_ptr<MeshAccess> ma, double time, shared_ptr<CoefficientFunction> bddatum)
+    {
         LocalHeap lh(10000000);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         IntegrationRule ir(eltyp, order*2);
@@ -546,14 +546,15 @@ void ExportEvolveTent(py::module m)
               int D = ma->GetDimension();
               Matrix<> wavefront;
               if(D==1)
-                  wavefront = MakeWavefront<1>(order, ma, wavespeed, time, bddatum);
+                  wavefront = MakeWavefront<1>(order, ma, time, bddatum);
               else if(D == 2)
-                  wavefront = MakeWavefront<2>(order, ma, wavespeed, time, bddatum);
+                  wavefront = MakeWavefront<2>(order, ma, time, bddatum);
               else if(D == 3)
-                  wavefront = MakeWavefront<3>(order, ma, wavespeed, time, bddatum);
+                  wavefront = MakeWavefront<3>(order, ma, time, bddatum);
               return wavefront;
           }
          );
+
     m.def("EvolveTentsError", [](int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, Matrix<> wavefront_corr) -> double
           {
               int D = ma->GetDimension();
@@ -567,6 +568,7 @@ void ExportEvolveTent(py::module m)
               return error;
           }
          );
+
     m.def("EvolveTentsEnergy", [](int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, double wavenumber) -> double
           {
               int D = ma->GetDimension();
