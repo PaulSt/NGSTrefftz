@@ -16,10 +16,15 @@ namespace ngcomp
                     shared_ptr<CoefficientFunction> bddatum);
 
   template <int D>
+  void EvolveTents (int order, shared_ptr<MeshAccess> ma, Vector<> wavespeed,
+                    double dt, SliceMatrix<> wavefront, double timeshift,
+                    shared_ptr<CoefficientFunction> bddatum);
+
+  template <int D>
   void CalcTentEl (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
                    shared_ptr<MeshAccess> ma, SliceMatrix<double> &wavefront,
                    SIMD_IntegrationRule &sir, LocalHeap &slh,
-                   FlatMatrix<> &elmat, FlatVector<> &elvec);
+                   SliceMatrix<> elmat, SliceVector<> elvec);
 
   template <int D>
   void
