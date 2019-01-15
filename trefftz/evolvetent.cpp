@@ -136,22 +136,16 @@ namespace ngcomp
                                 TentAdiam<D> (tent, ma));
       int nbasis = tel.GetNBasis ();
 
+      // check if tent vertex is on boundary between domains
       int ndomains = 1;
-      // cout << "el: " << tentnr << endl;
       for (auto surfel : ma->GetVertexSurfaceElements (tent->vertex))
         {
-          // cout << "surfel: " << surfel << endl;
           int in;
           int out;
           ma->GetSElNeighbouringDomains (surfel, in, out);
-          // cout << "nbd: " << in << " " << out << endl;
           if (out != 0)
             ndomains = 2;
         }
-      // for(auto elnr: tent->els)
-      // cout << "material of el: " << ma->GetElIndex(ElementId(VOL,elnr)) <<
-      // endl;
-      // cout << endl;
 
       FlatMatrix<> elmat (ndomains * nbasis, slh);
       FlatVector<> elvec (ndomains * nbasis, slh);
@@ -163,7 +157,7 @@ namespace ngcomp
         {
           int eli = ma->GetElIndex (ElementId (VOL, elnr));
           tel.SetWavespeed (wavespeed[eli]);
-          if (ndomains == 1)
+          if (ndomains == 1) // tent vertex is inside any domain
             eli = 0;
           SliceMatrix<> subm = elmat.Cols (eli * nbasis, (eli + 1) * nbasis)
                                    .Rows (eli * nbasis, (eli + 1) * nbasis);
@@ -179,7 +173,23 @@ namespace ngcomp
           int in;
           int out;
           ma->GetSElNeighbouringDomains (surfel, in, out);
+          cout << "tentv: " << tent->vertex
+               << " coord: " << ma->GetPoint<D> (tent->vertex) << endl;
           cout << "inout " << in << " " << out << endl;
+          // cout << "bnd: " << surfel << endl;
+          Array<int> elnums;
+          // ma->GetFacetElements(surfel,elnums);
+          // ma->GetElFacets(ElementId(BND,surfel),elnums);
+          // cout << elnums ;
+          // int eli0 = ma->GetElIndex(ElementId(VOL,elnums[0]));
+          // int eli1 = ma->GetElIndex(ElementId(VOL,elnums[1]));
+          // cout << "elindex0 "<< eli0 << " elindex1 " << eli1 << endl;
+          // cout << "materials: " << ma->GetMaterial(ElementId(VOL,elnums[0]))
+          // << endl;// << " " <<  ma->GetMaterial(ElementId(VOL,elnums[1]));
+          // if(elnums[1]>0)
+          // cout << "materials: " << ma->GetMaterial(ElementId(VOL,elnums[1]))
+          // << endl;// << " " <<  ma->GetMaterial(ElementId(VOL,elnums[1]));
+
           if (out == 0)
             CalcTentBndEl<D> (surfel, tent, tel, ma, bddatum, timeshift, sir,
                               slh, elmat, elvec);
