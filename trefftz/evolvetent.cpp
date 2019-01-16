@@ -115,14 +115,14 @@ namespace ngcomp
     int snip = sir.Size () * nsimd;
     int ndomains = ma->GetNDomains ();
 
-    double min_wavespeed = wavespeed[0];
+    double max_wavespeed = wavespeed[0];
     for (double c : wavespeed)
-      min_wavespeed = min (c, min_wavespeed);
+      max_wavespeed = max (c, max_wavespeed);
 
     TentPitchedSlab<D> tps
         = TentPitchedSlab<D> (ma); // collection of tents in timeslab
     tps.PitchTents (dt,
-                    min_wavespeed + 1); // adt = time slab height, wavespeed
+                    max_wavespeed + 1); // adt = time slab height, wavespeed
 
     cout << "solving " << tps.tents.Size () << " tents ";
     RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
@@ -132,7 +132,7 @@ namespace ngcomp
       Vec<D + 1> center;
       center.Range (0, D) = ma->GetPoint<D> (tent->vertex);
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
-      TrefftzWaveFE<D + 1> tel (order, min_wavespeed, center,
+      TrefftzWaveFE<D + 1> tel (order, max_wavespeed, center,
                                 TentAdiam<D> (tent, ma));
       int nbasis = tel.GetNBasis ();
 
