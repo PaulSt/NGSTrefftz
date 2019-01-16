@@ -38,7 +38,7 @@ namespace ngcomp
   void CalcTentElEval (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
                        shared_ptr<MeshAccess> ma, SliceMatrix<> &wavefront,
                        SIMD_IntegrationRule &sir, LocalHeap &slh,
-                       FlatVector<> &sol);
+                       SliceVector<> sol);
 
   template <int D>
   Mat<D + 1, D + 1>

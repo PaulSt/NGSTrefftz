@@ -295,51 +295,9 @@ namespace ngcomp
           tel.SetWavespeed (wavespeed[eli]);
 
           if (ndomains == 1)
-            {
-              CalcTentElEval<D> (elnr, tent, tel, ma, wavefront, sir, slh,
-                                 sol);
-            }
-          else
-            {
-              HeapReset hr (slh);
-              const ELEMENT_TYPE eltyp
-                  = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
-              int nbasis = tel.GetNBasis ();
-              int nsimd = SIMD<double>::Size ();
-              int snip = sir.Size () * nsimd;
-              ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
-
-              SIMD_MappedIntegrationRule<D, D + 1> smir (
-                  sir, ma->GetTrafo (elnr, slh), -1, slh);
-              SIMD_MappedIntegrationRule<D, D> smir_fix (
-                  sir, ma->GetTrafo (elnr, slh), slh);
-              for (int imip = 0; imip < sir.Size (); imip++)
-                smir[imip].Point ().Range (0, D)
-                    = smir_fix[imip].Point ().Range (0, D);
-
-              Mat<D + 1> v = TentFaceVerts<D> (tent, elnr, ma, 1);
-              Vec<D + 1> bs = v.Row (D);
-              FlatVector<SIMD<double>> mirtimes (sir.Size (), slh);
-              faceint.Evaluate (sir, bs, mirtimes);
-              for (int imip = 0; imip < sir.Size (); imip++)
-                smir[imip].Point () (D) = mirtimes[imip];
-
-              FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
-              FlatMatrix<SIMD<double>> simddshapes ((D + 1) * nbasis,
-                                                    sir.Size (), slh);
-              tel.CalcShape (smir, simdshapes);
-              tel.CalcDShape (smir, simddshapes);
-              FlatMatrix<> dshapes (nbasis, (D + 1) * snip,
-                                    &simddshapes (0, 0)[0]);
-              FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
-
-              wavefront.Row (elnr).Range (0, snip)
-                  = Trans (shapes.Cols (0, snip))
-                    * sol.Range (eli * nbasis, (eli + 1) * nbasis);
-              wavefront.Row (elnr).Range (snip, snip + snip * (D + 1))
-                  = Trans (dshapes)
-                    * sol.Range (eli * nbasis, (eli + 1) * nbasis);
-            }
+            eli = 0;
+          CalcTentElEval<D> (elnr, tent, tel, ma, wavefront, sir, slh,
+                             sol.Range (eli * nbasis, (eli + 1) * nbasis));
         }
     }); // end loop over tents
     cout << "...done" << endl;
@@ -537,7 +495,7 @@ namespace ngcomp
   void
   CalcTentElEval (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
                   shared_ptr<MeshAccess> ma, SliceMatrix<> &wavefront,
-                  SIMD_IntegrationRule &sir, LocalHeap &slh, FlatVector<> &sol)
+                  SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol)
   {
     HeapReset hr (slh);
     const ELEMENT_TYPE eltyp
