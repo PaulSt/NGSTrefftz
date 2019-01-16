@@ -202,7 +202,7 @@ namespace ngcomp
                     FlatMatrix<double> bbmat2(nbasis,(D+1)*snip,&simddshapes2(0,0)[0]);
 
                     Mat<D+1> Dmat = 0;
-                    Dmat.Row(D).Range(0,D) = -0.5*TentFaceArea<D>(vert)*n.Range(0,D);
+                    Dmat.Row(D).Range(0,D) = -0.5*TentFaceArea<D>(vert)*n.Range(0,D); //0.5 for DG average
                     Dmat.Col(D).Range(0,D) = -0.5*TentFaceArea<D>(vert)*n.Range(0,D);
                     FlatMatrix<double> bdbmat((D+1)*snip,nbasis,slh);
                     //double alpha = 0.5;
