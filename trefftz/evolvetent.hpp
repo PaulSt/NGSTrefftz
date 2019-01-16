@@ -27,7 +27,7 @@ namespace ngcomp
                        double timeshift, SIMD_IntegrationRule &sir, LocalHeap &slh, FlatMatrix<> &elmat, FlatVector<> &elvec);
 
     template<int D>
-    void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma , SliceMatrix<> &wavefront, SIMD_IntegrationRule &sir, LocalHeap &slh, FlatVector<> &sol);
+    void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma , SliceMatrix<> &wavefront, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol);
 
     template<int D>
     Mat<D+1,D+1> TentFaceVerts(Tent* tent, int elnr, shared_ptr<MeshAccess> ma, int top);
