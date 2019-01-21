@@ -148,16 +148,12 @@ namespace ngcomp
                 CalcTentEl<D>(elnr,tent,tel,ma,wavefront,sir,slh,subm,subv);
             }
 
-            //cout << elmat << endl;
-
             // Integrate boundary tent
             for(auto surfel : ma->GetVertexSurfaceElements(tent->vertex))
             {
                 int in;
                 int out;
                 ma->GetSElNeighbouringDomains(surfel, in, out);
-                cout << "tentv: " << tent->vertex << " coord: " << ma->GetPoint<D>(tent->vertex) << endl;
-                cout << "inout " << in << " " << out << endl;
 
                 if(out == 0)
                 {
@@ -245,7 +241,6 @@ namespace ngcomp
             {
                 int eli = ma->GetElIndex(ElementId(VOL,elnr));
                 tel.SetWavespeed(wavespeed[eli]);
-
                 if(ndomains == 1)
                     eli = 0;
                 CalcTentElEval<D>(elnr, tent, tel, ma, wavefront, sir, slh, sol.Range(eli*nbasis,(eli+1)*nbasis));
