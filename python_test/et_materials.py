@@ -8,29 +8,40 @@ from prodmesh import *
 from ngsolve.solve import Tcl_Eval # for snapshots
 from testcases import *
 
-order = 2
+order = 3
 t_start = 0
 t_step = 0.1
 
-# for i in range(0,len(initmesh.GetBoundaries())):
-   # initmesh.ngmesh.SetBCName(i,"neumann")
 geo = SplineGeometry()
-geo.AddRectangle((0,0), (2,2),
-                 bcs=["b","r","t","l"],
-                 leftdomain=1)
-geo.AddRectangle((1,1), (1.5,1.5),
-                 bcs=["b2","r2","t2","l2"],
-                 leftdomain=2, rightdomain=1)
+# geo.AddRectangle((0,0), (1,1),
+                 # bcs=["b","r","t","l"],
+                 # leftdomain=1)
+# geo.AddRectangle((0.5,0.5), (0.75,0.75),
+                 # bcs=["b2","r2","t2","l2"],
+                 # leftdomain=2, rightdomain=1)
+
+p1,p2,p3,p4 = [ geo.AppendPoint(x,y) for x,y in [(0,0), (1,0), (1,1), (0,1)] ]
+p5,p6 =  [ geo.AppendPoint(x,y) for x,y in [(2,0), (2,1)] ]
+geo.Append (["line", p1, p2], leftdomain=1, rightdomain=0)
+geo.Append (["line", p3, p2], leftdomain=2, rightdomain=1) #got to be careful with the normal vector along interfaces
+geo.Append (["line", p3, p4], leftdomain=1, rightdomain=0)
+geo.Append (["line", p4, p1], leftdomain=1, rightdomain=0)
+geo.Append (["line", p2, p5], leftdomain=2, rightdomain=0)
+geo.Append (["line", p5, p6], leftdomain=2, rightdomain=0)
+geo.Append (["line", p6, p3], leftdomain=2, rightdomain=0)
+
 geo.SetMaterial (1, "outer")
 geo.SetMaterial (2, "inner")
-initmesh = Mesh(geo.GenerateMesh(maxh=0.1))
+initmesh = Mesh(geo.GenerateMesh(maxh=0.03))
+for i in range(0,len(initmesh.GetBoundaries())):
+   initmesh.ngmesh.SetBCName(i,"neumann")
 Draw(initmesh)
 
 D = initmesh.dim
 t = CoordCF(D)
 c = Vector(2)
 c[0] = 1
-c[1] = 4
+c[1] = 2
 
 cf = CoefficientFunction(list(c))
 sq = sqrt(0.5);
@@ -40,8 +51,8 @@ bdd = CoefficientFunction((
     sq*cos(cf*t+sq*(x+y)),
     cf*cos(cf*t+sq*(x+y))
     ))
+bdd = vertgausspw(D,1)
 Draw(bdd, initmesh, 'piecewise')
-# input()
 
 D = initmesh.dim
 if D==3: eltyp = ET.TET
@@ -61,10 +72,11 @@ Draw(gfu,initmesh,'sol')
 # Draw(gfu,initmesh,'sol',autoscale=False,min=-0.01,max=0.01)
 
 wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd)
-
+input()
+# with TaskManager():
 for t in range(0,50):
-    # with TaskManager():
     wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
+    print("Error: " + str(EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,t_start + t_step,bdd))))
 
     ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
     f = LinearForm(fes)

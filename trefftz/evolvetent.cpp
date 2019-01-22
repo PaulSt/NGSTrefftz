@@ -157,13 +157,15 @@ namespace ngcomp
 
                 if(out == 0)
                 {
-                    tel.SetWavespeed(wavespeed[0]);
-                    CalcTentBndEl<D>(surfel,tent,tel,ma,bddatum,timeshift,sir,slh,elmat,elvec);
+                    tel.SetWavespeed(wavespeed[in-1]);
+                    if(ndomains == 1) //tent vertex is inside a domain
+                        in = 1;
+                    SliceMatrix<> subm = elmat.Cols((in-1)*nbasis,in*nbasis).Rows((in-1)*nbasis,in*nbasis);
+                    SliceVector<> subv = elvec.Range((in-1)*nbasis,in*nbasis);
+                    CalcTentBndEl<D>(surfel,tent,tel,ma,bddatum,timeshift,sir,slh,subm,subv);
                 }
                 else
                 {
-
-                    const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
                     int nbasis = tel.GetNBasis();
                     int nsimd = SIMD<double>::Size();
                     int snip = sir.Size()*nsimd;
@@ -186,7 +188,6 @@ namespace ngcomp
                     for(int imip=0;imip<snip;imip++)
                         smir[imip].Point() = map * sir[imip].operator Vec<D,SIMD<double>>() + shift;
 
-
                     tel.SetWavespeed(wavespeed[in-1]);
                     FlatMatrix<SIMD<double>> simddshapes1((D+1)*nbasis,sir.Size(),slh);
                     tel.CalcDShape(smir,simddshapes1);
@@ -208,13 +209,13 @@ namespace ngcomp
                         for(int r=0;r<(D+1);r++)
                             for(int d=0;d<D+1;d++)
                                 bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat1.Col(d*snip+imip);
-                    elmat.Cols((in-1)*nbasis,((in-1)+1)*nbasis).Rows((in-1)*nbasis,((in-1)+1)*nbasis) += bbmat1 * bdbmat;
+                    elmat.Cols((in-1)*nbasis,in*nbasis).Rows((in-1)*nbasis,in*nbasis) += bbmat1 * bdbmat;
                     bdbmat = 0;
                     for(int imip=0;imip<snip;imip++)
                         for(int r=0;r<(D+1);r++)
                             for(int d=0;d<D+1;d++)
                                 bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat2.Col(d*snip+imip);
-                    elmat.Cols((out-1)*nbasis,((out-1)+1)*nbasis).Rows((in-1)*nbasis,((in-1)+1)*nbasis) += bbmat1 * bdbmat;
+                    elmat.Cols((out-1)*nbasis,out*nbasis).Rows((in-1)*nbasis,in*nbasis) += bbmat1 * bdbmat;
 
                     Dmat *= -1;
                     bdbmat = 0;
@@ -222,13 +223,13 @@ namespace ngcomp
                         for(int r=0;r<(D+1);r++)
                             for(int d=0;d<D+1;d++)
                                 bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat1.Col(d*snip+imip);
-                    elmat.Cols((in-1)*nbasis,((in-1)+1)*nbasis).Rows((out-1)*nbasis,((out-1)+1)*nbasis) += bbmat2 * bdbmat;
+                    elmat.Cols((in-1)*nbasis,in*nbasis).Rows((out-1)*nbasis,out*nbasis) += bbmat2 * bdbmat;
                     bdbmat = 0;
                     for(int imip=0;imip<snip;imip++)
                         for(int r=0;r<(D+1);r++)
                             for(int d=0;d<D+1;d++)
                                 bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat2.Col(d*snip+imip);
-                    elmat.Cols((out-1)*nbasis,((out-1)+1)*nbasis).Rows((out-1)*nbasis,((out-1)+1)*nbasis) += bbmat2 * bdbmat;
+                    elmat.Cols((out-1)*nbasis,out*nbasis).Rows((out-1)*nbasis,out*nbasis) += bbmat2 * bdbmat;
                 }
             }
 
@@ -336,7 +337,7 @@ namespace ngcomp
 
     template<int D>
     void CalcTentBndEl(int surfel, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> bddatum,
-                       double timeshift, SIMD_IntegrationRule &sir, LocalHeap &slh, FlatMatrix<> &elmat, FlatVector<> &elvec)
+                       double timeshift, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
     {
         HeapReset hr(slh);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
