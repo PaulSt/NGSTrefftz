@@ -174,15 +174,18 @@ namespace ngcomp
 
           if (out == 0)
             {
-              tel.SetWavespeed (wavespeed[0]);
+              tel.SetWavespeed (wavespeed[in - 1]);
+              if (ndomains == 1) // tent vertex is inside a domain
+                in = 1;
+              SliceMatrix<> subm = elmat.Cols ((in - 1) * nbasis, in * nbasis)
+                                       .Rows ((in - 1) * nbasis, in * nbasis);
+              SliceVector<> subv
+                  = elvec.Range ((in - 1) * nbasis, in * nbasis);
               CalcTentBndEl<D> (surfel, tent, tel, ma, bddatum, timeshift, sir,
-                                slh, elmat, elvec);
+                                slh, subm, subv);
             }
           else
             {
-
-              const ELEMENT_TYPE eltyp
-                  = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
               int nbasis = tel.GetNBasis ();
               int nsimd = SIMD<double>::Size ();
               int snip = sir.Size () * nsimd;
@@ -239,8 +242,8 @@ namespace ngcomp
                         += Dmat (r, d)
                            * sir[imip / nsimd].Weight ()[imip % nsimd]
                            * bbmat1.Col (d * snip + imip);
-              elmat.Cols ((in - 1) * nbasis, ((in - 1) + 1) * nbasis)
-                  .Rows ((in - 1) * nbasis, ((in - 1) + 1) * nbasis)
+              elmat.Cols ((in - 1) * nbasis, in * nbasis)
+                  .Rows ((in - 1) * nbasis, in * nbasis)
                   += bbmat1 * bdbmat;
               bdbmat = 0;
               for (int imip = 0; imip < snip; imip++)
@@ -250,8 +253,8 @@ namespace ngcomp
                         += Dmat (r, d)
                            * sir[imip / nsimd].Weight ()[imip % nsimd]
                            * bbmat2.Col (d * snip + imip);
-              elmat.Cols ((out - 1) * nbasis, ((out - 1) + 1) * nbasis)
-                  .Rows ((in - 1) * nbasis, ((in - 1) + 1) * nbasis)
+              elmat.Cols ((out - 1) * nbasis, out * nbasis)
+                  .Rows ((in - 1) * nbasis, in * nbasis)
                   += bbmat1 * bdbmat;
 
               Dmat *= -1;
@@ -263,8 +266,8 @@ namespace ngcomp
                         += Dmat (r, d)
                            * sir[imip / nsimd].Weight ()[imip % nsimd]
                            * bbmat1.Col (d * snip + imip);
-              elmat.Cols ((in - 1) * nbasis, ((in - 1) + 1) * nbasis)
-                  .Rows ((out - 1) * nbasis, ((out - 1) + 1) * nbasis)
+              elmat.Cols ((in - 1) * nbasis, in * nbasis)
+                  .Rows ((out - 1) * nbasis, out * nbasis)
                   += bbmat2 * bdbmat;
               bdbmat = 0;
               for (int imip = 0; imip < snip; imip++)
@@ -274,8 +277,8 @@ namespace ngcomp
                         += Dmat (r, d)
                            * sir[imip / nsimd].Weight ()[imip % nsimd]
                            * bbmat2.Col (d * snip + imip);
-              elmat.Cols ((out - 1) * nbasis, ((out - 1) + 1) * nbasis)
-                  .Rows ((out - 1) * nbasis, ((out - 1) + 1) * nbasis)
+              elmat.Cols ((out - 1) * nbasis, out * nbasis)
+                  .Rows ((out - 1) * nbasis, out * nbasis)
                   += bbmat2 * bdbmat;
             }
         }
@@ -399,7 +402,7 @@ namespace ngcomp
                       shared_ptr<MeshAccess> ma,
                       shared_ptr<CoefficientFunction> bddatum,
                       double timeshift, SIMD_IntegrationRule &sir,
-                      LocalHeap &slh, FlatMatrix<> &elmat, FlatVector<> &elvec)
+                      LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
   {
     HeapReset hr (slh);
     const ELEMENT_TYPE eltyp

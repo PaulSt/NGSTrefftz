@@ -32,7 +32,7 @@ namespace ngcomp
                  shared_ptr<MeshAccess> ma,
                  shared_ptr<CoefficientFunction> bddatum, double timeshift,
                  SIMD_IntegrationRule &sir, LocalHeap &slh,
-                 FlatMatrix<> &elmat, FlatVector<> &elvec);
+                 SliceMatrix<> elmat, SliceVector<> elvec);
 
   template <int D>
   void CalcTentElEval (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
