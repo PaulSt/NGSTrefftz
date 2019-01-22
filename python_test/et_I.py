@@ -33,7 +33,7 @@ a += SymbolicBFI(u*v)
 a.Assemble()
 Draw(gfu,initmesh,'sol',autoscale=False,min=-0.002,max=0.002)
 bdd = gausspw(D,c)
-wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,bdd)
+wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd)
 
 input()
 for t in range(0,200):

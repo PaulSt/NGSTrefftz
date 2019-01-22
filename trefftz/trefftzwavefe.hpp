@@ -34,6 +34,8 @@ namespace ngfem
             virtual void CalcDShape (const SIMD_MappedIntegrationRule<D-1,D> & smir, SliceMatrix<SIMD<double>> dshape) const;
 
             int GetNBasis() const { return nbasis; }
+            float GetWavespeed() const { return c; }
+            void SetWavespeed(double wavespeed) {c = wavespeed;}
 
             //TrefftzWaveFE<D> * SetCenter(Vec<D> acenter) {elcenter = acenter; return this;}
             //TrefftzWaveFE<D> * SetElSize(double aelsize) {elsize = aelsize; return this;}

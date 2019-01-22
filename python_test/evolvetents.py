@@ -40,14 +40,14 @@ Draw(gfu,initmesh,'sol')
 # Draw(gfu,initmesh,'sol',autoscale=False,min=-0.1,max=0.1)
 # Draw(gfu,initmesh,'sol',autoscale=False,min=-0.01,max=0.01)
 bdd = standingwave(D,c)
-wavefront = EvolveTentsMakeWavefront(order,initmesh,c,t_start,bdd)
+wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd)
 
 with TaskManager():
     for t in range(0,200):
         start = time.time()
         wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
         print("time evolvetent: " + str(time.time() - start))
-        print("Error: " + str(EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,c,t_start + t_step,bdd))))
+        print("Error: " + str(EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,t_start + t_step,bdd))))
 
         ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
         f = LinearForm(fes)

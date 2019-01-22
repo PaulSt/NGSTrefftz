@@ -1,7 +1,7 @@
 from trefftzngs import *
-from ngsolve import *
 import math
 math.pi
+from ngsolve import *
 
 
 
