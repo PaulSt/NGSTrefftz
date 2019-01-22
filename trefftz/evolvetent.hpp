@@ -6,6 +6,7 @@
 #include <fem.hpp>
 #include <multigrid.hpp>
 #include "tents/tents.hpp"
+#include "trefftzwavefe.hpp"
 
 namespace ngcomp
 {
@@ -13,6 +14,31 @@ namespace ngcomp
   void EvolveTents (int order, shared_ptr<MeshAccess> ma, double wavespeed,
                     double dt, SliceMatrix<> wavefront, double timeshift,
                     shared_ptr<CoefficientFunction> bddatum);
+
+  template <int D>
+  void EvolveTents (int order, shared_ptr<MeshAccess> ma, Vector<> wavespeed,
+                    double dt, SliceMatrix<> wavefront, double timeshift,
+                    shared_ptr<CoefficientFunction> bddatum);
+
+  template <int D>
+  void CalcTentEl (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
+                   shared_ptr<MeshAccess> ma, SliceMatrix<double> &wavefront,
+                   SIMD_IntegrationRule &sir, LocalHeap &slh,
+                   SliceMatrix<> elmat, SliceVector<> elvec);
+
+  template <int D>
+  void
+  CalcTentBndEl (int surfel, Tent *tent, TrefftzWaveFE<D + 1> tel,
+                 shared_ptr<MeshAccess> ma,
+                 shared_ptr<CoefficientFunction> bddatum, double timeshift,
+                 SIMD_IntegrationRule &sir, LocalHeap &slh,
+                 SliceMatrix<> elmat, SliceVector<> elvec);
+
+  template <int D>
+  void CalcTentElEval (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
+                       shared_ptr<MeshAccess> ma, SliceMatrix<> &wavefront,
+                       SIMD_IntegrationRule &sir, LocalHeap &slh,
+                       SliceVector<> sol);
 
   template <int D>
   Mat<D + 1, D + 1>
@@ -26,7 +52,16 @@ namespace ngcomp
   template <int D> Vec<D> TentFaceNormal (Mat<D, D> v, int dir);
 
   template <int D>
-  Vec<D + 2, double> TestSolution (Vec<D + 1, double> p, double wavespeed);
+  Matrix<> MakeWavefront (int order, shared_ptr<MeshAccess> ma, double time,
+                          shared_ptr<CoefficientFunction> bddatum);
+
+  template <int D>
+  double Error (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
+                Matrix<> wavefront_corr);
+
+  template <int D>
+  double Energy (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
+                 double wavenumber);
 
   template <typename T = double> void SwapIfGreater (T &a, T &b);
 
