@@ -71,7 +71,7 @@ def gausspw(D, wavespeed):
 def vertgausspw(D, wavespeed):
     t = CoordCF(D)
     k = 1
-    delta = 80000
+    delta = 800
     if(D==1):
         sol = CoefficientFunction((
             exp( -delta*((x-0.25)*(x-0.25)) ),

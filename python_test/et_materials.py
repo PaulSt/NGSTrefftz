@@ -10,7 +10,7 @@ from testcases import *
 
 order = 3
 t_start = 0
-t_step = 0.1
+t_step = 0.05
 
 geo = SplineGeometry()
 # geo.AddRectangle((0,0), (1,1),
@@ -32,7 +32,7 @@ geo.Append (["line", p6, p3], leftdomain=2, rightdomain=0)
 
 geo.SetMaterial (1, "outer")
 geo.SetMaterial (2, "inner")
-initmesh = Mesh(geo.GenerateMesh(maxh=0.03))
+initmesh = Mesh(geo.GenerateMesh(maxh=0.025))
 for i in range(0,len(initmesh.GetBoundaries())):
    initmesh.ngmesh.SetBCName(i,"neumann")
 Draw(initmesh)
@@ -41,7 +41,7 @@ D = initmesh.dim
 t = CoordCF(D)
 c = Vector(2)
 c[0] = 1
-c[1] = 2
+c[1] = 0.5
 
 cf = CoefficientFunction(list(c))
 sq = sqrt(0.5);
@@ -73,19 +73,19 @@ Draw(gfu,initmesh,'sol')
 
 wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd)
 input()
-# with TaskManager():
-for t in range(0,50):
-    wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
-    print("Error: " + str(EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,t_start + t_step,bdd))))
+with TaskManager():
+    for t in range(0,50):
+        wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
+        print("Error: " + str(EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,t_start + t_step,bdd))))
 
-    ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
-    f = LinearForm(fes)
-    f += SymbolicLFI(ipfct*v, intrule=intrule)
-    f.Assemble()
-    gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs()) * f.vec
-    Redraw(blocking=True)
+        ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
+        f = LinearForm(fes)
+        f += SymbolicLFI(ipfct*v, intrule=intrule)
+        f.Assemble()
+        gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs()) * f.vec
+        Redraw(blocking=True)
 
-    t_start += t_step
-    print("time: " + str(t_start))
+        t_start += t_step
+        print("time: " + str(t_start))
 # filename = "results/mov/sol"+str(t).zfill(3) +".jpg"
 # Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))

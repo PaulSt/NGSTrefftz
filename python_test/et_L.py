@@ -21,17 +21,18 @@ for i in range(0, refpoints+1):
         yk = j/refpoints
         mp.RestrictH (x=xk, y=yk, z=0, h=max(minh,sqrt(0.005*((xk-0.5)*(xk-0.5)+(yk-0.5)*(yk-0.5)))))
 
-order = 3
-c = 1
-t_start = 0
-t_step = 0.05
-
 initmesh = Mesh( LshapeMesh(maxh,mp) )
 # RefineAround([0.5,0.5,0],0.1,initmesh)
 # RefineAround([0.5,0.5,0],0.02,initmesh)
 Draw(initmesh)
+input()
 for i in range(0,len(initmesh.GetBoundaries())):
    initmesh.ngmesh.SetBCName(i,"neumann")
+
+order = 2
+c = 1
+t_start = 0
+t_step = 0.05
 
 D = initmesh.dim
 if D==3: eltyp = ET.TET
@@ -46,7 +47,7 @@ gfu = GridFunction(fes)
 a = BilinearForm(fes)
 a += SymbolicBFI(u*v)
 a.Assemble()
-# Draw(gfu,initmesh,'sol')
+Draw(gfu,initmesh,'sol')
 # Draw(gfu,initmesh,'sol',autoscale=False,min=-1,max=1)
 bdd = vertgausspw(D,c)
 wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd )
@@ -55,7 +56,7 @@ wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd )
 # filename = "results/mov/sol"+str(0000)
 # Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
 # input()
-Draw(gfu,initmesh,'sol',autoscale=False,min=-0.05,max=0.1)
+# Draw(gfu,initmesh,'sol',autoscale=False,min=-0.05,max=0.1)
 
 for t in range(0,100):
     wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start, bdd )
