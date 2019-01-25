@@ -12,7 +12,7 @@ from netgen.geom2d import unit_square
 from netgen.meshing import MeshingParameters
 
 maxh=0.01
-minh=0.0005
+minh=0.01
 mp = MeshingParameters (maxh = maxh)
 refpoints = 500
 for i in range(0, refpoints+1):
