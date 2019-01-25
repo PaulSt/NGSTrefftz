@@ -225,61 +225,55 @@ namespace ngcomp
               FlatMatrix<double> bbmat2 (nbasis, (D + 1) * snip,
                                          &simddshapes2 (0, 0)[0]);
 
-              Mat<D + 1> Dmat = 0;
-              Dmat.Row (D).Range (0, D)
+              Mat<D + 1> Dmat1 = 0;
+              Dmat1.Row (D).Range (0, D)
                   = -0.5 * TentFaceArea<D> (vert)
                     * n.Range (0, D); // 0.5 for DG average
-              Dmat.Col (D).Range (0, D)
+              Dmat1.Col (D).Range (0, D)
                   = -0.5 * TentFaceArea<D> (vert) * n.Range (0, D);
-              FlatMatrix<double> bdbmat ((D + 1) * snip, nbasis, slh);
+              Mat<D + 1> Dmat2 = -1 * Dmat1;
+
+              FlatMatrix<double> *bdbmat[4];
+              for (int i = 0; i < 4; i++)
+                {
+                  bdbmat[i] = new FlatMatrix<> ((D + 1) * snip, nbasis, slh);
+                  *bdbmat[i] = 0;
+                }
               // double alpha = 0.5;
 
-              bdbmat = 0;
               for (int imip = 0; imip < snip; imip++)
                 for (int r = 0; r < (D + 1); r++)
                   for (int d = 0; d < D + 1; d++)
-                    bdbmat.Row (r * snip + imip)
-                        += Dmat (r, d)
-                           * sir[imip / nsimd].Weight ()[imip % nsimd]
-                           * bbmat1.Col (d * snip + imip);
+                    {
+                      bdbmat[0]->Row (r * snip + imip)
+                          += Dmat1 (r, d)
+                             * sir[imip / nsimd].Weight ()[imip % nsimd]
+                             * bbmat1.Col (d * snip + imip);
+                      bdbmat[1]->Row (r * snip + imip)
+                          += Dmat1 (r, d)
+                             * sir[imip / nsimd].Weight ()[imip % nsimd]
+                             * bbmat2.Col (d * snip + imip);
+                      bdbmat[2]->Row (r * snip + imip)
+                          += Dmat2 (r, d)
+                             * sir[imip / nsimd].Weight ()[imip % nsimd]
+                             * bbmat1.Col (d * snip + imip);
+                      bdbmat[3]->Row (r * snip + imip)
+                          += Dmat2 (r, d)
+                             * sir[imip / nsimd].Weight ()[imip % nsimd]
+                             * bbmat2.Col (d * snip + imip);
+                    }
               elmat.Cols ((in - 1) * nbasis, in * nbasis)
                   .Rows ((in - 1) * nbasis, in * nbasis)
-                  += bbmat1 * bdbmat;
-              bdbmat = 0;
-              for (int imip = 0; imip < snip; imip++)
-                for (int r = 0; r < (D + 1); r++)
-                  for (int d = 0; d < D + 1; d++)
-                    bdbmat.Row (r * snip + imip)
-                        += Dmat (r, d)
-                           * sir[imip / nsimd].Weight ()[imip % nsimd]
-                           * bbmat2.Col (d * snip + imip);
+                  += bbmat1 * (*bdbmat[0]);
               elmat.Cols ((out - 1) * nbasis, out * nbasis)
                   .Rows ((in - 1) * nbasis, in * nbasis)
-                  += bbmat1 * bdbmat;
-
-              Dmat *= -1;
-              bdbmat = 0;
-              for (int imip = 0; imip < snip; imip++)
-                for (int r = 0; r < (D + 1); r++)
-                  for (int d = 0; d < D + 1; d++)
-                    bdbmat.Row (r * snip + imip)
-                        += Dmat (r, d)
-                           * sir[imip / nsimd].Weight ()[imip % nsimd]
-                           * bbmat1.Col (d * snip + imip);
+                  += bbmat1 * (*bdbmat[1]);
               elmat.Cols ((in - 1) * nbasis, in * nbasis)
                   .Rows ((out - 1) * nbasis, out * nbasis)
-                  += bbmat2 * bdbmat;
-              bdbmat = 0;
-              for (int imip = 0; imip < snip; imip++)
-                for (int r = 0; r < (D + 1); r++)
-                  for (int d = 0; d < D + 1; d++)
-                    bdbmat.Row (r * snip + imip)
-                        += Dmat (r, d)
-                           * sir[imip / nsimd].Weight ()[imip % nsimd]
-                           * bbmat2.Col (d * snip + imip);
+                  += bbmat2 * (*bdbmat[2]);
               elmat.Cols ((out - 1) * nbasis, out * nbasis)
                   .Rows ((out - 1) * nbasis, out * nbasis)
-                  += bbmat2 * bdbmat;
+                  += bbmat2 * (*bdbmat[3]);
             }
         }
 
