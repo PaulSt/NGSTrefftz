@@ -236,7 +236,10 @@ def TunnelMesh(maxh = 0.5):
     geo.Append (["line", p10, p11])
     geo.Append (["line", p11, p12])
     geo.Append (["line", p12, p1])
-    mesh = geo.GenerateMesh (maxh=maxh)
+    if(mp==0):
+        mesh = geo.GenerateMesh (maxh=maxh)
+    if(mp!=0):
+        mesh = geo.GenerateMesh(mp=mp)
     return mesh
 
 def RefineAround(center,r,mesh):
