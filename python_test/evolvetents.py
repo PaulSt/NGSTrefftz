@@ -43,7 +43,9 @@ bdd = standingwave(D,c)
 wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd)
 
 with TaskManager():
-    for t in range(0,200):
+# SetNumThreads(1)
+# with TaskManager(pajetrace=100*1000*1000):
+    for t in range(0,10):
         start = time.time()
         wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
         print("time evolvetent: " + str(time.time() - start))
