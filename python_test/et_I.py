@@ -6,15 +6,26 @@ from ngsolve import *
 from prodmesh import *
 from ngsolve.solve import Tcl_Eval # for snapshots
 from testcases import *
+from netgen.meshing import MeshingParameters
 
 order = 3
 c = 1
 t_start = 0
 t_step = 0.02
 
-initmesh = Mesh(TunnelMesh(maxh = 0.06))
-RefineAround([0.5,0,0],0.2,initmesh)
-RefineAround([0.5,0,0],0.1,initmesh)
+maxh=0.05
+minh=0.005
+mp = MeshingParameters (maxh = maxh)
+refpoints = 500
+for i in range(0, refpoints+1):
+    for j in range(0, refpoints+1):
+        xk = i/refpoints
+        yk = j/refpoints
+        mp.RestrictH (x=xk, y=yk, z=0, h=max(minh,0.5*sqrt(maxh*((xk-0.5)*(xk-0.5)+(yk)*(yk)))))
+# RefineAround([0.5,0,0],0.2,initmesh)
+# RefineAround([0.5,0,0],0.1,initmesh)
+initmesh = Mesh(TunnelMesh(maxh, mp))
+
 for i in range(0,len(initmesh.GetBoundaries())):
     initmesh.ngmesh.SetBCName(i,"neumann")
 
@@ -31,7 +42,8 @@ gfu = GridFunction(fes)
 a = BilinearForm(fes)
 a += SymbolicBFI(u*v)
 a.Assemble()
-Draw(gfu,initmesh,'sol',autoscale=False,min=-0.002,max=0.002)
+# Draw(gfu,initmesh,'sol')
+Draw(gfu,initmesh,'sol',autoscale=False,min=-0.005,max=0.005)
 bdd = gausspw(D,c)
 wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd)
 
