@@ -53,6 +53,7 @@ bdd = CoefficientFunction((
     ))
 bdd = vertgausspw(D,1)
 Draw(bdd, initmesh, 'piecewise')
+wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd)
 
 D = initmesh.dim
 if D==3: eltyp = ET.TET
@@ -67,12 +68,18 @@ gfu = GridFunction(fes)
 a = BilinearForm(fes)
 a += SymbolicBFI(u*v)
 a.Assemble()
-Draw(gfu,initmesh,'sol')
-# Draw(gfu,initmesh,'sol',autoscale=False,min=-0.1,max=0.1)
-# Draw(gfu,initmesh,'sol',autoscale=False,min=-0.01,max=0.01)
 
-wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd)
+ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
+f = LinearForm(fes)
+f += SymbolicLFI(ipfct*v, intrule=intrule)
+f.Assemble()
+gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs()) * f.vec
+# Draw(gfu,initmesh,'sol')
+Draw(gfu,initmesh,'sol',autoscale=False,min=-0.1,max=0.35)
 input()
+filename = "results/mov/sol_mat0.jpg"
+# Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
+
 with TaskManager():
     for t in range(0,50):
         wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
@@ -87,5 +94,5 @@ with TaskManager():
 
         t_start += t_step
         print("time: " + str(t_start))
-# filename = "results/mov/sol"+str(t).zfill(3) +".jpg"
-# Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
+        # filename = "results/mov/sol_mat"+str(t).zfill(3) +".jpg"
+        # Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
