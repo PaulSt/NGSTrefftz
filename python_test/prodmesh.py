@@ -208,7 +208,7 @@ def CircleMesh(maxh=0.5):
     ngmesh = geo.GenerateMesh(maxh=maxh)
     return ngmesh
 
-def TunnelMesh(maxh = 0.5):
+def TunnelMesh(maxh = 0.5, mp=0):
     geo = ngeom2d.SplineGeometry()
     xshift = 0.5
     yshift = 0.25
