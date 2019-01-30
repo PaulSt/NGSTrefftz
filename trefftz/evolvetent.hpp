@@ -20,14 +20,16 @@ namespace ngcomp
 
     template<int D>
     void CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma, SliceMatrix<double> &wavefront,
-            SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
+            //SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
+                    SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
 
     template<int D>
     void CalcTentBndEl(int surfel, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> bddatum,
                        double timeshift, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
 
     template<int D>
-    void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma , SliceMatrix<> &wavefront, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol);
+    //void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma , SliceMatrix<> &wavefront, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol);
+    void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma , SliceMatrix<> &wavefront, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes);
 
     template<int D>
     Mat<D+1,D+1> TentFaceVerts(Tent* tent, int elnr, shared_ptr<MeshAccess> ma, int top);
