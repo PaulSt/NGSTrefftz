@@ -346,6 +346,44 @@ namespace ngcomp
     Mat<D + 1> Dmat;
     FlatVector<SIMD<double>> mirtimes (sir.Size (), slh);
 
+    /// Integration over bot of tent
+    vert = TentFaceVerts<D> (tent, elnr, ma, -1);
+    linbasis = vert.Row (D);
+    faceint.Evaluate (sir, linbasis, mirtimes);
+    for (int imip = 0; imip < sir.Size (); imip++)
+      smir[imip].Point () (D) = mirtimes[imip];
+
+    tint3.Start ();
+    FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
+    tel.CalcShape (smir, simdshapes);
+    tel.CalcDShape (smir, simddshapes);
+    FlatMatrix<> bbmat (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
+    tint3.Stop ();
+
+    tint4.Start ();
+    TentDmat<D> (Dmat, vert, -1, wavespeed);
+    FlatVector<> bdbvec ((D + 1) * snip, slh);
+    bdbvec = 0;
+    for (int imip = 0; imip < snip; imip++)
+      for (int r = 0; r < (D + 1); r++)
+        for (int d = 0; d < D + 1; d++)
+          bdbvec (r * snip + imip)
+              += Dmat (r, d) * sir[imip / nsimd].Weight ()[imip % nsimd]
+                 * wavefront (elnr, snip + d * snip + imip);
+    elvec -= bbmat * bdbvec;
+
+    // stabilization to recover second order solution
+    for (int imip = 0; imip < sir.Size (); imip++)
+      simdshapes.Col (imip)
+          *= sqrt (TentFaceArea<D> (vert)) * sqrt (sir[imip].Weight ());
+    AddABt (simdshapes, simdshapes, elmat);
+    for (int imip = 0; imip < sir.Size (); imip++)
+      simdshapes.Col (imip)
+          *= sqrt (TentFaceArea<D> (vert)) * sqrt (sir[imip].Weight ());
+    FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
+    elvec += shapes * wavefront.Row (elnr).Range (0, snip);
+    tint4.Stop ();
+
     /// Integration over top of tent
     vert = TentFaceVerts<D> (tent, elnr, ma, 1);
     linbasis = vert.Row (D);
@@ -356,7 +394,6 @@ namespace ngcomp
     tint1.Start ();
     // FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
     tel.CalcDShape (smir, simddshapes);
-    FlatMatrix<> bbmat (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
     tint1.Stop ();
 
     tint2.Start ();
@@ -371,45 +408,6 @@ namespace ngcomp
                  * bbmat.Col (d * snip + imip);
     elmat += bbmat * bdbmat;
     tint2.Stop ();
-
-    /// Integration over bot of tent
-    vert = TentFaceVerts<D> (tent, elnr, ma, -1);
-    linbasis = vert.Row (D);
-    faceint.Evaluate (sir, linbasis, mirtimes);
-    for (int imip = 0; imip < sir.Size (); imip++)
-      smir[imip].Point () (D) = mirtimes[imip];
-
-    tint3.Start ();
-    FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
-    FlatMatrix<SIMD<double>> simddshapes2 ((D + 1) * nbasis, sir.Size (), slh);
-    tel.CalcShape (smir, simdshapes);
-    tel.CalcDShape (smir, simddshapes2);
-    FlatMatrix<> bbmat2 (nbasis, (D + 1) * snip, &simddshapes2 (0, 0)[0]);
-    tint3.Stop ();
-
-    tint4.Start ();
-    TentDmat<D> (Dmat, vert, -1, wavespeed);
-    FlatVector<> bdbvec ((D + 1) * snip, slh);
-    bdbvec = 0;
-    for (int imip = 0; imip < snip; imip++)
-      for (int r = 0; r < (D + 1); r++)
-        for (int d = 0; d < D + 1; d++)
-          bdbvec (r * snip + imip)
-              += Dmat (r, d) * sir[imip / nsimd].Weight ()[imip % nsimd]
-                 * wavefront (elnr, snip + d * snip + imip);
-    elvec -= bbmat2 * bdbvec;
-
-    // stabilization to recover second order solution
-    for (int imip = 0; imip < sir.Size (); imip++)
-      simdshapes.Col (imip)
-          *= sqrt (TentFaceArea<D> (vert)) * sqrt (sir[imip].Weight ());
-    AddABt (simdshapes, simdshapes, elmat);
-    for (int imip = 0; imip < sir.Size (); imip++)
-      simdshapes.Col (imip)
-          *= sqrt (TentFaceArea<D> (vert)) * sqrt (sir[imip].Weight ());
-    FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
-    elvec += shapes * wavefront.Row (elnr).Range (0, snip);
-    tint4.Stop ();
   }
 
   template <int D>
