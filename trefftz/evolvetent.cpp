@@ -66,12 +66,17 @@ namespace ngcomp
       elmat = 0;
       elvec = 0;
 
+      FlatMatrix<SIMD<double>> *topdshapes[tent->els.Size ()];
+      for (auto &tds : topdshapes)
+        tds = new FlatMatrix<SIMD<double>> ((D + 1) * nbasis, sir.Size (),
+                                            slh);
+
       // Integrate top and bottom space-like tent faces
-      for (auto elnr : tent->els)
+      for (int elnr = 0; elnr < tent->els.Size (); elnr++)
         {
           RegionTimer reg1 (ttentel);
-          CalcTentEl<D> (elnr, tent, tel, ma, wavefront, sir, slh, elmat,
-                         elvec);
+          CalcTentEl<D> (tent->els[elnr], tent, tel, ma, wavefront, sir, slh,
+                         elmat, elvec, *topdshapes[elnr]);
         }
 
       // Integrate boundary tent
@@ -96,10 +101,11 @@ namespace ngcomp
       // sol[i]=elvec2[i-1];
 
       // eval solution on top of tent
-      for (auto elnr : tent->els)
+      for (int elnr = 0; elnr < tent->els.Size (); elnr++)
         {
           RegionTimer reg3 (ttenteval);
-          CalcTentElEval<D> (elnr, tent, tel, ma, wavefront, sir, slh, sol);
+          CalcTentElEval<D> (tent->els[elnr], tent, tel, ma, wavefront, sir,
+                             slh, sol, *topdshapes[elnr]);
         }
     }); // end loop over tents
     cout << "...done" << endl;
@@ -157,17 +163,23 @@ namespace ngcomp
       elmat = 0;
       elvec = 0;
 
+      FlatMatrix<SIMD<double>> *topdshapes[tent->els.Size ()];
+      for (auto &tds : topdshapes)
+        tds = new FlatMatrix<SIMD<double>> ((D + 1) * nbasis, sir.Size (),
+                                            slh);
+
       // Integrate top and bottom space-like tent faces
-      for (auto elnr : tent->els)
+      for (int elnr = 0; elnr < tent->els.Size (); elnr++)
         {
-          int eli = ma->GetElIndex (ElementId (VOL, elnr));
+          int eli = ma->GetElIndex (ElementId (VOL, tent->els[elnr]));
           tel.SetWavespeed (wavespeed[eli]);
           if (ndomains == 1) // tent vertex is inside a domain
             eli = 0;
           SliceMatrix<> subm = elmat.Cols (eli * nbasis, (eli + 1) * nbasis)
                                    .Rows (eli * nbasis, (eli + 1) * nbasis);
           SliceVector<> subv = elvec.Range (eli * nbasis, (eli + 1) * nbasis);
-          CalcTentEl<D> (elnr, tent, tel, ma, wavefront, sir, slh, subm, subv);
+          CalcTentEl<D> (tent->els[elnr], tent, tel, ma, wavefront, sir, slh,
+                         subm, subv, *topdshapes[elnr]);
         }
 
       // Integrate boundary tent
@@ -238,7 +250,7 @@ namespace ngcomp
                   = -0.5 * TentFaceArea<D> (vert) * n.Range (0, D);
               Mat<D + 1> Dmat2 = -1 * Dmat1;
 
-              FlatMatrix<double> *bdbmat[4];
+              FlatMatrix<> *bdbmat[4];
               for (int i = 0; i < 4; i++)
                 {
                   bdbmat[i] = new FlatMatrix<> ((D + 1) * snip, nbasis, slh);
@@ -287,24 +299,26 @@ namespace ngcomp
       FlatVector<> sol (ndomains * nbasis, &elvec (0));
 
       // eval solution on top of tent
-      for (auto elnr : tent->els)
+      for (int elnr = 0; elnr < tent->els.Size (); elnr++)
         {
-          int eli = ma->GetElIndex (ElementId (VOL, elnr));
+          int eli = ma->GetElIndex (ElementId (VOL, tent->els[elnr]));
           tel.SetWavespeed (wavespeed[eli]);
           if (ndomains == 1)
             eli = 0;
-          CalcTentElEval<D> (elnr, tent, tel, ma, wavefront, sir, slh,
-                             sol.Range (eli * nbasis, (eli + 1) * nbasis));
+          CalcTentElEval<D> (tent->els[elnr], tent, tel, ma, wavefront, sir,
+                             slh, sol.Range (eli * nbasis, (eli + 1) * nbasis),
+                             *topdshapes[elnr]);
         }
     }); // end loop over tents
     cout << "...done" << endl;
   }
 
   template <int D>
-  void CalcTentEl (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
-                   shared_ptr<MeshAccess> ma, SliceMatrix<double> &wavefront,
-                   SIMD_IntegrationRule &sir, LocalHeap &slh,
-                   SliceMatrix<> elmat, SliceVector<> elvec)
+  void
+  CalcTentEl (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
+              shared_ptr<MeshAccess> ma, SliceMatrix<double> &wavefront,
+              SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat,
+              SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes)
   {
     static Timer tint1 ("tent int top calcdshape", 2);
     static Timer tint2 ("tent int top elmat", 2);
@@ -332,32 +346,6 @@ namespace ngcomp
     Mat<D + 1> Dmat;
     FlatVector<SIMD<double>> mirtimes (sir.Size (), slh);
 
-    /// Integration over top of tent
-    vert = TentFaceVerts<D> (tent, elnr, ma, 1);
-    linbasis = vert.Row (D);
-    faceint.Evaluate (sir, linbasis, mirtimes);
-    for (int imip = 0; imip < sir.Size (); imip++)
-      smir[imip].Point () (D) = mirtimes[imip];
-
-    tint1.Start ();
-    FlatMatrix<SIMD<double>> simddshapes ((D + 1) * nbasis, sir.Size (), slh);
-    tel.CalcDShape (smir, simddshapes);
-    FlatMatrix<> bbmat (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
-    tint1.Stop ();
-
-    tint2.Start ();
-    TentDmat<D> (Dmat, vert, 1, wavespeed);
-    FlatMatrix<> bdbmat ((D + 1) * snip, nbasis, slh);
-    bdbmat = 0;
-    for (int imip = 0; imip < snip; imip++)
-      for (int r = 0; r < (D + 1); r++)
-        for (int d = 0; d < D + 1; d++)
-          bdbmat.Row (r * snip + imip)
-              += Dmat (r, d) * sir[imip / nsimd].Weight ()[imip % nsimd]
-                 * bbmat.Col (d * snip + imip);
-    elmat += bbmat * bdbmat;
-    tint2.Stop ();
-
     /// Integration over bot of tent
     vert = TentFaceVerts<D> (tent, elnr, ma, -1);
     linbasis = vert.Row (D);
@@ -369,6 +357,7 @@ namespace ngcomp
     FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
     tel.CalcShape (smir, simdshapes);
     tel.CalcDShape (smir, simddshapes);
+    FlatMatrix<> bbmat (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
     tint3.Stop ();
 
     tint4.Start ();
@@ -394,6 +383,31 @@ namespace ngcomp
     FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
     elvec += shapes * wavefront.Row (elnr).Range (0, snip);
     tint4.Stop ();
+
+    /// Integration over top of tent
+    vert = TentFaceVerts<D> (tent, elnr, ma, 1);
+    linbasis = vert.Row (D);
+    faceint.Evaluate (sir, linbasis, mirtimes);
+    for (int imip = 0; imip < sir.Size (); imip++)
+      smir[imip].Point () (D) = mirtimes[imip];
+
+    tint1.Start ();
+    // FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
+    tel.CalcDShape (smir, simddshapes);
+    tint1.Stop ();
+
+    tint2.Start ();
+    TentDmat<D> (Dmat, vert, 1, wavespeed);
+    FlatMatrix<> bdbmat ((D + 1) * snip, nbasis, slh);
+    bdbmat = 0;
+    for (int imip = 0; imip < snip; imip++)
+      for (int r = 0; r < (D + 1); r++)
+        for (int d = 0; d < D + 1; d++)
+          bdbmat.Row (r * snip + imip)
+              += Dmat (r, d) * sir[imip / nsimd].Weight ()[imip % nsimd]
+                 * bbmat.Col (d * snip + imip);
+    elmat += bbmat * bdbmat;
+    tint2.Stop ();
   }
 
   template <int D>
@@ -492,7 +506,8 @@ namespace ngcomp
   void
   CalcTentElEval (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
                   shared_ptr<MeshAccess> ma, SliceMatrix<> &wavefront,
-                  SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol)
+                  SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol,
+                  SliceMatrix<SIMD<double>> simddshapes)
   {
     HeapReset hr (slh);
     const ELEMENT_TYPE eltyp
@@ -517,9 +532,9 @@ namespace ngcomp
       smir[imip].Point () (D) = mirtimes[imip];
 
     FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
-    FlatMatrix<SIMD<double>> simddshapes ((D + 1) * nbasis, sir.Size (), slh);
+    // FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
     tel.CalcShape (smir, simdshapes);
-    tel.CalcDShape (smir, simddshapes);
+    // tel.CalcDShape(smir,simddshapes);
     FlatMatrix<> dshapes (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
     FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
 
