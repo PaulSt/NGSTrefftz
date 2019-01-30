@@ -40,11 +40,14 @@ namespace ngcomp
 
         cout << "solving " << tps.tents.Size() << " tents ";
         static Timer ttent("tent",2);
-        static Timer tsolve("tentsolve",2);
+        static Timer ttentel("tentel",2);
+        static Timer ttentbnd("tentbnd",2);
+        static Timer ttenteval("tenteval",2);
 
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             RegionTimer reg(ttent);
             LocalHeap slh = lh.Split();  // split to threads
+            HeapReset hr(slh);
             Tent* tent = tps.tents[tentnr];
 
             Vec<D+1> center;
@@ -60,20 +63,20 @@ namespace ngcomp
             // Integrate top and bottom space-like tent faces
             for(auto elnr: tent->els)
             {
+                RegionTimer reg1(ttentel);
                 CalcTentEl<D>(elnr,tent,tel,ma,wavefront,sir,slh,elmat,elvec);
             }
 
             // Integrate boundary tent
             for(auto surfel : ma->GetVertexSurfaceElements(tent->vertex))
             {
+                RegionTimer reg2(ttentbnd);
                 CalcTentBndEl<D>(surfel,tent,tel,ma,bddatum,timeshift,sir,slh,elmat,elvec);
             }
 
             // solve
-            tsolve.Start();
             LapackSolve(elmat,elvec);
             FlatVector<> sol(nbasis, &elvec(0));
-            tsolve.Stop();
 
             // modifications for first order solver
             //Matrix<> elmat2 = elmat.Rows(1,nbasis).Cols(1,nbasis);
@@ -87,6 +90,7 @@ namespace ngcomp
             // eval solution on top of tent
             for(auto elnr: tent->els)
             {
+                RegionTimer reg3(ttenteval);
                 CalcTentElEval<D>(elnr, tent, tel, ma, wavefront, sir, slh, sol);
             }
         }); // end loop over tents
@@ -114,6 +118,7 @@ namespace ngcomp
         cout << "solving " << tps.tents.Size() << " tents ";
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             LocalHeap slh = lh.Split();  // split to threads
+            HeapReset hr(slh);
             Tent* tent = tps.tents[tentnr];
 
             Vec<D+1> center;
@@ -250,7 +255,7 @@ namespace ngcomp
     {
         static Timer tint1("tent int top calcdshape",2);
         static Timer tint2("tent int top elmat",2);
-        static Timer tint3("tent int bot calcdshape",2);
+        static Timer tint3("tent int bot calc&calcdshape",2);
         static Timer tint4("tent int bot elvec",2);
 
         HeapReset hr(slh);
