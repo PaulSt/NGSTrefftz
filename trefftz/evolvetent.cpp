@@ -40,11 +40,14 @@ namespace ngcomp
 
         cout << "solving " << tps.tents.Size() << " tents ";
         static Timer ttent("tent",2);
-        static Timer tsolve("tentsolve",2);
+        static Timer ttentel("tentel",2);
+        static Timer ttentbnd("tentbnd",2);
+        static Timer ttenteval("tenteval",2);
 
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             RegionTimer reg(ttent);
             LocalHeap slh = lh.Split();  // split to threads
+            HeapReset hr(slh);
             Tent* tent = tps.tents[tentnr];
 
             Vec<D+1> center;
@@ -57,23 +60,27 @@ namespace ngcomp
             FlatVector<> elvec(nbasis,slh);
             elmat = 0; elvec = 0;
 
+            FlatMatrix<SIMD<double>>* topdshapes[tent->els.Size()];
+            for(auto& tds : topdshapes)
+                tds = new FlatMatrix<SIMD<double>>((D+1)*nbasis,sir.Size(),slh);
+            
             // Integrate top and bottom space-like tent faces
-            for(auto elnr: tent->els)
+            for(int elnr=0;elnr<tent->els.Size();elnr++)
             {
-                CalcTentEl<D>(elnr,tent,tel,ma,wavefront,sir,slh,elmat,elvec);
+                RegionTimer reg1(ttentel);
+                CalcTentEl<D>(tent->els[elnr],tent,tel,ma,wavefront,sir,slh,elmat,elvec,*topdshapes[elnr]);
             }
 
             // Integrate boundary tent
             for(auto surfel : ma->GetVertexSurfaceElements(tent->vertex))
             {
+                RegionTimer reg2(ttentbnd);
                 CalcTentBndEl<D>(surfel,tent,tel,ma,bddatum,timeshift,sir,slh,elmat,elvec);
             }
 
             // solve
-            tsolve.Start();
             LapackSolve(elmat,elvec);
             FlatVector<> sol(nbasis, &elvec(0));
-            tsolve.Stop();
 
             // modifications for first order solver
             //Matrix<> elmat2 = elmat.Rows(1,nbasis).Cols(1,nbasis);
@@ -85,9 +92,10 @@ namespace ngcomp
             //sol[i]=elvec2[i-1];
 
             // eval solution on top of tent
-            for(auto elnr: tent->els)
+            for(int elnr=0;elnr<tent->els.Size();elnr++)
             {
-                CalcTentElEval<D>(elnr, tent, tel, ma, wavefront, sir, slh, sol);
+                RegionTimer reg3(ttenteval);
+                CalcTentElEval<D>(tent->els[elnr], tent, tel, ma, wavefront, sir, slh, sol,*topdshapes[elnr]);
             }
         }); // end loop over tents
         cout << "...done" << endl;
@@ -114,6 +122,7 @@ namespace ngcomp
         cout << "solving " << tps.tents.Size() << " tents ";
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             LocalHeap slh = lh.Split();  // split to threads
+            HeapReset hr(slh);
             Tent* tent = tps.tents[tentnr];
 
             Vec<D+1> center;
@@ -136,16 +145,20 @@ namespace ngcomp
             FlatVector<> elvec(ndomains*nbasis,slh);
             elmat = 0; elvec = 0;
 
+            FlatMatrix<SIMD<double>>* topdshapes[tent->els.Size()];
+            for(auto& tds : topdshapes)
+                tds = new FlatMatrix<SIMD<double>>((D+1)*nbasis,sir.Size(),slh);
+
             // Integrate top and bottom space-like tent faces
-            for(auto elnr: tent->els)
+            for(int elnr=0;elnr<tent->els.Size();elnr++)
             {
-                int eli = ma->GetElIndex(ElementId(VOL,elnr));
+                int eli = ma->GetElIndex(ElementId(VOL,tent->els[elnr]));
                 tel.SetWavespeed(wavespeed[eli]);
                 if(ndomains == 1) //tent vertex is inside a domain
                     eli = 0;
                 SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
                 SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
-                CalcTentEl<D>(elnr,tent,tel,ma,wavefront,sir,slh,subm,subv);
+                CalcTentEl<D>(tent->els[elnr],tent,tel,ma,wavefront,sir,slh,subm,subv,*topdshapes[elnr]);
             }
 
             // Integrate boundary tent
@@ -203,7 +216,7 @@ namespace ngcomp
                     Dmat1.Col(D).Range(0,D) = -0.5*TentFaceArea<D>(vert)*n.Range(0,D);
                     Mat<D+1> Dmat2 = -1 * Dmat1;
 
-                    FlatMatrix<double>* bdbmat[4];
+                    FlatMatrix<>* bdbmat[4];
                     for(int i=0;i<4;i++)
                     {
                         bdbmat[i] = new FlatMatrix<>((D+1)*snip,nbasis,slh);
@@ -232,13 +245,13 @@ namespace ngcomp
             FlatVector<> sol(ndomains*nbasis, &elvec(0));
 
             // eval solution on top of tent
-            for(auto elnr: tent->els)
+            for(int elnr=0;elnr<tent->els.Size();elnr++)
             {
-                int eli = ma->GetElIndex(ElementId(VOL,elnr));
+                int eli = ma->GetElIndex(ElementId(VOL,tent->els[elnr]));
                 tel.SetWavespeed(wavespeed[eli]);
                 if(ndomains == 1)
                     eli = 0;
-                CalcTentElEval<D>(elnr, tent, tel, ma, wavefront, sir, slh, sol.Range(eli*nbasis,(eli+1)*nbasis));
+                CalcTentElEval<D>(tent->els[elnr], tent, tel, ma, wavefront, sir, slh, sol.Range(eli*nbasis,(eli+1)*nbasis), *topdshapes[elnr]);
             }
         }); // end loop over tents
         cout << "...done" << endl;
@@ -246,11 +259,11 @@ namespace ngcomp
 
     template<int D>
     void CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma, SliceMatrix<double> &wavefront,
-                    SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
+                    SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes)
     {
         static Timer tint1("tent int top calcdshape",2);
         static Timer tint2("tent int top elmat",2);
-        static Timer tint3("tent int bot calcdshape",2);
+        static Timer tint3("tent int bot calc&calcdshape",2);
         static Timer tint4("tent int bot elvec",2);
 
         HeapReset hr(slh);
@@ -279,7 +292,7 @@ namespace ngcomp
             smir[imip].Point()(D) = mirtimes[imip];
 
         tint1.Start();
-        FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
+        //FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
         tel.CalcDShape(smir,simddshapes);
         FlatMatrix<> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
         tint1.Stop();
@@ -304,8 +317,10 @@ namespace ngcomp
 
         tint3.Start();
         FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
+        FlatMatrix<SIMD<double>> simddshapes2((D+1)*nbasis,sir.Size(),slh);
         tel.CalcShape(smir,simdshapes);
-        tel.CalcDShape(smir,simddshapes);
+        tel.CalcDShape(smir,simddshapes2);
+        FlatMatrix<> bbmat2(nbasis,(D+1)*snip,&simddshapes2(0,0)[0]);
         tint3.Stop();
 
         tint4.Start();
@@ -316,7 +331,7 @@ namespace ngcomp
             for(int r=0;r<(D+1);r++)
                 for(int d=0;d<D+1;d++)
                     bdbvec(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * wavefront(elnr, snip+d*snip+imip);
-        elvec -= bbmat * bdbvec;
+        elvec -= bbmat2 * bdbvec;
 
         // stabilization to recover second order solution
         for(int imip=0;imip<sir.Size();imip++)
@@ -406,7 +421,7 @@ namespace ngcomp
 
 
     template<int D>
-    void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma , SliceMatrix<> &wavefront, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol)
+    void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma , SliceMatrix<> &wavefront, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes)
     {
         HeapReset hr(slh);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
@@ -428,9 +443,9 @@ namespace ngcomp
             smir[imip].Point()(D) = mirtimes[imip];
 
         FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
-        FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
+        //FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
         tel.CalcShape(smir,simdshapes);
-        tel.CalcDShape(smir,simddshapes);
+        //tel.CalcDShape(smir,simddshapes);
         FlatMatrix<> dshapes(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
         FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
 
