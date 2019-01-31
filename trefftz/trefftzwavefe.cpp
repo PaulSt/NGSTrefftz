@@ -196,7 +196,7 @@ namespace ngfem
                     for (size_t j = 0; j <= ord-i; j++)
                         for (size_t k = 0; k <= ord-i-j; k++)
                         {
-                            if((d==0&&i==0)||(d==1&&j==0)||(d==2&&k==0)) 
+                            if((d==0&&i==0)||(d==1&&j==0)||(d==2&&k==0))
                                 pol[ii++] = 0;
                             else
                                 pol[ii++] = polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * (d==0?i:(d==1?j:k));
@@ -230,7 +230,7 @@ namespace ngfem
             }
 
             const coo* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
-            for(int d=0;d<3;d++)
+            for(int d=0;d<4;d++)
             {
                 Vector<SIMD<double>> pol(npoly);
                 for (size_t i = 0, ii = 0; i <=ord; i++)
@@ -238,7 +238,7 @@ namespace ngfem
                         for (size_t k = 0; k <= ord-i-j; k++)
                             for (size_t l = 0; l <= ord-i-j-k; l++)
                             {
-                                if((d==0&&i==0)||(d==1&&j==0)||(d==2&&k==0)||(d==3&&l==0)) 
+                                if((d==0&&i==0)||(d==1&&j==0)||(d==2&&k==0)||(d==3&&l==0))
                                     pol[ii++] = 0;
                                 else
                                     pol[ii++] = polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * polxt[3][l-(d==3)]
