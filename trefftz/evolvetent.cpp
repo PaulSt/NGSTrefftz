@@ -320,10 +320,8 @@ namespace ngcomp
               SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat,
               SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes)
   {
-    static Timer tint1 ("tent int top calcdshape", 2);
-    static Timer tint2 ("tent int top elmat", 2);
-    static Timer tint3 ("tent int bot calc&calcdshape", 2);
-    static Timer tint4 ("tent int bot elvec", 2);
+    static Timer tint1 ("tent int calcshape", 2);
+    static Timer tint2 ("tent int mat&vec", 2);
 
     HeapReset hr (slh);
     const ELEMENT_TYPE eltyp
@@ -353,14 +351,14 @@ namespace ngcomp
     for (int imip = 0; imip < sir.Size (); imip++)
       smir[imip].Point () (D) = mirtimes[imip];
 
-    tint3.Start ();
+    tint1.Start ();
     FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
     tel.CalcShape (smir, simdshapes);
     tel.CalcDShape (smir, simddshapes);
     FlatMatrix<> bbmat (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
-    tint3.Stop ();
+    tint1.Stop ();
 
-    tint4.Start ();
+    tint2.Start ();
     TentDmat<D> (Dmat, vert, -1, wavespeed);
     FlatVector<> bdbvec ((D + 1) * snip, slh);
     bdbvec = 0;
@@ -382,7 +380,7 @@ namespace ngcomp
           *= sqrt (TentFaceArea<D> (vert)) * sqrt (sir[imip].Weight ());
     FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
     elvec += shapes * wavefront.Row (elnr).Range (0, snip);
-    tint4.Stop ();
+    tint2.Stop ();
 
     /// Integration over top of tent
     vert = TentFaceVerts<D> (tent, elnr, ma, 1);
