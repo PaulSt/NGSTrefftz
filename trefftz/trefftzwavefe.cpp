@@ -267,7 +267,7 @@ namespace ngfem
           }
 
         const coo *localmat = TrefftzWaveBasis<4>::getInstance ().TB (ord);
-        for (int d = 0; d < 3; d++)
+        for (int d = 0; d < 4; d++)
           {
             Vector<SIMD<double>> pol (npoly);
             for (size_t i = 0, ii = 0; i <= ord; i++)
