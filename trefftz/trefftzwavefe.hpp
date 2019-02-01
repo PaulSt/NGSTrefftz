@@ -115,26 +115,9 @@ namespace ngfem
     void TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum,
                    int basis, int dim, int &tracker);
     int IndexMap2 (Vec<D, int> index, int ord);
-
-    void MatToCOO (Matrix<> mat, CSR &sparsemat)
-    {
-      int spsize = 0;
-      for (int i = 0; i < mat.Height (); i++)
-        {
-          sparsemat[0].Append (spsize);
-          for (int j = 0; j < mat.Width (); j++)
-            {
-              if (mat (i, j))
-                {
-                  spsize++;
-                  sparsemat[1].Append (j);
-                  sparsemat[2].Append (mat (i, j));
-                }
-            }
-        }
-      sparsemat[0].Append (spsize);
-    };
   };
+
+  void MatToCSR (Matrix<> mat, CSR &sparsemat);
 
 }
 

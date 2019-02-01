@@ -578,7 +578,7 @@ namespace ngfem
               int tracker = 0;
               TB_inner (ord, trefftzbasis, coeff, b, D, tracker);
             }
-          MatToCOO (trefftzbasis, tbstore[ord]);
+          MatToCSR (trefftzbasis, tbstore[ord]);
         }
 
       if (tbstore[ord][0].Size () == 0)
@@ -661,6 +661,26 @@ namespace ngfem
   template class TrefftzWaveBasis<3>;
   template class TrefftzWaveBasis<4>;
 
+  void MatToCSR (Matrix<> mat, CSR &sparsemat)
+  {
+    int spsize = 0;
+    for (int i = 0; i < mat.Height (); i++)
+      {
+        // guarantee sparsemat[0].Size() to be nbasis,
+        // could be shorter but easier for mat*vec
+        sparsemat[0].Append (spsize);
+        for (int j = 0; j < mat.Width (); j++)
+          {
+            if (mat (i, j))
+              {
+                spsize++;
+                sparsemat[1].Append (j);
+                sparsemat[2].Append (mat (i, j));
+              }
+          }
+      }
+    sparsemat[0].Append (spsize);
+  };
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
