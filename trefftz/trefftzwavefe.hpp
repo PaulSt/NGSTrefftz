@@ -7,7 +7,8 @@
 
 namespace ngfem
 {
-  typedef Vec<3, Vector<>> coo; // COO sparse matrix in (row,col,val) format
+  typedef Vec<3, Array<double>>
+      CSR; // CSR sparse matrix in (row,col,val) format
 
   template <int D> class TrefftzWaveFE : public ScalarMappedElement<D>
   {
@@ -100,7 +101,7 @@ namespace ngfem
       return instance;
     }
 
-    const coo *TB (int ord);
+    const CSR *TB (int ord);
 
   private:
     TrefftzWaveBasis () = default;
@@ -109,30 +110,29 @@ namespace ngfem
     TrefftzWaveBasis &operator= (const TrefftzWaveBasis &) = delete;
 
     mutex gentrefftzbasis;
-    Array<coo> tbstore;
+    Array<CSR> tbstore;
     // once_flag tbonceflag;
     void TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum,
                    int basis, int dim, int &tracker);
     int IndexMap2 (Vec<D, int> index, int ord);
 
-    void MatToCOO (Matrix<> mat, coo &sparsemat)
+    void MatToCOO (Matrix<> mat, CSR &sparsemat)
     {
-      int nnonzero = 0;
-      for (auto val : mat.AsVector ())
-        if (val)
-          ++nnonzero;
-      sparsemat[0].SetSize (nnonzero);
-      sparsemat[1].SetSize (nnonzero);
-      sparsemat[2].SetSize (nnonzero);
-      for (int i = 0, counter = 0; i < mat.Height (); i++)
-        for (int j = 0; j < mat.Width (); j++)
-          if (mat (i, j))
+      int spsize = 0;
+      for (int i = 0; i < mat.Height (); i++)
+        {
+          sparsemat[0].Append (spsize);
+          for (int j = 0; j < mat.Width (); j++)
             {
-              sparsemat[0][counter] = i;
-              sparsemat[1][counter] = j;
-              sparsemat[2][counter] = mat (i, j);
-              counter++;
+              if (mat (i, j))
+                {
+                  spsize++;
+                  sparsemat[1].Append (j);
+                  sparsemat[2].Append (mat (i, j));
+                }
             }
+        }
+      sparsemat[0].Append (spsize);
     };
   };
 
