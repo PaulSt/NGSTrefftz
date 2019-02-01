@@ -305,7 +305,7 @@ namespace ngfem
     cpoint[1] *= c;
     // calc 1 dimensional monomial basis
     STACK_ARRAY (double, mem, 2 * (ord + 1));
-    Vec<2, double *> polxt;
+    double *polxt[2];
     for (size_t d = 0; d < 2; d++)
       {
         polxt[d] = &mem[d * (ord + 1)];
@@ -336,7 +336,7 @@ namespace ngfem
     cpoint[2] *= c;
     // calc 1 dimensional monomial basis
     STACK_ARRAY (double, mem, 3 * (ord + 1));
-    Vec<3, double *> polxt;
+    double *polxt[3];
     for (size_t d = 0; d < 3; d++)
       {
         polxt[d] = &mem[d * (ord + 1)];
@@ -368,7 +368,7 @@ namespace ngfem
     cpoint[3] *= c;
     // calc 1 dimensional monomial basis
     STACK_ARRAY (double, mem, 4 * (ord + 1));
-    Vec<4, double *> polxt;
+    double *polxt[4];
     for (size_t d = 0; d < 4; d++)
       {
         polxt[d] = &mem[d * (ord + 1)];
@@ -407,7 +407,7 @@ namespace ngfem
     cpoint[1] *= c;
     // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
     STACK_ARRAY (double, mem, 2 * (ord + 1) + 1);
-    Vec<2, double *> polxt;
+    double *polxt[2];
     for (size_t d = 0; d < 2; d++)
       {
         polxt[d] = &mem[d * (ord + 1) + 1];
@@ -483,7 +483,7 @@ namespace ngfem
     cpoint[3] *= c;
     // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
     STACK_ARRAY (double, mem, 4 * (ord + 1) + 1);
-    Vec<4, double *> polxt;
+    double *polxt[4];
     for (size_t d = 0; d < 4; d++)
       {
         polxt[d] = &mem[d * (ord + 1) + 1];
