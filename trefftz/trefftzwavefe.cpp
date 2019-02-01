@@ -73,7 +73,7 @@ namespace ngfem
                 Monomial (ord, cpoint[d], polxt[d]);
             }
 
-            Vector<SIMD<double>> tempshape(nbasis);
+            //Vector<SIMD<double>> tempshape(nbasis);
             Vector<SIMD<double>> pol(npoly);
 
             for (size_t i = 0, ii = 0; i <= ord; i++)
@@ -81,12 +81,18 @@ namespace ngfem
                     for (size_t k = 0; k <= ord-i-j; k++)
                         pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
 
-            const coo* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
+            //tempshape = 0.0;
+            //for (int i=0; i<(*localmat)[0].Size(); i++)
+                //tempshape[(*localmat)[0][i]] += (*localmat)[2][i]*pol[(*localmat)[1][i]];
+            //for(int b=0;b<nbasis;b++) shape.Col(imip)(b) = tempshape(b);
+            const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
 
-            tempshape = 0.0;
-            for (int i=0; i<(*localmat)[0].Size(); i++)
-                tempshape[(*localmat)[0][i]] += (*localmat)[2][i]*pol[(*localmat)[1][i]];
-            for(int b=0;b<nbasis;b++) shape.Col(imip)(b) = tempshape(b);
+            for (int i=0; i<nbasis; ++i)
+            {
+                shape(i,imip) = 0.0;
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    shape(i,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+            }
         }
     }
 
@@ -108,24 +114,25 @@ namespace ngfem
                 Monomial (ord, cpoint[d], polxt[d]);
             }
 
-            Vector<SIMD<double>> tempshape(nbasis);
             Vector<SIMD<double>> pol(npoly);
-
             for (size_t i = 0, ii = 0; i <= ord; i++)
                 for (size_t j = 0; j <= ord-i; j++)
                     for (size_t k = 0; k <= ord-i-j; k++)
                         for (size_t l = 0; l <= ord-i-j-k; l++)
                             pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
 
-            const coo* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
-            tempshape = 0.0;
-            for (int i=0; i<(*localmat)[0].Size(); i++)
-                tempshape[(*localmat)[0][i]] += (*localmat)[2][i]*pol[(*localmat)[1][i]];
-            for(int b=0;b<nbasis;b++) shape.Col(imip)(b) = tempshape(b);
+            const CSR* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
+            //for (int i=0; i<(*localmat)[0].Size(); i++)
+            //shape(imip, (*localmat)[0][i]) += (*localmat)[2][i]*pol[(*localmat)[1][i]];
+
+            for (int i=0; i<(*localmat)[0].Size()-1; ++i)
+            {
+                shape(i,imip) = 0.0;
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    shape(i,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+            }
         }
     }
-
-
 
     template<>
     void TrefftzWaveFE<1> :: CalcDShape (const SIMD_MappedIntegrationRule<0,1> & smir,
@@ -186,8 +193,7 @@ namespace ngfem
                 Monomial (ord, cpoint[d], polxt[d]);
             }
 
-            //coo localmat = *(TrefftzWaveBasis<3>::getInstance().TB(ord));
-            const coo* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
+            //CSR localmat = *(TrefftzWaveBasis<3>::getInstance().TB(ord));
 
             for(int d=0;d<3;d++)
             {
@@ -202,9 +208,16 @@ namespace ngfem
                                 pol[ii++] = polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * (d==0?i:(d==1?j:k));
                         }
                 Vector<SIMD<double>> tempdshape(nbasis);
-                tempdshape = 0.0;
-                for (int i=0; i<(*localmat)[0].Size(); i++)
-                    tempdshape[(*localmat)[0][i]] += (*localmat)[2][i]*pol[(*localmat)[1][i]];
+                //tempdshape = 0.0;
+                //for (int i=0; i<(*localmat)[0].Size(); i++)
+                    //tempdshape[(*localmat)[0][i]] += (*localmat)[2][i]*pol[(*localmat)[1][i]];
+                const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
+                for (int i=0; i<nbasis; ++i)
+                {
+                    tempdshape[i] = 0.0;
+                    for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                        tempdshape[i] += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+                }
                 for(int n=0;n<nbasis;n++)
                     dshape(n*3+d,imip) = tempdshape(n) * (d==2 ? c : 1);
             }
@@ -229,7 +242,6 @@ namespace ngfem
                 Monomial (ord, cpoint[d], polxt[d]);
             }
 
-            const coo* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
             for(int d=0;d<4;d++)
             {
                 Vector<SIMD<double>> pol(npoly);
@@ -244,10 +256,17 @@ namespace ngfem
                                     pol[ii++] = polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * polxt[3][l-(d==3)]
                                         * (d==0?i:(d==1?j:(d==2?k:l)));
                             }
+
+                const CSR* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
                 Vector<SIMD<double>> tempdshape(nbasis);
-                tempdshape = 0.0;
-                for (int i=0; i<(*localmat)[0].Size(); i++)
-                    tempdshape[(*localmat)[0][i]] += (*localmat)[2][i]*pol[(*localmat)[1][i]];
+                //for (int i=0; i<(*localmat)[0].Size(); i++)
+                //tempdshape[(*localmat)[0][i]] += (*localmat)[2][i]*pol[(*localmat)[1][i]];
+                for (int i=0; i<(*localmat)[0].Size()-1; ++i)
+                {
+                    tempdshape[i] = 0.0;
+                    for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                        tempdshape[i] += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+                }
                 for(int n=0;n<nbasis;n++)
                     dshape(n*4+d,imip) = tempdshape(n) * (d==3 ? c : 1);
             }
@@ -471,7 +490,7 @@ namespace ngfem
 
 
     template<int D>
-    const coo* TrefftzWaveBasis<D> :: TB(int ord)
+    const CSR* TrefftzWaveBasis<D> :: TB(int ord)
     {
         {
             lock_guard<mutex> lock(gentrefftzbasis);
@@ -480,7 +499,7 @@ namespace ngfem
                 int oldsize = tbstore.Size();
                 tbstore.SetSize (ord+1);
                 for (int i = oldsize; i <= ord; i++)
-                    tbstore[i] = coo();
+                    tbstore[i] = CSR();
             }
 
             if ( tbstore[ord][0].Size() == 0)
@@ -507,7 +526,7 @@ namespace ngfem
                 throw Exception (str.str());
             }
         }
-        const coo* tb =& tbstore[ord];
+        const CSR* tb =& tbstore[ord];
         return tb;
     }
 
