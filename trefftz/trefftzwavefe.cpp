@@ -274,11 +274,11 @@ namespace ngfem
         cpoint *= (2.0 / elsize);
         cpoint[3] *= c;
 
-        STACK_ARRAY (SIMD<double>, mem, 4 * (ord + 1));
+        STACK_ARRAY (SIMD<double>, mem, 4 * (ord + 1) + 1);
         Vec<4, SIMD<double> *> polxt;
         for (size_t d = 0; d < 4; d++)
           {
-            polxt[d] = &mem[d * (ord + 1)];
+            polxt[d] = &mem[d * (ord + 1) + 1];
             Monomial (ord, cpoint[d], polxt[d]);
           }
 
@@ -289,16 +289,12 @@ namespace ngfem
               for (size_t j = 0; j <= ord - i; j++)
                 for (size_t k = 0; k <= ord - i - j; k++)
                   for (size_t l = 0; l <= ord - i - j - k; l++)
-                    {
-                      if ((d == 0 && i == 0) || (d == 1 && j == 0)
-                          || (d == 2 && k == 0) || (d == 3 && l == 0))
-                        pol[ii++] = 0;
-                      else
-                        pol[ii++]
-                            = polxt[0][i - (d == 0)] * polxt[1][j - (d == 1)]
-                              * polxt[2][k - (d == 2)] * polxt[3][l - (d == 3)]
-                              * (d == 0 ? i : (d == 1 ? j : (d == 2 ? k : l)));
-                    }
+                    pol[ii++]
+                        = (d == 0 ? i
+                                  : (d == 1 ? j
+                                            : (d == 2 ? k : (d == 3 ? l : 0))))
+                          * polxt[0][i - (d == 0)] * polxt[1][j - (d == 1)]
+                          * polxt[2][k - (d == 2)] * polxt[3][l - (d == 3)];
 
             const CSR *localmat = TrefftzWaveBasis<4>::getInstance ().TB (ord);
             // Vector<SIMD<double>> tempdshape(nbasis);
