@@ -135,7 +135,7 @@ namespace ngfem
     {
         for (int imip = 0; imip < smir.Size(); imip++)
         {
-            Vec<3,SIMD<double>> cpoint = smir[imip].GetPoint();
+            Vec<2,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[1] *= c;
 
             // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
@@ -396,7 +396,7 @@ namespace ngfem
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[2] *= c;
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY(double, mem, 3*(ord+1)+1);
-        Vec<3,double*> polxt;
+        double* polxt[4];
         for(size_t d=0;d<3;d++)
         {
             polxt[d] = &mem[d*(ord+1)+1];
