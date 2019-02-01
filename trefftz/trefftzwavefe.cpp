@@ -28,12 +28,11 @@ namespace ngfem
     void TrefftzWaveFE<2> :: CalcShape (const SIMD_MappedIntegrationRule<1,2> & smir,
                                         BareSliceMatrix<SIMD<double>> shape) const
     {
-        //auto & smir = static_cast<const SIMD_MappedIntegrationRule<D-1,D>&> (mir);
         for (int imip = 0; imip < smir.Size(); imip++)
         {
             Vec<2,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[1] *= c;
-
+            // calc 1 dimensional monomial basis
             STACK_ARRAY(SIMD<double>, mem, 2*(ord+1));
             Vec<2,SIMD<double>*> polxt;
             for(size_t d=0;d<2;d++)
@@ -41,17 +40,19 @@ namespace ngfem
                 polxt[d] = &mem[d*(ord+1)];
                 Monomial (ord, cpoint[d], polxt[d]);
             }
-
-            Vector<SIMD<double>> tempshape(nbasis);
+            // calc D+1 dimenional monomial basis
             Vector<SIMD<double>> pol(npoly);
-
             for (size_t i = 0, ii = 0; i <= ord; i++)
                 for (size_t j = 0; j <= ord-i; j++)
                     pol[ii++] = polxt[0][i] * polxt[1][j];
-
-            //Matrix<> localmat = *(TrefftzWaveBasis<2>::getInstance().TB(ord));
-            //tempshape = localmat * pol;
-            for(int b=0;b<nbasis;b++) shape.Col(imip)(b) = tempshape(b);
+            // TB*monomials for trefftz shape fcts
+            const CSR* localmat = TrefftzWaveBasis<2>::getInstance().TB(ord);
+            for (int i=0; i<nbasis; ++i)
+            {
+                shape(i,imip) = 0.0;
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    shape(i,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+            }
         }
     }
 
@@ -59,12 +60,11 @@ namespace ngfem
     void TrefftzWaveFE<3> :: CalcShape (const SIMD_MappedIntegrationRule<2,3> & smir,
                                         BareSliceMatrix<SIMD<double>> shape) const
     {
-        //auto & smir = static_cast<const SIMD_MappedIntegrationRule<D-1,D>&> (mir);
         for (int imip = 0; imip < smir.Size(); imip++)
         {
             Vec<3,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[2] *= c;
-
+            // calc 1 dimensional monomial basis
             STACK_ARRAY(SIMD<double>, mem, 3*(ord+1));
             Vec<3,SIMD<double>*> polxt;
             for(size_t d=0;d<3;d++)
@@ -72,21 +72,14 @@ namespace ngfem
                 polxt[d] = &mem[d*(ord+1)];
                 Monomial (ord, cpoint[d], polxt[d]);
             }
-
-            //Vector<SIMD<double>> tempshape(nbasis);
+            // calc D+1 dimenional monomial basis
             Vector<SIMD<double>> pol(npoly);
-
             for (size_t i = 0, ii = 0; i <= ord; i++)
                 for (size_t j = 0; j <= ord-i; j++)
                     for (size_t k = 0; k <= ord-i-j; k++)
                         pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
-
-            //tempshape = 0.0;
-            //for (int i=0; i<(*localmat)[0].Size(); i++)
-                //tempshape[(*localmat)[0][i]] += (*localmat)[2][i]*pol[(*localmat)[1][i]];
-            //for(int b=0;b<nbasis;b++) shape.Col(imip)(b) = tempshape(b);
+            // TB*monomials for trefftz shape fcts
             const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
-
             for (int i=0; i<nbasis; ++i)
             {
                 shape(i,imip) = 0.0;
@@ -105,7 +98,7 @@ namespace ngfem
         {
             Vec<4,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[3] *= c;
-
+            // calc 1 dimensional monomial basis
             STACK_ARRAY(SIMD<double>, mem, 4*(ord+1));
             Vec<4,SIMD<double>*> polxt;
             for(size_t d=0;d<4;d++)
@@ -113,19 +106,16 @@ namespace ngfem
                 polxt[d] = &mem[d*(ord+1)];
                 Monomial (ord, cpoint[d], polxt[d]);
             }
-
+            // calc D+1 dimenional monomial basis
             Vector<SIMD<double>> pol(npoly);
             for (size_t i = 0, ii = 0; i <= ord; i++)
                 for (size_t j = 0; j <= ord-i; j++)
                     for (size_t k = 0; k <= ord-i-j; k++)
                         for (size_t l = 0; l <= ord-i-j-k; l++)
                             pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
-
+            // TB*monomials for trefftz shape fcts
             const CSR* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
-            //for (int i=0; i<(*localmat)[0].Size(); i++)
-            //shape(imip, (*localmat)[0][i]) += (*localmat)[2][i]*pol[(*localmat)[1][i]];
-
-            for (int i=0; i<(*localmat)[0].Size()-1; ++i)
+            for (int i=0; i<nbasis; ++i)
             {
                 shape(i,imip) = 0.0;
                 for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
@@ -145,33 +135,34 @@ namespace ngfem
     {
         for (int imip = 0; imip < smir.Size(); imip++)
         {
-            Vec<2,SIMD<double>> cpoint = smir[imip].GetPoint();
+            Vec<3,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[1] *= c;
 
-            STACK_ARRAY(SIMD<double>, mem, 2*(ord+1));
+            // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+            STACK_ARRAY(SIMD<double>, mem, 2*(ord+1)+1);
             Vec<2,SIMD<double>*> polxt;
             for(size_t d=0;d<2;d++)
             {
-                polxt[d] = &mem[d*(ord+1)];
+                polxt[d] = &mem[d*(ord+1)+1];
                 Monomial (ord, cpoint[d], polxt[d]);
             }
 
-            //Matrix<> localmat = *(TrefftzWaveBasis<2>::getInstance().TB(ord));
-            //Vector<SIMD<double>> tempdshape(nbasis);
-            //for(int d=0;d<2;d++)
-            //{
-            //tempdshape=0;
-            //for (size_t i = 0, ii = 0; i <=ord; i++)
-            //for (size_t j = 0; j <= ord-i; j++)
-            //{
-            //ii++;
-            //if((d==0&&i==0)||(d==1&&j==0)) continue;
-            //SIMD<double> pol = polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * (d==0?i:j);
-            //tempdshape += pol * localmat.Col(ii-1);
-            //}
-            //for(int n=0;n<nbasis;n++)
-            //dshape(n*2+d,imip) = tempdshape(n) * (d==1 ? c : 1);
-            //}
+            for(int d=0;d<2;d++)
+            {
+                Vector<SIMD<double>> pol(npoly);
+                for (size_t i = 0, ii = 0; i <=ord; i++)
+                    for (size_t j = 0; j <= ord-i; j++)
+                        pol[ii++] = (d==0?i:(d==1?j:0))
+                            * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
+
+                const CSR* localmat = TrefftzWaveBasis<2>::getInstance().TB(ord);
+                for (int i=0; i<nbasis; ++i)
+                {
+                    dshape(i*2+d,imip) = 0.0;
+                    for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                        dshape(i*2+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (d==1 ? c : 1);
+                }
+            }
         }
         dshape *= (2.0/elsize); //inner derivative
     }
@@ -185,15 +176,14 @@ namespace ngfem
             Vec<3,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[2] *= c;
 
-            STACK_ARRAY(SIMD<double>, mem, 3*(ord+1));
+            // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+            STACK_ARRAY(SIMD<double>, mem, 3*(ord+1)+1);
             Vec<3,SIMD<double>*> polxt;
             for(size_t d=0;d<3;d++)
             {
-                polxt[d] = &mem[d*(ord+1)];
+                polxt[d] = &mem[d*(ord+1)+1];
                 Monomial (ord, cpoint[d], polxt[d]);
             }
-
-            //CSR localmat = *(TrefftzWaveBasis<3>::getInstance().TB(ord));
 
             for(int d=0;d<3;d++)
             {
@@ -201,25 +191,16 @@ namespace ngfem
                 for (size_t i = 0, ii = 0; i <=ord; i++)
                     for (size_t j = 0; j <= ord-i; j++)
                         for (size_t k = 0; k <= ord-i-j; k++)
-                        {
-                            if((d==0&&i==0)||(d==1&&j==0)||(d==2&&k==0))
-                                pol[ii++] = 0;
-                            else
-                                pol[ii++] = polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * (d==0?i:(d==1?j:k));
-                        }
-                //Vector<SIMD<double>> tempdshape(nbasis);
-                //tempdshape = 0.0;
-                //for (int i=0; i<(*localmat)[0].Size(); i++)
-                    //tempdshape[(*localmat)[0][i]] += (*localmat)[2][i]*pol[(*localmat)[1][i]];
+                            pol[ii++] = (d==0?i:(d==1?j:(d==2?k:0)))
+                                * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)];
+
                 const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
                 for (int i=0; i<nbasis; ++i)
                 {
                     dshape(i*3+d,imip) = 0.0;
                     for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                        dshape(i*3+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (d==2 ? c : 1);;
+                        dshape(i*3+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (d==2 ? c : 1);
                 }
-                //for(int n=0;n<nbasis;n++)
-                    //dshape(n*3+d,imip) = tempdshape(n) * (d==2 ? c : 1);
             }
         }
         dshape *= (2.0/elsize); //inner derivative
@@ -234,6 +215,7 @@ namespace ngfem
             Vec<4,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[3] *= c;
 
+            // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
             STACK_ARRAY(SIMD<double>, mem, 4*(ord+1)+1);
             Vec<4,SIMD<double>*> polxt;
             for(size_t d=0;d<4;d++)
@@ -249,25 +231,21 @@ namespace ngfem
                     for (size_t j = 0; j <= ord-i; j++)
                         for (size_t k = 0; k <= ord-i-j; k++)
                             for (size_t l = 0; l <= ord-i-j-k; l++)
-                                pol[ii++] = (d==0?i:(d==1?j:(d==2?k:(d==3?l:0)))) 
+                                pol[ii++] = (d==0?i:(d==1?j:(d==2?k:(d==3?l:0))))
                                     * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * polxt[3][l-(d==3)];
 
                 const CSR* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
-                //Vector<SIMD<double>> tempdshape(nbasis);
-                //for (int i=0; i<(*localmat)[0].Size(); i++)
-                //tempdshape[(*localmat)[0][i]] += (*localmat)[2][i]*pol[(*localmat)[1][i]];
                 for (int i=0; i<nbasis; ++i)
                 {
                     dshape(i*4+d,imip) = 0.0;
                     for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                        dshape(i*4+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (d==3 ? c : 1);;
+                        dshape(i*4+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (d==3 ? c : 1);
                 }
-                //for(int n=0;n<nbasis;n++)
-                //dshape(n*4+d,imip) = tempdshape(n) * (d==3 ? c : 1);
             }
         }
         dshape *= (2.0/elsize); //inner derivative
     }
+
 
     /////////////// non-simd
 
@@ -284,7 +262,7 @@ namespace ngfem
         //auto & smir = static_cast<const SIMD_MappedIntegrationRule<D-1,D>&> (mir);
         Vec<2> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[1] *= c;
-
+        // calc 1 dimensional monomial basis
         STACK_ARRAY(double, mem, 2*(ord+1));
         Vec<2,double*> polxt;
         for(size_t d=0;d<2;d++)
@@ -292,27 +270,28 @@ namespace ngfem
             polxt[d] = &mem[d*(ord+1)];
             Monomial (ord, cpoint[d], polxt[d]);
         }
-
-        Vector<> tempshape(nbasis);
-        Vector<> pol(npoly);
-
+        // calc D+1 dimenional monomial basis
+        Vector<double> pol(npoly);
         for (size_t i = 0, ii = 0; i <= ord; i++)
             for (size_t j = 0; j <= ord-i; j++)
                 pol[ii++] = polxt[0][i] * polxt[1][j];
-
-        //Matrix<> localmat = *(TrefftzWaveBasis<2>::getInstance().TB(ord));
-        //tempshape = localmat * pol;
-        for(int b=0;b<nbasis;b++) shape(b) = tempshape(b);
+        // TB*monomials for trefftz shape fcts
+        const CSR* localmat = TrefftzWaveBasis<2>::getInstance().TB(ord);
+        for (int i=0; i<nbasis; ++i)
+        {
+            shape(i) = 0.0;
+            for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                shape(i) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+        }
     }
 
     template<>
     void TrefftzWaveFE<3> :: CalcShape (const BaseMappedIntegrationPoint & mip,
                                         BareSliceVector<> shape) const
     {
-        //auto & smir = static_cast<const SIMD_MappedIntegrationRule<D-1,D>&> (mir);
         Vec<3> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[2] *= c;
-
+        // calc 1 dimensional monomial basis
         STACK_ARRAY(double, mem, 3*(ord+1));
         Vec<3,double*> polxt;
         for(size_t d=0;d<3;d++)
@@ -320,28 +299,29 @@ namespace ngfem
             polxt[d] = &mem[d*(ord+1)];
             Monomial (ord, cpoint[d], polxt[d]);
         }
-
-        Vector<> tempshape(nbasis);
-        Vector<> pol(npoly);
-
+        // calc D+1 dimenional monomial basis
+        Vector<double> pol(npoly);
         for (size_t i = 0, ii = 0; i <= ord; i++)
             for (size_t j = 0; j <= ord-i; j++)
                 for (size_t k = 0; k <= ord-i-j; k++)
                     pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
-
-        //Matrix<> localmat = *(TrefftzWaveBasis<3>::getInstance().TB(ord));
-        //tempshape = localmat * pol;
-        for(int b=0;b<nbasis;b++) shape(b) = tempshape(b);
+        // TB*monomials for trefftz shape fcts
+        const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
+        for (int i=0; i<nbasis; ++i)
+        {
+            shape(i) = 0.0;
+            for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                shape(i) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+        }
     }
 
     template<>
     void TrefftzWaveFE<4> :: CalcShape (const BaseMappedIntegrationPoint & mip,
                                         BareSliceVector<> shape) const
     {
-        //auto & smir = static_cast<const SIMD_MappedIntegrationRule<D-1,D>&> (mir);
         Vec<4> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[3] *= c;
-
+        // calc 1 dimensional monomial basis
         STACK_ARRAY(double, mem, 4*(ord+1));
         Vec<4,double*> polxt;
         for(size_t d=0;d<4;d++)
@@ -349,20 +329,21 @@ namespace ngfem
             polxt[d] = &mem[d*(ord+1)];
             Monomial (ord, cpoint[d], polxt[d]);
         }
-
-        Vector<> tempshape(nbasis);
-        Vector<> pol(npoly);
-        pol= 1;
-
+        // calc D+1 dimenional monomial basis
+        Vector<double> pol(npoly);
         for (size_t i = 0, ii = 0; i <= ord; i++)
             for (size_t j = 0; j <= ord-i; j++)
                 for (size_t k = 0; k <= ord-i-j; k++)
                     for (size_t l = 0; l <= ord-i-j-k; l++)
                         pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
-
-        //Matrix<> localmat = *(TrefftzWaveBasis<4>::getInstance().TB(ord));
-        //tempshape = localmat * pol;
-        for(int b=0;b<nbasis;b++) shape(b) = tempshape(b);
+        // TB*monomials for trefftz shape fcts
+        const CSR* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
+        for (int i=0; i<nbasis; ++i)
+        {
+            shape(i) = 0.0;
+            for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                shape(i) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+        }
     }
 
 
@@ -378,32 +359,33 @@ namespace ngfem
     {
         Vec<2> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[1] *= c;
-
-        STACK_ARRAY(double, mem, 2*(ord+1));
+        // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+        STACK_ARRAY(double, mem, 2*(ord+1)+1);
         Vec<2,double*> polxt;
         for(size_t d=0;d<2;d++)
         {
-            polxt[d] = &mem[d*(ord+1)];
+            polxt[d] = &mem[d*(ord+1)+1];
             Monomial (ord, cpoint[d], polxt[d]);
         }
 
-        //Matrix<> localmat = *(TrefftzWaveBasis<2>::getInstance().TB(ord));
-        //Vector<> tempdshape(nbasis);
-        //for(int d=0;d<2;d++)
-        //{
-        //tempdshape=0;
-        //for (size_t i = 0, ii = 0; i <=ord; i++)
-        //for (size_t j = 0; j <= ord-i; j++)
-        //{
-        //ii++;
-        //if((d==0&&i==0)||(d==1&&j==0)) continue;
-        //double pol = polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * (d==0?i:j);
-        //tempdshape += pol * localmat.Col(ii-1);
-        //}
-        //dshape.Col(d) = tempdshape;
-        //}
-        dshape.Col(1) *= c; //inner derivative
+        for(int d=0;d<2;d++)
+        {
+            Vector<double> pol(npoly);
+            for (size_t i = 0, ii = 0; i <=ord; i++)
+                for (size_t j = 0; j <= ord-i; j++)
+                    pol[ii++] = (d==0?i:(d==1?j:0))
+                        * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
+
+            const CSR* localmat = TrefftzWaveBasis<2>::getInstance().TB(ord);
+            for (int i=0; i<nbasis; ++i)
+            {
+                dshape(i,d) = 0.0;
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+            }
+        }
         dshape *= (2.0/elsize); //inner derivative
+        dshape.Col(1) *= c; //inner derivative
     }
 
     template<>
@@ -412,33 +394,34 @@ namespace ngfem
     {
         Vec<3> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[2] *= c;
-
-        STACK_ARRAY(double, mem, 3*(ord+1));
+        // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+        STACK_ARRAY(double, mem, 3*(ord+1)+1);
         Vec<3,double*> polxt;
         for(size_t d=0;d<3;d++)
         {
-            polxt[d] = &mem[d*(ord+1)];
+            polxt[d] = &mem[d*(ord+1)+1];
             Monomial (ord, cpoint[d], polxt[d]);
         }
 
-        //Matrix<> localmat = *(TrefftzWaveBasis<3>::getInstance().TB(ord));
-        //Vector<> tempdshape(nbasis);
-        //for(int d=0;d<3;d++)
-        //{
-        //tempdshape=0;
-        //for (size_t i = 0, ii = 0; i <=ord; i++)
-        //for (size_t j = 0; j <= ord-i; j++)
-        //for (size_t k = 0; k <= ord-i-j; k++)
-        //{
-        //ii++;
-        //if((d==0&&i==0)||(d==1&&j==0)||(d==2&&k==0)) continue;
-        //double pol = polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * (d==0?i:(d==1?j:k));
-        //tempdshape += pol * localmat.Col(ii-1);
-        //}
-        //dshape.Col(d) = tempdshape;
-        //}
-        dshape.Col(2) *= c; //inner derivative
+        for(int d=0;d<3;d++)
+        {
+            Vector<double> pol(npoly);
+            for (size_t i = 0, ii = 0; i <=ord; i++)
+                for (size_t j = 0; j <= ord-i; j++)
+                    for (size_t k = 0; k <= ord-i-j; k++)
+                        pol[ii++] = (d==0?i:(d==1?j:(d==2?k:0)))
+                            * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)];
+
+            const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
+            for (int i=0; i<nbasis; ++i)
+            {
+                dshape(i,d) = 0.0;
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+            }
+        }
         dshape *= (2.0/elsize); //inner derivative
+        dshape.Col(2) *= c; //inner derivative
     }
 
     template<>
@@ -447,35 +430,35 @@ namespace ngfem
     {
         Vec<4> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[3] *= c;
-
-        STACK_ARRAY(double, mem, 4*(ord+1));
+        // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+        STACK_ARRAY(double, mem, 4*(ord+1)+1);
         Vec<4,double*> polxt;
         for(size_t d=0;d<4;d++)
         {
-            polxt[d] = &mem[d*(ord+1)];
+            polxt[d] = &mem[d*(ord+1)+1];
             Monomial (ord, cpoint[d], polxt[d]);
         }
 
-        //Matrix<> localmat = *(TrefftzWaveBasis<4>::getInstance().TB(ord));
-        //Vector<> tempdshape(nbasis);
-        //for(int d=0;d<4;d++)
-        //{
-        //tempdshape=0;
-        //for (size_t i = 0, ii = 0; i <=ord; i++)
-        //for (size_t j = 0; j <= ord-i; j++)
-        //for (size_t k = 0; k <= ord-i-j; k++)
-        //for (size_t l = 0; l <= ord-i-j-k; l++)
-        //{
-        //ii++;
-        //if((d==0&&i==0)||(d==1&&j==0)||(d==2&&k==0)||(d==3&&l==0)) continue;
-        //double pol = polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * polxt[3][l-(d==3)]
-        //* (d==0?i:(d==1?j:(d==2?k:l)));
-        //tempdshape += pol * localmat.Col(ii-1);
-        //}
-        //dshape.Col(d) = tempdshape;
-        //}
-        dshape.Col(3) *= c; //inner derivative
+        for(int d=0;d<4;d++)
+        {
+            Vector<double> pol(npoly);
+            for (size_t i = 0, ii = 0; i <=ord; i++)
+                for (size_t j = 0; j <= ord-i; j++)
+                    for (size_t k = 0; k <= ord-i-j; k++)
+                        for (size_t l = 0; l <= ord-i-j-k; l++)
+                            pol[ii++] = (d==0?i:(d==1?j:(d==2?k:(d==3?l:0))))
+                                * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * polxt[3][l-(d==3)];
+
+            const CSR* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
+            for (int i=0; i<nbasis; ++i)
+            {
+                dshape(i,d) = 0.0;
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+            }
+        }
         dshape *= (2.0/elsize); //inner derivative
+        dshape.Col(3) *= c; //inner derivative
     }
 
     template class TrefftzWaveFE<1>;
