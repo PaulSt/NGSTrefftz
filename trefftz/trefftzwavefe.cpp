@@ -207,19 +207,19 @@ namespace ngfem
                             else
                                 pol[ii++] = polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * (d==0?i:(d==1?j:k));
                         }
-                Vector<SIMD<double>> tempdshape(nbasis);
+                //Vector<SIMD<double>> tempdshape(nbasis);
                 //tempdshape = 0.0;
                 //for (int i=0; i<(*localmat)[0].Size(); i++)
                     //tempdshape[(*localmat)[0][i]] += (*localmat)[2][i]*pol[(*localmat)[1][i]];
                 const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
                 for (int i=0; i<nbasis; ++i)
                 {
-                    tempdshape[i] = 0.0;
+                    dshape(i*3+d,imip) = 0.0;
                     for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                        tempdshape[i] += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+                        dshape(i*3+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (d==2 ? c : 1);;
                 }
-                for(int n=0;n<nbasis;n++)
-                    dshape(n*3+d,imip) = tempdshape(n) * (d==2 ? c : 1);
+                //for(int n=0;n<nbasis;n++)
+                    //dshape(n*3+d,imip) = tempdshape(n) * (d==2 ? c : 1);
             }
         }
         dshape *= (2.0/elsize); //inner derivative
@@ -258,17 +258,17 @@ namespace ngfem
                             }
 
                 const CSR* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
-                Vector<SIMD<double>> tempdshape(nbasis);
+                //Vector<SIMD<double>> tempdshape(nbasis);
                 //for (int i=0; i<(*localmat)[0].Size(); i++)
                 //tempdshape[(*localmat)[0][i]] += (*localmat)[2][i]*pol[(*localmat)[1][i]];
-                for (int i=0; i<(*localmat)[0].Size()-1; ++i)
+                for (int i=0; i<nbasis; ++i)
                 {
-                    tempdshape[i] = 0.0;
+                    dshape(i*4+d,imip) = 0.0;
                     for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                        tempdshape[i] += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+                        dshape(i*4+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (d==3 ? c : 1);;
                 }
-                for(int n=0;n<nbasis;n++)
-                    dshape(n*4+d,imip) = tempdshape(n) * (d==3 ? c : 1);
+                //for(int n=0;n<nbasis;n++)
+                    //dshape(n*4+d,imip) = tempdshape(n) * (d==3 ? c : 1);
             }
         }
         dshape *= (2.0/elsize); //inner derivative
