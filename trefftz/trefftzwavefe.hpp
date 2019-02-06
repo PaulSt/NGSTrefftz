@@ -7,6 +7,8 @@
 
 namespace ngfem
 {
+    typedef Vec<3,Array<double>> CSR; // CSR sparse matrix in (row,col,val) format
+
     template <int D>
     class TrefftzWaveFE : public ScalarMappedElement<D>
     {
@@ -92,7 +94,7 @@ namespace ngfem
                 return instance;
             }
 
-            const Matrix<>* TB(int ord);
+            const CSR* TB(int ord);
 
         private:
             TrefftzWaveBasis()= default;
@@ -101,11 +103,14 @@ namespace ngfem
             TrefftzWaveBasis& operator=(const TrefftzWaveBasis&)= delete;
 
             mutex gentrefftzbasis;
-            Array<Matrix<>> tbstore;
+            Array<CSR> tbstore;
             //once_flag tbonceflag;
             void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis, int dim, int &tracker);
             int IndexMap2(Vec<D, int> index, int ord);
     };
+
+            void MatToCSR(Matrix<> mat, CSR &sparsemat);
+
 }
 
 
