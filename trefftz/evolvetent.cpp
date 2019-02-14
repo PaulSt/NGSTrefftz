@@ -1,11 +1,4 @@
 #include "evolvetent.hpp"
-#include "trefftzwavefe.hpp"
-#include "tents/tents.hpp"
-#include <comp.hpp> // provides FESpace, ...
-#include <h1lofe.hpp>
-#include <regex>
-#include <fem.hpp>
-#include <multigrid.hpp>
 
 namespace ngcomp
 {

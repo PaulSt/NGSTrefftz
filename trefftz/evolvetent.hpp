@@ -2,9 +2,6 @@
 #define FILE_TESTPYTHON_HPP
 #include <comp.hpp> // provides FESpace, ...
 #include <h1lofe.hpp>
-#include <regex>
-#include <fem.hpp>
-#include <multigrid.hpp>
 #include "tents/tents.hpp"
 #include "trefftzwavefe.hpp"
 
