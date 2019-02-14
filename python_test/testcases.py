@@ -71,26 +71,26 @@ def gausspw(D, wavespeed):
 def vertgausspw(D, wavespeed):
     t = CoordCF(D)
     k = 1
-    delta = 1000
+    delta = 0.07
     if(D==1):
         sol = CoefficientFunction((
-            exp( -delta*((x-0.25)*(x-0.25)) ),
-            -2*delta * (x-0.25) * exp( -delta*((x-0.25)*(x-0.25)) ),
+            exp( -(1/(delta*delta))*((x-0.25)*(x-0.25)) ),
+            -2*(1/(delta*delta)) * (x-0.25) * exp( -(1/(delta*delta))*((x-0.25)*(x-0.25)) ),
             0
             ))
         return sol
     elif(D==2):
         sol = CoefficientFunction((
-            exp(-delta*((x-0.25)*(x-0.25)) ),
-            -2*delta * (x-0.25) * exp(-delta*((x-0.25)*(x-0.25)) ),
+            exp(-(1/(delta*delta))*((x-0.25)*(x-0.25)) ),
+            -2*(1/(delta*delta))* (x-0.25) * exp(-(1/(delta*delta))*((x-0.25)*(x-0.25)) ),
             0,
             0
             ))
         return sol
     elif(D==3):
         sol = CoefficientFunction((
-            exp(-delta*((x-0.25)*(x-0.25)) ),
-            -2*delta * (x-0.25) * exp(-delta*((x-0.25)*(x-0.25)) ),
+            exp(-(1/(delta*delta))*((x-0.25)*(x-0.25)) ),
+            -2*(1/(delta*delta))* (x-0.25) * exp(-(1/(delta*delta))*((x-0.25)*(x-0.25)) ),
             0,
             0,
             0
