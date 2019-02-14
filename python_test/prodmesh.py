@@ -182,6 +182,7 @@ def CartSquare(N,t_steps):
 	# print("boundaries" + str(mesh.GetBoundaries()))
 	return mesh
 
+
 def LshapeMesh(maxh = 0.5, mp=0):
     geo = ngeom2d.SplineGeometry()
     p1 = geo.AppendPoint (0,0)
@@ -190,6 +191,27 @@ def LshapeMesh(maxh = 0.5, mp=0):
     p4 = geo.AppendPoint (1,0.5)
     p5 = geo.AppendPoint (1,1)
     p6 = geo.AppendPoint (0,1)
+    geo.Append (["line", p1, p2])
+    geo.Append (["line", p2, p3])
+    geo.Append (["line", p3, p4])
+    geo.Append (["line", p4, p5])
+    geo.Append (["line", p5, p6])
+    geo.Append (["line", p6, p1])
+    if(mp==0):
+        mesh = geo.GenerateMesh (maxh=maxh)
+    if(mp!=0):
+        mesh = geo.GenerateMesh(mp=mp)
+    return mesh
+
+
+def oLshapeMesh(maxh = 0.5, mp=0):
+    geo = ngeom2d.SplineGeometry()
+    p1 = geo.AppendPoint (0,0)
+    p2 = geo.AppendPoint (0,-0.5)
+    p3 = geo.AppendPoint (0.5,-0.5)
+    p4 = geo.AppendPoint (0.5,0.5)
+    p5 = geo.AppendPoint (-0.5,0.5)
+    p6 = geo.AppendPoint (-0.5,0)
     geo.Append (["line", p1, p2])
     geo.Append (["line", p2, p3])
     geo.Append (["line", p3, p4])

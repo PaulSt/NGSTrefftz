@@ -125,3 +125,30 @@ def standingwave(D, wavespeed):
             cos(math.pi*x)*cos(math.pi*y)*cos(math.pi*z)*cos(math.pi*t*wavespeed*sq)*wavespeed
             ))
         return sol
+
+import ngsolve.special_functions
+
+
+def singular(D, wavespeed):
+    t = CoordCF(D)
+    r2 = ((x)*(x)+(y)*(y))
+    r = sqrt((x)*(x)+(y)*(y))
+    at2=2*atan((y)/(r+(x)))
+    at2x=-y/r2
+    at2y=x/r2
+    theta = at2 #atan2(y,x)
+    alp = 3/2
+    bessel = ngsolve.special_functions.jv(z=r, v=alp)
+    besselder = (ngsolve.special_functions.jv(z=r, v=alp-1)-ngsolve.special_functions.jv(z=r, v=alp+1))/2
+
+    sol = CoefficientFunction((
+        cos(t)*sin(alp*at2)*bessel, 
+        cos(t)*cos(alp*at2)*alp*at2x*besselder*x/r, 
+        cos(t)*cos(alp*at2)*alp*at2y*besselder*y/r, 
+        sin(t)*sin(alp*at2)*bessel
+            ))
+    return sol
+    # cos(2*math.pi*t) * sin((2./3)*theta) * r2**(1./3),
+    # cos(2*math.pi*t) * cos((2./3)*theta)*(2./3)*(1./(1+((y)/(x))**2))*((x)**(-1)) * (2./3)*r2**(-2./3)*(x),
+    # cos(2*math.pi*t) * cos((2./3)*theta)*(2./3)*(1./(1+((y)/(x))**2))*(y)*(-(x)**(-2)) * (2./3)*r2**(-2./3)*(y),
+    # -2*math.pi*sin(2*math.pi*t) * sin((2/3)*theta) * r2**(1./3)
