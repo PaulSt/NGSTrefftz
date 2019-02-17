@@ -9,6 +9,7 @@ typedef moodycamel::ProducerToken TPToken;
 typedef moodycamel::ConsumerToken TCToken;
 
 static TQueue queue;
+using namespace ngstd;
 
 template <typename TFUNC>
 void RunParallelDependency (const Table<int> &dag, TFUNC func)

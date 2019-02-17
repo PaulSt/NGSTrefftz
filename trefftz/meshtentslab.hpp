@@ -1,12 +1,13 @@
 #ifndef FILE_MESHTENTSLAB_HPP
 #define FILE_MESHTENTSLAB_HPP
 
-#include <comp.hpp> // provides FESpace, ...
+#include <solve.hpp>
 #include <h1lofe.hpp>
 #include <regex>
 #include <fem.hpp>
 #include <multigrid.hpp>
 #include "tents/tents.hpp"
+#include "trefftzwavefe.hpp"
 
 namespace ngcomp
 {

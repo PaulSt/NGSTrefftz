@@ -1,6 +1,7 @@
 #ifndef FILE_TESTPYTHON_HPP
 #define FILE_TESTPYTHON_HPP
-#include <comp.hpp> // provides FESpace, ...
+//#include <comp.hpp>    // provides FESpace, ...
+#include <solve.hpp>
 #include <h1lofe.hpp>
 #include "tents/tents.hpp"
 #include "trefftzwavefe.hpp"
