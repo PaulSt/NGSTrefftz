@@ -2,20 +2,21 @@
 #define PARALLELDEPEND_HPP_INCUDED
 
 #include <solve.hpp>
-#include "concurrentqueue.h" 
+#include "concurrentqueue.h"
 
-typedef moodycamel::ConcurrentQueue<int> TQueue; 
-typedef moodycamel::ProducerToken TPToken; 
-typedef moodycamel::ConsumerToken TCToken; 
-  
+typedef moodycamel::ConcurrentQueue<int> TQueue;
+typedef moodycamel::ProducerToken TPToken;
+typedef moodycamel::ConsumerToken TCToken;
+
 static TQueue queue;
+using namespace ngstd;
 
 template <typename TFUNC>
 void RunParallelDependency (const Table<int> & dag, TFUNC func)
 {
   Array<atomic<int>> cnt_dep(dag.Size());
 
-  for (auto & d : cnt_dep) 
+  for (auto & d : cnt_dep)
     d.store (0, memory_order_relaxed);
 
 
@@ -25,7 +26,7 @@ void RunParallelDependency (const Table<int> & dag, TFUNC func)
 		 for (int j : dag[i])
 		   cnt_dep[j]++;
 	       });
-    
+
 
   Array<int> ready(dag.Size());
   ready.SetSize0();
@@ -64,12 +65,12 @@ void RunParallelDependency (const Table<int> & dag, TFUNC func)
   // double starttime = omp_get_wtime();
 
 
-  task_manager -> CreateJob 
+  task_manager -> CreateJob
     ([&] (const TaskInfo & ti)
      {
-       TPToken ptoken(queue); 
-       TCToken ctoken(queue); 
-        
+       TPToken ptoken(queue);
+       TCToken ctoken(queue);
+
        for (int i : sl)
 	 queue.enqueue (ptoken, ready[i]);
 
@@ -78,10 +79,10 @@ void RunParallelDependency (const Table<int> & dag, TFUNC func)
 	   if (cnt_final >= num_final) break;
 
 	   int nr;
-	   if(!queue.try_dequeue_from_producer(ptoken, nr)) 
-	     if(!queue.try_dequeue(ctoken, nr))  
-	       continue; 
-             
+	   if(!queue.try_dequeue_from_producer(ptoken, nr))
+	     if(!queue.try_dequeue(ctoken, nr))
+	       continue;
+
 	   if (dag[nr].Size() == 0)
 	     cnt_final++;
 
@@ -101,15 +102,15 @@ void RunParallelDependency (const Table<int> & dag, TFUNC func)
 
   for (int i : ready)
   queue.Push(i);
-    
-  task_manager -> CreateJob 
+
+  task_manager -> CreateJob
   ([&] (const TaskInfo & ti)
   {
   while (1)
   {
   int nr;
   if (!queue.Pop(nr)) break;
-             
+
   func(nr);
 
   for (int j : dag[nr])
@@ -118,7 +119,7 @@ void RunParallelDependency (const Table<int> & dag, TFUNC func)
   queue.Push (j);
   }
   }
-  ptqend[ti.task_nr] = omp_get_wtime();         
+  ptqend[ti.task_nr] = omp_get_wtime();
   });
   */
 }

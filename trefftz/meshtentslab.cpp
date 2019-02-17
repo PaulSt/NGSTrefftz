@@ -1,11 +1,4 @@
 #include "meshtentslab.hpp"
-#include "trefftzwavefe.hpp"
-#include "tents/tents.hpp"
-#include <comp.hpp>    // provides FESpace, ...
-#include <h1lofe.hpp>
-#include <regex>
-#include <fem.hpp>
-#include <multigrid.hpp>
 
 
 namespace ngcomp
@@ -15,7 +8,7 @@ namespace ngcomp
     {
         Point2IndexMap* pim = new Point2IndexMap();    // Your map type may vary, just change the typedef
         int index = 1;
-        int basedim =  ma->GetDimension(); 
+        int basedim =  ma->GetDimension();
         double dt_eps = 0.00001;
         //get boundaries of the init mesh
         Array<double> bd_points(0);
@@ -48,12 +41,12 @@ namespace ngcomp
         int ind_fdd = mesh -> AddFaceDescriptor (fdd);
 
         for(Tent* tent : tps.tents)
-        { 
+        {
             // cout << *tent << endl;
             if(tent->ttop < tent->tbot + dt_eps){ continue;  cout << "had to skip degenerate tent" << endl;}
             // Add vertices and 2d Elements to the mesh
             Vector<netgen::PointIndex> vertices(tent->nbv.Size()+2);
-            double pointc = ma -> GetPoint<1>(tent->vertex)(0); 
+            double pointc = ma -> GetPoint<1>(tent->vertex)(0);
             int ibot = tent->nbv[0]>tent->vertex ? 0 : 2;
             int itop = tent->nbv[0]>tent->vertex ? 2 : 0;
             vertices[ ibot ] = AddPointUnique(mesh,pim,netgen::Point3d(pointc,tent->tbot,0));
@@ -151,7 +144,7 @@ namespace ngcomp
         netgen::PointIndex pi = Point2Index(pim,p);
         if(pi == pim->size())
             ngma -> AddPoint(p);
-        return pi; 
+        return pi;
     }
 
 }
