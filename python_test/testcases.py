@@ -39,58 +39,61 @@ def simplesin(D, wavespeed):
         return sol
 
 
-def gausspw(D, wavespeed):
+def gausspw(D, wavespeed, x0 = [0.5,0.5,0.5]):
     t = CoordCF(D)
     k = 1
     delta = 1000
     if(D==1):
+        g = exp( -delta*((x-x0[0])*(x-x0[0])) ),
         sol = CoefficientFunction((
-            exp( -delta*((x-0.5)*(x-0.5)) ),
-            -2*delta * (x-0.5) * exp( -delta*((x-0.5)*(x-0.5)) ),
+            g,
+            -2*delta * (x-x0[0]) * g,
             0
             ))
         return sol
     elif(D==2):
+        g = exp(-delta*((x-x0[0])*(x-x0[0])+(y-x0[1])*(y-x0[1])) ),
         sol = CoefficientFunction((
-            exp(-delta*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)) ),
-            -2*delta * (x-0.5) * exp(-delta*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)) ),
-            -2*delta * (y-0.5) * exp(-delta*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)) ),
+            g,
+            -2*delta * (x-x0[0]) * g,
+            -2*delta * (y-x0[1]) * g,
             0
             ))
         return sol
     elif(D==3):
+        g = exp(-delta*((x-x0[0])*(x-x0[0])+(y-x0[1])*(y-x0[1])+(z-x0[2])*(z-x0[2])) ),
         sol = CoefficientFunction((
-            exp(-delta*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5)) ),
-            -2*delta * (x-0.5) * exp(-delta*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5)) ),
-            -2*delta * (y-0.5) * exp(-delta*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5)) ),
-            -2*delta * (z-0.5) * exp(-delta*((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5)) ),
+            g,
+            -2*delta * (x-x0[0]) * g,
+            -2*delta * (y-x0[1]) * g,
+            -2*delta * (z-x0[2]) * g,
             0
             ))
         return sol
 
-def vertgausspw(D, wavespeed):
+def vertgausspw(D, wavespeed, x0=0.25):
     t = CoordCF(D)
     k = 1
     delta = 0.07
     if(D==1):
         sol = CoefficientFunction((
-            exp( -(1/(delta*delta))*((x-0.25)*(x-0.25)) ),
-            -2*(1/(delta*delta)) * (x-0.25) * exp( -(1/(delta*delta))*((x-0.25)*(x-0.25)) ),
+            exp( -(1/(delta*delta))*((x-x0)*(x-x0)) ),
+            -2*(1/(delta*delta)) * (x-x0) * exp( -(1/(delta*delta))*((x-x0)*(x-x0)) ),
             0
             ))
         return sol
     elif(D==2):
         sol = CoefficientFunction((
-            exp(-(1/(delta*delta))*((x-0.25)*(x-0.25)) ),
-            -2*(1/(delta*delta))* (x-0.25) * exp(-(1/(delta*delta))*((x-0.25)*(x-0.25)) ),
+            exp(-(1/(delta*delta))*((x-x0)*(x-x0)) ),
+            -2*(1/(delta*delta))* (x-x0) * exp(-(1/(delta*delta))*((x-x0)*(x-x0)) ),
             0,
             0
             ))
         return sol
     elif(D==3):
         sol = CoefficientFunction((
-            exp(-(1/(delta*delta))*((x-0.25)*(x-0.25)) ),
-            -2*(1/(delta*delta))* (x-0.25) * exp(-(1/(delta*delta))*((x-0.25)*(x-0.25)) ),
+            exp(-(1/(delta*delta))*((x-x0)*(x-x0)) ),
+            -2*(1/(delta*delta))* (x-x0) * exp(-(1/(delta*delta))*((x-x0)*(x-x0)) ),
             0,
             0,
             0
@@ -142,9 +145,9 @@ def singular(D, wavespeed):
     besselder = (ngsolve.special_functions.jv(z=r, v=alp-1)-ngsolve.special_functions.jv(z=r, v=alp+1))/2
 
     sol = CoefficientFunction((
-        cos(t)*sin(alp*at2)*bessel, 
-        cos(t)*cos(alp*at2)*alp*at2x*besselder*x/r, 
-        cos(t)*cos(alp*at2)*alp*at2y*besselder*y/r, 
+        cos(t)*sin(alp*at2)*bessel,
+        cos(t)*cos(alp*at2)*alp*at2x*besselder*x/r,
+        cos(t)*cos(alp*at2)*alp*at2y*besselder*y/r,
         sin(t)*sin(alp*at2)*bessel
             ))
     return sol
