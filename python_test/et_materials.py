@@ -32,7 +32,9 @@ geo.Append (["line", p6, p3], leftdomain=2, rightdomain=0)
 
 geo.SetMaterial (1, "outer")
 geo.SetMaterial (2, "inner")
-initmesh = Mesh(geo.GenerateMesh(maxh=0.025))
+geo.SetDomainMaxH(1, 0.07)
+geo.SetDomainMaxH(2, 0.1)
+initmesh = Mesh(geo.GenerateMesh(maxh=0.1))
 for i in range(0,len(initmesh.GetBoundaries())):
    initmesh.ngmesh.SetBCName(i,"neumann")
 Draw(initmesh)
@@ -40,8 +42,8 @@ Draw(initmesh)
 D = initmesh.dim
 t = CoordCF(D)
 c = Vector(2)
-c[0] = 1
-c[1] = 0.5
+c[0] = 2
+c[1] = 1
 
 cf = CoefficientFunction(list(c))
 sq = sqrt(0.5);
@@ -51,7 +53,7 @@ bdd = CoefficientFunction((
     sq*cos(cf*t+sq*(x+y)),
     cf*cos(cf*t+sq*(x+y))
     ))
-bdd = vertgausspw(D,1)
+bdd = gausspw(D,1)
 Draw(bdd, initmesh, 'piecewise')
 wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd)
 
@@ -74,16 +76,15 @@ f = LinearForm(fes)
 f += SymbolicLFI(ipfct*v, intrule=intrule)
 f.Assemble()
 gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs()) * f.vec
-# Draw(gfu,initmesh,'sol')
-Draw(gfu,initmesh,'sol',autoscale=False,min=-0.1,max=0.35)
+Draw(gfu,initmesh,'sol')
+# Draw(gfu,initmesh,'sol',autoscale=False,min=-0.1,max=0.4)
 input()
 filename = "results/mov/sol_mat0.jpg"
 # Tcl_Eval("Ng_SnapShot .ndraw {};\n".format(filename))
 
 with TaskManager():
-    for t in range(0,50):
-        wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
-        print("Error: " + str(EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,t_start + t_step,bdd))))
+    for t in range(0,200):
+        wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,0)
 
         ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
         f = LinearForm(fes)
