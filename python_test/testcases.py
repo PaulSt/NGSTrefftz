@@ -136,22 +136,26 @@ def singular(D, wavespeed):
     t = CoordCF(D)
     r2 = ((x)*(x)+(y)*(y))
     r = sqrt((x)*(x)+(y)*(y))
-    at2=2*atan((y)/(r+(x)))
-    at2x=-y/r2
-    at2y=x/r2
-    theta = at2 #atan2(y,x)
-    alp = 3/2
-    bessel = ngsolve.special_functions.jv(z=r, v=alp)
-    besselder = (ngsolve.special_functions.jv(z=r, v=alp-1)-ngsolve.special_functions.jv(z=r, v=alp+1))/2
+    at2 = atan2(-y,-x)+math.pi #2*atan((y)/(r+(x)))
+    at2x=-(-y/r2)
+    at2y=-(x/r2)
+    alp = 10 #2.4048
+    nrb = 2.0/3.0
 
+    # sol = CoefficientFunction((
+        # cos(alp*t)*bessel(alp*r),
+        # cos(alp*t)*besselp(alp*r)*alp*x/r,
+        # cos(alp*t)*besselp(alp*r)*alp*y/r,
+        # -alp*sin(alp*t)*bessel(alp*r)
+        # ))
     sol = CoefficientFunction((
-        cos(t)*sin(alp*at2)*bessel,
-        cos(t)*cos(alp*at2)*alp*at2x*besselder*x/r,
-        cos(t)*cos(alp*at2)*alp*at2y*besselder*y/r,
-        sin(t)*sin(alp*at2)*bessel
-            ))
+        cos(alp*t)*sin(nrb*at2)*bessel(alp*r),
+        cos(alp*t)*(cos(nrb*at2)*nrb*at2x*bessel(alp*r) + sin(nrb*at2)*besselp(alp*r)*alp*x/r),
+        cos(alp*t)*(cos(nrb*at2)*nrb*at2y*bessel(alp*r) + sin(nrb*at2)*besselp(alp*r)*alp*y/r),
+        -alp*sin(alp*t)*sin(nrb*at2)*bessel(alp*r)
+        ))
     return sol
-    # cos(2*math.pi*t) * sin((2./3)*theta) * r2**(1./3),
+# cos(2*math.pi*t) * sin((2./3)*theta) * r2**(1./3),
     # cos(2*math.pi*t) * cos((2./3)*theta)*(2./3)*(1./(1+((y)/(x))**2))*((x)**(-1)) * (2./3)*r2**(-2./3)*(x),
     # cos(2*math.pi*t) * cos((2./3)*theta)*(2./3)*(1./(1+((y)/(x))**2))*(y)*(-(x)**(-2)) * (2./3)*r2**(-2./3)*(y),
     # -2*math.pi*sin(2*math.pi*t) * sin((2/3)*theta) * r2**(1./3)
