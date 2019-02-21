@@ -137,8 +137,8 @@ def singular(D, wavespeed):
     r2 = ((x)*(x)+(y)*(y))
     r = sqrt((x)*(x)+(y)*(y))
     at2 = atan2(-y,-x)+math.pi #2*atan((y)/(r+(x)))
-    at2x=-(-y/r2)
-    at2y=-(x/r2)
+    at2x=(-y/r2)
+    at2y=(x/r2)
     alp = 10 #2.4048
     nrb = 2.0/3.0
 
