@@ -890,5 +890,34 @@ void ExportEvolveTent (py::module m)
              energy = Energy<3> (order, ma, wavefront, wavenumber);
            return energy;
          });
+
+  m.def ("EvolveTentsDofs",
+         [] (int order, shared_ptr<MeshAccess> ma, double wavespeed,
+             double dt) -> int {
+           int D = ma->GetDimension ();
+           int dofis;
+           if (D == 1)
+             {
+               TentPitchedSlab<1> tps = TentPitchedSlab<1> (ma);
+               tps.PitchTents (dt, wavespeed + 1);
+               TrefftzWaveFE<2> tel (order, wavespeed);
+               dofis = tps.tents.Size () * tel.GetNBasis ();
+             }
+           else if (D == 2)
+             {
+               TentPitchedSlab<2> tps = TentPitchedSlab<2> (ma);
+               tps.PitchTents (dt, wavespeed + 1);
+               TrefftzWaveFE<3> tel (order, wavespeed);
+               dofis = tps.tents.Size () * tel.GetNBasis ();
+             }
+           else if (D == 3)
+             {
+               TentPitchedSlab<3> tps = TentPitchedSlab<3> (ma);
+               tps.PitchTents (dt, wavespeed + 1);
+               TrefftzWaveFE<4> tel (order, wavespeed);
+               dofis = tps.tents.Size () * tel.GetNBasis ();
+             }
+           return dofis;
+         });
 }
 #endif // NGS_PYTHON
