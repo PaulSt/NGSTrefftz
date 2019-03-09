@@ -70,7 +70,8 @@ namespace ngcomp
 
   template <typename T = double> void SwapIfGreater (T &a, T &b);
 
-  template <int D> double TentAdiam (Tent *tent, shared_ptr<MeshAccess> ma);
+  template <int D>
+  double TentAdiam (Tent *tent, shared_ptr<MeshAccess> ma, double wavespeed);
 }
 
 #ifdef NGS_PYTHON
