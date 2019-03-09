@@ -45,7 +45,7 @@ namespace ngcomp
             Vec<D+1> center;
             center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
             center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
-            TrefftzWaveFE<D+1> tel(order,wavespeed,center,TentAdiam<D>(tent,ma));
+            TrefftzWaveFE<D+1> tel(order,wavespeed,center,TentAdiam<D>(tent, ma, wavespeed));
             int nbasis = tel.GetNBasis();
 
             FlatMatrix<> elmat(nbasis,slh);
@@ -120,7 +120,7 @@ namespace ngcomp
             Vec<D+1> center;
             center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
             center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
-            TrefftzWaveFE<D+1> tel(order,max_wavespeed,center,TentAdiam<D>(tent,ma));
+            TrefftzWaveFE<D+1> tel(order,max_wavespeed,center,TentAdiam<D>(tent, ma, wavespeed[0]));
             int nbasis = tel.GetNBasis();
 
             // check if tent vertex is on boundary between domains
@@ -646,29 +646,35 @@ namespace ngcomp
     }
 
     template<int D>
-    double TentAdiam(Tent* tent, shared_ptr<MeshAccess> ma)
+    double TentAdiam(Tent* tent, shared_ptr<MeshAccess> ma, double wavespeed)
     {
         double anisotropicdiam = 0;
-        int vnumber = tent->nbv.Size()+2;
+        int vnumber = tent->nbv.Size();
 
-        Array<int> verts(vnumber);
-        verts.Range(2,vnumber) = tent->nbv;
-        verts[0] = tent->vertex;
-        verts[1] = tent->vertex;
+        //Array<int> verts(vnumber);
+        //verts.Range(2,vnumber) = tent->nbv;
+        //verts[0] = tent->vertex;
+        //verts[1] = tent->vertex;
 
-        Array<int> vtime(vnumber);
-        vtime.Range(2,vnumber) = tent->nbtime;
-        vtime[0] = tent->tbot;
-        vtime[1] = tent->ttop;
+        //Array<int> vtime(vnumber);
+        //vtime.Range(2,vnumber) = tent->nbtime;
+        //vtime[0] = tent->tbot;
+        //vtime[1] = tent->ttop;
+
         for (int k = 0; k < vnumber; k++)
         {
+            Vec<D> v1 = ma->GetPoint<D>(tent->vertex);
+            Vec<D> v2 = ma->GetPoint<D>(tent->nbv[k]);
+            anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(wavespeed*(tent->ttop - tent->nbtime[k]),2) ) );
+            anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(wavespeed*(tent->tbot - tent->nbtime[k]),2) ) );
             for (int j = 0; j < vnumber; j++)
             {
-                Vec<D> v1 = ma->GetPoint<D>(verts[j]);
-                Vec<D> v2 = ma->GetPoint<D>(verts[k]);
-                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(vtime[j]-vtime[k],2) ) );
+                v1 = ma->GetPoint<D>(tent->nbv[j]);
+                v2 = ma->GetPoint<D>(tent->nbv[k]);
+                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(wavespeed*(tent->nbtime[j]-tent->nbtime[k]),2) ) );
             }
         }
+
         return anisotropicdiam;
     }
 }
@@ -753,27 +759,62 @@ void ExportEvolveTent(py::module m)
               if(D == 1)
               {
                   TentPitchedSlab<1> tps = TentPitchedSlab<1>(ma);
-                  tps.PitchTents(dt, wavespeed+1); 
+                  tps.PitchTents(dt, wavespeed+1);
                   TrefftzWaveFE<2> tel(order,wavespeed);
                   dofis = tps.tents.Size() * tel.GetNBasis();
               }
               else if(D == 2)
               {
                   TentPitchedSlab<2> tps = TentPitchedSlab<2>(ma);
-                  tps.PitchTents(dt, wavespeed+1); 
+                  tps.PitchTents(dt, wavespeed+1);
                   TrefftzWaveFE<3> tel(order,wavespeed);
                   dofis = tps.tents.Size() * tel.GetNBasis();
               }
               else if(D == 3)
               {
                   TentPitchedSlab<3> tps = TentPitchedSlab<3>(ma);
-                  tps.PitchTents(dt, wavespeed+1); 
+                  tps.PitchTents(dt, wavespeed+1);
                   TrefftzWaveFE<4> tel(order,wavespeed);
                   dofis = tps.tents.Size() * tel.GetNBasis();
               }
               return dofis;
           }
          );
+
+    m.def("EvolveTentsAdiam", [](shared_ptr<MeshAccess> ma, double wavespeed, double dt) -> double
+          {
+              int D = ma->GetDimension();
+              double h = 0.0;
+              if(D == 1)
+              {
+                  TentPitchedSlab<1> tps = TentPitchedSlab<1>(ma);
+                  tps.PitchTents(dt, wavespeed+1);
+                  RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
+                      Tent* tent = tps.tents[tentnr];
+                      h = max(h,TentAdiam<1>(tent, ma, wavespeed));
+                  });
+              }
+              else if(D == 2)
+              {
+                  TentPitchedSlab<2> tps = TentPitchedSlab<2>(ma);
+                  tps.PitchTents(dt, wavespeed+1);
+                  RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
+                      Tent* tent = tps.tents[tentnr];
+                      h = max(h,TentAdiam<2>(tent, ma, wavespeed));
+                  });
+              }
+              else if(D == 3)
+              {
+                  TentPitchedSlab<3> tps = TentPitchedSlab<3>(ma);
+                  tps.PitchTents(dt, wavespeed+1);
+                  RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
+                      Tent* tent = tps.tents[tentnr];
+                      h = max(h,TentAdiam<3>(tent, ma, wavespeed));
+                  });
+              }
+              return h;
+          }
+    );
 }
 #endif // NGS_PYTHON
 
