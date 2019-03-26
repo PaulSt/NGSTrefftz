@@ -2,6 +2,19 @@
 
 namespace ngcomp
 {
+
+    template<int D>
+    class EvolveTent
+    {
+        private:
+
+        public:
+            EvolveTent(){;}
+            int dimensio(){return D;}
+
+    };
+
+
     inline void LapackSolve(SliceMatrix<double> a, SliceVector<double> b)
     {
         integer n = a.Width();
@@ -681,6 +694,17 @@ namespace ngcomp
 
 #ifdef NGS_PYTHON
 #include <python_ngstd.hpp>
+
+template<int D> void DeclareETClass(py::module &m, std::string typestr)
+{
+    using PyETclass = EvolveTent<D>;
+    std::string pyclass_name = std::string("EvolveTent") + typestr;
+    //py::class_<PyETclass,shared_ptr<PyETclass> >(m, "EvolveTent")
+    py::class_<PyETclass>(m, pyclass_name.c_str())//, py::buffer_protocol(), py::dynamic_attr())
+        .def(py::init<>())
+        .def("dimensio", &PyETclass::dimensio);
+}
+
 void ExportEvolveTent(py::module m)
 {
     m.def("EvolveTents", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, Matrix<> wavefront, double timeshift, shared_ptr<CoefficientFunction> bddatum ) -> Matrix<>//-> shared_ptr<MeshAccess>
@@ -779,7 +803,7 @@ void ExportEvolveTent(py::module m)
               }
               return dofis;
           }
-         );
+    );
 
     m.def("EvolveTentsAdiam", [](shared_ptr<MeshAccess> ma, double wavespeed, double dt) -> double
           {
@@ -815,7 +839,9 @@ void ExportEvolveTent(py::module m)
               return h;
           }
     );
+
+    DeclareETClass<2>(m, "");
+    DeclareETClass<3>(m, "");
 }
 #endif // NGS_PYTHON
-
 

@@ -55,6 +55,8 @@ namespace ngcomp
 
     template<int D>
     double TentAdiam(Tent* tent, shared_ptr<MeshAccess> ma, double wavespeed);
+
+    inline void LapackSolve(SliceMatrix<double> a, SliceVector<double> b);
 }
 
 #ifdef NGS_PYTHON
