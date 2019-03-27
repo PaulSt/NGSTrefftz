@@ -2,15 +2,6 @@
 
 namespace ngcomp
 {
-
-  template <int D> class EvolveTent
-  {
-  private:
-  public:
-    EvolveTent () { ; }
-    int dimensio () { return D; }
-  };
-
   inline void LapackSolve (SliceMatrix<double> a, SliceVector<double> b)
   {
     integer n = a.Width ();
@@ -835,10 +826,10 @@ namespace ngcomp
 
 template <int D> void DeclareETClass (py::module &m, std::string typestr)
 {
-  using PyETclass = EvolveTent<D>;
-  std::string pyclass_name = std::string ("EvolveTent") + typestr;
+  using PyETclass = WaveTents<D>;
+  std::string pyclass_name = std::string ("WaveTents") + typestr;
   // py::class_<PyETclass,shared_ptr<PyETclass> >(m, "EvolveTent")
-  py::class_<PyETclass> (
+  py::class_<PyETclass, TrefftzTents> (
       m, pyclass_name.c_str ()) //, py::buffer_protocol(), py::dynamic_attr())
       .def (py::init<> ())
       .def ("dimensio", &PyETclass::dimensio);
@@ -991,7 +982,14 @@ void ExportEvolveTent (py::module m)
         return h;
       });
 
-  DeclareETClass<2> (m, "");
-  DeclareETClass<3> (m, "");
+  py::class_<TrefftzTents> (
+      m, "TrefftzTents"); //, py::buffer_protocol(), py::dynamic_attr())
+
+  DeclareETClass<2> (m, "2");
+  DeclareETClass<3> (m, "3");
+  m.def ("TrefftzTent", [] () -> shared_ptr<TrefftzTents> {
+    TrefftzTents *nla = new WaveTents<2> ();
+    return shared_ptr<TrefftzTents> (nla);
+  });
 }
 #endif // NGS_PYTHON
