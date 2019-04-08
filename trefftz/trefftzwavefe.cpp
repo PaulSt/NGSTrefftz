@@ -161,6 +161,7 @@ namespace ngfem
 
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY (SIMD<double>, mem, 2 * (ord + 1) + 1);
+        mem[0] = 0;
         Vec<2, SIMD<double> *> polxt;
         for (size_t d = 0; d < 2; d++)
           {
@@ -204,6 +205,7 @@ namespace ngfem
 
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY (SIMD<double>, mem, 3 * (ord + 1) + 1);
+        mem[0] = 0;
         Vec<3, SIMD<double> *> polxt;
         for (size_t d = 0; d < 3; d++)
           {
@@ -249,6 +251,7 @@ namespace ngfem
 
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY (SIMD<double>, mem, 4 * (ord + 1) + 1);
+        mem[0] = 0;
         Vec<4, SIMD<double> *> polxt;
         for (size_t d = 0; d < 4; d++)
           {
@@ -409,6 +412,7 @@ namespace ngfem
     cpoint[1] *= c;
     // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
     STACK_ARRAY (double, mem, 2 * (ord + 1) + 1);
+    mem[0] = 0;
     double *polxt[2];
     for (size_t d = 0; d < 2; d++)
       {
@@ -445,7 +449,8 @@ namespace ngfem
     cpoint *= (2.0 / elsize);
     cpoint[2] *= c;
     // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
-    STACK_ARRAY (double, mem, 3 * (ord + 1) + 2);
+    STACK_ARRAY (double, mem, 3 * (ord + 1) + 1);
+    mem[0] = 0;
     // double* polxt[4];
     Vec<3, double *> polxt;
     for (size_t d = 0; d < 3; d++)
@@ -486,6 +491,7 @@ namespace ngfem
     cpoint[3] *= c;
     // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
     STACK_ARRAY (double, mem, 4 * (ord + 1) + 1);
+    mem[0] = 0;
     double *polxt[4];
     for (size_t d = 0; d < 4; d++)
       {

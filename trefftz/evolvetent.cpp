@@ -217,7 +217,7 @@ namespace ngcomp
 
               SIMD_MappedIntegrationRule<D, D + 1> smir (
                   sir, ma->GetTrafo (0, slh), -1, slh);
-              for (int imip = 0; imip < snip; imip++)
+              for (int imip = 0; imip < sir.Size (); imip++)
                 smir[imip].Point ()
                     = map * sir[imip].operator Vec<D, SIMD<double>> () + shift;
 
@@ -432,7 +432,7 @@ namespace ngcomp
 
     SIMD_MappedIntegrationRule<D, D + 1> smir (sir, ma->GetTrafo (0, slh), -1,
                                                slh);
-    for (int imip = 0; imip < snip; imip++)
+    for (int imip = 0; imip < sir.Size (); imip++)
       smir[imip].Point ()
           = map * sir[imip].operator Vec<D, SIMD<double>> () + shift;
 
