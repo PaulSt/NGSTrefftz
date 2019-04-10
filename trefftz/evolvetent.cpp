@@ -28,7 +28,7 @@ namespace ngcomp
         int snip = sir.Size()*nsimd;
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
-        tps.PitchTents(dt, wavespeed+5); // adt = time slab height, wavespeed
+        tps.PitchTents(dt, wavespeed+1); // adt = time slab height, wavespeed
 
         cout << "solving " << tps.tents.Size() << " tents ";
         static Timer ttent("tent",2);
@@ -300,10 +300,10 @@ namespace ngcomp
 
         // stabilization to recover second order solution
         for(int imip=0;imip<sir.Size();imip++)
-            simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vert))*sqrt(sir[imip].Weight());
+            simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vert)*sir[imip].Weight());
         AddABt(simdshapes,simdshapes,elmat);
         for(int imip=0;imip<sir.Size();imip++)
-            simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vert))*sqrt(sir[imip].Weight());
+            simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vert)*sir[imip].Weight());
         FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
         elvec += shapes*wavefront.Row(elnr).Range(0,snip);
         tint2.Stop();
@@ -330,7 +330,6 @@ namespace ngcomp
                     bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip);
         elmat += bbmat * bdbmat;
         tint2.Stop();
-
     }
 
     template<int D>
