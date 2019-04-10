@@ -33,7 +33,7 @@ namespace ngcomp
 
     TentPitchedSlab<D> tps
         = TentPitchedSlab<D> (ma);      // collection of tents in timeslab
-    tps.PitchTents (dt, wavespeed + 5); // adt = time slab height, wavespeed
+    tps.PitchTents (dt, wavespeed + 1); // adt = time slab height, wavespeed
 
     cout << "solving " << tps.tents.Size () << " tents ";
     static Timer ttent ("tent", 2);
