@@ -305,10 +305,10 @@ namespace ngcomp
 
         // stabilization to recover second order solution
         for(int imip=0;imip<sir.Size();imip++)
-            simdshapes.Col(imip) *= sqrt(TentFaceArea(vert))*sqrt(sir[imip].Weight());
+            simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vert)*sir[imip].Weight());
         AddABt(simdshapes,simdshapes,elmat);
         for(int imip=0;imip<sir.Size();imip++)
-            simdshapes.Col(imip) *= sqrt(TentFaceArea(vert))*sqrt(sir[imip].Weight());
+            simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vert)*sir[imip].Weight());
         FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
         elvec += shapes*wavefront.Row(elnr).Range(0,snip);
         tint2.Stop();
@@ -335,7 +335,6 @@ namespace ngcomp
                     bdbmat.Row(r*snip+imip) += Dmat(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip);
         elmat += bbmat * bdbmat;
         tint2.Stop();
-
     }
 
     template<int D>
@@ -363,7 +362,7 @@ namespace ngcomp
         Vec<D+1> shift = vert.Col(0);
 
         SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(0,slh),-1,slh);
-        for(int imip=0;imip<snip;imip++)
+        for(int imip=0;imip<sir.Size();imip++)
             smir[imip].Point() = map * sir[imip].operator Vec<D,SIMD<double>>() + shift;
 
         FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);

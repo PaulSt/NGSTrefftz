@@ -139,7 +139,7 @@ namespace ngfem
             cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[1] *= c;
 
             // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
-            STACK_ARRAY(SIMD<double>, mem, 2*(ord+1)+1);
+            STACK_ARRAY(SIMD<double>, mem, 2*(ord+1)+1); mem[0]=0;
             Vec<2,SIMD<double>*> polxt;
             for(size_t d=0;d<2;d++)
             {
@@ -177,7 +177,7 @@ namespace ngfem
             cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[2] *= c;
 
             // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
-            STACK_ARRAY(SIMD<double>, mem, 3*(ord+1)+1);
+            STACK_ARRAY(SIMD<double>, mem, 3*(ord+1)+1); mem[0]=0;
             Vec<3,SIMD<double>*> polxt;
             for(size_t d=0;d<3;d++)
             {
@@ -216,7 +216,7 @@ namespace ngfem
             cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[3] *= c;
 
             // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
-            STACK_ARRAY(SIMD<double>, mem, 4*(ord+1)+1);
+            STACK_ARRAY(SIMD<double>, mem, 4*(ord+1)+1); mem[0]=0;
             Vec<4,SIMD<double>*> polxt;
             for(size_t d=0;d<4;d++)
             {
@@ -293,7 +293,8 @@ namespace ngfem
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[2] *= c;
         // calc 1 dimensional monomial basis
         STACK_ARRAY(double, mem, 3*(ord+1));
-        double* polxt[3];
+        //double* polxt[3];
+        Vec<3,double*> polxt;
         for(size_t d=0;d<3;d++)
         {
             polxt[d] = &mem[d*(ord+1)];
@@ -351,7 +352,7 @@ namespace ngfem
     template<>
     void TrefftzWaveFE<1> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
                                          SliceMatrix<> dshape) const
-    {}
+    {cout << "dim not implemented" << endl;}
 
     template<>
     void TrefftzWaveFE<2> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
@@ -360,7 +361,7 @@ namespace ngfem
         Vec<2> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[1] *= c;
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
-        STACK_ARRAY(double, mem, 2*(ord+1)+1);
+        STACK_ARRAY(double, mem, 2*(ord+1)+1); mem[0]=0;
         double* polxt[2];
         for(size_t d=0;d<2;d++)
         {
@@ -395,8 +396,9 @@ namespace ngfem
         Vec<3> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[2] *= c;
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
-        STACK_ARRAY(double, mem, 3*(ord+1)+1);
-        double* polxt[4];
+        STACK_ARRAY(double, mem, 3*(ord+1)+1); mem[0]=0;
+        //double* polxt[4];
+        Vec<3,double*> polxt;
         for(size_t d=0;d<3;d++)
         {
             polxt[d] = &mem[d*(ord+1)+1];
@@ -431,7 +433,7 @@ namespace ngfem
         Vec<4> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[3] *= c;
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
-        STACK_ARRAY(double, mem, 4*(ord+1)+1);
+        STACK_ARRAY(double, mem, 4*(ord+1)+1); mem[0]=0;
         double* polxt[4];
         for(size_t d=0;d<4;d++)
         {
