@@ -305,10 +305,10 @@ namespace ngcomp
 
         // stabilization to recover second order solution
         for(int imip=0;imip<sir.Size();imip++)
-            simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vert)*sir[imip].Weight());
+            simdshapes.Col(imip) *= sqrt(TentFaceArea(vert)*sir[imip].Weight());
         AddABt(simdshapes,simdshapes,elmat);
         for(int imip=0;imip<sir.Size();imip++)
-            simdshapes.Col(imip) *= sqrt(TentFaceArea<D>(vert)*sir[imip].Weight());
+            simdshapes.Col(imip) *= sqrt(TentFaceArea(vert)*sir[imip].Weight());
         FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
         elvec += shapes*wavefront.Row(elnr).Range(0,snip);
         tint2.Stop();
