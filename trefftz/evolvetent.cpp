@@ -825,9 +825,11 @@ void ExportEvolveTent (py::module m)
              shared_ptr<CoefficientFunction> bddatum)
              -> shared_ptr<TrefftzTents> {
            // TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed,
-           // bddatum);
-           return shared_ptr<TrefftzTents> (
-               new WaveTents<2> (order, ma, wavespeed, bddatum));
+           // bddatum); shared_ptr<TrefftzTents> tr =
+           // make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum); return tr;
+           return make_shared<WaveTents<2>> (order, ma, wavespeed, bddatum);
+           // return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma,
+           // wavespeed, bddatum));
          });
 }
 #endif // NGS_PYTHON
