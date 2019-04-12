@@ -689,27 +689,32 @@ namespace ngcomp
     LocalHeap lh (10000000);
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
-    IntegrationRule ir (eltyp, order * 2);
+    SIMD_IntegrationRule sir (eltyp, order * 2);
     int nsimd = SIMD<double>::Size ();
-    int snip = ir.Size ()
-               + (ir.Size () % nsimd == 0 ? 0 : nsimd - ir.Size () % nsimd);
+    int snip = sir.Size () * nsimd;
     Matrix<> wavefront (ma->GetNE (), snip * (D + 2));
     for (int elnr = 0; elnr < ma->GetNE (); elnr++)
       {
         HeapReset hr (lh);
-        MappedIntegrationRule<D, D + 1> mir (ir, ma->GetTrafo (elnr, lh),
-                                             lh); // <dim  el, dim space>
-        for (int imip = 0; imip < ir.Size (); imip++)
-          mir[imip].Point ()[D] = time;
-        FlatMatrix<> bdeval (mir.Size (), D + 2, lh);
+        SIMD_MappedIntegrationRule<D, D + 1> smir (
+            sir, ma->GetTrafo (elnr, lh), -1, lh);
+        SIMD_MappedIntegrationRule<D, D> smir_fix (
+            sir, ma->GetTrafo (elnr, lh), lh);
+        for (int imip = 0; imip < sir.Size (); imip++)
+          {
+            smir[imip].Point ().Range (0, D)
+                = smir_fix[imip].Point ().Range (0, D);
+            smir[imip].Point ()[D] = time;
+          }
+        FlatMatrix<SIMD<double>> bdeval (D + 2, smir.Size (), lh);
         bdeval = 0;
-        bddatum->Evaluate (mir, bdeval);
+        bddatum->Evaluate (smir, bdeval);
         for (int imip = 0; imip < snip; imip++)
           {
-            wavefront (elnr, imip) = bdeval (imip % ir.Size (), 0);
+            wavefront (elnr, imip) = bdeval (0, imip / nsimd)[imip % nsimd];
             for (int d = 0; d < D + 1; d++)
               wavefront (elnr, snip + d * snip + imip)
-                  = bdeval (imip % ir.Size (), d + 1);
+                  = bdeval (d + 1, imip / nsimd)[imip % nsimd];
           }
       }
     return wavefront;
@@ -719,16 +724,18 @@ namespace ngcomp
   double Error (int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront,
                 Matrix<> wavefront_corr)
   {
+    LocalHeap lh (100000000);
     double error = 0;
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
-    IntegrationRule ir (eltyp, order * 2);
+    SIMD_IntegrationRule sir (eltyp, order * 2);
     int nsimd = SIMD<double>::Size ();
-    int snip = ir.Size ()
-               + (ir.Size () % nsimd == 0 ? 0 : nsimd - ir.Size () % nsimd);
+    int snip = sir.Size () * nsimd;
     for (int elnr = 0; elnr < ma->GetNE (); elnr++)
       {
-        for (int imip = 0; imip < ir.Size (); imip++)
+        SIMD_MappedIntegrationRule<D, D> smir (sir, ma->GetTrafo (elnr, lh),
+                                               lh);
+        for (int imip = 0; imip < snip; imip++)
           {
             // l2error +=
             // (wavefront(elnr,imip)-wavefront_corr(elnr,imip))*(wavefront(elnr,imip)-wavefront_corr(elnr,imip))*ir[imip].Weight();
@@ -737,7 +744,7 @@ namespace ngcomp
                   += pow (wavefront (elnr, snip + d * snip + imip)
                               - wavefront_corr (elnr, snip + d * snip + imip),
                           2)
-                     * ir[imip].Weight ();
+                     * smir[imip / nsimd].GetWeight ()[imip % nsimd];
           }
       }
     return sqrt (error);
