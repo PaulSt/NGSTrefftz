@@ -758,18 +758,22 @@ namespace ngcomp
     LocalHeap lh (10000000);
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
-    IntegrationRule ir (eltyp, order * 2);
+    SIMD_IntegrationRule sir (eltyp, order * 2);
     int nsimd = SIMD<double>::Size ();
-    int snip = ir.Size ()
-               + (ir.Size () % nsimd == 0 ? 0 : nsimd - ir.Size () % nsimd);
+    int snip = sir.Size () * nsimd;
     for (int elnr = 0; elnr < ma->GetNE (); elnr++)
-      for (int imip = 0; imip < ir.Size (); imip++)
-        for (int d = 0; d < D + 1; d++)
-          energy += 0.5
-                    * (((d == D ? 1.0 : 0.0) / pow (wavenumber, 2))
-                       * wavefront (elnr, snip + d * snip + imip)
-                       * wavefront (elnr, snip + d * snip + imip))
-                    * ir[imip].Weight ();
+      {
+        SIMD_MappedIntegrationRule<D, D> smir (sir, ma->GetTrafo (elnr, lh),
+                                               lh);
+        for (int imip = 0; imip < snip; imip++)
+          for (int d = 0; d < D + 1; d++)
+            energy += 0.5
+                      * (((d == D ? 1.0 : pow (wavenumber, 2))
+                          / pow (wavenumber, 2))
+                         * wavefront (elnr, snip + d * snip + imip)
+                         * wavefront (elnr, snip + d * snip + imip))
+                      * smir[imip / nsimd].GetWeight ()[imip % nsimd];
+      }
 
     return energy;
   }
