@@ -150,7 +150,7 @@ namespace ngcomp
                     eli = 0;
                 SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
                 SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
-                CalcTentEl<D>(tent->els[elnr],tent,tel,ma,wavefront,sir,slh,subm,subv,*topdshapes[elnr]);
+                CalcTentEl<D>(eli,tent,tel,ma,wavefront,sir,slh,subm,subv,*topdshapes[elnr]);
             }
 
             // Integrate boundary tent
