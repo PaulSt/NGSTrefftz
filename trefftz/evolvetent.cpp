@@ -592,15 +592,14 @@ namespace ngcomp
         break;
       case 2:
         {
-          double a = L2Norm (ve.Col (0) - ve.Col (1));
-          double b = L2Norm (ve.Col (1) - ve.Col (2));
-          double c = L2Norm (ve.Col (0) - ve.Col (2));
-          SwapIfGreater<> (a, b);
-          SwapIfGreater<> (a, c);
-          SwapIfGreater<> (b, c);
-          return 0.25
-                 * sqrt ((a + (b + c)) * (c - (a - b)) * (c + (a - b))
-                         * (a + (b - c)));
+          // double a = L2Norm(ve.Col(0)-ve.Col(1));
+          // double b = L2Norm(ve.Col(1)-ve.Col(2));
+          // double c = L2Norm(ve.Col(0)-ve.Col(2));
+          // SwapIfGreater<>(a,b); SwapIfGreater<>(a,c); SwapIfGreater<>(b,c);
+          // return 0.25 * sqrt((a+(b+c))*(c-(a-b))*(c+(a-b))*(a+(b-c)));
+          Vec<3> ba = ve.Col (0) - ve.Col (1);
+          Vec<3> baa = ve.Col (0) - ve.Col (2);
+          return L2Norm (Cross (ba, baa)) / 2.0 * 2;
           break;
         }
       case 3:
@@ -626,7 +625,7 @@ namespace ngcomp
 
           return sqrt ((-a + b + c + d) * (a - b + c + d) * (a + b - c + d)
                        * (a + b + c - d))
-                 / (192.0 * u * v * w);
+                 / (192.0 * u * v * w) * 6.0;
         }
       }
   }
