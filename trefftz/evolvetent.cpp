@@ -737,8 +737,8 @@ namespace ngcomp
                                                lh);
         for (int imip = 0; imip < snip; imip++)
           {
-            // l2error +=
-            // (wavefront(elnr,imip)-wavefront_corr(elnr,imip))*(wavefront(elnr,imip)-wavefront_corr(elnr,imip))*ir[imip].Weight();
+            // error +=
+            // (wavefront(elnr,imip)-wavefront_corr(elnr,imip))*(wavefront(elnr,imip)-wavefront_corr(elnr,imip))*smir[imip/nsimd].GetWeight()[imip%nsimd];
             for (int d = 0; d < D + 1; d++)
               error
                   += pow (wavefront (elnr, snip + d * snip + imip)
