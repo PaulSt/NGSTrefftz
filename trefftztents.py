@@ -1,9 +1,10 @@
 from ngsolve import *
+from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 import time
 import math
 from trefftzngs import *
-SetHeapSize(100*1000*10000)
+SetHeapSize(1000*1000*1000)
 
 order = 4
 
@@ -74,8 +75,6 @@ for maxh in ms:
     error = EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,t_step,bdd))
     h1error.append(error)
     print("error ", error)
-    error = EvolveTentsError(order,initmesh,EvolveTentsMakeWavefront(order,initmesh,t_step-0.000000000001,bdd),EvolveTentsMakeWavefront(order,initmesh,t_step,bdd))
-    print("fakeerror ", error)
 
     ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
     f = LinearForm(fes)
@@ -83,14 +82,22 @@ for maxh in ms:
     f.Assemble()
     gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs()) * f.vec
 
-    print(sqrt(Integrate(( sin(math.pi*x)*sin(math.pi*y)*sin(math.pi*z)*sin(math.pi*t_step*c*sq)/(sq*math.pi)-gfu)*( sin(math.pi*x)*sin(math.pi*y)*sin(math.pi*z)*sin(math.pi*t_step*c*sq)/(sq*math.pi)-gfu),initmesh)))
+    # print(sqrt(Integrate(( sin(math.pi*x)*sin(math.pi*y)*sin(math.pi*z)*sin(math.pi*t_step*c*sq)/(sq*math.pi)-gfu)*( sin(math.pi*x)*sin(math.pi*y)*sin(math.pi*z)*sin(math.pi*t_step*c*sq)/(sq*math.pi)-gfu),initmesh)))
 
-    corsol= CoefficientFunction((cos(math.pi*x)*sin(math.pi*y)*sin(math.pi*z)*sin(math.pi*t_step*c*sq)/sq,
-        sin(math.pi*x)*cos(math.pi*y)*sin(math.pi*z)*sin(math.pi*t_step*c*sq)/sq,
-        sin(math.pi*x)*sin(math.pi*y)*cos(math.pi*z)*sin(math.pi*t_step*c*sq)/sq))
-    print(sqrt(Integrate(( corsol-grad(gfu))*( corsol-grad(gfu)),initmesh)))
+    # corsol= CoefficientFunction((cos(math.pi*x)*sin(math.pi*y)*sin(math.pi*z)*sin(math.pi*t_step*c*sq)/sq,
+        # sin(math.pi*x)*cos(math.pi*y)*sin(math.pi*z)*sin(math.pi*t_step*c*sq)/sq,
+        # sin(math.pi*x)*sin(math.pi*y)*cos(math.pi*z)*sin(math.pi*t_step*c*sq)/sq))
+    # print(sqrt(Integrate(( corsol-grad(gfu))*( corsol-grad(gfu)),initmesh)))
+    adiam.append(EvolveTentsAdiam(initmesh,1,t_step))
+
+    initmesh.Refine()
 
 print("rate")
 from math import *
 for i in range(len(ms)-1):
-    print(log(h1error[i]-h1error[i+1])/log(ms[i]-ms[i+1]))
+    print(log(h1error[i]/h1error[i+1])/log(1/2))
+    # print(log(h1error[i]/h1error[i+1])/log(ms[i]/ms[i+1]))
+for i in range(len(ms)):
+    print("adiam ",adiam[i]," maxh ", ms[i]," error ", h1error[i])
+for i in range(len(ms)-1):
+    print(log(h1error[i]/h1error[i+1])/log(adiam[i]/adiam[i+1]))
