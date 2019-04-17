@@ -582,7 +582,7 @@ namespace ngcomp
     template<int D>
     Matrix<> MakeWavefront(int order, shared_ptr<MeshAccess> ma, double time, shared_ptr<CoefficientFunction> bddatum)
     {
-        LocalHeap lh(10000000);
+        LocalHeap lh(1000*1000*1000);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         SIMD_IntegrationRule sir(eltyp, order*2);
         int nsimd = SIMD<double>::Size();
@@ -613,7 +613,7 @@ namespace ngcomp
     template<int D>
     double Error(int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, Matrix<> wavefront_corr)
     {
-        LocalHeap lh(100000000);
+        LocalHeap lh(1000*1000*1000);
         double error=0;
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         SIMD_IntegrationRule sir(eltyp, order*2);
@@ -636,7 +636,7 @@ namespace ngcomp
     double Energy(int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, double wavenumber)
     {
         double energy=0;
-        LocalHeap lh(10000000);
+        LocalHeap lh(1000*1000*1000);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         SIMD_IntegrationRule sir(eltyp, order*2);
         int nsimd = SIMD<double>::Size();
@@ -824,7 +824,7 @@ void ExportEvolveTent(py::module m)
               else if(D == 3)
               {
                   TentPitchedSlab<3> tps = TentPitchedSlab<3>(ma);
-                  tps.PitchTents(dt, wavespeed+1);
+                  tps.PitchTents(dt, wavespeed+5);
                   RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
                       Tent* tent = tps.tents[tentnr];
                       h = max(h,TentAdiam<3>(tent, ma, wavespeed));
