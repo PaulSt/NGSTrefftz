@@ -20,15 +20,16 @@ namespace ngcomp
     template<int D>
     void EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, SliceMatrix<double> wavefront, double timeshift, shared_ptr<CoefficientFunction> bddatum)
     {
-        LocalHeap lh(100000000);
+        //int nthreads = (task_manager) ? task_manager->GetNumThreads() : 1;
+        LocalHeap lh(1000 * 1000 * 100, "trefftz tents", 1);
 
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
-        int nsimd = SIMD<double>::Size();
+        const int nsimd = SIMD<double>::Size();
         SIMD_IntegrationRule sir(eltyp, order*2);
-        int snip = sir.Size()*nsimd;
+        const int snip = sir.Size()*nsimd;
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
-        tps.PitchTents(dt, wavespeed+1); // adt = time slab height, wavespeed
+        tps.PitchTents(dt, wavespeed+5); // adt = time slab height, wavespeed
 
         cout << "solving " << tps.tents.Size() << " tents ";
         static Timer ttent("tent",2);
@@ -36,10 +37,12 @@ namespace ngcomp
         static Timer ttentbnd("tentbnd",2);
         static Timer ttenteval("tenteval",2);
 
+        TrefftzWaveBasis<D+1>::getInstance().CreateTB(order);
+
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             RegionTimer reg(ttent);
             LocalHeap slh = lh.Split();  // split to threads
-            HeapReset hr(slh);
+            //HeapReset hr(slh);
             Tent* tent = tps.tents[tentnr];
 
             Vec<D+1> center;
@@ -52,15 +55,19 @@ namespace ngcomp
             FlatVector<> elvec(nbasis,slh);
             elmat = 0; elvec = 0;
 
-            FlatMatrix<SIMD<double>>* topdshapes[tent->els.Size()];
+            //FlatMatrix<SIMD<double>>* topdshapes[tent->els.Size()];
+            //for(auto& tds : topdshapes)
+            //tds = new FlatMatrix<SIMD<double>>((D+1)*nbasis,sir.Size(),slh);
+
+            Array<FlatMatrix<SIMD<double>>> topdshapes(tent->els.Size());
             for(auto& tds : topdshapes)
-                tds = new FlatMatrix<SIMD<double>>((D+1)*nbasis,sir.Size(),slh);
+                tds.AssignMemory((D+1)*nbasis, sir.Size(), slh);
 
             // Integrate top and bottom space-like tent faces
             for(int elnr=0;elnr<tent->els.Size();elnr++)
             {
                 RegionTimer reg1(ttentel);
-                CalcTentEl<D>(tent->els[elnr],tent,tel,ma,wavefront,sir,slh,elmat,elvec,*topdshapes[elnr]);
+                CalcTentEl<D>(tent->els[elnr],tent,tel,ma,wavefront,sir,slh,elmat,elvec,topdshapes[elnr]);
             }
 
             // Integrate boundary tent
@@ -87,7 +94,7 @@ namespace ngcomp
             for(int elnr=0;elnr<tent->els.Size();elnr++)
             {
                 RegionTimer reg3(ttenteval);
-                CalcTentElEval<D>(tent->els[elnr], tent, tel, ma, wavefront, sir, slh, sol,*topdshapes[elnr]);
+                CalcTentElEval<D>(tent->els[elnr], tent, tel, ma, wavefront, sir, slh, sol,topdshapes[elnr]);
             }
         }); // end loop over tents
         cout << "...done" << endl;
@@ -470,7 +477,7 @@ namespace ngcomp
         }
         else //top or bot of tent
         {
-            INT<D+1> vnr = ma->GetElVertices(elnr);
+            INT<D+1> vnr = ma->GetElVertices(ElementId(VOL,elnr));
             // determine linear basis function coeffs to use for tent face
             for(int ivert = 0;ivert<vnr.Size();ivert++)
             {
