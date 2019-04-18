@@ -537,6 +537,7 @@ namespace ngfem
 
   template <int D> void TrefftzWaveBasis<D>::CreateTB (int ord)
   {
+    cout << "creating tp store for order " << ord << endl;
     // if (tbstore.Size() < ord)
     //{
     int oldsize = tbstore.Size ();
@@ -563,11 +564,12 @@ namespace ngfem
     //}
 
     // if ( tbstore[ord][0].Size() == 0)
-    //{
-    // stringstream str;
-    // str << "failed to generate trefftz basis of order " << ord << endl;
-    // throw Exception (str.str());
-    // }
+    if (tbstore.Size () < ord)
+      {
+        stringstream str;
+        str << "failed to generate trefftz basis of order " << ord << endl;
+        throw Exception (str.str ());
+      }
   }
 
   template <int D>
