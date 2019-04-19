@@ -630,6 +630,7 @@ namespace ngcomp
         int snip = sir.Size()*nsimd;
         for(int elnr=0;elnr<ma->GetNE();elnr++)
         {
+            HeapReset hr(lh);
             SIMD_MappedIntegrationRule<D,D> smir(sir,ma->GetTrafo(elnr,lh),lh);
             for(int imip=0;imip<snip;imip++)
             {
@@ -652,6 +653,7 @@ namespace ngcomp
         int snip = sir.Size()*nsimd;
         for(int elnr=0;elnr<ma->GetNE();elnr++)
         {
+            HeapReset hr(lh);
             SIMD_MappedIntegrationRule<D,D> smir(sir,ma->GetTrafo(elnr,lh),lh);
             for(int imip=0;imip<snip;imip++)
                 for(int d=0;d<D+1;d++)
