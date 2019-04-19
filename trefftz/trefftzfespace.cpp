@@ -41,6 +41,7 @@ namespace ngcomp
               = make_shared<T_DifferentialOperator<DiffOpMapped<1>>> ();
           flux_evaluator[VOL] = make_shared<
               T_DifferentialOperator<DiffOpMappedGradient<1>>> ();
+          TrefftzWaveBasis<1>::getInstance ().CreateTB (order);
           break;
         }
       case 2:
@@ -49,6 +50,7 @@ namespace ngcomp
               = make_shared<T_DifferentialOperator<DiffOpMapped<2>>> ();
           flux_evaluator[VOL] = make_shared<
               T_DifferentialOperator<DiffOpMappedGradient<2>>> ();
+          TrefftzWaveBasis<2>::getInstance ().CreateTB (order);
           break;
         }
       case 3:
@@ -57,6 +59,7 @@ namespace ngcomp
               = make_shared<T_DifferentialOperator<DiffOpMapped<3>>> ();
           flux_evaluator[VOL] = make_shared<
               T_DifferentialOperator<DiffOpMappedGradient<3>>> ();
+          TrefftzWaveBasis<3>::getInstance ().CreateTB (order);
           break;
         }
       }
