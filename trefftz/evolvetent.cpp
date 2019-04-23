@@ -362,7 +362,7 @@ namespace ngcomp
 
     Vec<D + 1> nnn = TentFaceNormal<D + 1> (vert, 1);
     if (L2Norm (nnn.Range (0, D)) * (wavespeed) > nnn[D])
-      cout << "tent pitched to high" << endl;
+      cout << "tent pitched too high" << endl;
     // if(TentFaceArea<D>(vert)<smir_fix[0].GetMeasure()[0]&&
     // tent->nbtime[0]==0)
     //{
