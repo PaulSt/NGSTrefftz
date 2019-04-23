@@ -299,7 +299,7 @@ namespace ngcomp
         TentDmat<D>(Dmat, vert, -1, wavespeed);
 
         Vec<D+1> nnn = TentFaceNormal<D+1>(vert,1);
-        if(L2Norm(nnn.Range(0,D))*(wavespeed)>nnn[D]) cout << "tent pitched to high" << endl;
+        if(L2Norm(nnn.Range(0,D))*(wavespeed)>nnn[D]) cout << "tent pitched too high" << endl;
         //if(TentFaceArea<D>(vert)<smir_fix[0].GetMeasure()[0]&& tent->nbtime[0]==0)
         //{
         //cout << "tent area problem "<<endl<< TentFaceArea<D>(vert)<< " smaller thamn " <<smir_fix[0].GetMeasure()[0]<< " ratio " << smir_fix[0].GetJacobiDet()[0]/TentFaceArea<D>(vert) << " vert " << endl;
