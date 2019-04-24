@@ -32,12 +32,12 @@ namespace ngcomp
 
             void CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel,
                     //SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
-                 SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes, SliceMatrix<double> wavefront);
+                 SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes, Matrix<> &wavefront);
 
             void CalcTentBndEl(int surfel, Tent* tent, TrefftzWaveFE<D+1> tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
 
             //void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma , SliceMatrix<> &wavefront, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol);
-            void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes, SliceMatrix<double> wavefront);
+            void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes, Matrix<> &wavefront);
 
             Mat<D+1,D+1> TentFaceVerts(Tent* tent, int elnr, int top);
 
@@ -69,7 +69,7 @@ namespace ngcomp
                 //cout << wavefront;
             }
 
-            Matrix<> EvolveTents(double dt, Matrix<double> wavefront);
+            void EvolveTents(double dt, Matrix<> &wavefront);
 
             Matrix<> MakeWavefront( shared_ptr<CoefficientFunction> bddatum, double time);
 

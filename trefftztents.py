@@ -19,16 +19,20 @@ def SolveTrefftzTents(mesh, order, finaltime):
         sin(math.pi*x)*sin(math.pi*y)*cos(math.pi*z)*sin(math.pi*t*c*sq)/sq,
         sin(math.pi*x)*sin(math.pi*y)*sin(math.pi*z)*cos(math.pi*t*c*sq)*c
         ))
-    wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd)
+
+    TT=TrefftzTent(order,initmesh,c,bdd)
+    wavefront = TT.MakeWavefront(bdd,t_start)
 
     start = time.time()
-    with TaskManager():
-        wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
+    # with TaskManager():
+    TT.EvolveTents(t_step,wavefront)
+
     timing = (time.time()-start)
     print("time ",time.time()-start)
-    error = EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,t_step,bdd))
+    error = TT.Error(wavefront,TT.MakeWavefront(bdd,t_step))
     print("error ", error)
-    adiam = EvolveTentsAdiam(initmesh,1,t_step)
+    # adiam = EvolveTentsAdiam(initmesh,1,t_step)
+    adiam=1
 
     return [error, timing, adiam]
 
@@ -41,17 +45,18 @@ if __name__ == '__main__':
     t_start = 0
     t_step = 2/sqrt(3)
 
+
     h1error = []
     adiam = []
     timer = []
 # ms = [0.4,0.3,0.2,0.1]
-    ms = [0,1,2,3,4,5]
+    ms = [0,1]
 
     initmesh = Mesh(unit_cube.GenerateMesh(maxh = 1))
+    # initmesh = Mesh(unit_square.GenerateMesh(maxh = 1))
     for maxh in ms:
         print("RUN: ", maxh)
         # initmesh = Mesh(unit_cube.GenerateMesh(maxh = maxh))
-        # initmesh = Mesh(unit_square.GenerateMesh(maxh = maxh))
         [error,timing,tentdiam] =  SolveTrefftzTents(initmesh, order, t_step)
         h1error.append(error)
         adiam.append(tentdiam)

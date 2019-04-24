@@ -19,7 +19,7 @@ namespace ngcomp
 
 
     template<int D>
-    Matrix<> WaveTents<D> :: EvolveTents(double dt, Matrix<> wavefront)
+    void WaveTents<D> :: EvolveTents(double dt, Matrix<> &wavefront)
     {
         //int nthreads = (task_manager) ? task_manager->GetNumThreads() : 1;
         LocalHeap lh(1000 * 1000 * 100, "trefftz tents", 1);
@@ -68,7 +68,7 @@ namespace ngcomp
             for(int elnr=0;elnr<tent->els.Size();elnr++)
             {
                 RegionTimer reg1(ttentel);
-                CalcTentEl(tent->els[elnr],tent,tel,sir,slh,elmat,elvec,*topdshapes[elnr], wavefront);
+                CalcTentEl(tent->els[elnr],tent,tel,sir,slh,elmat,elvec,topdshapes[elnr], wavefront);
             }
 
             // Integrate boundary tent
@@ -95,12 +95,13 @@ namespace ngcomp
             for(int elnr=0;elnr<tent->els.Size();elnr++)
             {
                 RegionTimer reg3(ttenteval);
-                CalcTentElEval(tent->els[elnr], tent, tel, sir, slh, sol,*topdshapes[elnr], wavefront);
+                CalcTentElEval(tent->els[elnr], tent, tel, sir, slh, sol,topdshapes[elnr], wavefront);
             }
         }); // end loop over tents
+        cout<<"solved from " << timeshift;
         timeshift += dt;
-        cout << "...done" << endl;
-        return wavefront;
+        cout<<" to " << timeshift<<endl;
+        //return wavefront;
     }
 
     //template<int D>
@@ -261,7 +262,7 @@ namespace ngcomp
 
     template<int D>
     void WaveTents<D> :: CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel,
-                    SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes, SliceMatrix<double> wavefront)
+                    SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes, Matrix<> &wavefront)
     {
         static Timer tint1("tent int calcshape",2);
         static Timer tint2("tent int mat&vec",2);
@@ -299,9 +300,9 @@ namespace ngcomp
         tint1.Stop();
 
         tint2.Start();
-        TentDmat<D>(Dmat, vert, -1);
+        TentDmat(Dmat, vert, -1);
 
-        Vec<D+1> nnn = TentFaceNormal<D+1>(vert,1);
+        Vec<D+1> nnn = TentFaceNormal(vert,1);
         if(L2Norm(nnn.Range(0,D))*(wavespeed)>nnn[D]) cout << "tent pitched too high" << endl;
         //if(TentFaceArea<D>(vert)<smir_fix[0].GetMeasure()[0]&& tent->nbtime[0]==0)
         //{
@@ -365,7 +366,8 @@ namespace ngcomp
         Mat<D+1> vert = TentFaceVerts(tent, surfel, 0);
         // build normal vector
         Vec<D+1> n;
-        n = TentFaceNormal(vert,0);
+        n = -TentFaceNormal(vert,0);
+
         if(D==1) //D=1 special case
             n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]);
         n[D] = 0; // time-like faces only
@@ -427,7 +429,7 @@ namespace ngcomp
 
 
     template<int D>
-    void WaveTents<D> :: CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel,  SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes, SliceMatrix<double> wavefront)
+    void WaveTents<D> :: CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel,  SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes, Matrix<> &wavefront)
     {
         HeapReset hr(slh);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
@@ -659,7 +661,7 @@ namespace ngcomp
             SIMD_MappedIntegrationRule<D,D> smir(sir,ma->GetTrafo(elnr,lh),lh);
             for(int imip=0;imip<snip;imip++)
                 for(int d=0;d<D+1;d++)
-                    energy += 0.5*( ((d==D?1.0:pow(wavenumber,2))/pow(wavenumber,2))*wavefront(elnr,snip+d*snip+imip)*wavefront(elnr,snip+d*snip+imip))*smir[imip/nsimd].GetWeight()[imip%nsimd];
+                    energy += 0.5*( ((d==D?1.0:pow(wavespeed,2))/pow(wavespeed,2))*wavefront(elnr,snip+d*snip+imip)*wavefront(elnr,snip+d*snip+imip))*smir[imip/nsimd].GetWeight()[imip%nsimd];
         }
 
         return energy;
@@ -728,15 +730,16 @@ void DeclareETClass(py::module &m, std::string typestr)
     using PyETclass = WaveTents<D>;
     std::string pyclass_name = std::string("WaveTents") + typestr;
     //py::class_<PyETclass,shared_ptr<PyETclass> >(m, "EvolveTent")
-    py::class_<PyETclass, TrefftzTents>(m, pyclass_name.c_str())//, py::buffer_protocol(), py::dynamic_attr())
+    py::class_<PyETclass, shared_ptr<PyETclass>, TrefftzTents>(m, pyclass_name.c_str())//, py::buffer_protocol(), py::dynamic_attr())
         .def(py::init<>())
         .def("EvolveTents", &PyETclass::EvolveTents)
-        .def("MakeWavefront", &PyETclass::MakeWavefront);
+        .def("MakeWavefront", &PyETclass::MakeWavefront)
+        .def("Error", &PyETclass::Error);
 }
 
 void ExportEvolveTent(py::module m)
 {
-    py::class_<TrefftzTents>(m, "TrefftzTents");//, py::buffer_protocol(), py::dynamic_attr())
+    py::class_<TrefftzTents, shared_ptr<TrefftzTents>>(m, "TrefftzTents");//, py::buffer_protocol(), py::dynamic_attr())
 
     DeclareETClass<1>(m, "1");
     DeclareETClass<2>(m, "2");
@@ -744,10 +747,16 @@ void ExportEvolveTent(py::module m)
     m.def("TrefftzTent", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, shared_ptr<CoefficientFunction> bddatum) -> shared_ptr<TrefftzTents>
           {
               //TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
-              //shared_ptr<TrefftzTents> tr = make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
-              //return tr;
-return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
+              shared_ptr<TrefftzTents> tr;
+              int D = ma->GetDimension();
+              //return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
+              if(D==2)
+                  tr= make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
+              else if(D==3)
+                  tr = make_shared<WaveTents<3>>(order,ma,wavespeed,bddatum);
+              return tr;
               //return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma, wavespeed, bddatum));
+
           });
 }
 #endif // NGS_PYTHON
