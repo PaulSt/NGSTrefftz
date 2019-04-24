@@ -95,6 +95,7 @@ namespace ngfem
             }
 
             const CSR* TB(int ord);
+            void CreateTB(int ord);
 
         private:
             TrefftzWaveBasis()= default;
@@ -102,14 +103,13 @@ namespace ngfem
             TrefftzWaveBasis(const TrefftzWaveBasis&)= delete;
             TrefftzWaveBasis& operator=(const TrefftzWaveBasis&)= delete;
 
-            mutex gentrefftzbasis;
             Array<CSR> tbstore;
             //once_flag tbonceflag;
             void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis, int dim, int &tracker);
             int IndexMap2(Vec<D, int> index, int ord);
     };
 
-            void MatToCSR(Matrix<> mat, CSR &sparsemat);
+    void MatToCSR(Matrix<> mat, CSR &sparsemat);
 
 }
 

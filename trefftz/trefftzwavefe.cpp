@@ -472,42 +472,45 @@ namespace ngfem
     template<int D>
     const CSR* TrefftzWaveBasis<D> :: TB(int ord)
     {
-        {
-            lock_guard<mutex> lock(gentrefftzbasis);
-            if (tbstore.Size() <= ord)
-            {
-                int oldsize = tbstore.Size();
-                tbstore.SetSize (ord+1);
-                for (int i = oldsize; i <= ord; i++)
-                    tbstore[i] = CSR();
-            }
-
-            if ( tbstore[ord][0].Size() == 0)
-            {
-                cout << "basis for ord: " << ord << endl;
-                const int nbasis = (BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1));
-                const int npoly = (BinCoeff(D + ord, ord));
-                Matrix<> trefftzbasis(nbasis,npoly);
-                trefftzbasis = 0;
-                Vec<D, int>  coeff = 0;
-                int count = 0;
-                for(int b=0;b<nbasis;b++)
-                {
-                    int tracker = 0;
-                    TB_inner(ord, trefftzbasis, coeff, b, D, tracker);
-                }
-                MatToCSR(trefftzbasis,tbstore[ord]);
-            }
-
-            if ( tbstore[ord][0].Size() == 0)
-            {
-                stringstream str;
-                str << "failed to generate trefftz basis of order " << ord << endl;
-                throw Exception (str.str());
-            }
-        }
         const CSR* tb =& tbstore[ord];
         return tb;
+    }
+
+    template<int D>
+    void TrefftzWaveBasis<D> :: CreateTB(int ord)
+    {
+        cout << "creating tp store for order " << ord << endl;
+        //if (tbstore.Size() < ord)
+        //{
+        int oldsize = tbstore.Size();
+        tbstore.SetSize (ord+1);
+        for (int i = oldsize; i <= ord; i++)
+            tbstore[i] = CSR();
+
+        //if ( tbstore[ord][0].Size() == 0)
+        //{
+        const int nbasis = (BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1));
+        const int npoly = (BinCoeff(D + ord, ord));
+        Matrix<> trefftzbasis(nbasis,npoly);
+        trefftzbasis = 0;
+        Vec<D, int>  coeff = 0;
+        int count = 0;
+        for(int b=0;b<nbasis;b++)
+        {
+            int tracker = 0;
+            TB_inner(ord, trefftzbasis, coeff, b, D, tracker);
+        }
+        MatToCSR(trefftzbasis,tbstore[ord]);
+        //}
+        //}
+
+        //if ( tbstore[ord][0].Size() == 0)
+        if ( tbstore.Size() < ord)
+        {
+            stringstream str;
+            str << "failed to generate trefftz basis of order " << ord << endl;
+            throw Exception (str.str());
+        }
     }
 
 
