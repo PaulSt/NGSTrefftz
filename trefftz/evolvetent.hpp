@@ -30,8 +30,6 @@ namespace ngcomp
 
     void
     CalcTentEl (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
-                // SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<>
-                // elmat, SliceVector<> elvec);
                 SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat,
                 SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes,
                 Matrix<> &wavefront);
@@ -40,9 +38,6 @@ namespace ngcomp
                         SIMD_IntegrationRule &sir, LocalHeap &slh,
                         SliceMatrix<> elmat, SliceVector<> elvec);
 
-    // void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel,
-    // shared_ptr<MeshAccess> ma , SliceMatrix<> &wavefront,
-    // SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol);
     void
     CalcTentElEval (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
                     SIMD_IntegrationRule &sir, LocalHeap &slh,
@@ -70,13 +65,7 @@ namespace ngcomp
                shared_ptr<CoefficientFunction> abddatum)
         : order (aorder), ma (ama), wavespeed (awavespeed), bddatum (abddatum)
     {
-      // const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG :
-      // ET_SEGM ); IntegrationRule ir(eltyp, order*2); int nsimd =
-      // SIMD<double>::Size(); int snip = ir.Size() +
-      // (ir.Size()%nsimd==0?0:nsimd-ir.Size()%nsimd);
-      // wavefront.SetSize(ama->GetNE(),snip * (D+2));
-      // wavefront = MakeWavefront(abddatum, 0);
-      // cout << wavefront;
+      ;
     }
 
     void EvolveTents (double dt, Matrix<> &wavefront);
@@ -89,6 +78,19 @@ namespace ngcomp
     double Energy (Matrix<> wavefront);
 
     double MaxAdiam (double dt);
+
+    int LocalDofs ()
+    {
+      TrefftzWaveFE<D + 1> tel (order, wavespeed);
+      return tel.GetNBasis ();
+    }
+
+    int NrTents (double dt)
+    {
+      TentPitchedSlab<D> tps = TentPitchedSlab<D> (ma);
+      tps.PitchTents (dt, wavespeed + 1);
+      return tps.tents.Size ();
+    }
   };
 }
 

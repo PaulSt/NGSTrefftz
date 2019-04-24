@@ -857,7 +857,9 @@ template <int D> void DeclareETClass (py::module &m, std::string typestr)
       .def ("EvolveTents", &PyETclass::EvolveTents)
       .def ("MakeWavefront", &PyETclass::MakeWavefront)
       .def ("Error", &PyETclass::Error)
-      .def ("MaxAdiam", &PyETclass::MaxAdiam);
+      .def ("MaxAdiam", &PyETclass::MaxAdiam)
+      .def ("LocalDofs", &PyETclass::LocalDofs)
+      .def ("NrTents", &PyETclass::NrTents);
 }
 
 void ExportEvolveTent (py::module m)
