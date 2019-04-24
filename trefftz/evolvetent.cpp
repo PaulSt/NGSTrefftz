@@ -369,8 +369,7 @@ namespace ngcomp
         n = -TentFaceNormal(vert,0);
 
         if(D==1) //D=1 special case
-            n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]);
-        n[D] = 0; // time-like faces only
+            n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n[D]=0;
         // build mapping to physical boundary simplex
         Mat<D+1,D> map;
         for(int i=0;i<D;i++)
@@ -585,9 +584,10 @@ namespace ngcomp
                         break;
                     }
         }
-        normv /= L2Norm(normv);
         if(top == 1) normv *= sgn_nozero<double>(normv[D]);
         else if(top == -1) normv *= (-sgn_nozero<double>(normv[D]));
+        else if(top == 0) normv[D]=0;// time-like faces only
+        normv /= L2Norm(normv);
         return normv;
     }
 
@@ -711,12 +711,28 @@ namespace ngcomp
 
         return anisotropicdiam;
     }
+
+
+    template<int D>
+    double WaveTents<D> :: MaxAdiam(double dt)
+    {
+        double h = 0.0;
+        TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);
+        tps.PitchTents(dt, wavespeed+1);
+        RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
+            Tent* tent = tps.tents[tentnr];
+            h = max(h,TentAdiam(tent));
+        });
+        return h;
+    }
+
+
 }
 
 
-    template class WaveTents<1>;
-    template class WaveTents<2>;
-    template class WaveTents<3>;
+template class WaveTents<1>;
+template class WaveTents<2>;
+template class WaveTents<3>;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -724,8 +740,8 @@ namespace ngcomp
 #ifdef NGS_PYTHON
 #include <python_ngstd.hpp>
 
-template<int D>
-void DeclareETClass(py::module &m, std::string typestr)
+    template<int D>
+    void DeclareETClass(py::module &m, std::string typestr)
 {
     using PyETclass = WaveTents<D>;
     std::string pyclass_name = std::string("WaveTents") + typestr;
@@ -734,7 +750,8 @@ void DeclareETClass(py::module &m, std::string typestr)
         .def(py::init<>())
         .def("EvolveTents", &PyETclass::EvolveTents)
         .def("MakeWavefront", &PyETclass::MakeWavefront)
-        .def("Error", &PyETclass::Error);
+        .def("Error", &PyETclass::Error)
+        .def("MaxAdiam", &PyETclass::MaxAdiam);
 }
 
 void ExportEvolveTent(py::module m)
