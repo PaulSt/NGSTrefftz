@@ -8,6 +8,8 @@ from trefftzngs import *
 
 
 def SolveTrefftzTents(mesh, order, finaltime):
+    global TT
+    global bdd
     D = initmesh.dim
     t = CoordCF(D)
 
@@ -24,22 +26,21 @@ def SolveTrefftzTents(mesh, order, finaltime):
     wavefront = TT.MakeWavefront(bdd,t_start)
 
     start = time.time()
-    # with TaskManager():
-    TT.EvolveTents(t_step,wavefront)
+    with TaskManager():
+        TT.EvolveTents(t_step,wavefront)
 
     timing = (time.time()-start)
     print("time ",time.time()-start)
     error = TT.Error(wavefront,TT.MakeWavefront(bdd,t_step))
     print("error ", error)
-    # adiam = EvolveTentsAdiam(initmesh,1,t_step)
-    adiam=1
+    adiam = TT.MaxAdiam(t_step)
 
     return [error, timing, adiam]
 
 
 if __name__ == '__main__':
     order = 3
-    SetNumThreads(10)
+    SetNumThreads(2)
 
     c = 1
     t_start = 0
@@ -50,7 +51,7 @@ if __name__ == '__main__':
     adiam = []
     timer = []
 # ms = [0.4,0.3,0.2,0.1]
-    ms = [0,1]
+    ms = [0,1,2]
 
     initmesh = Mesh(unit_cube.GenerateMesh(maxh = 1))
     # initmesh = Mesh(unit_square.GenerateMesh(maxh = 1))

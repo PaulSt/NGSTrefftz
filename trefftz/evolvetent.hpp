@@ -88,7 +88,7 @@ namespace ngcomp
 
     double Energy (Matrix<> wavefront);
 
-    int dimensio () { return D; }
+    double MaxAdiam (double dt);
   };
 }
 
