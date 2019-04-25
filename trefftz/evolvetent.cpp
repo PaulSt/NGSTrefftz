@@ -750,13 +750,33 @@ void ExportEvolveTent(py::module m)
     DeclareETClass<1>(m, "1");
     DeclareETClass<2>(m, "2");
     DeclareETClass<3>(m, "3");
+
     m.def("TrefftzTent", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, shared_ptr<CoefficientFunction> bddatum) -> shared_ptr<TrefftzTents>
           {
               //TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
               shared_ptr<TrefftzTents> tr;
               int D = ma->GetDimension();
               //return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
-              if(D==2)
+              if(D==1)
+                  tr= make_shared<WaveTents<1>>(order,ma,wavespeed,bddatum);
+              else if(D==2)
+                  tr= make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
+              else if(D==3)
+                  tr = make_shared<WaveTents<3>>(order,ma,wavespeed,bddatum);
+              return tr;
+              //return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma, wavespeed, bddatum));
+
+          });
+
+    m.def("TrefftzTent", [](int order, shared_ptr<MeshAccess> ma, Vector<> wavespeed, shared_ptr<CoefficientFunction> bddatum) -> shared_ptr<TrefftzTents>
+          {
+              //TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
+              shared_ptr<TrefftzTents> tr;
+              int D = ma->GetDimension();
+              //return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
+              if(D==1)
+                  tr= make_shared<WaveTents<1>>(order,ma,wavespeed,bddatum);
+              else if(D==2)
                   tr= make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
               else if(D==3)
                   tr = make_shared<WaveTents<3>>(order,ma,wavespeed,bddatum);
