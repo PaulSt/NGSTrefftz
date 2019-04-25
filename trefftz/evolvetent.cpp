@@ -20,8 +20,7 @@ namespace ngcomp
       cout << "Lapack error: " << success << endl;
   }
 
-  template <int D>
-  void WaveTents<D>::EvolveTents (double dt, Matrix<> &wavefront)
+  template <int D> void WaveTents<D>::EvolveTents (double dt)
   {
     // int nthreads = (task_manager) ? task_manager->GetNumThreads() : 1;
     LocalHeap lh (1000 * 1000 * 100, "trefftz tents", 1);
@@ -82,7 +81,7 @@ namespace ngcomp
           {
             RegionTimer reg1 (ttentel);
             CalcTentEl (tent->els[elnr], tent, tel, sir, slh, elmat, elvec,
-                        topdshapes[elnr], wavefront);
+                        topdshapes[elnr]);
           }
 
         // Integrate boundary tent
@@ -110,7 +109,7 @@ namespace ngcomp
           {
             RegionTimer reg3 (ttenteval);
             CalcTentElEval (tent->els[elnr], tent, tel, sir, slh, sol,
-                            topdshapes[elnr], wavefront);
+                            topdshapes[elnr]);
           }
       }); // end loop over tents
 
@@ -159,7 +158,7 @@ namespace ngcomp
             SliceVector<> subv
                 = elvec.Range (eli * nbasis, (eli + 1) * nbasis);
             CalcTentEl (tent->els[elnr], tent, tel, sir, slh, subm, subv,
-                        topdshapes[elnr], wavefront);
+                        topdshapes[elnr]);
           }
 
         // Integrate boundary tent
@@ -288,7 +287,7 @@ namespace ngcomp
               eli = 0;
             CalcTentElEval (tent->els[elnr], tent, tel, sir, slh,
                             sol.Range (eli * nbasis, (eli + 1) * nbasis),
-                            topdshapes[elnr], wavefront);
+                            topdshapes[elnr]);
           }
       }); // end loop over tents
     cout << "solved from " << timeshift;
@@ -302,8 +301,7 @@ namespace ngcomp
   WaveTents<D>::CalcTentEl (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
                             SIMD_IntegrationRule &sir, LocalHeap &slh,
                             SliceMatrix<> elmat, SliceVector<> elvec,
-                            SliceMatrix<SIMD<double>> simddshapes,
-                            Matrix<> &wavefront)
+                            SliceMatrix<SIMD<double>> simddshapes)
   {
     static Timer tint1 ("tent int calcshape", 2);
     static Timer tint2 ("tent int mat&vec", 2);
@@ -503,8 +501,7 @@ namespace ngcomp
   WaveTents<D>::CalcTentElEval (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
                                 SIMD_IntegrationRule &sir, LocalHeap &slh,
                                 SliceVector<> sol,
-                                SliceMatrix<SIMD<double>> simddshapes,
-                                Matrix<> &wavefront)
+                                SliceMatrix<SIMD<double>> simddshapes)
   {
     HeapReset hr (slh);
     const ELEMENT_TYPE eltyp
@@ -874,6 +871,8 @@ template <int D> void DeclareETClass (py::module &m, std::string typestr)
       .def (py::init<> ())
       .def ("EvolveTents", &PyETclass::EvolveTents)
       .def ("MakeWavefront", &PyETclass::MakeWavefront)
+      .def ("SetWavefront", &PyETclass::SetWavefront)
+      .def ("GetWavefront", &PyETclass::GetWavefront)
       .def ("Error", &PyETclass::Error)
       .def ("MaxAdiam", &PyETclass::MaxAdiam)
       .def ("LocalDofs", &PyETclass::LocalDofs)

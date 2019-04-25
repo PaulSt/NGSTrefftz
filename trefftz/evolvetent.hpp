@@ -24,15 +24,14 @@ namespace ngcomp
     int order;
     shared_ptr<MeshAccess> ma;
     Vector<> wavespeed;
-    // Matrix<> wavefront;
+    Matrix<> wavefront;
     shared_ptr<CoefficientFunction> bddatum;
     double timeshift = 0;
 
     void
     CalcTentEl (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
                 SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat,
-                SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes,
-                Matrix<> &wavefront);
+                SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
 
     void CalcTentBndEl (int surfel, Tent *tent, TrefftzWaveFE<D + 1> tel,
                         SIMD_IntegrationRule &sir, LocalHeap &slh,
@@ -41,8 +40,7 @@ namespace ngcomp
     void
     CalcTentElEval (int elnr, Tent *tent, TrefftzWaveFE<D + 1> tel,
                     SIMD_IntegrationRule &sir, LocalHeap &slh,
-                    SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes,
-                    Matrix<> &wavefront);
+                    SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes);
 
     Mat<D + 1, D + 1> TentFaceVerts (Tent *tent, int elnr, int top);
 
@@ -69,10 +67,20 @@ namespace ngcomp
       wavespeed[0] = awavespeed;
     }
 
-    void EvolveTents (double dt, Matrix<> &wavefront);
+    WaveTents (int aorder, shared_ptr<MeshAccess> ama, Vector<> awavespeed,
+               shared_ptr<CoefficientFunction> abddatum)
+        : order (aorder), ma (ama), bddatum (abddatum), wavespeed (awavespeed)
+    {
+      ;
+    }
+
+    void EvolveTents (double dt);
 
     Matrix<>
     MakeWavefront (shared_ptr<CoefficientFunction> bddatum, double time);
+
+    Matrix<> GetWavefront () { return wavefront; }
+    void SetWavefront (Matrix<> wf) { wavefront = wf; }
 
     double Error (Matrix<> wavefront, Matrix<> wavefront_corr);
 
