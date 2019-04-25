@@ -8,53 +8,89 @@
 
 namespace ngcomp
 {
-    template<int D>
-    void EvolveTents(int order, shared_ptr<MeshAccess> ma, double wavespeed, double dt, SliceMatrix<> wavefront,
-            double timeshift,  shared_ptr<CoefficientFunction> bddatum);
+
+    class TrefftzTents {
+        private:
+
+        public:
+            TrefftzTents(){;}
+            //virtual ~TrefftzTents() = default;
+            virtual int dimensio(){return 0;}
+
+    };
 
     template<int D>
-    void EvolveTents(int order, shared_ptr<MeshAccess> ma, Vector<> wavespeed, double dt, SliceMatrix<> wavefront,
-            double timeshift, shared_ptr<CoefficientFunction> bddatum);
+    class WaveTents : public TrefftzTents
+    {
+        private:
+            int order;
+            shared_ptr<MeshAccess> ma;
+            Vector<> wavespeed;
+            Matrix<> wavefront;
+            shared_ptr<CoefficientFunction> bddatum;
+            double timeshift = 0;
 
-    template<int D>
-    void CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma, SliceMatrix<double> &wavefront,
-            //SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
-                    SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
+            void CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel,
+                 SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
 
-    template<int D>
-    void CalcTentBndEl(int surfel, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> bddatum,
-                       double timeshift, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
+            void CalcTentBndEl(int surfel, Tent* tent, TrefftzWaveFE<D+1> tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
 
-    template<int D>
-    //void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma , SliceMatrix<> &wavefront, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol);
-    void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, shared_ptr<MeshAccess> ma , SliceMatrix<> &wavefront, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes);
+            void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes);
 
-    template<int D>
-    Mat<D+1,D+1> TentFaceVerts(Tent* tent, int elnr, shared_ptr<MeshAccess> ma, int top);
+            Mat<D+1,D+1> TentFaceVerts(Tent* tent, int elnr, int top);
 
-    template<int D>
-    void TentDmat(Mat<D+1> &Dmat, Mat<D+1> v, int top, double wavespeed);
+            void TentDmat(Mat<D+1> &Dmat, Mat<D+1> v, int top, double wavespeed);
 
-    template<int D>
-    double TentFaceArea( Mat<D+1,D+1> v );
+            double TentFaceArea( Mat<D+1,D+1> v );
 
-    template<int D>
-    Vec<D> TentFaceNormal( Mat<D,D> v, int dir );
+            Vec<D+1> TentFaceNormal( Mat<D+1,D+1> v, int dir );
 
-    template<int D>
-    Matrix<> MakeWavefront(int order, shared_ptr<MeshAccess> ma, double time, shared_ptr<CoefficientFunction> bddatum);
+            template<typename T=double>
+            void SwapIfGreater(T& a, T& b);
 
-    template<int D>
-    double Error(int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, Matrix<> wavefront_corr);
+            double TentAdiam(Tent* tent);
 
-    template<int D>
-    double Energy(int order, shared_ptr<MeshAccess> ma, Matrix<> wavefront, double wavenumber);
+            inline void LapackSolve(SliceMatrix<double> a, SliceVector<double> b);
 
-    template<typename T=double>
-    void SwapIfGreater(T& a, T& b);
+        public:
+            WaveTents(){;}
 
-    template<int D>
-    double TentAdiam(Tent* tent, shared_ptr<MeshAccess> ma, double wavespeed);
+            WaveTents( int aorder, shared_ptr<MeshAccess> ama, double awavespeed, shared_ptr<CoefficientFunction> abddatum)
+                : order(aorder), ma(ama), bddatum(abddatum)
+            {
+                wavespeed.SetSize(1);
+                wavespeed[0]=awavespeed;
+            }
+
+            WaveTents( int aorder, shared_ptr<MeshAccess> ama, Vector<> awavespeed, shared_ptr<CoefficientFunction> abddatum)
+                : order(aorder), ma(ama), bddatum(abddatum), wavespeed(awavespeed)
+            { ; }
+
+            void EvolveTents(double dt);
+
+            Matrix<> MakeWavefront( shared_ptr<CoefficientFunction> bddatum, double time);
+
+            Matrix<> GetWavefront() {return wavefront;}
+            void SetWavefront(Matrix<> wf) {wavefront=wf;}
+
+            double Error(Matrix<> wavefront, Matrix<> wavefront_corr);
+
+            double Energy(Matrix<> wavefront);
+
+            double MaxAdiam(double dt);
+
+            int LocalDofs(){
+                TrefftzWaveFE<D+1> tel(order,wavespeed[0]);
+                return tel.GetNBasis();
+            }
+
+            int NrTents(double dt)
+            {
+                TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);
+                tps.PitchTents(dt, wavespeed[0]+1);
+                return tps.tents.Size();
+            }
+    };
 }
 
 #ifdef NGS_PYTHON

@@ -9,6 +9,8 @@ from trefftzngs import *
 
 
 def SolveTrefftzTents(mesh, order, finaltime):
+    global TT
+    global bdd
     D = initmesh.dim
     t = CoordCF(D)
 
@@ -37,18 +39,18 @@ def SolveTrefftzTents(mesh, order, finaltime):
             sin(math.pi*x)*cos(math.pi*t*c*sq)*c
             ))
 
-
-
-    wavefront = EvolveTentsMakeWavefront(order,initmesh,t_start,bdd)
+    TT=TrefftzTent(order,initmesh,c,bdd)
+    TT.SetWavefront(TT.MakeWavefront(bdd,t_start))
 
     start = time.time()
     with TaskManager():
-        wavefront = EvolveTents(order,initmesh,c,t_step,wavefront,t_start,bdd)
+        TT.EvolveTents(t_step)
     timing = (time.time()-start)
+
     print("time ",time.time()-start)
-    error = EvolveTentsError(order,initmesh,wavefront,EvolveTentsMakeWavefront(order,initmesh,t_step,bdd))
+    error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
     print("error ", error)
-    adiam = EvolveTentsAdiam(initmesh,1,t_step)
+    adiam = TT.MaxAdiam(t_step)
 
     return [error, timing, adiam]
 
@@ -61,13 +63,9 @@ if __name__ == '__main__':
     t_start = 0
     t_step = 2/sqrt(3)
 
-    h1error = []
-    adiam = []
-    timer = []
-# ms = [0.4,0.3,0.2,0.1]
     ms = [0,1,2]
-
     meshes=[ Mesh(SegMesh(4,0,1)), Mesh(unit_square.GenerateMesh(maxh = 0.4)), Mesh(unit_cube.GenerateMesh(maxh = 1))]
+
     for initmesh in meshes:
         h1error = []
         adiam = []
