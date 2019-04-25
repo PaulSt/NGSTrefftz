@@ -1,6 +1,7 @@
-from ngsolve import *
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
+from ngsolve.TensorProductTools import *
+from ngsolve import *
 import time
 import math
 from trefftzngs import *
@@ -63,8 +64,8 @@ if __name__ == '__main__':
     t_step = 2/sqrt(3)
 
     ms = [0,1,2]
+    meshes=[ Mesh(SegMesh(4,0,1)), Mesh(unit_square.GenerateMesh(maxh = 0.4)), Mesh(unit_cube.GenerateMesh(maxh = 1))]
 
-    meshes=[ Mesh(unit_square.GenerateMesh(maxh = 0.4)), Mesh(unit_cube.GenerateMesh(maxh = 1))]
     for initmesh in meshes:
         h1error = []
         adiam = []
@@ -77,8 +78,10 @@ if __name__ == '__main__':
             adiam.append(tentdiam)
             timer.append(timing)
 
-            if maxh != ms[-1]:
+            if maxh != ms[-1] and initmesh.dim!=1:
                 initmesh.Refine()
+            elif initmesh.dim==1:
+                initmesh=Mesh(SegMesh(initmesh.ne*2,0,1))
 
         print("====================",initmesh.dim,"====================")
         for i in range(len(ms)):
