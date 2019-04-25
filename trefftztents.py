@@ -23,15 +23,15 @@ def SolveTrefftzTents(mesh, order, finaltime):
         ))
 
     TT=TrefftzTent(order,initmesh,c,bdd)
-    wavefront = TT.MakeWavefront(bdd,t_start)
+    TT.SetWavefront(TT.MakeWavefront(bdd,t_start))
 
     start = time.time()
     with TaskManager():
-        TT.EvolveTents(t_step,wavefront)
+        TT.EvolveTents(t_step)
 
     timing = (time.time()-start)
     print("time ",time.time()-start)
-    error = TT.Error(wavefront,TT.MakeWavefront(bdd,t_step))
+    error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
     print("error ", error)
     adiam = TT.MaxAdiam(t_step)
 
