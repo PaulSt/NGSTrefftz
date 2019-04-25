@@ -45,8 +45,8 @@ def SolveTrefftzTents(mesh, order, finaltime):
     start = time.time()
     with TaskManager():
         TT.EvolveTents(t_step)
-
     timing = (time.time()-start)
+
     print("time ",time.time()-start)
     error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
     print("error ", error)

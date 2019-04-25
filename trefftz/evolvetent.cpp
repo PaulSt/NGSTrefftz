@@ -171,10 +171,10 @@ namespace ngcomp
                         Mat<D+1> vert = TentFaceVerts(tent, surfel, 0);
                         // build normal vector
                         Vec<D+1> n;
-                        n.Range(0,D) = TentFaceNormal(vert.Cols(1,D+1).Rows(0,D),0);
+                        n = -TentFaceNormal(vert,0);
                         if(D==1) //D=1 special case
-                            n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]);
-                        n[D] = 0; // time-like faces only
+                            n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n[D] = 0; // time-like faces only
+
                         // build mapping to physical boundary simplex
                         Mat<D+1,D> map;
                         for(int i=0;i<D;i++)
