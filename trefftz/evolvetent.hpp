@@ -25,7 +25,7 @@ namespace ngcomp
         private:
             int order;
             shared_ptr<MeshAccess> ma;
-            double wavespeed;
+            Vector<> wavespeed;
             //Matrix<> wavefront;
             shared_ptr<CoefficientFunction> bddatum;
             double timeshift = 0;
@@ -39,7 +39,7 @@ namespace ngcomp
 
             Mat<D+1,D+1> TentFaceVerts(Tent* tent, int elnr, int top);
 
-            void TentDmat(Mat<D+1> &Dmat, Mat<D+1> v, int top);
+            void TentDmat(Mat<D+1> &Dmat, Mat<D+1> v, int top, double wavespeed);
 
             double TentFaceArea( Mat<D+1,D+1> v );
 
@@ -56,8 +56,11 @@ namespace ngcomp
             WaveTents(){;}
 
             WaveTents( int aorder, shared_ptr<MeshAccess> ama, double awavespeed, shared_ptr<CoefficientFunction> abddatum)
-                : order(aorder), ma(ama), wavespeed(awavespeed), bddatum(abddatum)
-            {;}
+                : order(aorder), ma(ama), bddatum(abddatum)
+            {
+                wavespeed.SetSize(1); 
+                wavespeed[0]=awavespeed;
+            }
 
             void EvolveTents(double dt, Matrix<> &wavefront);
 
@@ -70,14 +73,14 @@ namespace ngcomp
             double MaxAdiam(double dt);
 
             int LocalDofs(){
-                TrefftzWaveFE<D+1> tel(order,wavespeed);
+                TrefftzWaveFE<D+1> tel(order,wavespeed[0]);
                 return tel.GetNBasis();
             }
 
             int NrTents(double dt)
             {
                 TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);
-                tps.PitchTents(dt, wavespeed+1);
+                tps.PitchTents(dt, wavespeed[0]+1);
                 return tps.tents.Size();
             }
     };
