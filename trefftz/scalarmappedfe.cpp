@@ -97,9 +97,15 @@ namespace ngfem
       const SIMD_BaseMappedIntegrationRule &mir,
       BareVector<SIMD<double>> values, BareSliceVector<> coefs) const
   {
-    throw ExceptionNOSIMD (
-        string ("AddTrans (simd) not implemented for class ")
-        + typeid (*this).name ());
+    // throw ExceptionNOSIMD (string("AddTrans (simd) not implemented for class
+    // ")+typeid(*this).name());
+    STACK_ARRAY (SIMD<double>, mem, ndof * mir.Size ());
+    FlatMatrix<SIMD<double>> shape (ndof, mir.Size (), &mem[0]);
+    CalcShape (mir, shape);
+    const int nsimd = SIMD<double>::Size ();
+    FlatMatrix<double> bdbmat (ndof, mir.Size () * nsimd, &shape (0, 0)[0]);
+    FlatVector<double> bdbvec (mir.Size () * nsimd, &values (0)[0]);
+    coefs.AddSize (ndof) += bdbmat * bdbvec;
   }
 
   void BaseScalarMappedElement ::AddTrans (
