@@ -27,6 +27,7 @@ namespace ngfem
     CalcShape (const SIMD_BaseMappedIntegrationRule & mir,
                BareSliceMatrix<SIMD<double>> shape) const
     {
+        cout<<"SIMD - CalcShape not overloaded"<< endl;
         throw ExceptionNOSIMD("SIMD - CalcShape not overloaded");
     }
 
@@ -48,6 +49,7 @@ namespace ngfem
     void BaseScalarMappedElement ::
     Evaluate (const SIMD_BaseMappedIntegrationRule & mir, BareSliceVector<> coefs, BareVector<SIMD<double>> values) const
     {
+        cout<<"SIMD - Eval not overloaded"<< endl;
         throw ExceptionNOSIMD (string("Evaluate (simd) not implemented for class ")+typeid(*this).name());
     }
 
@@ -84,14 +86,8 @@ namespace ngfem
     void BaseScalarMappedElement ::
     AddTrans (const SIMD_BaseMappedIntegrationRule & mir, BareVector<SIMD<double>> values, BareSliceVector<> coefs) const
     {
-        //throw ExceptionNOSIMD (string("AddTrans (simd) not implemented for class ")+typeid(*this).name());
-        STACK_ARRAY(SIMD<double>, mem, ndof*mir.Size());
-        FlatMatrix<SIMD<double>> shape(ndof,mir.Size(),&mem[0]);
-        CalcShape (mir, shape);
-        const int nsimd = SIMD<double>::Size();
-        FlatMatrix<double> bdbmat(ndof,mir.Size()*nsimd,&shape(0,0)[0]);
-        FlatVector<double> bdbvec(mir.Size()*nsimd,&values(0)[0]);
-        coefs.AddSize(ndof) += bdbmat * bdbvec;
+        cout<<"SIMD - AddTrans not overloaded"<< endl;
+        throw ExceptionNOSIMD (string("AddTrans (simd) not implemented for class ")+typeid(*this).name());
     }
 
     void BaseScalarMappedElement ::
@@ -105,25 +101,28 @@ namespace ngfem
     CalcMappedDShape (const SIMD_BaseMappedIntegrationRule & mir,
                       BareSliceMatrix<SIMD<double>> dshapes) const
     {
+        cout<<"SIMD - CalcMappedDShape not overloaded"<< endl;
         throw ExceptionNOSIMD("SIMD - CalcDShape not overloaded");
     }
 
     void BaseScalarMappedElement ::
     EvaluateGrad (const SIMD_BaseMappedIntegrationRule & ir, BareSliceVector<> coefs, BareSliceMatrix<SIMD<double>> values) const
     {
+        cout<<"SIMD - EvaluateGrad not overloaded"<< endl;
         throw ExceptionNOSIMD (string("EvaluateGrad (simd) not implemented for class ")+typeid(*this).name());
     }
 
-    void BaseScalarMappedElement ::
-    EvaluateGrad (const SIMD_IntegrationRule & ir, BareSliceVector<> coefs, BareSliceMatrix<SIMD<double>> values) const
-    {
-        throw ExceptionNOSIMD (string("EvaluateGrad (simd) not implemented for class ")+typeid(*this).name());
-    }
+    //void BaseScalarMappedElement ::
+    //EvaluateGrad (const SIMD_IntegrationRule & ir, BareSliceVector<> coefs, BareSliceMatrix<SIMD<double>> values) const
+    //{
+        //throw ExceptionNOSIMD (string("EvaluateGrad (simd) not implemented for class ")+typeid(*this).name());
+    //}
 
     void BaseScalarMappedElement ::
     AddGradTrans (const SIMD_BaseMappedIntegrationRule & ir, BareSliceMatrix<SIMD<double>> values,
                   BareSliceVector<> coefs) const
     {
+        cout<<"SIMD - AddTransGrad not overloaded"<< endl;
         throw ExceptionNOSIMD (string("AddGradTrans (simd) not implemented for class ")+typeid(*this).name());
     }
 
