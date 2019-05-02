@@ -22,17 +22,15 @@ namespace ngfem
   }
 
   template <>
-  void
-  TrefftzWaveFE<1>::CalcShape (const SIMD_MappedIntegrationRule<0, 1> &smir,
-                               BareSliceMatrix<SIMD<double>> shape) const
+  void TrefftzWaveFE<1>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                    BareSliceMatrix<SIMD<double>> shape) const
   {
     cout << "dim not implemented" << endl;
   }
 
   template <>
-  void
-  TrefftzWaveFE<2>::CalcShape (const SIMD_MappedIntegrationRule<1, 2> &smir,
-                               BareSliceMatrix<SIMD<double>> shape) const
+  void TrefftzWaveFE<2>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                    BareSliceMatrix<SIMD<double>> shape) const
   {
     for (int imip = 0; imip < smir.Size (); imip++)
       {
@@ -65,9 +63,8 @@ namespace ngfem
   }
 
   template <>
-  void
-  TrefftzWaveFE<3>::CalcShape (const SIMD_MappedIntegrationRule<2, 3> &smir,
-                               BareSliceMatrix<SIMD<double>> shape) const
+  void TrefftzWaveFE<3>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                    BareSliceMatrix<SIMD<double>> shape) const
   {
     for (int imip = 0; imip < smir.Size (); imip++)
       {
@@ -101,9 +98,8 @@ namespace ngfem
   }
 
   template <>
-  void
-  TrefftzWaveFE<4>::CalcShape (const SIMD_MappedIntegrationRule<3, 4> &smir,
-                               BareSliceMatrix<SIMD<double>> shape) const
+  void TrefftzWaveFE<4>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                    BareSliceMatrix<SIMD<double>> shape) const
   {
     // auto & smir = static_cast<const SIMD_MappedIntegrationRule<D-1,D>&>
     // (mir);
@@ -142,15 +138,15 @@ namespace ngfem
 
   template <>
   void
-  TrefftzWaveFE<1>::CalcDShape (const SIMD_MappedIntegrationRule<0, 1> &smir,
-                                SliceMatrix<SIMD<double>> dshape) const
+  TrefftzWaveFE<1>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                BareSliceMatrix<SIMD<double>> dshape) const
   {
   }
 
   template <>
   void
-  TrefftzWaveFE<2>::CalcDShape (const SIMD_MappedIntegrationRule<1, 2> &smir,
-                                SliceMatrix<SIMD<double>> dshape) const
+  TrefftzWaveFE<2>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                BareSliceMatrix<SIMD<double>> dshape) const
   {
     for (int imip = 0; imip < smir.Size (); imip++)
       {
@@ -182,9 +178,9 @@ namespace ngfem
               {
                 dshape (i * 2 + d, imip) = 0.0;
                 for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
-                  dshape (i * 2 + d, imip) += (*localmat)[2][j]
-                                              * pol[(*localmat)[1][j]]
-                                              * (d == 1 ? c : 1);
+                  dshape (i * 2 + d, imip)
+                      += (*localmat)[2][j] * pol[(*localmat)[1][j]]
+                         * (d == 1 ? c : 1) * (2.0 / elsize);
               }
           }
       }
@@ -193,8 +189,8 @@ namespace ngfem
 
   template <>
   void
-  TrefftzWaveFE<3>::CalcDShape (const SIMD_MappedIntegrationRule<2, 3> &smir,
-                                SliceMatrix<SIMD<double>> dshape) const
+  TrefftzWaveFE<3>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                BareSliceMatrix<SIMD<double>> dshape) const
   {
     for (int imip = 0; imip < smir.Size (); imip++)
       {
@@ -228,9 +224,9 @@ namespace ngfem
               {
                 dshape (i * 3 + d, imip) = 0.0;
                 for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
-                  dshape (i * 3 + d, imip) += (*localmat)[2][j]
-                                              * pol[(*localmat)[1][j]]
-                                              * (d == 2 ? c : 1);
+                  dshape (i * 3 + d, imip)
+                      += (*localmat)[2][j] * pol[(*localmat)[1][j]]
+                         * (d == 2 ? c : 1) * (2.0 / elsize);
               }
           }
       }
@@ -239,8 +235,8 @@ namespace ngfem
 
   template <>
   void
-  TrefftzWaveFE<4>::CalcDShape (const SIMD_MappedIntegrationRule<3, 4> &smir,
-                                SliceMatrix<SIMD<double>> dshape) const
+  TrefftzWaveFE<4>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                BareSliceMatrix<SIMD<double>> dshape) const
   {
     for (int imip = 0; imip < smir.Size (); imip++)
       {
@@ -278,13 +274,13 @@ namespace ngfem
               {
                 dshape (i * 4 + d, imip) = 0.0;
                 for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
-                  dshape (i * 4 + d, imip) += (*localmat)[2][j]
-                                              * pol[(*localmat)[1][j]]
-                                              * (d == 3 ? c : 1);
+                  dshape (i * 4 + d, imip)
+                      += (*localmat)[2][j] * pol[(*localmat)[1][j]]
+                         * (d == 3 ? c : 1) * (2.0 / elsize);
               }
           }
       }
-    dshape *= (2.0 / elsize); // inner derivative
+    // dshape.AddSize(nbasis*4,smir.Size()) *= (2.0/elsize); //inner derivative
   }
 
   /////////////// non-simd
@@ -300,7 +296,7 @@ namespace ngfem
   void TrefftzWaveFE<2>::CalcShape (const BaseMappedIntegrationPoint &mip,
                                     BareSliceVector<> shape) const
   {
-    // auto & smir = static_cast<const SIMD_MappedIntegrationRule<D-1,D>&>
+    // auto & smir = static_cast<const SIMD_BaseMappedIntegrationRuleD>&>
     // (mir);
     Vec<2> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
