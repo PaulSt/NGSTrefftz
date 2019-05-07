@@ -9,8 +9,6 @@ from trefftzngs import *
 
 
 def SolveTrefftzTents(mesh, order, finaltime):
-    global TT
-    global bdd
     D = initmesh.dim
     t = CoordCF(D)
 
@@ -56,7 +54,7 @@ def SolveTrefftzTents(mesh, order, finaltime):
 
 
 if __name__ == '__main__':
-    order = 3
+    order = 4
     SetNumThreads(2)
 
     c = 1
@@ -64,7 +62,7 @@ if __name__ == '__main__':
     t_step = 2/sqrt(3)
 
     ms = [0,1,2]
-    meshes=[ Mesh(SegMesh(4,0,1)), Mesh(unit_square.GenerateMesh(maxh = 0.4)), Mesh(unit_cube.GenerateMesh(maxh = 1))]
+    meshes=[ Mesh(SegMesh(4,0,math.pi)), Mesh(unit_square.GenerateMesh(maxh = 0.4)), Mesh(unit_cube.GenerateMesh(maxh = 1))]
 
     for initmesh in meshes:
         h1error = []
@@ -94,3 +92,4 @@ if __name__ == '__main__':
         for i in range(len(ms)-1):
             print(math.log(h1error[i]/h1error[i+1])/math.log(adiam[i]/adiam[i+1]))
         print("===========================================")
+        input()
