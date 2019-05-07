@@ -258,8 +258,8 @@ namespace ngfem
             static constexpr bool SUPPORT_PML = true;
 
             static const FEL & Cast (const FiniteElement & fel)
-            { 
-                return static_cast<const FEL&> (fel); 
+            {
+                return static_cast<const FEL&> (fel);
             }
 
             static void GenerateMatrix (const FiniteElement & fel,
