@@ -22,7 +22,7 @@ namespace ngcomp
     void WaveTents<D> :: EvolveTents(double dt)
     {
         //int nthreads = (task_manager) ? task_manager->GetNumThreads() : 1;
-        LocalHeap lh(1000 * 1000 * 100, "trefftz tents", 1);
+        LocalHeap lh(1000 * 1000 * 1000, "trefftz tents", 1);
 
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         const int nsimd = SIMD<double>::Size();
