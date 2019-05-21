@@ -184,7 +184,7 @@ namespace ngfem
               }
           }
       }
-    dshape *= (2.0 / elsize); // inner derivative
+    // dshape *= (2.0/elsize); //inner derivative
   }
 
   template <>
@@ -230,7 +230,7 @@ namespace ngfem
               }
           }
       }
-    dshape *= (2.0 / elsize); // inner derivative
+    // dshape *= (2.0/elsize); //inner derivative
   }
 
   template <>
@@ -281,6 +281,7 @@ namespace ngfem
           }
       }
     // dshape.AddSize(nbasis*4,smir.Size()) *= (2.0/elsize); //inner derivative
+    // dshape *= (2.0/elsize); //inner derivative
   }
 
   /////////////// non-simd
