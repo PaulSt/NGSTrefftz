@@ -81,9 +81,9 @@ namespace ngcomp
                     (*newel)[tent->vertex<tent->nbv[k] ? 0 : 1] = vertices[ibot];
                     (*newel)[tent->vertex<tent->nbv[k] ? 1 : 0] = vertices[2*k+1];
                     newel -> si = ind_fdi;
-                    newel -> edgenr = 1;
-                    newel -> epgeominfo[0].edgenr = 1;
-                    newel -> epgeominfo[1].edgenr = 1;
+                    newel -> edgenr = index;
+                    newel -> epgeominfo[0].edgenr = index;
+                    newel -> epgeominfo[1].edgenr = index;
                     mesh -> AddSegment(*newel);
                 }
 
