@@ -305,6 +305,7 @@ namespace ngcomp
   {
     static Timer tint1 ("tent int calcshape", 2);
     static Timer tint2 ("tent int mat&vec", 2);
+    static Timer tint3 ("tent mat*vec", 2);
 
     HeapReset hr (slh);
     const ELEMENT_TYPE eltyp
@@ -334,14 +335,11 @@ namespace ngcomp
     for (int imip = 0; imip < sir.Size (); imip++)
       smir[imip].Point () (D) = mirtimes[imip];
 
-    tint1.Start ();
     FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
     tel.CalcShape (smir, simdshapes);
     tel.CalcDShape (smir, simddshapes);
     FlatMatrix<> bbmat (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
-    tint1.Stop ();
 
-    tint2.Start ();
     TentDmat (Dmat, vert, -1, wavespeed);
 
     Vec<D + 1> nnn = TentFaceNormal (vert, 1);
@@ -376,7 +374,6 @@ namespace ngcomp
           *= sqrt (TentFaceArea (vert) * sir[imip].Weight ());
     FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
     elvec += shapes * wavefront.Row (elnr).Range (0, snip);
-    tint2.Stop ();
 
     /// Integration over top of tent
     vert = TentFaceVerts (tent, elnr, 1);
@@ -385,23 +382,29 @@ namespace ngcomp
     for (int imip = 0; imip < sir.Size (); imip++)
       smir[imip].Point () (D) = mirtimes[imip];
 
-    tint1.Start ();
     // FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
+    tint1.Start ();
     tel.CalcDShape (smir, simddshapes);
     tint1.Stop ();
 
-    tint2.Start ();
     TentDmat (Dmat, vert, 1, wavespeed);
     FlatMatrix<> bdbmat ((D + 1) * snip, nbasis, slh);
     bdbmat = 0;
-    for (int imip = 0; imip < snip; imip++)
-      for (int r = 0; r < (D + 1); r++)
-        for (int d = 0; d < D + 1; d++)
-          bdbmat.Row (r * snip + imip)
-              += Dmat (r, d) * sir[imip / nsimd].Weight ()[imip % nsimd]
-                 * bbmat.Col (d * snip + imip);
-    elmat += bbmat * bdbmat;
+    tint2.Start ();
+    for (int imip = 0; imip < sir.Size (); imip++)
+      for (int si = 0; si < nsimd; si++)
+        for (int r = 0; r < (D + 1); r++)
+          for (int d = 0; d < D + 1; d++)
+            bdbmat.Row (r * snip + imip * nsimd + si)
+                += Dmat (r, d) * sir[imip].Weight ()[si]
+                   * bbmat.Col (d * snip + imip * nsimd + si);
     tint2.Stop ();
+    tint3.Start ();
+    elmat += bbmat * bdbmat;
+    tint3.Stop ();
+    tint3.AddFlops (bbmat.Height () * bbmat.Width () * bdbmat.Width ());
+    // cout << "height " << bbmat.Height() << " width " << bbmat.Width()  <<
+    // endl;
   }
 
   template <int D>
