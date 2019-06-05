@@ -20,11 +20,13 @@ namespace ngfem
     double elsize;
     float c;
     ELEMENT_TYPE eltype;
+    int basistype;
 
   public:
     // TrefftzWaveFE();
     TrefftzWaveFE (int aord = 1, float ac = 1.0, Vec<D> aelcenter = 0,
-                   double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG);
+                   double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG,
+                   int abasistype = 0);
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
 
@@ -163,7 +165,7 @@ namespace ngfem
     }
 
     const CSR *TB (int ord);
-    void CreateTB (int ord);
+    void CreateTB (int ord, int basistype = 0);
 
   private:
     TrefftzWaveBasis () = default;
@@ -174,7 +176,7 @@ namespace ngfem
     Array<CSR> tbstore;
     // once_flag tbonceflag;
     void TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum,
-                   int basis, int dim, int &tracker);
+                   int basis, int dim, int &tracker, int basistype);
     int IndexMap2 (Vec<D, int> index, int ord);
   };
 
