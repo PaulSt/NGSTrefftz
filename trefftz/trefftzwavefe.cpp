@@ -8,7 +8,7 @@
 namespace ngfem
 {
     template<int D>
-    TrefftzWaveFE<D> :: TrefftzWaveFE(int aord, float ac, Vec<D> aelcenter, double aelsize, ELEMENT_TYPE aeltype)
+    TrefftzWaveFE<D> :: TrefftzWaveFE(int aord, float ac, Vec<D> aelcenter, double aelsize, ELEMENT_TYPE aeltype, int abasistype)
     : ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
     ord(aord),
     c(ac),
@@ -16,7 +16,8 @@ namespace ngfem
     npoly(BinCoeff(D + ord, ord)),
     elcenter(aelcenter),
     elsize(aelsize),
-    eltype(aeltype)
+    eltype(aeltype),
+    basistype(abasistype)
     {;}
 
     template<>
@@ -478,7 +479,7 @@ namespace ngfem
     }
 
     template<int D>
-    void TrefftzWaveBasis<D> :: CreateTB(int ord)
+    void TrefftzWaveBasis<D> :: CreateTB(int ord, int basistype)
     {
         cout << "creating tp store for order " << ord << endl;
         //if (tbstore.Size() < ord)
@@ -499,7 +500,7 @@ namespace ngfem
         for(int b=0;b<nbasis;b++)
         {
             int tracker = 0;
-            TB_inner(ord, trefftzbasis, coeff, b, D, tracker);
+            TB_inner(ord, trefftzbasis, coeff, b, D, tracker, basistype);
         }
         MatToCSR(trefftzbasis,tbstore[ord]);
         //}
@@ -516,13 +517,13 @@ namespace ngfem
 
 
     template<int D>
-    void TrefftzWaveBasis<D> :: TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis, int dim, int &tracker)
+    void TrefftzWaveBasis<D> :: TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis, int dim, int &tracker, int basistype)
     {
         if (dim>0)
         {
             while(coeffnum(dim-1)<=ord)
             {
-                TB_inner(ord,trefftzbasis,coeffnum,basis, dim-1, tracker);
+                TB_inner(ord,trefftzbasis,coeffnum,basis, dim-1, tracker, basistype);
                 coeffnum(dim-1)++;
             }
         }
@@ -535,14 +536,33 @@ namespace ngfem
             {
                 if(tracker >= 0) tracker++;
                 int indexmap = IndexMap2(coeffnum, ord);
-                if((coeffnum(D-1)==0 || coeffnum(D-1)==1) && tracker>basis)
+                int k = coeffnum(D-1);
+                if(k==0 || k==1)
                 {
-                    trefftzbasis(basis,indexmap) = 1;
-                    tracker = -1;
+                    switch (basistype) {
+                        case 0:
+                            if(tracker>basis)
+                            {
+                                //trefftzbasis( i, setbasis++ ) = 1.0; //set the l-th coeff to 1
+                                trefftzbasis(basis,indexmap) = 1;
+                                tracker = -1;
+                            }
+                            //i += nbasis-1;	//jump to time = 2 if i=0
+                            break;
+                        case 1:
+                            if((k == 0 && basis < BinCoeff(D-1 + ord, ord)) || (k == 1 && basis >= BinCoeff(D-1 + ord, ord))){
+                                trefftzbasis( basis,indexmap ) = 1;
+                                for(int exponent :  coeffnum.Range(0,D-1)) trefftzbasis( basis,indexmap ) *= LegCoeffMonBasis(basis,exponent);}
+                            break;
+                        case 2:
+                            if((k == 0 && basis < BinCoeff(D-1 + ord, ord)) || (k == 1 && basis >= BinCoeff(D-1 + ord, ord))){
+                                trefftzbasis( basis,indexmap ) = 1;
+                                for(int exponent :  coeffnum.Range(0,D-1)) trefftzbasis( basis,indexmap ) *= ChebCoeffMonBasis(basis,exponent);}
+                            break;
+                    }
                 }
                 else if(coeffnum(D-1)>1)
                 {
-                    int k = coeffnum(D-1);
                     for(int m=0;m<D-1;m++) //rekursive sum
                     {
                         Vec<D, int> get_coeff = coeffnum;
@@ -578,6 +598,9 @@ namespace ngfem
     void MatToCSR(Matrix<> mat, CSR &sparsemat)
     {
         int spsize = 0;
+        sparsemat[0].SetSize(0);
+        sparsemat[1].SetSize(0);
+        sparsemat[2].SetSize(0);
         for(int i=0;i<mat.Height();i++)
         {
             // guarantee sparsemat[0].Size() to be nbasis,
