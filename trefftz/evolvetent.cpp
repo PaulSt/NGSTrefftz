@@ -151,6 +151,13 @@ namespace ngcomp
           {
             int eli = ma->GetElIndex (ElementId (VOL, tent->els[elnr]));
             tel.SetWavespeed (wavespeed[eli]);
+
+            if (ma->GetMaterial (ElementId (VOL, tent->els[elnr]))
+                == "integ") // hotfix
+              {
+                eli = 1;
+                tel.SetWavespeed (1);
+              }
             if (ndomains == 1) // tent vertex is inside a domain
               eli = 0;
             SliceMatrix<> subm = elmat.Cols (eli * nbasis, (eli + 1) * nbasis)
@@ -259,6 +266,9 @@ namespace ngcomp
                                * sir[imip / nsimd].Weight ()[imip % nsimd]
                                * bbmat2.Col (d * snip + imip);
                       }
+                if (in == 3)
+                  in = 2; // hotfix to correctly fill matrix
+
                 elmat.Cols ((in - 1) * nbasis, in * nbasis)
                     .Rows ((in - 1) * nbasis, in * nbasis)
                     += bbmat1 * (*bdbmat[0]);
@@ -283,6 +293,12 @@ namespace ngcomp
           {
             int eli = ma->GetElIndex (ElementId (VOL, tent->els[elnr]));
             tel.SetWavespeed (wavespeed[eli]);
+            if (ma->GetMaterial (ElementId (VOL, tent->els[elnr]))
+                == "integ") // hotfix
+              {
+                eli = 1;
+                tel.SetWavespeed (1);
+              }
             if (ndomains == 1)
               eli = 0;
             CalcTentElEval (tent->els[elnr], tent, tel, sir, slh,
@@ -695,7 +711,7 @@ namespace ngcomp
   WaveTents<D>::MakeWavefront (shared_ptr<CoefficientFunction> bddatum,
                                double time)
   {
-    LocalHeap lh (1000 * 1000 * 1000);
+    LocalHeap lh (1000 * 1000 * 100, "make wavefront", 1);
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     SIMD_IntegrationRule sir (eltyp, order * 2);
@@ -732,7 +748,7 @@ namespace ngcomp
   template <int D>
   double WaveTents<D>::Error (Matrix<> wavefront, Matrix<> wavefront_corr)
   {
-    LocalHeap lh (1000 * 1000 * 1000);
+    LocalHeap lh (1000 * 1000 * 100, "error", 1);
     double error = 0;
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
@@ -762,7 +778,7 @@ namespace ngcomp
   template <int D> double WaveTents<D>::Energy (Matrix<> wavefront)
   {
     double energy = 0;
-    LocalHeap lh (1000 * 1000 * 1000);
+    LocalHeap lh (1000 * 1000 * 100, "energy", 1);
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     SIMD_IntegrationRule sir (eltyp, order * 2);
