@@ -113,7 +113,7 @@ namespace ngfem
     template <class MIR>
     static void
     ApplyIR (const FiniteElement &fel, const MIR &mir, FlatVector<Complex> x,
-             FlatMatrix<Complex> y, LocalHeap &lh)
+             SliceMatrix<Complex> y, LocalHeap &lh)
     {
       Cast (fel).Evaluate (
           mir,
