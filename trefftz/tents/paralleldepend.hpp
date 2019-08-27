@@ -2,6 +2,7 @@
 #define PARALLELDEPEND_HPP_INCUDED
 
 #include <solve.hpp>
+using namespace ngsolve;
 #include "concurrentqueue.h"
 
 typedef moodycamel::ConcurrentQueue<int> TQueue;
@@ -9,6 +10,7 @@ typedef moodycamel::ProducerToken TPToken;
 typedef moodycamel::ConsumerToken TCToken;
 
 static TQueue queue;
+
 using namespace ngstd;
 
 template <typename TFUNC>

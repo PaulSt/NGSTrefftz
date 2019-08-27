@@ -1,5 +1,7 @@
 #include "tents.hpp"
-//#include "myvisual.hpp"
+#ifdef USE_NETGEN_GUI
+#include "myvisual.hpp"
+#endif
 
 constexpr ELEMENT_TYPE ET_ (int D)
 {
@@ -10,7 +12,15 @@ constexpr ELEMENT_TYPE ET_ (int D)
 int additional_intorder = 1;
 
 template <int DIM>
-void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed)
+void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed,
+                                       LocalHeap &lh)
+{
+  auto cf = make_shared<ConstantCoefficientFunction> (wavespeed);
+  PitchTents (dt, cf, lh);
+}
+template <int DIM>
+void TentPitchedSlab<DIM>::PitchTents (
+    double dt, shared_ptr<CoefficientFunction> wavespeed, LocalHeap &lh)
 {
   cout << "pitch tents ... ";
   Timer t ("pitch tents");
@@ -23,7 +33,7 @@ void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed)
 
   // element-wise maximal wave-speeds
   Array<double> cmax (ma->GetNE ());
-  cmax = wavespeed;
+  // cmax = wavespeed;
 
   // compute edge-based max time-differences
   Array<double> edge_refdt (ma->GetNEdges ());
@@ -33,6 +43,13 @@ void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed)
   fine_edges.Clear ();
   for (Ngs_Element el : ma->Elements (VOL))
     {
+      ElementId ei = ElementId (el);
+      ELEMENT_TYPE eltype = ma->GetElType (ei);
+      IntegrationRule ir (eltype, 0);
+      ElementTransformation &trafo = ma->GetTrafo (ei, lh);
+      MappedIntegrationPoint<DIM, DIM> mip (ir[0], trafo);
+      cmax[el.Nr ()] = wavespeed->Evaluate (mip);
+
       for (int e : el.Edges ())
         {
           auto pnts = ma->GetEdgePNums (e);
@@ -321,8 +338,8 @@ TentPitchedSlab<DIM>::GetTentHeight (int vertex, Array<int> &els,
 }
 
 template <int DIM>
-void TentPitchedSlab<DIM>::PitchTents (double dt, double wavespeed,
-                                       LocalHeap &lh)
+void TentPitchedSlab<DIM>::PitchTentsGradient (double dt, double wavespeed,
+                                               LocalHeap &lh)
 {
   cout << "pitch tents ... ";
   Timer t ("pitch tents");
@@ -632,190 +649,193 @@ void TentPitchedSlab<DIM>::SetupTents (
       }
     tent.elfnums = elfnums_creator.MoveTable ();
   });
+  /*
+  ParallelFor
+    (Range(tents), [&] (int i)
+     {
+// #pragma omp atomic
+//        cnt_tents++;
+//
+// #pragma omp critical
+//        cout << "\rcalc data for tent " << cnt_tents << "/" << tents.Size()
+<< flush;
 
-  ParallelFor (Range (tents), [&] (int i) {
-    // #pragma omp atomic
-    //        cnt_tents++;
-    //
-    // #pragma omp critical
-    //        cout << "\rcalc data for tent " << cnt_tents << "/" <<
-    //        tents.Size() << flush;
+       LocalHeap & clh = lh, lh = clh.Split();
 
-    LocalHeap &clh = lh, lh = clh.Split ();
+       Tent & tent = *tents[i];
+       int nels = tent.els.Size();
+       tent.gradphi_bot.SetSize(nels);
+       tent.gradphi_top.SetSize(nels);
+       // tent.agradphi_bot.SetSize(nels);
+       // tent.agradphi_top.SetSize(nels);
+       tent.delta.SetSize(nels);
+       // tent.adelta.SetSize(nels);
+       tent.graddelta.SetSize(nels);
 
-    Tent &tent = *tents[i];
-    int nels = tent.els.Size ();
-    tent.gradphi_bot.SetSize (nels);
-    tent.gradphi_top.SetSize (nels);
-    // tent.agradphi_bot.SetSize(nels);
-    // tent.agradphi_top.SetSize(nels);
-    tent.delta.SetSize (nels);
-    // tent.adelta.SetSize(nels);
-    tent.graddelta.SetSize (nels);
+       FlatArray<int> elfacets(nels,lh);
+       for (int j : Range(nels))
+         elfacets[j] = tent.elfnums[j].Size();
 
-    FlatArray<int> elfacets (nels, lh);
-    for (int j : Range (nels))
-      elfacets[j] = tent.elfnums[j].Size ();
+       tent.gradphi_facet_bot = Table< Matrix<> >(elfacets);
+       tent.gradphi_facet_top = Table< Matrix<> >(elfacets);
+       // tent.agradphi_facet_bot = Table< AFlatMatrix<> >(elfacets);
+       // tent.agradphi_facet_top = Table< AFlatMatrix<> >(elfacets);
+       tent.delta_facet = Table< Vector<double> >(elfacets);
+       // tent.adelta_facet = Table< AVector<double> >(elfacets);
 
-    tent.gradphi_facet_bot = Table<Matrix<>> (elfacets);
-    tent.gradphi_facet_top = Table<Matrix<>> (elfacets);
-    // tent.agradphi_facet_bot = Table< AFlatMatrix<> >(elfacets);
-    // tent.agradphi_facet_top = Table< AFlatMatrix<> >(elfacets);
-    tent.delta_facet = Table<Vector<double>> (elfacets);
-    // tent.adelta_facet = Table< AVector<double> >(elfacets);
+       for (int j : Range(nels)) // loop over elts in a tent
+         {
+           ElementId ej (VOL, tent.els[j]);
 
-    for (int j : Range (nels)) // loop over elts in a tent
-      {
-        ElementId ej (VOL, tent.els[j]);
+           Array<int> dnums;
 
-        Array<int> dnums;
+           fes->GetDofNrs (ej, dnums);
+           auto vnums = ma->GetElVertices (ej);
 
-        fes->GetDofNrs (ej, dnums);
-        auto vnums = ma->GetElVertices (ej);
+           ElementTransformation & trafo = ma->GetTrafo (ej, lh);
 
-        ElementTransformation &trafo = ma->GetTrafo (ej, lh);
+           const DGFiniteElement<DIM> & fel =
+             static_cast<const DGFiniteElement<DIM>&> (fes->GetFE (ej, lh));
 
-        const DGFiniteElement<DIM> &fel
-            = static_cast<const DGFiniteElement<DIM> &> (fes->GetFE (ej, lh));
+           ELEMENT_TYPE eltype = fel.ElementType();
 
-        ELEMENT_TYPE eltype = fel.ElementType ();
+           // Set top and bottom tent surfaces using pw.linear FE:
 
-        // Set top and bottom tent surfaces using pw.linear FE:
+           // ScalarFE< (DIM==2) ? ET_TRIG : ET_SEGM,1> fe_nodal; // for 2d or
+1d ScalarFE<ET_(DIM),1> fe_nodal; Vector<> shape_nodal(fe_nodal.GetNDof());
+           Matrix<> dshape_nodal(fe_nodal.GetNDof(),DIM);
 
-        // ScalarFE< (DIM==2) ? ET_TRIG : ET_SEGM,1> fe_nodal; // for 2d or 1d
-        ScalarFE<ET_ (DIM), 1> fe_nodal;
-        Vector<> shape_nodal (fe_nodal.GetNDof ());
-        Matrix<> dshape_nodal (fe_nodal.GetNDof (), DIM);
+           Vector<> coef_bot, coef_top; // coefficient of tau_bot(X) and
+tau_top(X) coef_bot.SetSize(fe_nodal.GetNDof());
+           coef_top.SetSize(fe_nodal.GetNDof());
+           for (int k = 0; k < vnums.Size(); k++)
+             {
+               if (vnums[k] == tent.vertex)  // central vertex
+                 {
+                   coef_bot(k) = tent.tbot;
+                   coef_top(k) = tent.ttop;
+                 }
+               else
+                 for (int l = 0; l < tent.nbv.Size(); l++)
+                   if (tent.nbv[l] == vnums[k])
+                     coef_bot(k) = coef_top(k) = tent.nbtime[l];
+             }
 
-        Vector<> coef_bot,
-            coef_top; // coefficient of tau_bot(X) and tau_top(X)
-        coef_bot.SetSize (fe_nodal.GetNDof ());
-        coef_top.SetSize (fe_nodal.GetNDof ());
-        for (int k = 0; k < vnums.Size (); k++)
-          {
-            if (vnums[k] == tent.vertex) // central vertex
-              {
-                coef_bot (k) = tent.tbot;
-                coef_top (k) = tent.ttop;
-              }
-            else
-              for (int l = 0; l < tent.nbv.Size (); l++)
-                if (tent.nbv[l] == vnums[k])
-                  coef_bot (k) = coef_top (k) = tent.nbtime[l];
-          }
+           IntegrationRule ir (eltype, 2*fel.Order());
 
-        IntegrationRule ir (eltype, 2 * fel.Order ());
+           tent.gradphi_bot[j].SetSize(ir.Size(),DIM);
+           tent.gradphi_top[j].SetSize(ir.Size(),DIM);
 
-        tent.gradphi_bot[j].SetSize (ir.Size (), DIM);
-        tent.gradphi_top[j].SetSize (ir.Size (), DIM);
+           // void * ptr;
+           // posix_memalign (&ptr, 64, 8*DIM*(ir.Size()+8));
+           // new (&tent.agradphi_top[j]) AFlatMatrix<>(DIM, ir.Size(),
+(double*)ptr);
+           // posix_memalign (&ptr, 64, 8*DIM*(ir.Size()+8));
+           // new (&tent.agradphi_bot[j]) AFlatMatrix<>(DIM, ir.Size(),
+(double*)ptr);
 
-        // void * ptr;
-        // posix_memalign (&ptr, 64, 8*DIM*(ir.Size()+8));
-        // new (&tent.agradphi_top[j]) AFlatMatrix<>(DIM, ir.Size(),
-        // (double*)ptr); posix_memalign (&ptr, 64, 8*DIM*(ir.Size()+8)); new
-        // (&tent.agradphi_bot[j]) AFlatMatrix<>(DIM, ir.Size(), (double*)ptr);
+           tent.delta[j].SetSize(ir.Size());
+           // tent.adelta[j] = AVector<>(ir.Size());
+           tent.graddelta[j].SetSize(DIM);
 
-        tent.delta[j].SetSize (ir.Size ());
-        // tent.adelta[j] = AVector<>(ir.Size());
-        // tent.graddelta[j].SetSize(DIM);
+           for (int k = 0; k < ir.Size(); k++)
+             {
+               MappedIntegrationPoint<DIM,DIM> mip(ir[k], trafo);
 
-        for (int k = 0; k < ir.Size (); k++)
-          {
-            MappedIntegrationPoint<DIM, DIM> mip (ir[k], trafo);
+               fe_nodal.CalcShape (ir[k], shape_nodal);
+               fe_nodal.CalcMappedDShape (mip, dshape_nodal);
 
-            fe_nodal.CalcShape (ir[k], shape_nodal);
-            fe_nodal.CalcMappedDShape (mip, dshape_nodal);
+               tent.delta[j][k] = InnerProduct(coef_top-coef_bot, shape_nodal);
+               tent.gradphi_bot[j].Row(k) = Trans (dshape_nodal) * coef_bot;
+               tent.gradphi_top[j].Row(k) = Trans (dshape_nodal) * coef_top;
+               if(k==0)
+                 tent.graddelta[j] = Trans (dshape_nodal) *
+(coef_top-coef_bot);
+             }
+           // tent.adelta[j] = 0.0;
+           // tent.adelta[j] = tent.delta[j];
 
-            tent.delta[j][k] = InnerProduct (coef_top - coef_bot, shape_nodal);
-            tent.gradphi_bot[j].Row (k) = Trans (dshape_nodal) * coef_bot;
-            tent.gradphi_top[j].Row (k) = Trans (dshape_nodal) * coef_top;
-            if (k == 0)
-              tent.graddelta[j] = Trans (dshape_nodal) * (coef_top - coef_bot);
-          }
-        // tent.adelta[j] = 0.0;
-        // tent.adelta[j] = tent.delta[j];
+           // for (int k = 0; k < tent.agradphi_bot[j].VWidth(); k++)
+           //   for (int l = 0; l < DIM; l++)
+           //     {
+           //       tent.agradphi_bot[j].Get(l,k) = 0.0;
+           //       tent.agradphi_top[j].Get(l,k) = 0.0;
+           //     }
 
-        // for (int k = 0; k < tent.agradphi_bot[j].VWidth(); k++)
-        //   for (int l = 0; l < DIM; l++)
-        //     {
-        //       tent.agradphi_bot[j].Get(l,k) = 0.0;
-        //       tent.agradphi_top[j].Get(l,k) = 0.0;
-        //     }
+           // tent.agradphi_bot[j] = 0.0;
+           // tent.agradphi_top[j] = 0.0;
+           // for (int k = 0; k < tent.agradphi_bot[j].Width(); k++)
+           //   for (int l = 0; l < DIM; l++)
+           //     {
+           //       tent.agradphi_bot[j](l,k) = tent.gradphi_bot[j](k,l);
+           //       tent.agradphi_top[j](l,k) = tent.gradphi_top[j](k,l);
+           //     }
 
-        // tent.agradphi_bot[j] = 0.0;
-        // tent.agradphi_top[j] = 0.0;
-        // for (int k = 0; k < tent.agradphi_bot[j].Width(); k++)
-        //   for (int l = 0; l < DIM; l++)
-        //     {
-        //       tent.agradphi_bot[j](l,k) = tent.gradphi_bot[j](k,l);
-        //       tent.agradphi_top[j](l,k) = tent.gradphi_top[j](k,l);
-        //     }
+           for (int k : tent.elfnums[j].Range())
+             {
+               const DGFiniteElement<DIM-1> & felfacet =
+                 static_cast<const DGFiniteElement<DIM-1>&> (fes->GetFacetFE
+(tent.elfnums[j][k], lh)); IntegrationRule ir(felfacet.ElementType(),
+2*felfacet.Order()+additional_intorder);
 
-        for (int k : tent.elfnums[j].Range ())
-          {
-            const DGFiniteElement<DIM - 1> &felfacet
-                = static_cast<const DGFiniteElement<DIM - 1> &> (
-                    fes->GetFacetFE (tent.elfnums[j][k], lh));
-            IntegrationRule ir (felfacet.ElementType (),
-                                2 * felfacet.Order () + additional_intorder);
+               tent.gradphi_facet_bot[j][k].SetSize(ir.Size(), DIM);
+               tent.gradphi_facet_top[j][k].SetSize(ir.Size(), DIM);
+               tent.delta_facet[j][k].SetSize(ir.Size());
+               // tent.adelta_facet[j][k] = AVector<>(ir.Size());
 
-            tent.gradphi_facet_bot[j][k].SetSize (ir.Size (), DIM);
-            tent.gradphi_facet_top[j][k].SetSize (ir.Size (), DIM);
-            tent.delta_facet[j][k].SetSize (ir.Size ());
-            // tent.adelta_facet[j][k] = AVector<>(ir.Size());
+               auto vnums = ma->GetElVertices (ej);
+               Facet2ElementTrafo transform(fel.ElementType(), vnums);
 
-            auto vnums = ma->GetElVertices (ej);
-            Facet2ElementTrafo transform (fel.ElementType (), vnums);
+               int loc_facetnr = 0; // local facet number of element j
+               // if( facetdata[tent.elfnums[j][k]]->elnr[0] == ej.Nr() )
+               // 	 loc_facetnr =
+facetdata[tent.elfnums[j][k]]->facetnr[0];
+               // else
+               //	 loc_facetnr =
+facetdata[tent.elfnums[j][k]]->facetnr[1];
 
-            int loc_facetnr = 0; // local facet number of element j
-            // if( facetdata[tent.elfnums[j][k]]->elnr[0] == ej.Nr() )
-            // 	 loc_facetnr = facetdata[tent.elfnums[j][k]]->facetnr[0];
-            // else
-            //	 loc_facetnr = facetdata[tent.elfnums[j][k]]->facetnr[1];
+               auto fnums = ma->GetElFacets(ej);
+               for (int l = 0; l < fnums.Size(); l++)
+                 if (fnums[l] == tent.elfnums[j][k]) loc_facetnr = l;
 
-            auto fnums = ma->GetElFacets (ej);
-            for (int l = 0; l < fnums.Size (); l++)
-              if (fnums[l] == tent.elfnums[j][k])
-                loc_facetnr = l;
+               for (int l = 0; l < ir.Size(); l++)
+                 {
+                   MappedIntegrationPoint<DIM,DIM> mip(transform(loc_facetnr,
+ir[l]), trafo);
 
-            for (int l = 0; l < ir.Size (); l++)
-              {
-                MappedIntegrationPoint<DIM, DIM> mip (
-                    transform (loc_facetnr, ir[l]), trafo);
+                   fe_nodal.CalcShape (mip.IP(), shape_nodal);
+                   fe_nodal.CalcMappedDShape (mip, dshape_nodal);
 
-                fe_nodal.CalcShape (mip.IP (), shape_nodal);
-                fe_nodal.CalcMappedDShape (mip, dshape_nodal);
-
-                tent.delta_facet[j][k][l]
-                    = InnerProduct (coef_top - coef_bot, shape_nodal);
-                tent.gradphi_facet_bot[j][k].Row (l)
-                    = Trans (dshape_nodal) * coef_bot;
-                tent.gradphi_facet_top[j][k].Row (l)
-                    = Trans (dshape_nodal) * coef_top;
-              }
-            // tent.adelta_facet[j][k] = 0.0;
-            // tent.adelta_facet[j][k] = tent.delta_facet[j][k];
-            //
-            // posix_memalign (&ptr, 64, 8*DIM*(ir.Size()+8));
-            // new (&tent.agradphi_facet_top[j][k]) AFlatMatrix<>(DIM,
-            // ir.Size(), (double*)ptr); posix_memalign (&ptr, 64,
-            // 8*DIM*(ir.Size()+8)); new (&tent.agradphi_facet_bot[j][k])
-            // AFlatMatrix<>(DIM, ir.Size(), (double*)ptr);
-            //
-            // tent.agradphi_facet_bot[j][k] = 0.0;
-            // tent.agradphi_facet_top[j][k] = 0.0;
-            // for (int l = 0; l < tent.agradphi_facet_bot[j][k].Width(); l++)
-            //   for (int m = 0; m < DIM; m++)
-            //     {
-            //       tent.agradphi_facet_bot[j][k](m,l) =
-            //       tent.gradphi_facet_bot[j][k](l,m);
-            //       tent.agradphi_facet_top[j][k](m,l) =
-            //       tent.gradphi_facet_top[j][k](l,m);
-            //     }
-          }
-      } // loop over elements of tent
-  });   // loop over all tents
-
+                   tent.delta_facet[j][k][l] = InnerProduct(coef_top-coef_bot,
+shape_nodal); tent.gradphi_facet_bot[j][k].Row(l) = Trans (dshape_nodal) *
+coef_bot; tent.gradphi_facet_top[j][k].Row(l) = Trans (dshape_nodal) *
+coef_top;
+                 }
+               // tent.adelta_facet[j][k] = 0.0;
+               // tent.adelta_facet[j][k] = tent.delta_facet[j][k];
+               //
+               // posix_memalign (&ptr, 64, 8*DIM*(ir.Size()+8));
+               // new (&tent.agradphi_facet_top[j][k]) AFlatMatrix<>(DIM,
+ir.Size(), (double*)ptr);
+               // posix_memalign (&ptr, 64, 8*DIM*(ir.Size()+8));
+               // new (&tent.agradphi_facet_bot[j][k]) AFlatMatrix<>(DIM,
+ir.Size(), (double*)ptr);
+               //
+               // tent.agradphi_facet_bot[j][k] = 0.0;
+               // tent.agradphi_facet_top[j][k] = 0.0;
+               // for (int l = 0; l < tent.agradphi_facet_bot[j][k].Width();
+l++)
+               //   for (int m = 0; m < DIM; m++)
+               //     {
+               //       tent.agradphi_facet_bot[j][k](m,l) =
+tent.gradphi_facet_bot[j][k](l,m);
+               //       tent.agradphi_facet_top[j][k](m,l) =
+tent.gradphi_facet_top[j][k](l,m);
+               //     }
+             }
+         } // loop over elements of tent
+     }); // loop over all tents
+  */
   cout << "done" << endl;
   cout << "number of tents = " << tents.Size () << endl;
 }
@@ -824,10 +844,11 @@ TempTentData::TempTentData (const Tent &tent, const FESpace &fes,
                             const MeshAccess &ma, LocalHeap &lh)
     : fei (tent.els.Size (), lh), iri (tent.els.Size (), lh),
       miri (tent.els.Size (), lh), trafoi (tent.els.Size (), lh),
-      agradphi_bot (tent.els.Size (), lh), agradphi_top (tent.els.Size (), lh),
-      adelta (tent.els.Size (), lh), felpos (tent.edges.Size (), lh),
-      firi (tent.edges.Size (), lh), mfiri1 (tent.edges.Size (), lh),
-      mfiri2 (tent.edges.Size (), lh), agradphi_botf1 (tent.edges.Size (), lh),
+      mesh_size (tent.els.Size (), lh), agradphi_bot (tent.els.Size (), lh),
+      agradphi_top (tent.els.Size (), lh), adelta (tent.els.Size (), lh),
+      felpos (tent.edges.Size (), lh), firi (tent.edges.Size (), lh),
+      mfiri1 (tent.edges.Size (), lh), mfiri2 (tent.edges.Size (), lh),
+      agradphi_botf1 (tent.edges.Size (), lh),
       agradphi_topf1 (tent.edges.Size (), lh),
       agradphi_botf2 (tent.edges.Size (), lh),
       agradphi_topf2 (tent.edges.Size (), lh),
@@ -848,7 +869,8 @@ TempTentData::TempTentData (const Tent &tent, const FESpace &fes,
       trafoi[i] = &ma.GetTrafo (ei, lh);
       miri[i] = &(*trafoi[i]) (*iri[i], lh);
 
-      auto vnums = ma.GetElVertices (ei);
+      mesh_size[i] = pow (fabs ((*miri[i])[0].GetJacobiDet ()[0]),
+                          1.0 / miri[i]->DimElement ());
 
       int nipt = miri[i]->Size ();
       agradphi_bot[i].AssignMemory (dim, nipt, lh);
@@ -872,6 +894,7 @@ TempTentData::TempTentData (const Tent &tent, const FESpace &fes,
       // coef_top(fe_nodal[i]->GetNDof());
       coef_top[i].AssignMemory (fe_nodal[i]->GetNDof (), lh);
       coef_bot[i].AssignMemory (fe_nodal[i]->GetNDof (), lh);
+      auto vnums = ma.GetElVertices (ei);
       for (int k = 0; k < vnums.Size (); k++)
         {
           auto pos = tent.nbv.Pos (vnums[k]);
@@ -924,8 +947,13 @@ TempTentData::TempTentData (const Tent &tent, const FESpace &fes,
               auto etfacet = ElementTopology::GetFacetType (
                   trafo.GetElementType (), loc_facetnr[j]);
               if (j == 0)
-                simd_ir_facet = new (lh) SIMD_IntegrationRule (
-                    etfacet, 2 * order + additional_intorder);
+                {
+                  simd_ir_facet = new (lh) SIMD_IntegrationRule (
+                      etfacet, 2 * order + additional_intorder);
+                  simd_ir_facet->SetIRX (
+                      nullptr); // quick fix to avoid usage of TP elements
+                                // (slows down)
+                }
 
               // auto & simd_ir_facet_vol = transform(loc_facetnr[j],
               // *simd_ir_facet, lh);
@@ -938,8 +966,8 @@ TempTentData::TempTentData (const Tent &tent, const FESpace &fes,
 
                   anormals[i].AssignMemory (dim, mfiri1[i]->Size (), lh);
                   adelta_facet[i].AssignMemory (mfiri1[i]->Size (), lh);
-                  agradphi_botf1[i].AssignMemory (2, mfiri1[i]->Size (), lh);
-                  agradphi_topf1[i].AssignMemory (2, mfiri1[i]->Size (), lh);
+                  agradphi_botf1[i].AssignMemory (dim, mfiri1[i]->Size (), lh);
+                  agradphi_topf1[i].AssignMemory (dim, mfiri1[i]->Size (), lh);
 
                   for (size_t k : Range (mfiri1[i]->Size ()))
                     {
@@ -977,8 +1005,8 @@ TempTentData::TempTentData (const Tent &tent, const FESpace &fes,
                   mfiri2[i] = &trafo (*firi[i][j], lh);
                   mfiri2[i]->ComputeNormalsAndMeasure (trafo.GetElementType (),
                                                        loc_facetnr[j]);
-                  agradphi_botf2[i].AssignMemory (2, mfiri2[i]->Size (), lh);
-                  agradphi_topf2[i].AssignMemory (2, mfiri2[i]->Size (), lh);
+                  agradphi_botf2[i].AssignMemory (dim, mfiri2[i]->Size (), lh);
+                  agradphi_topf2[i].AssignMemory (dim, mfiri2[i]->Size (), lh);
                   size_t elpos = felpos[i][j];
                   fe_nodal[elpos]->EvaluateGrad (*mfiri2[i], coef_bot[elpos],
                                                  agradphi_botf2[i]);
@@ -990,6 +1018,30 @@ TempTentData::TempTentData (const Tent &tent, const FESpace &fes,
     }
 }
 
+template <int DIM>
+void TentPitchedSlab<DIM>::CheckTents (
+    const shared_ptr<L2HighOrderFESpace> fes, LocalHeap &lh)
+{
+  cout << "call CheckTents" << endl;
+  double maxgrad = 0.0;
+  ParallelFor (Range (tents), [&] (int i) {
+    LocalHeap &clh = lh, lh = clh.Split ();
+    Tent &tent = *tents[i];
+    *testout << "tent " << i << ":" << endl;
+    for (int j : Range (tent.els.Size ())) // loop over elts in a tent
+      {
+        // *testout << "el " << j << ":" << endl;
+        int height = tent.gradphi_top[j].Height ();
+        auto grad = tent.gradphi_top[j].Row (0);
+        auto norm = L2Norm (grad);
+        *testout << norm << endl;
+        if (norm > maxgrad)
+          maxgrad = norm;
+      }
+  });
+  cout << "maximal gradient = " << maxgrad << endl;
+}
+
 template <int DIM> void TentPitchedSlab<DIM>::VTKOutputTents (string filename)
 {
   ;
@@ -997,11 +1049,13 @@ template <int DIM> void TentPitchedSlab<DIM>::VTKOutputTents (string filename)
 
 template <int DIM>
 void TentPitchedSlab<DIM>::GetTentData (Array<int> &tentdata,
-                                        Array<float> &tenttimes, int &nlevels)
+                                        Array<double> &tentbot,
+                                        Array<double> &tenttop, int &nlevels)
 {
   nlevels = 0;
   tentdata.SetAllocSize (4 * tents.Size ());
-  tenttimes.SetAllocSize (4 * tents.Size ());
+  tenttop.SetAllocSize (4 * tents.Size ());
+  tentbot.SetAllocSize (4 * tents.Size ());
 
   for (int i : Range (tents))
     {
@@ -1019,14 +1073,15 @@ void TentPitchedSlab<DIM>::GetTentData (Array<int> &tentdata,
           for (auto v : verts)
             {
               if (v == tent.vertex)
-                tenttimes.Append (tent.tbot);
+                tentbot.Append (tent.tbot);
               else
                 {
                   auto pos = tent.nbv.Pos (v);
-                  tenttimes.Append (tent.nbtime[pos]);
+                  tentbot.Append (tent.nbtime[pos]);
                 }
             }
-          tenttimes.Append (tent.ttop);
+          tentbot.Append (tent.ttop);
+          tenttop.Append ({ tent.ttop, 0.0, 0.0, 0.0 });
         }
     }
   nlevels += 1;

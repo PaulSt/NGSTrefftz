@@ -17,8 +17,9 @@ namespace ngcomp
       bd_points.Append (ma->GetPoint<1> (el.Vertices ()[0]) (0));
 
     TentPitchedSlab<1> tps
-        = TentPitchedSlab<1> (ma);  // collection of tents in timeslab
-    tps.PitchTents (dt, wavespeed); // adt = time slab height, wavespeed
+        = TentPitchedSlab<1> (ma); // collection of tents in timeslab
+    LocalHeap lh (1000 * 1000 * 100);
+    tps.PitchTents (dt, wavespeed, lh); // adt = time slab height, wavespeed
     cout << "numb of tents: " << tps.tents.Size () << endl;
 
     auto mesh = make_shared<netgen::Mesh> ();
