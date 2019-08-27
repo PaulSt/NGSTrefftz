@@ -34,7 +34,7 @@ namespace ngcomp
         for(double c : wavespeed) max_wavespeed = max(c,max_wavespeed);
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
-        tps.PitchTents(dt, max_wavespeed+5); // adt = time slab height, wavespeed
+        tps.PitchTents(dt, max_wavespeed+5,lh); // adt = time slab height, wavespeed
 
         cout << "solving " << tps.tents.Size() << " tents ";
         static Timer ttent("tent",2);
@@ -138,10 +138,10 @@ namespace ngcomp
                 {
                     int eli = ma->GetElIndex(ElementId(VOL,tent->els[elnr]));
                     tel.SetWavespeed(wavespeed[eli]);
-                 
+
                     if(ma->GetMaterial(ElementId(VOL,tent->els[elnr]))=="integ")  //hotfix
                     {
-                        eli=1; 
+                        eli=1;
                         tel.SetWavespeed(1);
                     }
                     if(ndomains == 1) //tent vertex is inside a domain
@@ -243,7 +243,7 @@ namespace ngcomp
                     tel.SetWavespeed(wavespeed[eli]);
                     if(ma->GetMaterial(ElementId(VOL,tent->els[elnr]))=="integ")  //hotfix
                     {
-                        eli=1; 
+                        eli=1;
                         tel.SetWavespeed(1);
                     }
                     if(ndomains == 1)
@@ -718,7 +718,8 @@ namespace ngcomp
     {
         double h = 0.0;
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);
-        tps.PitchTents(dt, wavespeed[0]+1);
+        LocalHeap lh(1000 * 1000 * 100);
+        tps.PitchTents(dt, wavespeed[0]+1,lh);
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             Tent* tent = tps.tents[tentnr];
             h = max(h,TentAdiam(tent));

@@ -86,8 +86,9 @@ namespace ngcomp
 
             int NrTents(double dt)
             {
+                LocalHeap lh(1000 * 1000 * 100);
                 TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);
-                tps.PitchTents(dt, wavespeed[0]+1);
+                tps.PitchTents(dt, wavespeed[0]+1,lh);
                 return tps.tents.Size();
             }
     };

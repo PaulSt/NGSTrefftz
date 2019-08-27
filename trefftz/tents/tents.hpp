@@ -3,6 +3,7 @@
 
 #include <solve.hpp>
 #include "paralleldepend.hpp"
+
 using namespace ngsolve;
 
 // A tent is a macroelement consisting of a tentpole erected at a
@@ -59,7 +60,7 @@ public:
   class TempTentData * tempdata = nullptr;
 
   // global physical times
-  double * time;     // global physical time at vertex, stored in NPConservationLaw::gftau
+  double * time;     // global physical time at vertex, stored in ConservationLaw::gftau
   double timebot;    // global physical bottom time at vertex
 
   void InitTent(shared_ptr<GridFunction> gftau)
@@ -93,14 +94,14 @@ public:
   Array<SIMD_IntegrationRule*> iri;              // integration rules for all elements in the tent
   Array<SIMD_BaseMappedIntegrationRule*> miri;   // mapped integration rules for all elements in the tent
   Array<ElementTransformation*> trafoi;          // element transformations for all elements in the tent
-
+  Array<double> mesh_size;                       // mesh size for each element
   Array<FlatMatrix<SIMD<double>>> agradphi_bot;  // gradient of the old advancing front in the IP's
   Array<FlatMatrix<SIMD<double>>> agradphi_top;  // gradient of the new advancing front in the IP's
   Array<FlatVector<SIMD<double>>> adelta;        // height of the tent in the IP's
 
   // facet data
   Array<INT<2,size_t>> felpos;                   // local numbers of the neighbors
-  Array<Vec<2,SIMD_IntegrationRule*>> firi;      // facet integration rules for all facets in the tent
+  Array<Vec<2,const SIMD_IntegrationRule*>> firi;      // facet integration rules for all facets in the tent
                                                  // transformed to local coordinated of the
                                                  // neighboring elements
   Array<SIMD_BaseMappedIntegrationRule*> mfiri1; // mapped facet integration rules for all facets
@@ -146,20 +147,24 @@ public:
   double GetTentHeight(int vertex, Array<int> & els, FlatArray<int> nbv,
 		       Array<double> & tau, Array<double> & cmax, LocalHeap & lh);
   
-  void PitchTents(double dt, double cmax);
   void PitchTents(double dt, double cmax, LocalHeap & lh);
+  void PitchTents(double dt, shared_ptr<CoefficientFunction> cmax, LocalHeap & lh);
+  void PitchTentsGradient(double dt, double cmax, LocalHeap & lh);
 
   // Collect tent dofs (inner dofs counted first, then interface dofs),
   // set tent.nd_T, tent.dofs, tent.nd, tent.nd_u, tent.inner_dofs, etc:
 
   void SetupTents(const shared_ptr<L2HighOrderFESpace> v, LocalHeap & lh);
 
+  void CheckTents(const shared_ptr<L2HighOrderFESpace> v, LocalHeap & lh);
+    
   int SpacetimeDofs() { return spacetime_dofs; }
   
   // Export pitched tents into a VTK output file
   void VTKOutputTents(string filename);
 
-  void GetTentData(Array<int> & tentdata, Array<float> & tenttimes, int & nlevels);
+  void GetTentData(Array<int> & tentdata, Array<double> & tentbot,
+                   Array<double> & tenttop, int & nlevels);
 };
 
 // template class TentPitchedSlab<1>;
