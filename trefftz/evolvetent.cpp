@@ -896,7 +896,10 @@ template <int D> void DeclareETClass (py::module &m, std::string typestr)
       .def ("Error", &PyETclass::Error)
       .def ("MaxAdiam", &PyETclass::MaxAdiam)
       .def ("LocalDofs", &PyETclass::LocalDofs)
-      .def ("NrTents", &PyETclass::NrTents);
+      .def ("NrTents", &PyETclass::NrTents)
+      .def ("GetOrder", &PyETclass::GetOrder)
+      .def ("GetSpaceDim", &PyETclass::GetSpaceDim)
+      .def ("GetInitmesh", &PyETclass::GetInitmesh);
 }
 
 void ExportEvolveTent (py::module m)
@@ -908,7 +911,7 @@ void ExportEvolveTent (py::module m)
   DeclareETClass<2> (m, "2");
   DeclareETClass<3> (m, "3");
 
-  m.def ("TrefftzTent",
+  m.def ("WaveTents",
          [] (int order, shared_ptr<MeshAccess> ma, double wavespeed,
              shared_ptr<CoefficientFunction> bddatum)
              -> shared_ptr<TrefftzTents> {
@@ -928,7 +931,7 @@ void ExportEvolveTent (py::module m)
            // wavespeed, bddatum));
          });
 
-  m.def ("TrefftzTent",
+  m.def ("WaveTents",
          [] (int order, shared_ptr<MeshAccess> ma, Vector<> wavespeed,
              shared_ptr<CoefficientFunction> bddatum)
              -> shared_ptr<TrefftzTents> {

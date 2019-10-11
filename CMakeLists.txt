@@ -11,9 +11,16 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX ${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON} CACHE PATH "Install dir" FORCE)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
+install (FILES
+        trefftz/__init__.py 
+        DESTINATION trefftzngs
+        COMPONENT trefftzngs
+        )
+
 add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
     trefftz/helpers.cpp
     trefftz/trefftzwavefe.cpp
+    trefftz/gpw/trefftzgppwfe.cpp
     trefftz/diffopmapped.hpp
     trefftz/trefftzfespace.cpp
     trefftz/scalarmappedfe.cpp
@@ -26,4 +33,4 @@ add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
 #add_compile_options(PRIVATE -Wall -Wextra -pedantic)
 
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
-install(TARGETS trefftzngs DESTINATION .)
+install(TARGETS trefftzngs DESTINATION trefftzngs)
