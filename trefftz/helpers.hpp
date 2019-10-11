@@ -3,10 +3,47 @@
 
 #include <cmath>
 #include <bla.hpp>
+#include <fem.hpp>
 
 namespace ngfem
 {
   using namespace ngbla;
+
+  typedef Vec<3, Array<double>>
+      CSR; // CSR sparse matrix in (row,col,val) format
+
+  void MatToCSR (Matrix<> mat, CSR &sparsemat);
+
+  class Monomial : public RecursivePolynomial<Monomial>
+  {
+  public:
+    Monomial () { ; }
+
+    template <class S, class T> inline Monomial (int n, S x, T &&values)
+    {
+      Eval (n, x, values);
+    }
+
+    template <class S> static INLINE double P0 (S x) { return 1.0; }
+    template <class S> static INLINE S P1 (S x) { return x; }
+    template <class S, class Sy> static INLINE S P1 (S x, Sy y)
+    {
+      return P1 (x);
+    }
+
+    static INLINE double A (int i) { return 1.0; }
+    static INLINE double B (int i) { return 0; }
+    static INLINE double C (int i) { return 0; }
+
+    static INLINE double CalcA (int i) { return 1.0; }
+    static INLINE double CalcB (int i) { return 0; }
+    static INLINE double CalcC (int i) { return 0; }
+
+    enum
+    {
+      ZERO_B = 1
+    };
+  };
 
   constexpr long ipow (int base, int expo, int result = 1)
   {
