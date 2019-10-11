@@ -756,7 +756,10 @@ template class WaveTents<3>;
         .def("Error", &PyETclass::Error)
         .def("MaxAdiam", &PyETclass::MaxAdiam)
         .def("LocalDofs", &PyETclass::LocalDofs)
-        .def("NrTents", &PyETclass::NrTents);
+        .def("NrTents", &PyETclass::NrTents)
+        .def("GetOrder", &PyETclass::GetOrder)
+        .def("GetSpaceDim",&PyETclass::GetSpaceDim)
+        .def("GetInitmesh",&PyETclass::GetInitmesh);
 }
 
 void ExportEvolveTent(py::module m)
@@ -767,7 +770,7 @@ void ExportEvolveTent(py::module m)
     DeclareETClass<2>(m, "2");
     DeclareETClass<3>(m, "3");
 
-    m.def("TrefftzTent", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, shared_ptr<CoefficientFunction> bddatum) -> shared_ptr<TrefftzTents>
+    m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, shared_ptr<CoefficientFunction> bddatum) -> shared_ptr<TrefftzTents>
           {
               //TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
               shared_ptr<TrefftzTents> tr;
@@ -784,7 +787,7 @@ void ExportEvolveTent(py::module m)
 
           });
 
-    m.def("TrefftzTent", [](int order, shared_ptr<MeshAccess> ma, Vector<> wavespeed, shared_ptr<CoefficientFunction> bddatum) -> shared_ptr<TrefftzTents>
+    m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, Vector<> wavespeed, shared_ptr<CoefficientFunction> bddatum) -> shared_ptr<TrefftzTents>
           {
               //TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
               shared_ptr<TrefftzTents> tr;

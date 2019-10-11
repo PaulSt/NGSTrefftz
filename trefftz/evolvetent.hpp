@@ -71,7 +71,8 @@ namespace ngcomp
             Matrix<> MakeWavefront( shared_ptr<CoefficientFunction> bddatum, double time);
 
             Matrix<> GetWavefront() {return wavefront;}
-            void SetWavefront(Matrix<> wf) {wavefront=wf;}
+            void SetWavefront(shared_ptr<CoefficientFunction> bddatum, double time) { wavefront = MakeWavefront( bddatum, time); }
+            //void SetWavefront(Matrix<> wf) { wavefront = wf; }
 
             double Error(Matrix<> wavefront, Matrix<> wavefront_corr);
 
@@ -91,6 +92,10 @@ namespace ngcomp
                 tps.PitchTents(dt, wavespeed[0]+1,lh);
                 return tps.tents.Size();
             }
+            
+            int GetOrder(){return order;}
+            int GetSpaceDim(){return D;}
+            shared_ptr<MeshAccess> GetInitmesh(){return ma;}
     };
 }
 
