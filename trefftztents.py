@@ -8,7 +8,7 @@ from trefftzngs import *
 # SetHeapSize(1000*1000*1000)
 
 
-def SolveTrefftzTents(mesh, order, finaltime):
+def SolveWaveTents(mesh, order, finaltime):
     D = initmesh.dim
     t = CoordCF(D)
 
@@ -37,8 +37,8 @@ def SolveTrefftzTents(mesh, order, finaltime):
             sin(math.pi*x)*cos(math.pi*t*c*sq)*c
             ))
 
-    TT=TrefftzTent(order,initmesh,c,bdd)
-    TT.SetWavefront(TT.MakeWavefront(bdd,t_start))
+    TT=WaveTents(order,initmesh,c,bdd)
+    TT.SetWavefront(bdd,t_start)
 
     start = time.time()
     with TaskManager():
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         for maxh in ms:
             print("RUN: ", maxh)
             # initmesh = Mesh(unit_cube.GenerateMesh(maxh = maxh))
-            [error,timing,tentdiam] =  SolveTrefftzTents(initmesh, order, t_step)
+            [error,timing,tentdiam] =  SolveWaveTents(initmesh, order, t_step)
             h1error.append(error)
             adiam.append(tentdiam)
             timer.append(timing)

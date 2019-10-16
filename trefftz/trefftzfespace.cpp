@@ -20,7 +20,8 @@ namespace ngcomp
     cout << "======== Constructor of TrefftzFESpace =========" << endl;
     cout << "Flags:" << endl << flags;
 
-    D = ma->GetDimension ();
+    fullD = ma->GetDimension ();
+    D = fullD - 1;
 
     order = int (
         flags.GetNumFlag ("order", 3)); // flags.GetDefineFlag ("order");
@@ -28,21 +29,21 @@ namespace ngcomp
     basistype = flags.GetNumFlag ("basistype", 0);
     useshift = flags.GetNumFlag ("useshift", 1);
 
-    local_ndof = (BinCoeff (D - 1 + order, order)
-                  + BinCoeff (D - 1 + order - 1, order - 1));
+    local_ndof = (BinCoeff (fullD - 1 + order, order)
+                  + BinCoeff (fullD - 1 + order - 1, order - 1));
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
 
-    switch (D)
+    switch (fullD)
       {
       case 1:
         {
-          evaluator[VOL]
-              = make_shared<T_DifferentialOperator<DiffOpMapped<1>>> ();
-          flux_evaluator[VOL] = make_shared<
-              T_DifferentialOperator<DiffOpMappedGradient<1>>> ();
-          TrefftzWaveBasis<1>::getInstance ().CreateTB (order, basistype);
-          break;
+          // evaluator[VOL] =
+          // make_shared<T_DifferentialOperator<DiffOpMapped<1>>>();
+          // flux_evaluator[VOL] =
+          // make_shared<T_DifferentialOperator<DiffOpMappedGradient<1>>>();
+          // TrefftzWaveBasis<1>::getInstance().CreateTB(order, basistype);
+          // break;
         }
       case 2:
         {
@@ -50,7 +51,7 @@ namespace ngcomp
               = make_shared<T_DifferentialOperator<DiffOpMapped<2>>> ();
           flux_evaluator[VOL] = make_shared<
               T_DifferentialOperator<DiffOpMappedGradient<2>>> ();
-          TrefftzWaveBasis<2>::getInstance ().CreateTB (order, basistype);
+          TrefftzWaveBasis<1>::getInstance ().CreateTB (order, basistype);
           break;
         }
       case 3:
@@ -59,7 +60,7 @@ namespace ngcomp
               = make_shared<T_DifferentialOperator<DiffOpMapped<3>>> ();
           flux_evaluator[VOL] = make_shared<
               T_DifferentialOperator<DiffOpMappedGradient<3>>> ();
-          TrefftzWaveBasis<3>::getInstance ().CreateTB (order, basistype);
+          TrefftzWaveBasis<2>::getInstance ().CreateTB (order, basistype);
           break;
         }
       }
@@ -68,8 +69,8 @@ namespace ngcomp
   void TrefftzFESpace ::Update (LocalHeap &lh)
   {
     FESpace::Update (lh);
-    cout << "update: order = " << order << " D: " << D << " ndof = " << ndof
-         << " local_ndof:" << local_ndof << endl
+    cout << "update: order = " << order << " fullD: " << fullD
+         << " ndof = " << ndof << " local_ndof:" << local_ndof << endl
          << "================================================" << endl;
   }
 
@@ -100,14 +101,14 @@ namespace ngcomp
       {
       case ET_SEGM:
         {
-          return *(new (alloc) TrefftzWaveFE<1> (order, c, ElCenter<1> (ei),
-                                                 Adiam<1> (ei), ET_SEGM));
-          break;
+          // return *(new (alloc)
+          // TrefftzWaveFE<1>(order,c,ElCenter<1>(ei),Adiam<1>(ei),ET_SEGM));
+          // break;
         }
       case ET_QUAD:
       case ET_TRIG:
         {
-          return *(new (alloc) TrefftzWaveFE<2> (
+          return *(new (alloc) TrefftzWaveFE<1> (
               order, c, ElCenter<2> (ei), Adiam<2> (ei), ma->GetElType (ei)));
           break;
         }
@@ -116,7 +117,7 @@ namespace ngcomp
       case ET_PYRAMID:
       case ET_TET:
         {
-          return *(new (alloc) TrefftzWaveFE<3> (
+          return *(new (alloc) TrefftzWaveFE<2> (
               order, c, ElCenter<3> (ei), Adiam<3> (ei), ma->GetElType (ei)));
           break;
         }

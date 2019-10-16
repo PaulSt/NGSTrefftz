@@ -8,6 +8,7 @@ namespace ngcomp
   class TrefftzFESpace : public FESpace
   {
     int D;
+    int fullD;
     int order;
     size_t ndof;
     int nel;

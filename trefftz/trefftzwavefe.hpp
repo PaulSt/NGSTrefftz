@@ -7,13 +7,13 @@
 
 namespace ngfem
 {
-  template <int D> class TrefftzWaveFE : public ScalarMappedElement<D>
+  template <int D> class TrefftzWaveFE : public ScalarMappedElement<D + 1>
   {
   private:
     const int ord;
     const int nbasis;
     const int npoly;
-    Vec<D> elcenter;
+    Vec<D + 1> elcenter;
     double elsize;
     float c;
     ELEMENT_TYPE eltype;
@@ -21,7 +21,7 @@ namespace ngfem
 
   public:
     // TrefftzWaveFE();
-    TrefftzWaveFE (int aord = 1, float ac = 1.0, Vec<D> aelcenter = 0,
+    TrefftzWaveFE (int aord = 1, float ac = 1.0, Vec<D + 1> aelcenter = 0,
                    double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG,
                    int abasistype = 0);
 
@@ -36,13 +36,13 @@ namespace ngfem
     //
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
 
-    using ScalarMappedElement<D>::CalcShape;
+    using ScalarMappedElement<D + 1>::CalcShape;
     virtual void CalcShape (const BaseMappedIntegrationPoint &mip,
                             BareSliceVector<> shape) const;
     virtual void CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
                             BareSliceMatrix<SIMD<double>> shape) const;
 
-    using ScalarMappedElement<D>::CalcDShape;
+    using ScalarMappedElement<D + 1>::CalcDShape;
     virtual void CalcDShape (const BaseMappedIntegrationPoint &mip,
                              SliceMatrix<> dshape) const;
     virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
@@ -131,9 +131,9 @@ namespace ngfem
 
     Array<CSR> tbstore;
     // once_flag tbonceflag;
-    void TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum,
+    void TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D + 1, int> coeffnum,
                    int basis, int dim, int &tracker, int basistype);
-    int IndexMap2 (Vec<D, int> index, int ord);
+    int IndexMap2 (Vec<D + 1, int> index, int ord);
   };
 }
 
