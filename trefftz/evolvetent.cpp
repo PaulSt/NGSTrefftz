@@ -42,7 +42,7 @@ namespace ngcomp
         static Timer ttentbnd("tentbnd",2);
         static Timer ttenteval("tenteval",2);
 
-        TrefftzWaveBasis<D+1>::getInstance().CreateTB(order);
+        TrefftzWaveBasis<D>::getInstance().CreateTB(order);
 
         if(ndomains==1)
             RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
@@ -54,7 +54,7 @@ namespace ngcomp
                 Vec<D+1> center;
                 center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
                 center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
-                TrefftzWaveFE<D+1> tel(order,wavespeed[0],center,TentAdiam(tent));
+                TrefftzWaveFE<D> tel(order,wavespeed[0],center,TentAdiam(tent));
                 int nbasis = tel.GetNBasis();
 
                 FlatMatrix<> elmat(nbasis,slh);
@@ -112,7 +112,7 @@ namespace ngcomp
                 Vec<D+1> center;
                 center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
                 center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
-                TrefftzWaveFE<D+1> tel(order,max_wavespeed,center,TentAdiam(tent)); //TODO: fix scaling with correct wavespeed
+                TrefftzWaveFE<D> tel(order,max_wavespeed,center,TentAdiam(tent)); //TODO: fix scaling with correct wavespeed
                 int nbasis = tel.GetNBasis();
 
                 // check if tent vertex is on boundary between domains
@@ -259,7 +259,7 @@ namespace ngcomp
 
 
     template<int D>
-    void WaveTents<D> :: CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel,
+    void WaveTents<D> :: CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D> tel,
                                     SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes)
     {
         static Timer tint1("tent int calcshape",2);
@@ -353,7 +353,7 @@ namespace ngcomp
     }
 
     template<int D>
-    void WaveTents<D> :: CalcTentBndEl(int surfel, Tent* tent, TrefftzWaveFE<D+1> tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
+    void WaveTents<D> :: CalcTentBndEl(int surfel, Tent* tent, TrefftzWaveFE<D> tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
     {
         HeapReset hr(slh);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
@@ -428,7 +428,7 @@ namespace ngcomp
 
 
     template<int D>
-    void WaveTents<D> :: CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D+1> tel,  SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes)
+    void WaveTents<D> :: CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D> tel,  SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes)
     {
         HeapReset hr(slh);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);

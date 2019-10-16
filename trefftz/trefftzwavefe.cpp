@@ -8,25 +8,25 @@
 namespace ngfem
 {
     template<int D>
-    TrefftzWaveFE<D> :: TrefftzWaveFE(int aord, float ac, Vec<D> aelcenter, double aelsize, ELEMENT_TYPE aeltype, int abasistype)
-    : ScalarMappedElement<D>(BinCoeff(D-1 + aord, aord) + BinCoeff(D-1 + aord-1, aord-1), aord),
+    TrefftzWaveFE<D> :: TrefftzWaveFE(int aord, float ac, Vec<(D+1)> aelcenter, double aelsize, ELEMENT_TYPE aeltype, int abasistype)
+    : ScalarMappedElement<D+1>(BinCoeff(D + aord, aord) + BinCoeff(D + aord-1, aord-1), aord),
     ord(aord),
     c(ac),
-    nbasis(BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1)),
-    npoly(BinCoeff(D + ord, ord)),
+    nbasis(BinCoeff(D + ord, ord) + BinCoeff(D + ord-1, ord-1)),
+    npoly(BinCoeff(D+1 + ord, ord)),
     elcenter(aelcenter),
     elsize(aelsize),
     eltype(aeltype),
     basistype(abasistype)
     {;}
 
-    template<>
-    void TrefftzWaveFE<1> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
-                                        BareSliceMatrix<SIMD<double>> shape) const
-    {cout << "dim not implemented" << endl;}
+    //template<>
+    //void TrefftzWaveFE<1> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
+                                        //BareSliceMatrix<SIMD<double>> shape) const
+    //{cout << "dim not implemented" << endl;}
 
     template<>
-    void TrefftzWaveFE<2> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
+    void TrefftzWaveFE<1> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
                                         BareSliceMatrix<SIMD<double>> shape) const
     {
         for (int imip = 0; imip < smir.Size(); imip++)
@@ -47,7 +47,7 @@ namespace ngfem
                 for (size_t j = 0; j <= ord-i; j++)
                     pol[ii++] = polxt[0][i] * polxt[1][j];
             // TB*monomials for trefftz shape fcts
-            const CSR* localmat = TrefftzWaveBasis<2>::getInstance().TB(ord);
+            const CSR* localmat = TrefftzWaveBasis<1>::getInstance().TB(ord);
             for (int i=0; i<nbasis; ++i)
             {
                 shape(i,imip) = 0.0;
@@ -58,7 +58,7 @@ namespace ngfem
     }
 
     template<>
-    void TrefftzWaveFE<3> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
+    void TrefftzWaveFE<2> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
                                         BareSliceMatrix<SIMD<double>> shape) const
     {
         for (int imip = 0; imip < smir.Size(); imip++)
@@ -80,7 +80,7 @@ namespace ngfem
                     for (size_t k = 0; k <= ord-i-j; k++)
                         pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
             // TB*monomials for trefftz shape fcts
-            const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
+            const CSR* localmat = TrefftzWaveBasis<2>::getInstance().TB(ord);
             for (int i=0; i<nbasis; ++i)
             {
                 shape(i,imip) = 0.0;
@@ -91,7 +91,7 @@ namespace ngfem
     }
 
     template<>
-    void TrefftzWaveFE<4> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
+    void TrefftzWaveFE<3> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
                                         BareSliceMatrix<SIMD<double>> shape) const
     {
         //auto & smir = static_cast<const SIMD_MappedIntegrationRule<D-1,D>&> (mir);
@@ -115,7 +115,7 @@ namespace ngfem
                         for (size_t l = 0; l <= ord-i-j-k; l++)
                             pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
             // TB*monomials for trefftz shape fcts
-            const CSR* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
+            const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
             for (int i=0; i<nbasis; ++i)
             {
                 shape(i,imip) = 0.0;
@@ -125,13 +125,13 @@ namespace ngfem
         }
     }
 
-    template<>
-    void TrefftzWaveFE<1> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
-                                         BareSliceMatrix<SIMD<double>> dshape) const
-    {}
+    //template<>
+    //void TrefftzWaveFE<1> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
+                                         //BareSliceMatrix<SIMD<double>> dshape) const
+    //{}
 
     template<>
-    void TrefftzWaveFE<2> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
+    void TrefftzWaveFE<1> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
                                          BareSliceMatrix<SIMD<double>> dshape) const
     {
         for (int imip = 0; imip < smir.Size(); imip++)
@@ -156,7 +156,7 @@ namespace ngfem
                         pol[ii++] = (d==0?i:(d==1?j:0))
                             * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
 
-                const CSR* localmat = TrefftzWaveBasis<2>::getInstance().TB(ord);
+                const CSR* localmat = TrefftzWaveBasis<1>::getInstance().TB(ord);
                 for (int i=0; i<nbasis; ++i)
                 {
                     dshape(i*2+d,imip) = 0.0;
@@ -169,7 +169,7 @@ namespace ngfem
     }
 
     template<>
-    void TrefftzWaveFE<3> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
+    void TrefftzWaveFE<2> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
                                          BareSliceMatrix<SIMD<double>> dshape) const
     {
         for (int imip = 0; imip < smir.Size(); imip++)
@@ -195,7 +195,7 @@ namespace ngfem
                             pol[ii++] = (d==0?i:(d==1?j:(d==2?k:0)))
                                 * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)];
 
-                const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
+                const CSR* localmat = TrefftzWaveBasis<2>::getInstance().TB(ord);
                 for (int i=0; i<nbasis; ++i)
                 {
                     dshape(i*3+d,imip) = 0.0;
@@ -208,7 +208,7 @@ namespace ngfem
     }
 
     template<>
-    void TrefftzWaveFE<4> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
+    void TrefftzWaveFE<3> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
                                          BareSliceMatrix<SIMD<double>> dshape) const
     {
         for (int imip = 0; imip < smir.Size(); imip++)
@@ -235,7 +235,7 @@ namespace ngfem
                                 pol[ii++] = (d==0?i:(d==1?j:(d==2?k:(d==3?l:0))))
                                     * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * polxt[3][l-(d==3)];
 
-                const CSR* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
+                const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
                 for (int i=0; i<nbasis; ++i)
                 {
                     dshape(i*4+d,imip) = 0.0;
@@ -252,13 +252,13 @@ namespace ngfem
     /////////////// non-simd
 
 
-    template<>
-    void TrefftzWaveFE<1> :: CalcShape (const BaseMappedIntegrationPoint & mip,
-                                        BareSliceVector<> shape) const
-    {cout << "dim not implemented" << endl;}
+    //template<>
+    //void TrefftzWaveFE<1> :: CalcShape (const BaseMappedIntegrationPoint & mip,
+                                        //BareSliceVector<> shape) const
+    //{cout << "dim not implemented" << endl;}
 
     template<>
-    void TrefftzWaveFE<2> :: CalcShape (const BaseMappedIntegrationPoint & mip,
+    void TrefftzWaveFE<1> :: CalcShape (const BaseMappedIntegrationPoint & mip,
                                         BareSliceVector<> shape) const
     {
         //auto & smir = static_cast<const SIMD_BaseMappedIntegrationRuleD>&> (mir);
@@ -278,7 +278,7 @@ namespace ngfem
             for (size_t j = 0; j <= ord-i; j++)
                 pol[ii++] = polxt[0][i] * polxt[1][j];
         // TB*monomials for trefftz shape fcts
-        const CSR* localmat = TrefftzWaveBasis<2>::getInstance().TB(ord);
+        const CSR* localmat = TrefftzWaveBasis<1>::getInstance().TB(ord);
         for (int i=0; i<nbasis; ++i)
         {
             shape(i) = 0.0;
@@ -288,7 +288,7 @@ namespace ngfem
     }
 
     template<>
-    void TrefftzWaveFE<3> :: CalcShape (const BaseMappedIntegrationPoint & mip,
+    void TrefftzWaveFE<2> :: CalcShape (const BaseMappedIntegrationPoint & mip,
                                         BareSliceVector<> shape) const
     {
         Vec<3> cpoint = mip.GetPoint();
@@ -309,7 +309,7 @@ namespace ngfem
                 for (size_t k = 0; k <= ord-i-j; k++)
                     pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
         // TB*monomials for trefftz shape fcts
-        const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
+        const CSR* localmat = TrefftzWaveBasis<2>::getInstance().TB(ord);
         for (int i=0; i<nbasis; ++i)
         {
             shape(i) = 0.0;
@@ -319,7 +319,7 @@ namespace ngfem
     }
 
     template<>
-    void TrefftzWaveFE<4> :: CalcShape (const BaseMappedIntegrationPoint & mip,
+    void TrefftzWaveFE<3> :: CalcShape (const BaseMappedIntegrationPoint & mip,
                                         BareSliceVector<> shape) const
     {
         Vec<4> cpoint = mip.GetPoint();
@@ -340,7 +340,7 @@ namespace ngfem
                     for (size_t l = 0; l <= ord-i-j-k; l++)
                         pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
         // TB*monomials for trefftz shape fcts
-        const CSR* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
+        const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
         for (int i=0; i<nbasis; ++i)
         {
             shape(i) = 0.0;
@@ -351,13 +351,13 @@ namespace ngfem
 
 
 
-    template<>
-    void TrefftzWaveFE<1> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
-                                         SliceMatrix<> dshape) const
-    {cout << "dim not implemented" << endl;}
+    //template<>
+    //void TrefftzWaveFE<1> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
+                                         //SliceMatrix<> dshape) const
+    //{cout << "dim not implemented" << endl;}
 
     template<>
-    void TrefftzWaveFE<2> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
+    void TrefftzWaveFE<1> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
                                          SliceMatrix<> dshape) const
     {
         Vec<2> cpoint = mip.GetPoint();
@@ -379,7 +379,7 @@ namespace ngfem
                     pol[ii++] = (d==0?i:(d==1?j:0))
                         * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
 
-            const CSR* localmat = TrefftzWaveBasis<2>::getInstance().TB(ord);
+            const CSR* localmat = TrefftzWaveBasis<1>::getInstance().TB(ord);
             for (int i=0; i<nbasis; ++i)
             {
                 dshape(i,d) = 0.0;
@@ -392,7 +392,7 @@ namespace ngfem
     }
 
     template<>
-    void TrefftzWaveFE<3> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
+    void TrefftzWaveFE<2> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
                                          SliceMatrix<> dshape) const
     {
         Vec<3> cpoint = mip.GetPoint();
@@ -416,7 +416,7 @@ namespace ngfem
                         pol[ii++] = (d==0?i:(d==1?j:(d==2?k:0)))
                             * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)];
 
-            const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
+            const CSR* localmat = TrefftzWaveBasis<2>::getInstance().TB(ord);
             for (int i=0; i<nbasis; ++i)
             {
                 dshape(i,d) = 0.0;
@@ -429,7 +429,7 @@ namespace ngfem
     }
 
     template<>
-    void TrefftzWaveFE<4> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
+    void TrefftzWaveFE<3> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
                                          SliceMatrix<> dshape) const
     {
         Vec<4> cpoint = mip.GetPoint();
@@ -453,7 +453,7 @@ namespace ngfem
                             pol[ii++] = (d==0?i:(d==1?j:(d==2?k:(d==3?l:0))))
                                 * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * polxt[3][l-(d==3)];
 
-            const CSR* localmat = TrefftzWaveBasis<4>::getInstance().TB(ord);
+            const CSR* localmat = TrefftzWaveBasis<3>::getInstance().TB(ord);
             for (int i=0; i<nbasis; ++i)
             {
                 dshape(i,d) = 0.0;
@@ -468,7 +468,7 @@ namespace ngfem
     template class TrefftzWaveFE<1>;
     template class TrefftzWaveFE<2>;
     template class TrefftzWaveFE<3>;
-    template class TrefftzWaveFE<4>;
+    //template class TrefftzWaveFE<4>;
 
 
     template<int D>
@@ -491,16 +491,16 @@ namespace ngfem
 
         //if ( tbstore[ord][0].Size() == 0)
         //{
-        const int nbasis = (BinCoeff(D-1 + ord, ord) + BinCoeff(D-1 + ord-1, ord-1));
-        const int npoly = (BinCoeff(D + ord, ord));
+        const int nbasis = (BinCoeff(D + ord, ord) + BinCoeff(D + ord-1, ord-1));
+        const int npoly = (BinCoeff(D+1 + ord, ord));
         Matrix<> trefftzbasis(nbasis,npoly);
         trefftzbasis = 0;
-        Vec<D, int>  coeff = 0;
+        Vec<D+1, int>  coeff = 0;
         int count = 0;
         for(int b=0;b<nbasis;b++)
         {
             int tracker = 0;
-            TB_inner(ord, trefftzbasis, coeff, b, D, tracker, basistype);
+            TB_inner(ord, trefftzbasis, coeff, b, D+1, tracker, basistype);
         }
         MatToCSR(trefftzbasis,tbstore[ord]);
         //}
@@ -517,7 +517,7 @@ namespace ngfem
 
 
     template<int D>
-    void TrefftzWaveBasis<D> :: TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis, int dim, int &tracker, int basistype)
+    void TrefftzWaveBasis<D> :: TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker, int basistype)
     {
         if (dim>0)
         {
@@ -530,13 +530,13 @@ namespace ngfem
         else
         {
             int sum=0;
-            for(int i=0;i<D;i++)
+            for(int i=0;i<D+1;i++)
                 sum += coeffnum(i);
             if(sum<=ord)
             {
                 if(tracker >= 0) tracker++;
                 int indexmap = IndexMap2(coeffnum, ord);
-                int k = coeffnum(D-1);
+                int k = coeffnum(D);
                 if(k==0 || k==1)
                 {
                     switch (basistype) {
@@ -550,23 +550,23 @@ namespace ngfem
                             //i += nbasis-1;	//jump to time = 2 if i=0
                             break;
                         case 1:
-                            if((k == 0 && basis < BinCoeff(D-1 + ord, ord)) || (k == 1 && basis >= BinCoeff(D-1 + ord, ord))){
+                            if((k == 0 && basis < BinCoeff(D + ord, ord)) || (k == 1 && basis >= BinCoeff(D + ord, ord))){
                                 trefftzbasis( basis,indexmap ) = 1;
-                                for(int exponent :  coeffnum.Range(0,D-1)) trefftzbasis( basis,indexmap ) *= LegCoeffMonBasis(basis,exponent);}
+                                for(int exponent :  coeffnum.Range(0,D)) trefftzbasis( basis,indexmap ) *= LegCoeffMonBasis(basis,exponent);}
                             break;
                         case 2:
-                            if((k == 0 && basis < BinCoeff(D-1 + ord, ord)) || (k == 1 && basis >= BinCoeff(D-1 + ord, ord))){
+                            if((k == 0 && basis < BinCoeff(D + ord, ord)) || (k == 1 && basis >= BinCoeff(D + ord, ord))){
                                 trefftzbasis( basis,indexmap ) = 1;
-                                for(int exponent :  coeffnum.Range(0,D-1)) trefftzbasis( basis,indexmap ) *= ChebCoeffMonBasis(basis,exponent);}
+                                for(int exponent :  coeffnum.Range(0,D)) trefftzbasis( basis,indexmap ) *= ChebCoeffMonBasis(basis,exponent);}
                             break;
                     }
                 }
-                else if(coeffnum(D-1)>1)
+                else if(coeffnum(D)>1)
                 {
-                    for(int m=0;m<D-1;m++) //rekursive sum
+                    for(int m=0;m<D;m++) //rekursive sum
                     {
-                        Vec<D, int> get_coeff = coeffnum;
-                        get_coeff[D-1] = get_coeff[D-1] - 2;
+                        Vec<D+1, int> get_coeff = coeffnum;
+                        get_coeff[D] = get_coeff[D] - 2;
                         get_coeff[m] = get_coeff[m] + 2;
                         trefftzbasis( basis, indexmap) += (coeffnum(m)+1) * (coeffnum(m)+2) * trefftzbasis(basis, IndexMap2(get_coeff, ord));
                     }
@@ -577,13 +577,13 @@ namespace ngfem
     }
 
     template<int D>
-    int TrefftzWaveBasis<D> :: IndexMap2(Vec<D, int> index, int ord)
+    int TrefftzWaveBasis<D> :: IndexMap2(Vec<D+1, int> index, int ord)
     {
         int sum=0;
         int temp_size = 0;
-        for(int d=0;d<D;d++){
+        for(int d=0;d<D+1;d++){
             for(int p=0;p<index(d);p++){
-                sum+=BinCoeff(D-1 - d + ord - p - temp_size, ord - p - temp_size);
+                sum+=BinCoeff(D - d + ord - p - temp_size, ord - p - temp_size);
             }
             temp_size+=index(d);
         }
@@ -593,7 +593,7 @@ namespace ngfem
     template class TrefftzWaveBasis<1>;
     template class TrefftzWaveBasis<2>;
     template class TrefftzWaveBasis<3>;
-    template class TrefftzWaveBasis<4>;
+    //template class TrefftzWaveBasis<4>;
 }
 
 
