@@ -72,23 +72,23 @@ namespace ngfem
             }
             void EvaluateGrad (const SIMD_BaseMappedIntegrationRule & ir, BareSliceVector<> coefs, BareSliceMatrix<SIMD<double>> values) const
             {
-                STACK_ARRAY(SIMD<double>, mem, (D)*nbasis*ir.Size());
-                FlatMatrix<SIMD<double>> simddshapes((D)*nbasis,ir.Size(),&mem[0]);
+                STACK_ARRAY(SIMD<double>, mem, (D+1)*nbasis*ir.Size());
+                FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,ir.Size(),&mem[0]);
                 CalcDShape(ir,simddshapes);
                 const int nsimd = SIMD<double>::Size();
-                FlatMatrix<double> dshapes(nbasis,(D)*nsimd*ir.Size(),&simddshapes(0,0)[0]);
-                FlatVector<double> bdbvec((D)*nsimd*ir.Size(),&values(0,0)[0]);
+                FlatMatrix<double> dshapes(nbasis,(D+1)*nsimd*ir.Size(),&simddshapes(0,0)[0]);
+                FlatVector<double> bdbvec((D+1)*nsimd*ir.Size(),&values(0,0)[0]);
                 bdbvec = Trans(dshapes)*coefs;
             }
             void AddGradTrans (const SIMD_BaseMappedIntegrationRule & mir, BareSliceMatrix<SIMD<double>> values,
                     BareSliceVector<> coefs) const
             {
-                STACK_ARRAY(SIMD<double>, mem, (D)*nbasis*mir.Size());
-                FlatMatrix<SIMD<double>> simddshapes((D)*nbasis,mir.Size(),&mem[0]);
+                STACK_ARRAY(SIMD<double>, mem, (D+1)*nbasis*mir.Size());
+                FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,mir.Size(),&mem[0]);
                 CalcDShape(mir,simddshapes);
                 const int nsimd = SIMD<double>::Size();
-                FlatMatrix<double> dshapes(nbasis,(D)*nsimd*mir.Size(),&simddshapes(0,0)[0]);
-                FlatVector<double> bdbvec((D)*nsimd*mir.Size(),&values(0,0)[0]);
+                FlatMatrix<double> dshapes(nbasis,(D+1)*nsimd*mir.Size(),&simddshapes(0,0)[0]);
+                FlatVector<double> bdbvec((D+1)*nsimd*mir.Size(),&values(0,0)[0]);
                 coefs.AddSize(nbasis) += dshapes*bdbvec;
             }
     };
