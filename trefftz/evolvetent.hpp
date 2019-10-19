@@ -5,6 +5,7 @@
 #include <h1lofe.hpp>
 #include "tents/tents.hpp"
 #include "trefftzwavefe.hpp"
+#include "trefftzgppwfe.hpp"
 
 namespace ngcomp
 {
@@ -30,12 +31,12 @@ namespace ngcomp
             shared_ptr<CoefficientFunction> bddatum;
             double timeshift = 0;
 
-            void CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D> tel,
+            void CalcTentEl(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel,
                  SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
 
-            void CalcTentBndEl(int surfel, Tent* tent, TrefftzWaveFE<D> tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
+            void CalcTentBndEl(int surfel, Tent* tent, ScalarMappedElement<D+1> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
 
-            void CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D> tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes);
+            void CalcTentElEval(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes);
 
             Mat<D+1,D+1> TentFaceVerts(Tent* tent, int elnr, int top);
 
@@ -82,7 +83,7 @@ namespace ngcomp
 
             int LocalDofs(){
                 TrefftzWaveFE<D> tel(order,wavespeed[0]);
-                return tel.GetNBasis();
+                return tel.GetNDof();
             }
 
             int NrTents(double dt)

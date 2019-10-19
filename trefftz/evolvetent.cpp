@@ -55,7 +55,8 @@ namespace ngcomp
                 center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
                 center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
                 TrefftzWaveFE<D> tel(order,wavespeed[0],center,TentAdiam(tent));
-                int nbasis = tel.GetNBasis();
+                //TrefftzGppwFE<D> tel(order,wavespeed[0],center,TentAdiam(tent));
+                int nbasis = tel.GetNDof();
 
                 FlatMatrix<> elmat(nbasis,slh);
                 FlatVector<> elvec(nbasis,slh);
@@ -113,7 +114,7 @@ namespace ngcomp
                 center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
                 center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
                 TrefftzWaveFE<D> tel(order,max_wavespeed,center,TentAdiam(tent)); //TODO: fix scaling with correct wavespeed
-                int nbasis = tel.GetNBasis();
+                int nbasis = tel.GetNDof();
 
                 // check if tent vertex is on boundary between domains
                 int ndomains = 1;
@@ -169,7 +170,7 @@ namespace ngcomp
                     }
                     else
                     {
-                        int nbasis = tel.GetNBasis();
+                        int nbasis = tel.GetNDof();
                         int nsimd = SIMD<double>::Size();
                         int snip = sir.Size()*nsimd;
 
@@ -259,7 +260,7 @@ namespace ngcomp
 
 
     template<int D>
-    void WaveTents<D> :: CalcTentEl(int elnr, Tent* tent, TrefftzWaveFE<D> tel,
+    void WaveTents<D> :: CalcTentEl(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel,
                                     SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes)
     {
         static Timer tint1("tent int calcshape",2);
@@ -269,7 +270,7 @@ namespace ngcomp
         HeapReset hr(slh);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         double wavespeed = tel.GetWavespeed();
-        int nbasis = tel.GetNBasis();
+        int nbasis = tel.GetNDof();
         int nsimd = SIMD<double>::Size();
         int snip = sir.Size()*nsimd;
         ScalarFE<eltyp,1> faceint; //linear basis for tent faces
@@ -353,12 +354,12 @@ namespace ngcomp
     }
 
     template<int D>
-    void WaveTents<D> :: CalcTentBndEl(int surfel, Tent* tent, TrefftzWaveFE<D> tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
+    void WaveTents<D> :: CalcTentBndEl(int surfel, Tent* tent, ScalarMappedElement<D+1> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
     {
         HeapReset hr(slh);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         double wavespeed = tel.GetWavespeed();
-        int nbasis = tel.GetNBasis();
+        int nbasis = tel.GetNDof();
         int nsimd = SIMD<double>::Size();
         int snip = sir.Size()*nsimd;
 
@@ -428,11 +429,11 @@ namespace ngcomp
 
 
     template<int D>
-    void WaveTents<D> :: CalcTentElEval(int elnr, Tent* tent, TrefftzWaveFE<D> tel,  SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes)
+    void WaveTents<D> :: CalcTentElEval(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel,  SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes)
     {
         HeapReset hr(slh);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
-        int nbasis = tel.GetNBasis();
+        int nbasis = tel.GetNDof();
         int nsimd = SIMD<double>::Size();
         int snip = sir.Size()*nsimd;
         ScalarFE<eltyp,1> faceint; //linear basis for tent faces

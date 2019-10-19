@@ -115,7 +115,7 @@ namespace ngfem
     //void BaseScalarMappedElement ::
     //EvaluateGrad (const SIMD_IntegrationRule & ir, BareSliceVector<> coefs, BareSliceMatrix<SIMD<double>> values) const
     //{
-        //throw ExceptionNOSIMD (string("EvaluateGrad (simd) not implemented for class ")+typeid(*this).name());
+    //throw ExceptionNOSIMD (string("EvaluateGrad (simd) not implemented for class ")+typeid(*this).name());
     //}
 
     void BaseScalarMappedElement ::
@@ -140,7 +140,7 @@ namespace ngfem
 
     template<int D>
     void ScalarMappedElement<D> :: CalcDShape (const BaseMappedIntegrationRule & mir,
-                                            SliceMatrix<> dshapes) const
+                                               SliceMatrix<> dshapes) const
     {
         for (int i = 0; i < mir.Size(); i++)
             CalcDShape (mir[i], dshapes.Cols(i*D,(i+1)*D));
@@ -211,14 +211,23 @@ namespace ngfem
 #endif
     }
 
-    template <int D>
-        void ScalarMappedElement<D> ::
-        GetPolOrders (FlatArray<PolOrder<D> > orders) const
-        {
+    template<int D>
+    void ScalarMappedElement<D> ::
+    GetPolOrders (FlatArray<PolOrder<D> > orders) const
+    {
 #ifndef __CUDA_ARCH__
-            throw Exception (string ("GetPolOrders not implemnted for element") + ClassName());
+        throw Exception (string ("GetPolOrders not implemnted for element") + ClassName());
 #endif
-        }
+    }
+
+
+    template<int D>
+    void ScalarMappedElement<D> ::
+    CalcDShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape) const
+    {
+        cout<<"SIMD - CalcDShape not overloaded"<< endl;
+        throw ExceptionNOSIMD("SIMD - CalcDShape not overloaded");
+    }
 
     template class ScalarMappedElement<1>;
     template class ScalarMappedElement<2>;
