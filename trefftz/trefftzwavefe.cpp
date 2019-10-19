@@ -13,10 +13,9 @@ namespace ngfem
                                    int abasistype)
       : ScalarMappedElement<D + 1> (
           BinCoeff (D + aord, aord) + BinCoeff (D + aord - 1, aord - 1), aord),
-        ord (aord), c (ac),
-        nbasis (BinCoeff (D + ord, ord) + BinCoeff (D + ord - 1, ord - 1)),
-        npoly (BinCoeff (D + 1 + ord, ord)), elcenter (aelcenter),
-        elsize (aelsize), eltype (aeltype), basistype (abasistype)
+        ord (aord), c (ac), npoly (BinCoeff (D + 1 + ord, ord)),
+        elcenter (aelcenter), elsize (aelsize), eltype (aeltype),
+        basistype (abasistype)
   {
     ;
   }
@@ -51,7 +50,7 @@ namespace ngfem
             pol[ii++] = polxt[0][i] * polxt[1][j];
         // TB*monomials for trefftz shape fcts
         const CSR *localmat = TrefftzWaveBasis<1>::getInstance ().TB (ord);
-        for (int i = 0; i < nbasis; ++i)
+        for (int i = 0; i < this->ndof; ++i)
           {
             shape (i, imip) = 0.0;
             for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
@@ -86,7 +85,7 @@ namespace ngfem
               pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
         // TB*monomials for trefftz shape fcts
         const CSR *localmat = TrefftzWaveBasis<2>::getInstance ().TB (ord);
-        for (int i = 0; i < nbasis; ++i)
+        for (int i = 0; i < this->ndof; ++i)
           {
             shape (i, imip) = 0.0;
             for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
@@ -125,7 +124,7 @@ namespace ngfem
                     = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
         // TB*monomials for trefftz shape fcts
         const CSR *localmat = TrefftzWaveBasis<3>::getInstance ().TB (ord);
-        for (int i = 0; i < nbasis; ++i)
+        for (int i = 0; i < this->ndof; ++i)
           {
             shape (i, imip) = 0.0;
             for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
@@ -170,7 +169,7 @@ namespace ngfem
                             * polxt[0][i - (d == 0)] * polxt[1][j - (d == 1)];
 
             const CSR *localmat = TrefftzWaveBasis<1>::getInstance ().TB (ord);
-            for (int i = 0; i < nbasis; ++i)
+            for (int i = 0; i < this->ndof; ++i)
               {
                 dshape (i * 2 + d, imip) = 0.0;
                 for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
@@ -216,7 +215,7 @@ namespace ngfem
                               * polxt[2][k - (d == 2)];
 
             const CSR *localmat = TrefftzWaveBasis<2>::getInstance ().TB (ord);
-            for (int i = 0; i < nbasis; ++i)
+            for (int i = 0; i < this->ndof; ++i)
               {
                 dshape (i * 3 + d, imip) = 0.0;
                 for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
@@ -266,7 +265,7 @@ namespace ngfem
                           * polxt[2][k - (d == 2)] * polxt[3][l - (d == 3)];
 
             const CSR *localmat = TrefftzWaveBasis<3>::getInstance ().TB (ord);
-            for (int i = 0; i < nbasis; ++i)
+            for (int i = 0; i < this->ndof; ++i)
               {
                 dshape (i * 4 + d, imip) = 0.0;
                 for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
@@ -276,8 +275,8 @@ namespace ngfem
               }
           }
       }
-    // dshape.AddSize(nbasis*4,smir.Size()) *= (2.0/elsize); //inner derivative
-    // dshape *= (2.0/elsize); //inner derivative
+    // dshape.AddSize(this->ndof*4,smir.Size()) *= (2.0/elsize); //inner
+    // derivative dshape *= (2.0/elsize); //inner derivative
   }
 
   /////////////// non-simd
@@ -312,7 +311,7 @@ namespace ngfem
         pol[ii++] = polxt[0][i] * polxt[1][j];
     // TB*monomials for trefftz shape fcts
     const CSR *localmat = TrefftzWaveBasis<1>::getInstance ().TB (ord);
-    for (int i = 0; i < nbasis; ++i)
+    for (int i = 0; i < this->ndof; ++i)
       {
         shape (i) = 0.0;
         for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
@@ -345,7 +344,7 @@ namespace ngfem
           pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
     // TB*monomials for trefftz shape fcts
     const CSR *localmat = TrefftzWaveBasis<2>::getInstance ().TB (ord);
-    for (int i = 0; i < nbasis; ++i)
+    for (int i = 0; i < this->ndof; ++i)
       {
         shape (i) = 0.0;
         for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
@@ -378,7 +377,7 @@ namespace ngfem
             pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
     // TB*monomials for trefftz shape fcts
     const CSR *localmat = TrefftzWaveBasis<3>::getInstance ().TB (ord);
-    for (int i = 0; i < nbasis; ++i)
+    for (int i = 0; i < this->ndof; ++i)
       {
         shape (i) = 0.0;
         for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
@@ -418,7 +417,7 @@ namespace ngfem
                         * polxt[0][i - (d == 0)] * polxt[1][j - (d == 1)];
 
         const CSR *localmat = TrefftzWaveBasis<1>::getInstance ().TB (ord);
-        for (int i = 0; i < nbasis; ++i)
+        for (int i = 0; i < this->ndof; ++i)
           {
             dshape (i, d) = 0.0;
             for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
@@ -459,7 +458,7 @@ namespace ngfem
                           * polxt[2][k - (d == 2)];
 
         const CSR *localmat = TrefftzWaveBasis<2>::getInstance ().TB (ord);
-        for (int i = 0; i < nbasis; ++i)
+        for (int i = 0; i < this->ndof; ++i)
           {
             dshape (i, d) = 0.0;
             for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
@@ -502,7 +501,7 @@ namespace ngfem
                       * polxt[2][k - (d == 2)] * polxt[3][l - (d == 3)];
 
         const CSR *localmat = TrefftzWaveBasis<3>::getInstance ().TB (ord);
-        for (int i = 0; i < nbasis; ++i)
+        for (int i = 0; i < this->ndof; ++i)
           {
             dshape (i, d) = 0.0;
             for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)

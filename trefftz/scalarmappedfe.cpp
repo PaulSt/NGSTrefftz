@@ -137,7 +137,7 @@ namespace ngfem
   //{
   // throw ExceptionNOSIMD (string("EvaluateGrad (simd) not implemented for
   // class ")+typeid(*this).name());
-  //}
+  // }
 
   void BaseScalarMappedElement ::AddGradTrans (
       const SIMD_BaseMappedIntegrationRule &ir,
@@ -233,6 +233,15 @@ namespace ngfem
     throw Exception (string ("GetPolOrders not implemnted for element")
                      + ClassName ());
 #endif
+  }
+
+  template <int D>
+  void ScalarMappedElement<D>::CalcDShape (
+      const SIMD_BaseMappedIntegrationRule &smir,
+      BareSliceMatrix<SIMD<double>> dshape) const
+  {
+    cout << "SIMD - CalcDShape not overloaded" << endl;
+    throw ExceptionNOSIMD ("SIMD - CalcDShape not overloaded");
   }
 
   template class ScalarMappedElement<1>;

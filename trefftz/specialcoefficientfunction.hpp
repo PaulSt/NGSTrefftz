@@ -126,7 +126,7 @@ namespace ngfem
     {
       FlatVector<double> point = mip.GetPoint ();
 
-      int ndof = treff.GetNBasis ();
+      int ndof = treff.GetNDof ();
       cout << "nr: " << basisfunction << " / " << ndof << endl;
       Vector<double> shape (ndof);
       // Matrix<double> shape(ndof,2);

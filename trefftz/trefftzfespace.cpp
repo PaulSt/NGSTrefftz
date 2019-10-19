@@ -29,8 +29,9 @@ namespace ngcomp
     basistype = flags.GetNumFlag ("basistype", 0);
     useshift = flags.GetNumFlag ("useshift", 1);
 
-    local_ndof = (BinCoeff (fullD - 1 + order, order)
-                  + BinCoeff (fullD - 1 + order - 1, order - 1));
+    // local_ndof = (BinCoeff(fullD-1 + order, order) + BinCoeff(fullD-1 +
+    // order-1, order-1));
+    local_ndof = 2 * order + 1;
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
 

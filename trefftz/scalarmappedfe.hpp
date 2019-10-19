@@ -128,6 +128,8 @@ namespace ngfem
 
     void CalcDShape (const BaseMappedIntegrationRule &mir,
                      SliceMatrix<> dshapes) const;
+    virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
+                             BareSliceMatrix<SIMD<double>> dshape) const;
 
     // compute dshape, matrix: ndof x spacedim, Use CalcMappedDShape only for
     // consistancy, can use CalcDShape with BaseMappedIR
@@ -169,6 +171,10 @@ namespace ngfem
     // public:
     //	NGS_DLL_HEADER virtual std::list<std::tuple<std::string,double>> Timing
     //() const;
+    virtual float GetWavespeed () const
+    {
+      return 0;
+    } // ugly parent hack for trefftzwave
   };
 
 }

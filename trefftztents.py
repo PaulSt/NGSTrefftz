@@ -8,7 +8,7 @@ from trefftzngs import *
 # SetHeapSize(1000*1000*1000)
 
 
-def SolveWaveTents(mesh, order, finaltime):
+def SolveWaveTents(initmesh, order, finaltime):
     D = initmesh.dim
     t = CoordCF(D)
 
