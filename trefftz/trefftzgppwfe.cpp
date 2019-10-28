@@ -29,16 +29,11 @@ namespace ngfem
         cpoint *= (2.0 / elsize);
         cpoint[1] *= c;
         // calc 1 dimensional monomial basis
-        STACK_ARRAY (SIMD<double>, mem, 2 * (ord + 1) + 1);
-        for (size_t d = 0; d < 2; d++)
-          {
-            SIMD<double> evalpoint = pow (-1, d) * cpoint[0] - cpoint[1];
-            Monomial (ord, evalpoint, &mem[d * (ord + 1)]);
-          }
-        for (int i = 0; i < this->ndof; ++i)
-          {
-            shape (i, imip) = i <= ord ? mem[i] : mem[i + 1];
-          }
+        int basisn = 0;
+        for (int i = 0; i <= ord; ++i)
+          for (int d = 0; d < NDirections (i); ++d)
+            shape (basisn++, imip)
+                = pow (GetDirection (i, d) * cpoint[0] - cpoint[1], i);
       }
   }
 
@@ -67,21 +62,17 @@ namespace ngfem
         cpoint *= (2.0 / elsize);
         cpoint[1] *= c;
         // calc 1 dimensional monomial basis
-        STACK_ARRAY (SIMD<double>, mem, 2 * (ord + 1) + 1 + 2);
-        for (size_t d = 0; d < 2; d++)
-          {
-            SIMD<double> evalpoint = pow (-1, d) * cpoint[0] - cpoint[1];
-            Monomial (ord, evalpoint, &mem[d * (ord + 1)]);
-          }
         for (int d = 0; d < 2; d++)
           {
-            for (int i = 0; i < this->ndof; ++i)
-              {
-                dshape (i * 2 + d, imip) = pow (-1, (i <= ord && d == 0))
-                                           * (i <= ord ? i : i - ord)
-                                           * (i <= ord ? mem[i - 1] : mem[i])
-                                           * (d == 1 ? c : 1) * (2.0 / elsize);
-              }
+            int basisn = 0;
+            for (int i = 0; i <= ord; ++i)
+              for (int dir = 0; dir < NDirections (i); ++dir)
+                dshape (2 * (basisn++) + d, imip)
+                    = i
+                      * pow (GetDirection (i, dir) * cpoint[0] - cpoint[1],
+                             (i - 1) * (i > 0))
+                      * (d == 0 ? GetDirection (i, dir) : 1)
+                      * (d == 1 ? (-c) : 1) * (2.0 / elsize);
           }
       }
   }
@@ -150,20 +141,100 @@ namespace ngfem
     return tb;
   }
 
-  template <int D> void TrefftzGppwBasis<D>::CreateTB (int ord, int basistype)
+  template <int D>
+  void TrefftzGppwBasis<D>::CreateTB (int ord, int gppword, Vector<> gamma,
+                                      int basistype)
   {
     cout << "creating tp store for order " << ord << endl;
+
+    // if (tbstore.Size() < ord)
+    //{
+    int oldsize = tbstore.Size ();
+    tbstore.SetSize (ord + 1);
+    for (int i = oldsize; i <= ord; i++)
+      tbstore[i] = CSR ();
+
+    // if ( tbstore[ord][0].Size() == 0)
+    //{
+    const int nbasis = 2 * ord + 1;
+    const int npoly = (gppword + 1) * (gppword + 2) / 2 - 1;
+    Matrix<> trefftzbasis (nbasis, npoly);
+    trefftzbasis = 0;
+    Vec<D + 1, int> coeff = 0;
+    int count = 0;
+    int basisn = 0;
+    for (int j = 0; j <= ord; ++j)
+      for (int dir = 0; dir < TrefftzGppwFE<D>::NDirections (j); ++dir)
+        for (int ell = (basisn++) - 1; ell < gppword; ell++)
+          {
+            // TB_inner(gamma, ord, trefftzbasis, coeff, b, D+1, ell,
+            // basistype);
+            Vec<D + 1, int> get_coeff;
+            get_coeff[D] = 0;
+            get_coeff[0] = ell + 2;
+            trefftzbasis (basisn, IndexMap2 (get_coeff, gppword - 1)) = 0;
+            get_coeff[D] = 1;
+            get_coeff[0] = ell + 1;
+            trefftzbasis (basisn, IndexMap2 (get_coeff, gppword - 1)) = 0;
+            for (int t = 0; t < ell; t++)
+              {
+                int x = ell - t;
+                get_coeff[D] = t + 2;
+                get_coeff[0] = x;
+                Vec<D + 1, int> get_coeff2;
+                get_coeff2[D] = t;
+                get_coeff2[0] = x + 2;
+                trefftzbasis (basisn, IndexMap2 (get_coeff, gppword - 1))
+                    = (x + 2) * (x + 1) / (t + 2) * (t + 2)
+                          * trefftzbasis (basisn,
+                                          IndexMap2 (get_coeff2, gppword - 1))
+                      - (x <= basisn - 2) * BinCoeff (basisn, t);
+              }
+          }
+    MatToCSR (trefftzbasis, tbstore[ord]);
+    //}
+    //}
+
+    // if ( tbstore[ord][0].Size() == 0)
+    if (tbstore.Size () < ord)
+      {
+        stringstream str;
+        str << "failed to generate trefftz basis of order " << ord << endl;
+        throw Exception (str.str ());
+      }
   }
 
   template <int D>
-  void TrefftzGppwBasis<D>::TB_inner (int ord, Matrix<> &trefftzbasis,
-                                      Vec<D, int> coeffnum, int basis, int dim,
-                                      int &tracker, int basistype)
+  void TrefftzGppwBasis<D>::TB_inner (Vector<> gamma, int ord,
+                                      Matrix<> &trefftzbasis,
+                                      Vec<D + 1, int> coeffnum, int basis,
+                                      int dim, int &tracker, int basistype)
   {
+    // if (dim>0)
+    //{
+    // while(coeffnum(dim-1)<=ord)
+    //{
+    // TB_inner(gamma, ord,trefftzbasis,coeffnum,basis, dim-1, tracker,
+    // basistype); coeffnum(dim-1)++;
+    // }
+    // }
+    // else
+    //{
+    // int sum=0;
+    // for(int i=0;i<D+1;i++)
+    // sum += coeffnum(i);
+    // if(sum<=ord)
+    //{
+    // int indexmap = IndexMap2(coeffnum, ord);
+    // int k = coeffnum(D);
+    // cout << coeffnum << endl;
+    ////trefftzbasis(basis, indexmap) *= 1.0/(k * (k-1));
+    //}
+    //}
   }
 
   template <int D>
-  int TrefftzGppwBasis<D>::IndexMap2 (Vec<D, int> index, int ord)
+  int TrefftzGppwBasis<D>::IndexMap2 (Vec<D + 1, int> index, int ord)
   {
     int sum = 0;
     int temp_size = 0;

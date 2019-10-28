@@ -45,6 +45,9 @@ namespace ngfem
     virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
                              BareSliceMatrix<SIMD<double>> dshape) const;
 
+    static int NDirections (int ord) { return ord == 0 ? 1 : 2; }
+    static int GetDirection (int ord, int k) { return pow (-1, k); }
+
     void
     Evaluate (const SIMD_BaseMappedIntegrationRule &mir,
               BareSliceVector<> coefs, BareVector<SIMD<double>> values) const
@@ -120,7 +123,7 @@ namespace ngfem
     }
 
     const CSR *TB (int ord);
-    void CreateTB (int ord, int basistype = 0);
+    void CreateTB (int ord, int gppword, Vector<> gamma, int basistype = 0);
 
   private:
     TrefftzGppwBasis () = default;
@@ -130,9 +133,10 @@ namespace ngfem
 
     Array<CSR> tbstore;
     // once_flag tbonceflag;
-    void TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum,
-                   int basis, int dim, int &tracker, int basistype);
-    int IndexMap2 (Vec<D, int> index, int ord);
+    void TB_inner (Vector<> gamma, int ord, Matrix<> &trefftzbasis,
+                   Vec<D + 1, int> coeffnum, int basis, int dim, int &tracker,
+                   int basistype);
+    int IndexMap2 (Vec<D + 1, int> index, int ord);
   };
 
 }
