@@ -18,6 +18,8 @@ namespace ngcomp
         float c=1;
         int useshift=1;
         int basistype;
+        Array<double> gamma;
+        int gppword;
 
         public:
 
@@ -39,7 +41,7 @@ namespace ngcomp
         double Adiam(ElementId ei) const;
 
         template<int D>
-        Vec<D> ElCenter(ElementId ei) const;
+        Vec<D+1> ElCenter(ElementId ei) const;
     };
 }
 

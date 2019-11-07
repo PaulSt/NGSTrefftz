@@ -5,6 +5,7 @@
 #include <multigrid.hpp>
 
 #include "trefftzwavefe.hpp"
+#include "trefftzgppwfe.hpp"
 #include "trefftzfespace.hpp"
 #include "diffopmapped.hpp"
 
@@ -12,7 +13,7 @@ namespace ngcomp
 {
 
     TrefftzFESpace :: TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags)
-        : FESpace (ama, flags)
+        : FESpace (ama, flags), gamma(flags.GetNumListFlag ("gamma"))
     {
 
         DefineNumFlag("wavespeed");
@@ -26,9 +27,12 @@ namespace ngcomp
         c = flags.GetNumFlag ("wavespeed", 1);
         basistype = flags.GetNumFlag ("basistype", 0);
         useshift = flags.GetNumFlag("useshift", 1);
+        gppword = flags.GetNumFlag("gppword", order);
 
-        //local_ndof = (BinCoeff(fullD-1 + order, order) + BinCoeff(fullD-1 + order-1, order-1));
-        local_ndof = 2*order+1;
+        cout << "gamma" << gamma <<" size " << gamma.Size() << endl;
+        if(gamma.Size()!=0) while(gamma.Size()<=gppword-2) gamma.Append(0.0);
+
+        local_ndof = (BinCoeff(fullD-1 + order, order) + BinCoeff(fullD-1 + order-1, order-1));
         nel = ma->GetNE();
         ndof = local_ndof * nel;
 
@@ -96,7 +100,10 @@ namespace ngcomp
             case ET_QUAD:
             case ET_TRIG:
                 {
-                    return *(new (alloc) TrefftzWaveFE<1>(order,c,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
+if(gamma.Size()!=0)
+                    return *(new (alloc) TrefftzGppwFE<1>(gamma, gppword, order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
+else
+                    return *(new (alloc) TrefftzWaveFE<1>(order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
                     break;
                 }
             case ET_HEX:
@@ -104,7 +111,7 @@ namespace ngcomp
             case ET_PYRAMID:
             case ET_TET:
                 {
-                    return *(new (alloc) TrefftzWaveFE<2>(order,c,ElCenter<3>(ei),Adiam<3>(ei),ma->GetElType(ei)));
+                    return *(new (alloc) TrefftzWaveFE<2>(order,c,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
                     break;
                 }
         }
@@ -121,21 +128,21 @@ namespace ngcomp
         {
             for(auto vertex2 : vertices_index)
             {
-                Vec<D> v1 = ma->GetPoint<D>(vertex1);
-                Vec<D> v2 = ma->GetPoint<D>(vertex2);
+                Vec<D+1> v1 = ma->GetPoint<D+1>(vertex1);
+                Vec<D+1> v2 = ma->GetPoint<D+1>(vertex2);
                 //cout << "v1: " << v1 << " v1 part: " << v1(1,D-1) << "norm " << L2Norm(v1) << endl ;
-                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1(0,D-2) - v2(0,D-2)) + pow(c*(v1(D-1)-v2(D-1)),2) ) );
+                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1(0,D-1) - v2(0,D-1)) + pow(c*(v1(D)-v2(D)),2) ) );
             }
         }
-        return anisotropicdiam * useshift + 1*(useshift==0);
+        return anisotropicdiam * useshift + (useshift==0);
     }
 
     template<int D>
-    Vec<D> TrefftzFESpace :: ElCenter(ElementId ei) const
+    Vec<D+1> TrefftzFESpace :: ElCenter(ElementId ei) const
     {
-        Vec<D> center = 0;
+        Vec<D+1> center = 0;
         auto vertices_index = ma->GetElVertices(ei);
-        for(auto vertex : vertices_index) center += ma->GetPoint<D>(vertex);
+        for(auto vertex : vertices_index) center += ma->GetPoint<D+1>(vertex);
         center *= (1.0/vertices_index.Size()) * useshift;
         return center;
     }
