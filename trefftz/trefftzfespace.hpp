@@ -17,6 +17,8 @@ namespace ngcomp
     float c = 1;
     int useshift = 1;
     int basistype;
+    Array<double> gamma;
+    int gppword;
 
   public:
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
@@ -34,7 +36,7 @@ namespace ngcomp
   protected:
     template <int D> double Adiam (ElementId ei) const;
 
-    template <int D> Vec<D> ElCenter (ElementId ei) const;
+    template <int D> Vec<D + 1> ElCenter (ElementId ei) const;
   };
 }
 
