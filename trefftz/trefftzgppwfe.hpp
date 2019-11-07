@@ -18,9 +18,11 @@ namespace ngfem
             float c;
             ELEMENT_TYPE eltype;
             int basistype;
+            int gppword;
+            const Array<double> &gamma;
 
         public:
-            TrefftzGppwFE(int aord = 1, float ac = 1.0, Vec<D> aelcenter = 0, double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0);
+            TrefftzGppwFE(const Array<double> &agamma, int agppword = 0, int aord = 1, float ac = 1.0, Vec<D> aelcenter = 0, double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0);
 
             float GetWavespeed() const { return c; }
             void SetWavespeed(double wavespeed) {c = wavespeed;}
@@ -40,7 +42,7 @@ namespace ngfem
             virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape) const;
 
             static int NDirections(int ord) { return ord==0?1:2;}
-            static int GetDirection(int ord, int k) { return pow(-1,k);}
+            static double GetDirection(int ord, int k) { return k%2?1:-1;}
 
             void Evaluate (const SIMD_BaseMappedIntegrationRule & mir, BareSliceVector<> coefs, BareVector<SIMD<double>> values) const
             {
@@ -72,23 +74,23 @@ namespace ngfem
             }
             void EvaluateGrad (const SIMD_BaseMappedIntegrationRule & ir, BareSliceVector<> coefs, BareSliceMatrix<SIMD<double>> values) const
             {
-                STACK_ARRAY(SIMD<double>, mem, (D)*this->ndof*ir.Size());
-                FlatMatrix<SIMD<double>> simddshapes((D)*this->ndof,ir.Size(),&mem[0]);
+                STACK_ARRAY(SIMD<double>, mem, (D+1)*this->ndof*ir.Size());
+                FlatMatrix<SIMD<double>> simddshapes((D+1)*this->ndof,ir.Size(),&mem[0]);
                 CalcDShape(ir,simddshapes);
                 const int nsimd = SIMD<double>::Size();
-                FlatMatrix<double> dshapes(this->ndof,(D)*nsimd*ir.Size(),&simddshapes(0,0)[0]);
-                FlatVector<double> bdbvec((D)*nsimd*ir.Size(),&values(0,0)[0]);
+                FlatMatrix<double> dshapes(this->ndof,(D+1)*nsimd*ir.Size(),&simddshapes(0,0)[0]);
+                FlatVector<double> bdbvec((D+1)*nsimd*ir.Size(),&values(0,0)[0]);
                 bdbvec = Trans(dshapes)*coefs;
             }
             void AddGradTrans (const SIMD_BaseMappedIntegrationRule & mir, BareSliceMatrix<SIMD<double>> values,
                     BareSliceVector<> coefs) const
             {
-                STACK_ARRAY(SIMD<double>, mem, (D)*this->ndof*mir.Size());
-                FlatMatrix<SIMD<double>> simddshapes((D)*this->ndof,mir.Size(),&mem[0]);
+                STACK_ARRAY(SIMD<double>, mem, (D+1)*this->ndof*mir.Size());
+                FlatMatrix<SIMD<double>> simddshapes((D+1)*this->ndof,mir.Size(),&mem[0]);
                 CalcDShape(mir,simddshapes);
                 const int nsimd = SIMD<double>::Size();
-                FlatMatrix<double> dshapes(this->ndof,(D)*nsimd*mir.Size(),&simddshapes(0,0)[0]);
-                FlatVector<double> bdbvec((D)*nsimd*mir.Size(),&values(0,0)[0]);
+                FlatMatrix<double> dshapes(this->ndof,(D+1)*nsimd*mir.Size(),&simddshapes(0,0)[0]);
+                FlatVector<double> bdbvec((D+1)*nsimd*mir.Size(),&values(0,0)[0]);
                 coefs.AddSize(this->ndof) += dshapes*bdbvec;
             }
     };
@@ -98,13 +100,12 @@ namespace ngfem
     class TrefftzGppwBasis{
         public:
             static TrefftzGppwBasis& getInstance(){
-                static TrefftzGppwBasis instance;
+                static TrefftzGppwBasis ginstance;
                 // volatile int dummy{};
-                return instance;
+                return ginstance;
             }
 
-            const CSR* TB(int ord);
-            void CreateTB(int ord, int gppword, Vector<> gamma, int basistype = 0);
+            const CSR* TB(int ord, int gppword, const Array<double> &gamma, int basistype = 0);
 
         private:
             TrefftzGppwBasis()= default;
@@ -112,9 +113,10 @@ namespace ngfem
             TrefftzGppwBasis(const TrefftzGppwBasis&)= delete;
             TrefftzGppwBasis& operator=(const TrefftzGppwBasis&)= delete;
 
-            Array<CSR> tbstore;
+            mutex gentrefftzbasis;
+            Array<CSR> gtbstore;
             //once_flag tbonceflag;
-            void TB_inner(Vector<> gamma, int ord, Matrix<> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker, int basistype);
+            void TB_inner(const Array<double> &gamma, int ord, Matrix<> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker, int basistype);
             int IndexMap2(Vec<D+1, int> index, int ord);
     };
 
