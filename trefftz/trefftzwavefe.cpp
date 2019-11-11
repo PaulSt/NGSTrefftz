@@ -525,7 +525,7 @@ namespace ngfem
 
   template <int D> void TrefftzWaveBasis<D>::CreateTB (int ord, int basistype)
   {
-    cout << "creating tp store for order " << ord << endl;
+    cout << "creating tb store for order " << ord << endl;
     // if (tbstore.Size() < ord)
     //{
     int oldsize = tbstore.Size ();

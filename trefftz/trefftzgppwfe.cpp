@@ -36,7 +36,7 @@ namespace ngfem
         for (int i = 0; i <= ord; ++i)
           for (int d = 0; d < NDirections (i); ++d)
             shape (basisn++, imip)
-                = pow (GetDirection (i, d) * cpoint[0] - cpoint[1], i);
+                = pow (GetDirection (i, d) * cpoint[0] + cpoint[1], i);
 
         // calc 1 dimensional monomial basis
         STACK_ARRAY (SIMD<double>, mem, 2 * (gppword + 1));
@@ -98,10 +98,10 @@ namespace ngfem
               for (int dir = 0; dir < NDirections (i); ++dir)
                 dshape (2 * (basisn++) + d, imip)
                     = i
-                      * pow (GetDirection (i, dir) * cpoint[0] - cpoint[1],
+                      * pow (GetDirection (i, dir) * cpoint[0] + cpoint[1],
                              (i - 1) * (i > 0))
                       * (d == 0 ? GetDirection (i, dir) : 1)
-                      * (d == 1 ? (-c) : 1) * (2.0 / elsize);
+                      * (d == 1 ? (c) : 1) * (2.0 / elsize);
           }
 
         //+1 size to avoid undefined behavior taking deriv, getting [-1] entry
@@ -186,7 +186,7 @@ namespace ngfem
     for (int i = 0, basisn = 0; i <= ord; ++i)
       for (int d = 0; d < NDirections (i); ++d)
         shape (basisn++)
-            = pow (GetDirection (i, d) * cpoint[0] - c * cpoint[1], i);
+            = pow (GetDirection (i, d) * cpoint[0] + c * cpoint[1], i);
 
     // calc 1 dimensional monomial basis
     STACK_ARRAY (double, mem, 2 * (gppword + 1));
@@ -241,9 +241,9 @@ namespace ngfem
           for (int dir = 0; dir < NDirections (i); ++dir)
             dshape (basisn++, d)
                 = i
-                  * pow (GetDirection (i, dir) * cpoint[0] - c * cpoint[1],
+                  * pow (GetDirection (i, dir) * cpoint[0] + c * cpoint[1],
                          (i - 1) * (i > 0))
-                  * (d == 0 ? GetDirection (i, dir) : 1) * (d == 1 ? (-c) : 1)
+                  * (d == 0 ? GetDirection (i, dir) : 1) * (d == 1 ? (c) : 1)
                   * (2.0 / elsize);
       }
 
