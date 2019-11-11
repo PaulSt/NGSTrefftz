@@ -114,7 +114,7 @@ namespace ngfem
             TrefftzGppwBasis& operator=(const TrefftzGppwBasis&)= delete;
 
             mutex gentrefftzbasis;
-            Array<CSR> gtbstore;
+            std::map<std::string,CSR> gtbstore;
             //once_flag tbonceflag;
             void TB_inner(const Array<double> &gamma, int ord, Matrix<> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker, int basistype);
             int IndexMap2(Vec<D+1, int> index, int ord);
