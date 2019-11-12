@@ -42,7 +42,7 @@ namespace ngfem
 
     using ScalarMappedElement<D + 1>::CalcDShape;
     virtual void CalcDShape (const BaseMappedIntegrationPoint &mip,
-                             SliceMatrix<> dshape) const;
+                             BareSliceMatrix<> dshape) const;
     virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
                              BareSliceMatrix<SIMD<double>> dshape) const;
 

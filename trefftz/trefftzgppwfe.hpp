@@ -43,12 +43,27 @@ namespace ngfem
 
     using ScalarMappedElement<D + 1>::CalcDShape;
     virtual void CalcDShape (const BaseMappedIntegrationPoint &mip,
-                             SliceMatrix<> dshape) const;
+                             BareSliceMatrix<> dshape) const;
     virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
                              BareSliceMatrix<SIMD<double>> dshape) const;
 
+    int GetNDof () const { return this->ndof; }
+
     static int NDirections (int ord) { return ord == 0 ? 1 : 2; }
     static double GetDirection (int ord, int k) { return k % 2 ? 1 : -1; }
+
+    // using ScalarMappedElement<D>::CalcMappedDShape;
+    // HD NGS_DLL_HEADER virtual
+    void CalcMappedDShape (const BaseMappedIntegrationPoint &bmip,
+                           BareSliceMatrix<> dshape) const
+    {
+      CalcDShape (bmip, dshape);
+    }
+    void CalcMappedDShape (const SIMD_BaseMappedIntegrationRule &mir,
+                           BareSliceMatrix<SIMD<double>> dshapes) const
+    {
+      CalcDShape (mir, dshapes);
+    }
 
     void
     Evaluate (const SIMD_BaseMappedIntegrationRule &mir,
@@ -77,13 +92,6 @@ namespace ngfem
       coefs.AddSize (this->ndof) += bdbmat * bdbvec;
     }
 
-    // using ScalarMappedElement<D>::CalcMappedDShape;
-    // HD NGS_DLL_HEADER virtual
-    void CalcMappedDShape (const SIMD_BaseMappedIntegrationRule &mir,
-                           BareSliceMatrix<SIMD<double>> dshapes) const
-    {
-      CalcDShape (mir, dshapes);
-    }
     void EvaluateGrad (const SIMD_BaseMappedIntegrationRule &ir,
                        BareSliceVector<> coefs,
                        BareSliceMatrix<SIMD<double>> values) const
