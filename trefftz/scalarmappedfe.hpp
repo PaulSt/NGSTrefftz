@@ -29,7 +29,7 @@ namespace ngfem
             // compute dshape, matrix: ndof x spacedim
             HD NGS_DLL_HEADER
                 virtual void CalcDShape (const BaseMappedIntegrationPoint & mip,
-                        SliceMatrix<> dshape) const = 0;
+                        BareSliceMatrix<> dshape) const = 0;
 
 
             // returns shape functions in point ip.
@@ -105,7 +105,7 @@ namespace ngfem
             using BaseScalarMappedElement::CalcDShape;
             using BaseScalarMappedElement::CalcMappedDShape;
 
-            void CalcDShape (const BaseMappedIntegrationRule & mir, SliceMatrix<> dshapes) const;
+            void CalcDShape (const BaseMappedIntegrationRule & mir, BareSliceMatrix<> dshapes) const;
             virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape) const;
 
             //compute dshape, matrix: ndof x spacedim, Use CalcMappedDShape only for consistancy, can use CalcDShape with BaseMappedIR

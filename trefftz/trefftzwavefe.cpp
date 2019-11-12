@@ -352,12 +352,12 @@ namespace ngfem
 
     //template<>
     //void TrefftzWaveFE<1> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
-                                         //SliceMatrix<> dshape) const
+                                         //BareSliceMatrix<> dshape) const
     //{cout << "dim not implemented" << endl;}
 
     template<>
     void TrefftzWaveFE<1> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
-                                         SliceMatrix<> dshape) const
+                                         BareSliceMatrix<> dshape) const
     {
         Vec<2> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[1] *= c;
@@ -392,7 +392,7 @@ namespace ngfem
 
     template<>
     void TrefftzWaveFE<2> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
-                                         SliceMatrix<> dshape) const
+                                         BareSliceMatrix<> dshape) const
     {
         Vec<3> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[2] *= c;
@@ -429,7 +429,7 @@ namespace ngfem
 
     template<>
     void TrefftzWaveFE<3> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
-                                         SliceMatrix<> dshape) const
+                                         BareSliceMatrix<> dshape) const
     {
         Vec<4> cpoint = mip.GetPoint();
         cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[3] *= c;

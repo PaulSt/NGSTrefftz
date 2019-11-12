@@ -140,7 +140,7 @@ namespace ngfem
 
     template<int D>
     void ScalarMappedElement<D> :: CalcDShape (const BaseMappedIntegrationRule & mir,
-                                               SliceMatrix<> dshapes) const
+                                               BareSliceMatrix<> dshapes) const
     {
         for (int i = 0; i < mir.Size(); i++)
             CalcDShape (mir[i], dshapes.Cols(i*D,(i+1)*D));
