@@ -122,6 +122,9 @@ namespace ngfem
                                  &values (0, 0)[0]);
       coefs.AddSize (this->ndof) += dshapes * bdbvec;
     }
+
+    void CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
+                            BareSliceMatrix<> hddshape) const;
   };
 
   template <int D> class TrefftzGppwBasis

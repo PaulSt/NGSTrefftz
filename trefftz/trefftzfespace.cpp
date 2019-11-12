@@ -71,6 +71,19 @@ namespace ngcomp
           break;
         }
       }
+
+    switch (fullD)
+      {
+      case 2:
+        additional_evaluators.Set (
+            "hesse", make_shared<T_DifferentialOperator<DiffOpHesse<2>>> ());
+        break;
+      case 3:
+        additional_evaluators.Set (
+            "hesse", make_shared<T_DifferentialOperator<DiffOpHesse<3>>> ());
+        break;
+      default:;
+      }
   }
 
   void TrefftzFESpace ::Update (LocalHeap &lh)
