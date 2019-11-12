@@ -60,6 +60,17 @@ namespace ngcomp
                 }
         }
 
+        switch (fullD)
+        {
+            case 2:
+                additional_evaluators.Set ("hesse", make_shared<T_DifferentialOperator<DiffOpHesse<2>>> ());
+                break;
+            case 3:
+                additional_evaluators.Set ("hesse", make_shared<T_DifferentialOperator<DiffOpHesse<3>>> ());
+                break;
+            default:
+                ;
+        }
 
     }
 
@@ -100,10 +111,10 @@ namespace ngcomp
             case ET_QUAD:
             case ET_TRIG:
                 {
-if(gamma.Size()!=0)
-                    return *(new (alloc) TrefftzGppwFE<1>(gamma, gppword, order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
-else
-                    return *(new (alloc) TrefftzWaveFE<1>(order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
+                    if(gamma.Size()!=0)
+                        return *(new (alloc) TrefftzGppwFE<1>(gamma, gppword, order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
+                    else
+                        return *(new (alloc) TrefftzWaveFE<1>(order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
                     break;
                 }
             case ET_HEX:
