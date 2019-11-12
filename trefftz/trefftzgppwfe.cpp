@@ -2,6 +2,7 @@
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
 #include "helpers.hpp"
+#include "trefftzwavefe.hpp"
 
 #include <ctime>
 
@@ -9,13 +10,14 @@ namespace ngfem
 {
   template <int D>
   TrefftzGppwFE<D>::TrefftzGppwFE (const Array<double> &agamma, int agppword,
-                                   int aord, float ac, Vec<D> aelcenter,
+                                   int aord, float ac, Vec<D + 1> aelcenter,
                                    double aelsize, ELEMENT_TYPE aeltype,
                                    int abasistype)
-      : ScalarMappedElement<D + 1> (2 * aord + 1, aord), ord (aord), c (ac),
-        npoly (BinCoeff (D + 1 + ord, ord)), elcenter (aelcenter),
-        elsize (aelsize), eltype (aeltype), basistype (abasistype),
-        gppword (agppword), gamma (agamma)
+      : ScalarMappedElement<D + 1> (
+          BinCoeff (D + aord, aord) + BinCoeff (D + aord - 1, aord - 1), aord),
+        ord (aord), c (ac), npoly (BinCoeff (D + 1 + ord, ord)),
+        elcenter (aelcenter), elsize (aelsize), eltype (aeltype),
+        basistype (abasistype), gppword (agppword), gamma (agamma)
   {
     ;
   }
