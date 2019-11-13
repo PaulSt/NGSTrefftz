@@ -258,30 +258,56 @@ namespace ngfem
                                      BareSliceMatrix<> dshape) const
   {
     Vec<2> cpoint = mip.GetPoint ();
-    cpoint -= elcenter;
-    cpoint *= (2.0 / elsize);
-    // calc 1 dimensional monomial basis
-    for (int d = 0; d < 2; d++)
-      {
-        for (int i = 0, basisn = 0; i <= ord; ++i)
-          for (int dir = 0; dir < NDirections (i); ++dir)
-            dshape (basisn++, d)
-                = i
-                  * pow (GetDirection (i, dir) * cpoint[0] + c * cpoint[1],
-                         (i - 1) * (i > 0))
-                  * (d == 0 ? GetDirection (i, dir) : 1) * (d == 1 ? (c) : 1)
-                  * (2.0 / elsize);
-      }
+    // cpoint -= elcenter; cpoint *= (2.0/elsize);
+    //  calc 1 dimensional monomial basis
+    // for(int d=0;d<2;d++)
+    //{
+    // for (int i=0, basisn = 0; i<=ord; ++i)
+    // for(int dir=0;dir<NDirections(i);++dir)
+    // dshape(basisn++,d) =
+    // i*pow(GetDirection(i,dir)*cpoint[0]+c*cpoint[1],(i-1)*(i>0))
+    //* (d==0 ? GetDirection(i,dir) : 1)
+    //* (d==1 ? (c) : 1) * (2.0/elsize);
+    //}
 
     // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
-    STACK_ARRAY (double, mem, 2 * (gppword + 1) + 1);
+    STACK_ARRAY (double, mem, 2 * (ord + 1) + 1);
     mem[0] = 0;
-    int npoly = BinCoeff (1 + 1 + gppword, gppword);
+    int npoly = BinCoeff (1 + 1 + ord, ord);
     double *polxt[2];
     for (size_t d = 0; d < 2; d++)
       {
-        polxt[d] = &mem[d * (gppword + 1) + 1];
-        Monomial (gppword, cpoint[d], polxt[d]);
+        polxt[d] = &mem[d * (ord + 1) + 1];
+        Monomial (ord, cpoint[d], polxt[d]);
+      }
+
+    for (int d = 0; d < 2; d++)
+      {
+        Vector<double> pol (npoly);
+        for (size_t i = 0, ii = 0; i <= ord; i++)
+          for (size_t j = 0; j <= ord - i; j++)
+            pol[ii++] = (d == 0 ? i : (d == 1 ? j : 0))
+                        * polxt[0][i - (d == 0)] * polxt[1][j - (d == 1)];
+
+        const CSR *localmat = TrefftzWaveBasis<1>::getInstance ().TB (ord);
+        for (int i = 0; i < this->ndof; ++i)
+          {
+            dshape (i, d) = 0.0;
+            for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
+              dshape (i, d) += (*localmat)[2][j]
+                               * pol[(*localmat)[1][j]]; // * (2.0/elsize);
+          }
+      }
+
+    // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+    STACK_ARRAY (double, mem2, 2 * (gppword + 1) + 1);
+    mem2[0] = 0;
+    npoly = BinCoeff (1 + 1 + gppword, gppword);
+    double *polxt2[2];
+    for (size_t d = 0; d < 2; d++)
+      {
+        polxt2[d] = &mem2[d * (gppword + 1) + 1];
+        Monomial (gppword, cpoint[d], polxt2[d]);
       }
 
     for (int d = 0; d < 2; d++)
@@ -290,7 +316,7 @@ namespace ngfem
         for (size_t i = 0, ii = 0; i <= gppword; i++)
           for (size_t j = 0; j <= gppword - i; j++)
             pol[ii++] = (d == 0 ? i : (d == 1 ? j : 0))
-                        * polxt[0][i - (d == 0)] * polxt[1][j - (d == 1)];
+                        * polxt2[0][i - (d == 0)] * polxt2[1][j - (d == 1)];
 
         const CSR *localmat
             = TrefftzGppwBasis<1>::getInstance ().TB (ord, gppword, gamma);
@@ -298,8 +324,8 @@ namespace ngfem
           {
             // dshape(i,d) = 0.0;
             for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
-              dshape (i, d) += (*localmat)[2][j] * pol[(*localmat)[1][j]]
-                               * (2.0 / elsize);
+              dshape (i, d) += (*localmat)[2][j]
+                               * pol[(*localmat)[1][j]]; // * (2.0/elsize);
           }
       }
   }
