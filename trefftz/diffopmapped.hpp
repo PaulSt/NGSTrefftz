@@ -363,6 +363,31 @@ namespace ngfem
     };
 
 
+  template <int D>
+  class DiffOpMappedHesse : public DiffOp<DiffOpMappedHesse<D>>
+  {
+  public:
+    enum { DIM = 1 };
+    enum { DIM_SPACE = D };
+    enum { DIM_ELEMENT = D };
+    enum { DIM_DMAT = D*D };
+    enum { DIFFORDER = 2 };
+
+    static string Name() { return "hesse"; }
+    // static Array<int> GetDimensions() { return Array<int> ( { D,D } ); }
+    static INT<2> GetDimensions() { return { D,D }; }
+
+    static auto & Cast (const FiniteElement & fel)
+    { return static_cast<const ScalarMappedElement<D>&> (fel); }
+
+    template <typename MIP, typename MAT>
+    static void GenerateMatrix (const FiniteElement & fel, const MIP & mip,
+                                MAT && mat, LocalHeap & lh)
+    {
+      HeapReset hr(lh);
+      Cast(fel).CalcMappedDDShape(mip, Trans(mat));
+    }
+  };
 
 
 }

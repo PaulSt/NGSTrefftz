@@ -109,7 +109,7 @@ namespace ngfem
             virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape) const;
 
             //compute dshape, matrix: ndof x spacedim, Use CalcMappedDShape only for consistancy, can use CalcDShape with BaseMappedIR
-            HD NGS_DLL_HEADER virtual void CalcMappedDShape (const MappedIntegrationPoint<D,D> & mip, SliceMatrix<> dshape) const;
+            HD NGS_DLL_HEADER virtual void CalcMappedDShape (const MappedIntegrationPoint<D,D> & mip, BareSliceMatrix<> dshape) const;
             HD NGS_DLL_HEADER virtual void CalcMappedDShape (const MappedIntegrationRule<D,D> & mir, SliceMatrix<> dshapes) const;
 
             //Evaluates gradient in integration point ip.
@@ -128,11 +128,14 @@ namespace ngfem
             //Vector x provides coefficient vector.
             HD NGS_DLL_HEADER virtual void EvaluateGradTrans (const BaseMappedIntegrationRule & ir, FlatMatrixFixWidth<D> values, BareSliceVector<> coefs) const;
             HD NGS_DLL_HEADER virtual void EvaluateGradTrans (const BaseMappedIntegrationRule & ir, SliceMatrix<> values, SliceMatrix<> coefs) const;
-            HD NGS_DLL_HEADER virtual void GetPolOrders (FlatArray<PolOrder<D> > orders) const;
+            //HD NGS_DLL_HEADER virtual void GetPolOrders (FlatArray<PolOrder<D> > orders) const;
 
             //public:
             //	NGS_DLL_HEADER virtual std::list<std::tuple<std::string,double>> Timing () const;
             virtual float GetWavespeed() const {return 0;} //ugly parent hack for trefftzwave
+
+
+            NGS_DLL_HEADER virtual void CalcMappedDDShape (const BaseMappedIntegrationPoint & bmip, BareSliceMatrix<> hddshape) const;
     };
 
 }

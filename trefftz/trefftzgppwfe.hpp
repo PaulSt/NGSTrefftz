@@ -98,8 +98,6 @@ namespace ngfem
                 coefs.AddSize(this->ndof) += dshapes*bdbvec;
             }
 
-            void CalcMappedDDShape (const BaseMappedIntegrationPoint & bmip,
-                    BareSliceMatrix<> hddshape) const;
     };
 
 
