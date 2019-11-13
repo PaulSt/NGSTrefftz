@@ -184,8 +184,8 @@ namespace ngfem
     Vec<2> cpoint = mip.GetPoint ();
     Array<double> gam (gamma);
     // cpoint -= elcenter;
-    cpoint *= (2.0 / elsize);
-    // calc 1 dimensional monomial basis
+    // cpoint *= (2.0/elsize);
+    //  calc 1 dimensional monomial basis
     // for (int i=0, basisn = 0; i<=ord; ++i)
     // for(int d=0;d<NDirections(i);++d)
     // shape(basisn++) = pow(GetDirection(i,d)*cpoint[0]+c*cpoint[1],i);
@@ -229,7 +229,7 @@ namespace ngfem
         pol[ii++] = polxt[0][i] * polxt[1][j];
     // TB*monomials for trefftz shape fcts
     // gam[1] += elcenter[0];
-    gam[1] *= (elsize / 2.0);
+    // gam[1] *= (elsize/2.0);
     localmat = TrefftzGppwBasis<1>::getInstance ().TB (ord, gppword, gam);
     for (int i = 0; i < this->ndof; ++i)
       {
@@ -316,47 +316,6 @@ namespace ngfem
                                      BareSliceMatrix<> dshape) const
   {
     cout << "dim not implemented" << endl;
-  }
-
-  template <int D>
-  void
-  TrefftzGppwFE<D>::CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
-                                       BareSliceMatrix<> hddshape) const
-  {
-    auto &mip = static_cast<const MappedIntegrationPoint<D, D> &> (bmip);
-    int nd = GetNDof ();
-    auto ddshape = hddshape.AddSize (nd, D * D);
-    double eps = 1e-7;
-    MatrixFixWidth<D> dshape1 (nd), dshape2 (nd);
-    const ElementTransformation &eltrans = mip.GetTransformation ();
-
-    for (int i = 0; i < D; i++)
-      {
-        IntegrationPoint ip1 = mip.IP ();
-        IntegrationPoint ip2 = mip.IP ();
-        ip1 (i) -= eps;
-        ip2 (i) += eps;
-        MappedIntegrationPoint<D, D> mip1 (ip1, eltrans);
-        MappedIntegrationPoint<D, D> mip2 (ip2, eltrans);
-
-        CalcMappedDShape (mip1, dshape1);
-        CalcMappedDShape (mip2, dshape2);
-
-        ddshape.Cols (D * i, D * (i + 1)) = (0.5 / eps) * (dshape2 - dshape1);
-      }
-
-    for (int j = 0; j < D; j++)
-      {
-        for (int k = 0; k < nd; k++)
-          for (int l = 0; l < D; l++)
-            dshape1 (k, l) = ddshape (k, l * D + j);
-
-        dshape2 = dshape1 * mip.GetJacobianInverse ();
-
-        for (int k = 0; k < nd; k++)
-          for (int l = 0; l < D; l++)
-            ddshape (k, l * D + j) = dshape2 (k, l);
-      }
   }
 
   template class TrefftzGppwFE<1>;

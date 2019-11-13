@@ -167,7 +167,7 @@ namespace ngfem
 
   template <int D>
   void ScalarMappedElement<D>::CalcMappedDShape (
-      const MappedIntegrationPoint<D, D> &mip, SliceMatrix<> dshape) const
+      const MappedIntegrationPoint<D, D> &mip, BareSliceMatrix<> dshape) const
   {
     // no mapping - no inner derivative
     CalcDShape (mip, dshape);
@@ -225,15 +225,15 @@ namespace ngfem
 #endif
   }
 
-  template <int D>
-  void
-  ScalarMappedElement<D>::GetPolOrders (FlatArray<PolOrder<D>> orders) const
-  {
-#ifndef __CUDA_ARCH__
-    throw Exception (string ("GetPolOrders not implemnted for element")
-                     + ClassName ());
-#endif
-  }
+  // template<int D>
+  // void ScalarMappedElement<D> ::
+  // GetPolOrders (FlatArray<PolOrder<D> > orders) const
+  //{
+  //#ifndef __CUDA_ARCH__
+  // throw Exception (string ("GetPolOrders not implemnted for element") +
+  // ClassName());
+  //#endif
+  //}
 
   template <int D>
   void ScalarMappedElement<D>::CalcDShape (
@@ -242,6 +242,51 @@ namespace ngfem
   {
     cout << "SIMD - CalcDShape not overloaded" << endl;
     throw ExceptionNOSIMD ("SIMD - CalcDShape not overloaded");
+  }
+
+  template <int D>
+  void ScalarMappedElement<D>::CalcMappedDDShape (
+      const BaseMappedIntegrationPoint &bmip, BareSliceMatrix<> hddshape) const
+  {
+    auto &mip = static_cast<const MappedIntegrationPoint<D, D> &> (bmip);
+    int nd = GetNDof ();
+    auto ddshape = hddshape.AddSize (nd, D * D);
+    double eps = 1e-7;
+    MatrixFixWidth<(D)> dshape1 (nd), dshape2 (nd);
+    const ElementTransformation &eltrans = mip.GetTransformation ();
+
+    for (int i = 0; i < D; i++)
+      {
+        IntegrationPoint ip1 = mip.IP ();
+        IntegrationPoint ip2 = mip.IP ();
+        ip1 (i) -= eps;
+        ip2 (i) += eps;
+        MappedIntegrationPoint<D, D> mip1 (ip1, eltrans);
+        MappedIntegrationPoint<D, D> mip2 (ip2, eltrans);
+
+        // cout << bmip.GetPoint() << endl;
+        // bmip.GetPoint()(i) -= eps;
+        // cout << bmip.GetPoint() << endl;
+        CalcMappedDShape (mip1, dshape1);
+        // bmip.GetPoint()(i) += 2*eps;
+        CalcMappedDShape (mip2, dshape2);
+        // bmip.GetPoint()(i) -= eps;
+
+        ddshape.Cols (D * i, D * (i + 1)) = (0.5 / eps) * (dshape2 - dshape1);
+      }
+
+    for (int j = 0; j < D; j++)
+      {
+        for (int k = 0; k < nd; k++)
+          for (int l = 0; l < D; l++)
+            dshape1 (k, l) = ddshape (k, l * D + j);
+
+        dshape2 = dshape1 * mip.GetJacobianInverse ();
+
+        for (int k = 0; k < nd; k++)
+          for (int l = 0; l < D; l++)
+            ddshape (k, l * D + j) = dshape2 (k, l);
+      }
   }
 
   template class ScalarMappedElement<1>;

@@ -135,7 +135,7 @@ namespace ngfem
     // consistancy, can use CalcDShape with BaseMappedIR
     HD NGS_DLL_HEADER virtual void
     CalcMappedDShape (const MappedIntegrationPoint<D, D> &mip,
-                      SliceMatrix<> dshape) const;
+                      BareSliceMatrix<> dshape) const;
     HD NGS_DLL_HEADER virtual void
     CalcMappedDShape (const MappedIntegrationRule<D, D> &mir,
                       SliceMatrix<> dshapes) const;
@@ -165,8 +165,8 @@ namespace ngfem
     HD NGS_DLL_HEADER virtual void
     EvaluateGradTrans (const BaseMappedIntegrationRule &ir,
                        SliceMatrix<> values, SliceMatrix<> coefs) const;
-    HD NGS_DLL_HEADER virtual void
-    GetPolOrders (FlatArray<PolOrder<D>> orders) const;
+    // HD NGS_DLL_HEADER virtual void GetPolOrders (FlatArray<PolOrder<D> >
+    // orders) const;
 
     // public:
     //	NGS_DLL_HEADER virtual std::list<std::tuple<std::string,double>> Timing
@@ -175,6 +175,10 @@ namespace ngfem
     {
       return 0;
     } // ugly parent hack for trefftzwave
+
+    NGS_DLL_HEADER virtual void
+    CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
+                       BareSliceMatrix<> hddshape) const;
   };
 
 }
