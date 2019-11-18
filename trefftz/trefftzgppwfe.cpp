@@ -171,33 +171,11 @@ namespace ngfem
             //for(int d=0;d<NDirections(i);++d)
                 //shape(basisn++) = pow(GetDirection(i,d)*cpoint[0]+c*cpoint[1],i);
 
-        // calc 1 dimensional monomial basis
-        STACK_ARRAY(double, mem2, 2*(ord+1));
-        int npoly = BinCoeff(1+1 + ord, ord);
-        double* polxt[2];
-        for(size_t d=0;d<2;d++)
-        {
-            polxt[d] = &mem2[d*(ord+1)];
-            Monomial (ord, cpoint[d], polxt[d]);
-        }
-        // calc D+1 dimenional monomial basis
-        Vector<double> pol2(npoly);
-        for (size_t i = 0, ii = 0; i <= ord; i++)
-            for (size_t j = 0; j <= ord-i; j++)
-                pol2[ii++] = polxt[0][i] * polxt[1][j];
-        // TB*monomials for trefftz shape fcts
-        const CSR* localmat = TrefftzWaveBasis<1>::getInstance().TB(ord);
-        for (int i=0; i<this->ndof; ++i)
-        {
-            shape(i) = 0.0;
-            for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                shape(i) += (*localmat)[2][j]*pol2[(*localmat)[1][j]];
-        }
-
         //cpoint += 2.0/elsize*elcenter;
         // calc 1 dimensional monomial basis
         STACK_ARRAY(double, mem, 2*(gppword+1));
-        npoly = BinCoeff(1+1 + gppword, gppword);
+        int npoly = BinCoeff(1+1 + gppword, gppword);
+        double* polxt[2];
         for(size_t d=0;d<2;d++)
         {
             polxt[d] = &mem[d*(gppword+1)];
@@ -211,13 +189,37 @@ namespace ngfem
         // TB*monomials for trefftz shape fcts
         //gam[1] += elcenter[0];
         //gam[1] *= (elsize/2.0);
-        localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gppword,gam);
+        const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gppword,gam);
+        for (int i=0; i<this->ndof; ++i)
+        {
+            shape(i) = 0.0;
+            for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                shape(i) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+        }
+
+        cpoint[1] *= c;
+        // calc 1 dimensional monomial basis
+        STACK_ARRAY(double, mem2, 2*(ord+1));
+        npoly = BinCoeff(1+1 + ord, ord);
+        for(size_t d=0;d<2;d++)
+        {
+            polxt[d] = &mem2[d*(ord+1)];
+            Monomial (ord, cpoint[d], polxt[d]);
+        }
+        // calc D+1 dimenional monomial basis
+        Vector<double> pol2(npoly);
+        for (size_t i = 0, ii = 0; i <= ord; i++)
+            for (size_t j = 0; j <= ord-i; j++)
+                pol2[ii++] = polxt[0][i] * polxt[1][j];
+        // TB*monomials for trefftz shape fcts
+        localmat = TrefftzWaveBasis<1>::getInstance().TB(ord);
         for (int i=0; i<this->ndof; ++i)
         {
             //shape(i) = 0.0;
             for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                shape(i) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
+                shape(i) += (*localmat)[2][j]*pol2[(*localmat)[1][j]];
         }
+
     }
 
     template<>
@@ -248,36 +250,10 @@ namespace ngfem
                         //* (d==1 ? (c) : 1) * (2.0/elsize);
         //}
 
-        // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
-        STACK_ARRAY(double, mem, 2*(ord+1)+1); mem[0]=0;
-        int npoly = BinCoeff(1+1 + ord, ord);
-        double* polxt[2];
-        for(size_t d=0;d<2;d++)
-        {
-            polxt[d] = &mem[d*(ord+1)+1];
-            Monomial (ord, cpoint[d], polxt[d]);
-        }
-
-        for(int d=0;d<2;d++)
-        {
-            Vector<double> pol(npoly);
-            for (size_t i = 0, ii = 0; i <=ord; i++)
-                for (size_t j = 0; j <= ord-i; j++)
-                    pol[ii++] = (d==0?i:(d==1?j:0))
-                        * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
-
-            const CSR* localmat = TrefftzWaveBasis<1>::getInstance().TB(ord);
-            for (int i=0; i<this->ndof; ++i)
-            {
-                dshape(i,d) = 0.0;
-                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                    dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]];// * (2.0/elsize);
-            }
-        }
 
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY(double, mem2, 2*(gppword+1)+1); mem2[0]=0;
-        npoly = BinCoeff(1+1 + gppword, gppword);
+        int npoly = BinCoeff(1+1 + gppword, gppword);
         double* polxt2[2];
         for(size_t d=0;d<2;d++)
         {
@@ -296,9 +272,37 @@ namespace ngfem
             const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gppword,gamma);
             for (int i=0; i<this->ndof; ++i)
             {
-                //dshape(i,d) = 0.0;
+                dshape(i,d) = 0.0;
                 for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
                     dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]];// * (2.0/elsize);
+            }
+        }
+
+        cpoint[1] *= c;
+        // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+        STACK_ARRAY(double, mem, 2*(ord+1)+1); mem[0]=0;
+        npoly = BinCoeff(1+1 + ord, ord);
+        double* polxt[2];
+        for(size_t d=0;d<2;d++)
+        {
+            polxt[d] = &mem[d*(ord+1)+1];
+            Monomial (ord, cpoint[d], polxt[d]);
+        }
+
+        for(int d=0;d<2;d++)
+        {
+            Vector<double> pol(npoly);
+            for (size_t i = 0, ii = 0; i <=ord; i++)
+                for (size_t j = 0; j <= ord-i; j++)
+                    pol[ii++] = (d==0?i:(d==1?j:0))
+                        * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
+
+            const CSR* localmat = TrefftzWaveBasis<1>::getInstance().TB(ord);
+            for (int i=0; i<this->ndof; ++i)
+            {
+                //dshape(i,d) = 0.0;
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]]* (d==1 ? c : 1);// * (2.0/elsize);
             }
         }
     }
