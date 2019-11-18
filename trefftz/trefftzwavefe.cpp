@@ -421,11 +421,12 @@ namespace ngfem
           {
             dshape (i, d) = 0.0;
             for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
-              dshape (i, d) += (*localmat)[2][j] * pol[(*localmat)[1][j]];
+              dshape (i, d) += (*localmat)[2][j] * pol[(*localmat)[1][j]]
+                               * (d == 1 ? c : 1) * (2.0 / elsize);
           }
       }
-    dshape *= (2.0 / elsize); // inner derivative
-    dshape.Col (1) *= c;      // inner derivative
+    // dshape *= (2.0/elsize); //inner derivative
+    // dshape.Col(1) *= c; //inner derivative
   }
 
   template <>
@@ -462,11 +463,12 @@ namespace ngfem
           {
             dshape (i, d) = 0.0;
             for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
-              dshape (i, d) += (*localmat)[2][j] * pol[(*localmat)[1][j]];
+              dshape (i, d) += (*localmat)[2][j] * pol[(*localmat)[1][j]]
+                               * (d == 2 ? c : 1) * (2.0 / elsize);
           }
       }
-    dshape *= (2.0 / elsize); // inner derivative
-    dshape.Col (2) *= c;      // inner derivative
+    // dshape *= (2.0/elsize); //inner derivative
+    // dshape.Col(2) *= c; //inner derivative
   }
 
   template <>
@@ -505,11 +507,12 @@ namespace ngfem
           {
             dshape (i, d) = 0.0;
             for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
-              dshape (i, d) += (*localmat)[2][j] * pol[(*localmat)[1][j]];
+              dshape (i, d) += (*localmat)[2][j] * pol[(*localmat)[1][j]]
+                               * (d == 3 ? c : 1) * (2.0 / elsize);
           }
       }
-    dshape *= (2.0 / elsize); // inner derivative
-    dshape.Col (3) *= c;      // inner derivative
+    // dshape *= (2.0/elsize); //inner derivative
+    // dshape.Col(3) *= c; //inner derivative
   }
 
   template class TrefftzWaveFE<1>;
