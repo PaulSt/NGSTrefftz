@@ -151,7 +151,8 @@ namespace ngfem
     // &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker,
     // int basistype);
     void TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D + 1, int> coeffnum,
-                   int basis, int dim, int &tracker, int basistype);
+                   int basis, int dim, int &tracker, int basistype,
+                   double wavespeed);
     int IndexMap2 (Vec<D + 1, int> index, int ord);
   };
 

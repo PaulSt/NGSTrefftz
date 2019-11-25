@@ -365,98 +365,107 @@ namespace ngfem
       if (gtbstore[encode][0].Size () == 0)
         {
           cout << "creating gppw bstore for " << encode << endl;
-          const int nbasis = 2 * ord + 1;
-          const int npoly = BinCoeff (D + 1 + gppword, gppword);
-          Matrix<> trefftzbasis (nbasis, npoly);
-          trefftzbasis = 0;
-          int basisn = 0;
-
-          const int nbasis2
+          const int nbasis
               = (BinCoeff (D + ord, ord) + BinCoeff (D + ord - 1, ord - 1));
+          const int npoly = BinCoeff (D + 1 + gppword, gppword);
+          Matrix<> gppwbasis (nbasis, npoly);
+          gppwbasis = 0;
+          // int basisn=0;
+
           const int npoly2 = (BinCoeff (D + 1 + ord, ord));
-          Matrix<> trefftzbasis2 (nbasis2, npoly2);
-          trefftzbasis2 = 0;
+          Matrix<> trefftzbasis (nbasis, npoly2);
+          trefftzbasis = 0;
           Vec<D + 1, int> coeff = 0;
           int count = 0;
-          for (int b = 0; b < nbasis2; b++)
+          for (int b = 0; b < nbasis; b++)
             {
               int tracker = 0;
-              TB_inner (ord, trefftzbasis2, coeff, b, D + 1, tracker,
-                        basistype);
+              TB_inner (ord, trefftzbasis, coeff, b, D + 1, tracker, basistype,
+                        1 / sqrt (gamma[0]));
             }
+          // cout << "tb with " << nbasis << " and npoly "<< npoly2 <<endl<<
+          // trefftzbasis<<endl;
 
-          for (int j = 0; j <= ord; j++)
+          for (int basisn = 0; basisn < nbasis; basisn++)
             {
-              for (int dir = 0; dir < TrefftzGppwFE<D>::NDirections (j); dir++)
-                {
-                  for (int ell = j - 1; ell <= gppword - 2; ell++)
-                    {
-                      Vec<D + 1, int> get_coeff;
-                      get_coeff[D] = 0;
-                      get_coeff[0] = ell + 2;
-                      trefftzbasis (basisn, IndexMap2 (get_coeff, gppword))
-                          = 0;
-                      get_coeff[D] = 1;
-                      get_coeff[0] = ell + 1;
-                      trefftzbasis (basisn, IndexMap2 (get_coeff, gppword))
-                          = 0;
-                      for (int t = 0; t <= ell; t++)
-                        {
-                          int x = ell - t;
-                          get_coeff[D] = t + 2;
-                          get_coeff[0] = x;
+              // for (int j=0; j<=ord; j++)
+              //{
+              // for(int dir=0;dir<TrefftzGppwFE<D>::NDirections(j);dir++)
+              //{
+              Vec<D + 1, int> get_coeff;
+              int j = 0;
+              for (size_t i = 0; i <= ord; i++)
+                for (size_t k = 0; k <= ord - i; k++)
+                  {
+                    get_coeff[D] = k;
+                    get_coeff[0] = i;
+                    if (trefftzbasis (basisn, IndexMap2 (get_coeff, ord)) != 0
+                        && i + k > j)
+                      j = i + k;
+                  }
 
-                          // cout << "setting " << get_coeff << " mapped to "
-                          // << IndexMap2(get_coeff, gppword) << endl;
-                          Vec<D + 1, int> get_coeff2;
-                          get_coeff2[D] = t;
-                          get_coeff2[0] = x + 2;
-                          trefftzbasis (basisn, IndexMap2 (get_coeff, gppword))
-                              = (x + 2) * (x + 1)
-                                / ((t + 2) * (t + 1) * gamma[0])
-                                * trefftzbasis (
-                                    basisn, IndexMap2 (get_coeff2, gppword))
-                              //- (t<=j-2)*BinCoeff(j,t+2) *
-                              //gamma[x+t+2-j]*pow(gamma[0],0.5*(j-t-4))
-                              //* pow(TrefftzGppwFE<D>::GetDirection(j,dir),x)
-                              //+ (x+t+2<=ord)*trefftzbasis2( basisn,
-                              //IndexMap2(get_coeff2, ord))
-                              ;
-                          // if(t<=j-2) cout << "ell " << ell << " ord " << j
-                          // << " at " << t << endl;
-                          for (int betax = max (0, j - t - 1); betax < x;
-                               betax++)
-                            {
-                              get_coeff2[D] = t + 2;
-                              get_coeff2[0] = betax;
-                              trefftzbasis (basisn,
-                                            IndexMap2 (get_coeff, gppword))
-                                  -= gamma[x - betax]
-                                     * trefftzbasis (
-                                         basisn,
+              for (int ell = j - 1; ell <= gppword - 2; ell++)
+                {
+                  get_coeff[D] = 0;
+                  get_coeff[0] = ell + 2;
+                  gppwbasis (basisn, IndexMap2 (get_coeff, gppword)) = 0;
+                  get_coeff[D] = 1;
+                  get_coeff[0] = ell + 1;
+                  gppwbasis (basisn, IndexMap2 (get_coeff, gppword)) = 0;
+                  for (int t = 0; t <= ell; t++)
+                    {
+                      int x = ell - t;
+                      get_coeff[D] = t + 2;
+                      get_coeff[0] = x;
+
+                      // cout << "setting " << get_coeff << " mapped to " <<
+                      // IndexMap2(get_coeff, gppword) << endl;
+                      Vec<D + 1, int> get_coeff2;
+                      get_coeff2[D] = t;
+                      get_coeff2[0] = x + 2;
+                      gppwbasis (basisn, IndexMap2 (get_coeff, gppword))
+                          = (x + 2) * (x + 1) / ((t + 2) * (t + 1) * gamma[0])
+                            * gppwbasis (basisn,
                                          IndexMap2 (get_coeff2, gppword))
-                                     / gamma[0];
-                            }
-                          for (int betax = 0; betax < x; betax++)
-                            {
-                              get_coeff2[D] = t + 2;
-                              get_coeff2[0] = betax;
-                              trefftzbasis (basisn,
-                                            IndexMap2 (get_coeff, gppword))
-                                  -= (betax + t + 2 <= ord) * gamma[x - betax]
-                                     * trefftzbasis2 (
-                                         basisn, IndexMap2 (get_coeff2, ord));
-                            }
+                          //- (t<=j-2)*BinCoeff(j,t+2) *
+                          //gamma[x+t+2-j]*pow(gamma[0],0.5*(j-t-4))
+                          //* pow(TrefftzGppwFE<D>::GetDirection(j,dir),x)
+                          //+ (x+t+2<=ord)*trefftzbasis( basisn,
+                          //IndexMap2(get_coeff2, ord))
+                          ;
+                      // if(t<=j-2) cout << "ell " << ell << " ord " << j << "
+                      // at " << t << endl;
+                      for (int betax = max (0, j - t - 1); betax < x; betax++)
+                        {
+                          get_coeff2[D] = t + 2;
+                          get_coeff2[0] = betax;
+                          gppwbasis (basisn, IndexMap2 (get_coeff, gppword))
+                              -= gamma[x - betax]
+                                 * gppwbasis (basisn,
+                                              IndexMap2 (get_coeff2, gppword))
+                                 / gamma[0];
+                        }
+                      for (int betax = 0; betax <= ord - t - 2; betax++)
+                        {
+                          get_coeff2[D] = (t + 2);
+                          get_coeff2[0] = betax;
+                          gppwbasis (basisn, IndexMap2 (get_coeff, gppword))
+                              -= gamma[x - betax]
+                                 * trefftzbasis (basisn,
+                                                 IndexMap2 (get_coeff2, ord))
+                                 / gamma[0];
                         }
                     }
-                  basisn++;
                 }
+              // basisn++;
+              // }
+              // }
             }
-          cout << trefftzbasis << endl;
-          cout << "size " << trefftzbasis.Height () << " x "
-               << trefftzbasis.Width () << endl;
+          cout << gppwbasis << endl;
+          cout << "size " << gppwbasis.Height () << " x " << gppwbasis.Width ()
+               << endl;
 
-          MatToCSR (trefftzbasis, gtbstore[encode]);
+          MatToCSR (gppwbasis, gtbstore[encode]);
         }
 
       if (gtbstore[encode].Size () == 0)
@@ -472,16 +481,17 @@ namespace ngfem
   }
 
   template <int D>
-  void TrefftzGppwBasis<D>::TB_inner (int ord, Matrix<> &trefftzbasis,
-                                      Vec<D + 1, int> coeffnum, int basis,
-                                      int dim, int &tracker, int basistype)
+  void
+  TrefftzGppwBasis<D>::TB_inner (int ord, Matrix<> &trefftzbasis,
+                                 Vec<D + 1, int> coeffnum, int basis, int dim,
+                                 int &tracker, int basistype, double wavespeed)
   {
     if (dim > 0)
       {
         while (coeffnum (dim - 1) <= ord)
           {
             TB_inner (ord, trefftzbasis, coeffnum, basis, dim - 1, tracker,
-                      basistype);
+                      basistype, wavespeed);
             coeffnum (dim - 1)++;
           }
       }
@@ -543,7 +553,8 @@ namespace ngfem
                         += (coeffnum (m) + 1) * (coeffnum (m) + 2)
                            * trefftzbasis (basis, IndexMap2 (get_coeff, ord));
                   }
-                trefftzbasis (basis, indexmap) *= 1.0 / (k * (k - 1));
+                trefftzbasis (basis, indexmap)
+                    *= wavespeed * wavespeed / (k * (k - 1));
               }
           }
       }
