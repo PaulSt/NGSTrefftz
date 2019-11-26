@@ -163,9 +163,11 @@ namespace ngfem
         //for(int d=0;d<NDirections(i);d++)
             //shape(basisn++)=shape(basisn-2)*((d%2?-1:1)*cpoint[0]-c*cpoint[1]);
         Vec<2> cpoint = mip.GetPoint();
+        cpoint -= elcenter;
+        cpoint *= (2.0/elsize);
         Array<double> gam(gamma);
-        //cpoint -= elcenter;
-        //cpoint *= (2.0/elsize);
+        gam[0] += elcenter[0];
+        gam[1] *= (elsize/2.0);
         // calc 1 dimensional monomial basis
         //for (int i=0, basisn = 0; i<=ord; ++i)
             //for(int d=0;d<NDirections(i);++d)
@@ -187,8 +189,6 @@ namespace ngfem
             for (size_t j = 0; j <= gppword-i; j++)
                 pol[ii++] = polxt[0][i] * polxt[1][j];
         // TB*monomials for trefftz shape fcts
-        //gam[1] += elcenter[0];
-        //gam[1] *= (elsize/2.0);
         const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gppword,gam);
         for (int i=0; i<this->ndof; ++i)
         {
@@ -197,7 +197,7 @@ namespace ngfem
                 shape(i) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
         }
 
-        cpoint[1] *= c;
+        cpoint[1] *= 1.0/sqrt(1+elcenter[0]);
         // calc 1 dimensional monomial basis
         STACK_ARRAY(double, mem2, 2*(ord+1));
         npoly = BinCoeff(1+1 + ord, ord);
@@ -251,6 +251,11 @@ namespace ngfem
         //}
 
 
+        cpoint -= elcenter;
+        cpoint *= (2.0/elsize);
+        Array<double> gam(gamma);
+        gam[0] += elcenter[0];
+        gam[1] *= (elsize/2.0);
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY(double, mem2, 2*(gppword+1)+1); mem2[0]=0;
         int npoly = BinCoeff(1+1 + gppword, gppword);
@@ -269,16 +274,16 @@ namespace ngfem
                     pol[ii++] = (d==0?i:(d==1?j:0))
                         * polxt2[0][i-(d==0)] * polxt2[1][j-(d==1)];
 
-            const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gppword,gamma);
+            const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gppword,gam);
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i,d) = 0.0;
                 for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                    dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]];// * (2.0/elsize);
+                    dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (2.0/elsize);
             }
         }
 
-        cpoint[1] *= c;
+        cpoint[1] *= 1.0/sqrt(1+elcenter[0]);
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY(double, mem, 2*(ord+1)+1); mem[0]=0;
         npoly = BinCoeff(1+1 + ord, ord);
@@ -302,7 +307,8 @@ namespace ngfem
             {
                 //dshape(i,d) = 0.0;
                 for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                    dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]]* (d==1 ? c : 1);// * (2.0/elsize);
+                    dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]] 
+                        * (d==1 ? 1.0/sqrt(1+elcenter[0]) : 1) * (2.0/elsize);
             }
         }
     }
