@@ -27,43 +27,6 @@ namespace ngfem
                                     BareSliceMatrix<SIMD<double>> shape) const
   {
     throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
-    for (int imip = 0; imip < smir.Size (); imip++)
-      {
-        Vec<2, SIMD<double>> cpoint = smir[imip].GetPoint ();
-        cpoint -= elcenter;
-        cpoint *= (2.0 / elsize);
-        cpoint[1] *= c;
-        // calc 1 dimensional monomial basis
-        int basisn = 0;
-        for (int i = 0; i <= ord; ++i)
-          for (int d = 0; d < NDirections (i); ++d)
-            shape (basisn++, imip)
-                = pow (GetDirection (i, d) * cpoint[0] + cpoint[1], i);
-
-        // calc 1 dimensional monomial basis
-        STACK_ARRAY (SIMD<double>, mem, 2 * (gppword + 1));
-        int npoly = BinCoeff (1 + 1 + gppword, gppword);
-        Vec<2, SIMD<double> *> polxt;
-        for (size_t d = 0; d < 2; d++)
-          {
-            polxt[d] = &mem[d * (gppword + 1)];
-            Monomial (gppword, cpoint[d], polxt[d]);
-          }
-        // calc D+1 dimenional monomial basis
-        Vector<SIMD<double>> pol (npoly);
-        for (size_t i = 0, ii = 0; i <= gppword; i++)
-          for (size_t j = 0; j <= gppword - i; j++)
-            pol[ii++] = polxt[0][i] * polxt[1][j];
-        // TB*monomials for trefftz shape fcts
-        const CSR *localmat
-            = TrefftzGppwBasis<1>::getInstance ().TB (ord, gppword, gamma);
-        for (int i = 0; i < this->ndof; ++i)
-          {
-            // shape(i,imip) = 0.0;
-            for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
-              shape (i, imip) += (*localmat)[2][j] * pol[(*localmat)[1][j]];
-          }
-      }
   }
 
   template <>
@@ -86,57 +49,6 @@ namespace ngfem
                                 BareSliceMatrix<SIMD<double>> dshape) const
   {
     throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
-    for (int imip = 0; imip < smir.Size (); imip++)
-      {
-        Vec<2, SIMD<double>> cpoint = smir[imip].GetPoint ();
-        cpoint -= elcenter;
-        cpoint *= (2.0 / elsize);
-        cpoint[1] *= c;
-        // calc 1 dimensional monomial basis
-        for (int d = 0; d < 2; d++)
-          {
-            int basisn = 0;
-            for (int i = 0; i <= ord; ++i)
-              for (int dir = 0; dir < NDirections (i); ++dir)
-                dshape (2 * (basisn++) + d, imip)
-                    = i
-                      * pow (GetDirection (i, dir) * cpoint[0] + cpoint[1],
-                             (i - 1) * (i > 0))
-                      * (d == 0 ? GetDirection (i, dir) : 1)
-                      * (d == 1 ? (c) : 1) * (2.0 / elsize);
-          }
-
-        //+1 size to avoid undefined behavior taking deriv, getting [-1] entry
-        STACK_ARRAY (SIMD<double>, mem, 2 * (gppword + 1) + 1);
-        mem[0] = 0;
-        int npoly = BinCoeff (1 + 1 + gppword, gppword);
-        Vec<2, SIMD<double> *> polxt;
-        for (size_t d = 0; d < 2; d++)
-          {
-            polxt[d] = &mem[d * (gppword + 1) + 1];
-            Monomial (gppword, cpoint[d], polxt[d]);
-          }
-
-        for (int d = 0; d < 2; d++)
-          {
-            Vector<SIMD<double>> pol (npoly);
-            for (size_t i = 0, ii = 0; i <= gppword; i++)
-              for (size_t j = 0; j <= gppword - i; j++)
-                pol[ii++] = (d == 0 ? i : (d == 1 ? j : 0))
-                            * polxt[0][i - (d == 0)] * polxt[1][j - (d == 1)];
-
-            const CSR *localmat
-                = TrefftzGppwBasis<1>::getInstance ().TB (ord, gppword, gamma);
-            for (int i = 0; i < this->ndof; ++i)
-              {
-                // dshape(i*2+d,imip) = 0.0;
-                for (int j = (*localmat)[0][i]; j < (*localmat)[0][i + 1]; ++j)
-                  dshape (i * 2 + d, imip)
-                      += (*localmat)[2][j] * pol[(*localmat)[1][j]]
-                         * (d == 1 ? c : 1) * (2.0 / elsize);
-              }
-          }
-      }
   }
 
   template <>
