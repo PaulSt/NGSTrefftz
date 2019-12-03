@@ -1,6 +1,7 @@
 #include <comp.hpp>    // provides FESpace, ...
 #include <h1lofe.hpp>
 #include <regex>
+#include <python_comp.hpp>
 #include <fem.hpp>
 #include <multigrid.hpp>
 
@@ -15,22 +16,22 @@ namespace ngcomp
     TrefftzFESpace :: TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags)
         : FESpace (ama, flags), gamma(flags.GetNumListFlag ("gamma"))
     {
+        type="trefftzfespace";
 
-        DefineNumFlag("wavespeed");
-        cout << "======== Constructor of TrefftzFESpace =========" << endl;
-        cout << "Flags:" << endl << flags;
+        //cout << "======== Constructor of TrefftzFESpace =========" << endl;
+        //cout << "Flags:" << endl << flags;
 
         fullD = ma->GetDimension();
         D = fullD-1;
 
-        order = int(flags.GetNumFlag ("order", 3));//flags.GetDefineFlag ("order");
+        order = int(flags.GetNumFlag ("order", 3));
         c = flags.GetNumFlag ("wavespeed", 1);
         basistype = flags.GetNumFlag ("basistype", 0);
-        useshift = flags.GetNumFlag("useshift", 1);
-        gppword = flags.GetNumFlag("gppword", order);
+        useshift = flags.GetDefineFlag("useshift");
+        gppword = flags.GetNumFlag("gppword", 1);
 
-        cout << "gamma" << gamma <<" size " << gamma.Size() << endl;
-        if(gamma.Size()!=0) while(gamma.Size()<=gppword-2) gamma.Append(0.0);
+        //cout << "gamma" << gamma <<" size " << gamma.Size() << endl;
+        if(gamma.Size()!=0) while(gamma.Size()<gppword) gamma.Append(0.0);
 
         local_ndof = (BinCoeff(fullD-1 + order, order) + BinCoeff(fullD-1 + order-1, order-1));
         nel = ma->GetNE();
@@ -80,8 +81,8 @@ namespace ngcomp
     void TrefftzFESpace :: Update(LocalHeap & lh)
     {
         FESpace::Update(lh);
-        cout << "update: order = " << order << " fullD: " << fullD << " ndof = " <<  ndof << " local_ndof:" << local_ndof << endl <<
-            "================================================" << endl ;
+        //cout << "update: order = " << order << " fullD: " << fullD << " ndof = " <<  ndof << " local_ndof:" << local_ndof << endl <<
+            //"================================================" << endl ;
     }
 
     void TrefftzFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) const
@@ -158,36 +159,54 @@ namespace ngcomp
         return center;
     }
 
+    DocInfo TrefftzFESpace :: GetDocu ()
+    {
+        auto docu = FESpace::GetDocu();
+        docu.Arg("useshift") = "bool = True\n"
+            "  use shift of basis functins to element center and scale them";
+        docu.Arg("gamma") = "bool = True\n"
+            "  use shift of basis functins to element center and scale them";
+        docu.Arg("gppword") = "bool = True\n"
+            "  use shift of basis functins to element center and scale them";
+        docu.Arg("basistype") = "bool = True\n"
+            "  use shift of basis functins to element center and scale them";
+        docu.Arg("wavespeed") = "bool = True\n"
+            "  use shift of basis functins to element center and scale them";
+        return docu;
+    }
+
     /*
        register fe-spaces
        Object of type TrefftzFESpace can be defined in the pde-file via
        "define fespace v -type=trefftzfespace"
        */
     static RegisterFESpace<TrefftzFESpace> initi_trefftz ("trefftzfespace");
+
 }
-
-
 
 
 #ifdef NGS_PYTHON
-
 void ExportTrefftzFESpace(py::module m)
 {
     using namespace ngcomp;
-    using namespace ngfem;
-    /*
-       We just export the class here and use the FESpace constructor to create our space.
-       This has the advantage, that we do not need to specify all the flags to parse (like
-       dirichlet, definedon,...), but we can still append new functions only for that space.
-       */
-    py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>, FESpace>
-        (m, "TrefftzFESpace", "FESpace with first order and second order trigs on 2d mesh")
+    //using namespace ngfem;
+    //[>
+    //We just export the class here and use the FESpace constructor to create our space.
+    //This has the advantage, that we do not need to specify all the flags to parse (like
+    //dirichlet, definedon,...), but we can still append new functions only for that space.
+    //*/
+    //py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>, FESpace>
+    //(m, "TrefftzFESpace", "FESpace with first order and second order trigs on 2d mesh")
+    //.def("GetNDof", &TrefftzFESpace::GetNDof)
+    //;
+    //m.def("GetNDof", [](shared_ptr<FESpace> fes) {
+    //cout << typeid(*fes).name() << endl;
+    ////fes->GetNDof();
+    //});
+
+    ExportFESpace<TrefftzFESpace>(m, "trefftzfespace")
+        .def("GetDocu", &TrefftzFESpace::GetDocu)
         .def("GetNDof", &TrefftzFESpace::GetNDof)
         ;
-    m.def("GetNDof", [](shared_ptr<FESpace> fes) {
-        cout << typeid(*fes).name() << endl;
-        //fes->GetNDof();
-    });
 }
-
 #endif // NGS_PYTHON
