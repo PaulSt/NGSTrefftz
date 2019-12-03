@@ -23,15 +23,17 @@ namespace ngcomp
   public:
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
 
-    virtual string GetClassName () const { return "TrefftzFESpace"; }
+    string GetClassName () const override { return "trefftz"; }
 
-    virtual void Update (LocalHeap &lh);
+    void Update (LocalHeap &lh);
 
-    virtual void GetDofNrs (ElementId ei, Array<DofId> &dnums) const;
+    void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
 
-    virtual FiniteElement &GetFE (ElementId ei, Allocator &alloc) const;
+    FiniteElement &GetFE (ElementId ei, Allocator &alloc) const override;
 
-    virtual size_t GetNDof () const throw () override { return ndof; }
+    size_t GetNDof () const override { return ndof; }
+
+    static DocInfo GetDocu ();
 
   protected:
     template <int D> double Adiam (ElementId ei) const;
