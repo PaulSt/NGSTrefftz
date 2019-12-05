@@ -81,11 +81,11 @@ namespace ngfem
     //{
     // double evalpoint = pow(-1,d)*cpoint[0]-cpoint[1];
     // Monomial (ord, evalpoint, &mem[d*(ord+1)]);
-    //}
+    // }
     // for (int i=0; i<this->ndof; ++i)
     //{
     // shape(i) = i<=ord ? mem[i] : mem[i+1];
-    //}
+    // }
     // shape(0)=1;
     // shape(1)=cpoint[0]-c*cpoint[1];
     // shape(2)=-cpoint[0]-c*cpoint[1];
@@ -182,7 +182,7 @@ namespace ngfem
     // i*pow(GetDirection(i,dir)*cpoint[0]+c*cpoint[1],(i-1)*(i>0))
     //* (d==0 ? GetDirection(i,dir) : 1)
     //* (d==1 ? (c) : 1) * (2.0/elsize);
-    //}
+    // }
 
     cpoint -= elcenter;
     cpoint *= (2.0 / elsize);
@@ -282,7 +282,7 @@ namespace ngfem
 
       if (gtbstore[encode][0].Size () == 0)
         {
-          cout << "creating gppw bstore for " << encode << endl;
+          // cout << "creating gppw bstore for " << encode << endl;
           const int nbasis
               = (BinCoeff (D + ord, ord) + BinCoeff (D + ord - 1, ord - 1));
           const int npoly = BinCoeff (D + 1 + gppword, gppword);
@@ -311,18 +311,26 @@ namespace ngfem
               // for(int dir=0;dir<TrefftzGppwFE<D>::NDirections(j);dir++)
               //{
               Vec<D + 1, int> get_coeff;
-              int j = 0;
+              int j = 0; // order of current basis fct
               for (size_t i = 0; i <= ord; i++)
-                for (size_t k = 0; k <= ord - i; k++)
-                  {
-                    get_coeff[D] = k;
-                    get_coeff[0] = i;
-                    if (trefftzbasis (basisn, IndexMap2 (get_coeff, ord)) != 0
-                        && i + k > j)
-                      j = i + k;
-                  }
+                {
+                  for (size_t k = 0; k <= ord - i; k++)
+                    {
+                      get_coeff[D] = k;
+                      get_coeff[0] = i;
+                      if (trefftzbasis (basisn, IndexMap2 (get_coeff, ord))
+                              != 0
+                          && i + k > j)
+                        {
+                          j = i + k;
+                          // cout << basisn <<" new ord " << j << " with x " <<
+                          // i << " t " << k << " and entry " << trefftzbasis(
+                          // basisn, IndexMap2(get_coeff, ord)) << endl;
+                        }
+                    }
+                }
 
-              for (int ell = j - 1; ell <= gppword - 2; ell++)
+              for (int ell = j - 1; ell < gppword - 1; ell++)
                 {
                   get_coeff[D] = 0;
                   get_coeff[0] = ell + 2;
@@ -363,7 +371,7 @@ namespace ngfem
                                               IndexMap2 (get_coeff2, gppword))
                                  / gamma[0];
                         }
-                      for (int betax = 0; betax <= ord - t - 2; betax++)
+                      for (int betax = 0; betax <= j - t - 2; betax++)
                         {
                           get_coeff2[D] = (t + 2);
                           get_coeff2[0] = betax;
@@ -372,16 +380,25 @@ namespace ngfem
                                  * trefftzbasis (basisn,
                                                  IndexMap2 (get_coeff2, ord))
                                  / gamma[0];
+                          // cout <<basisn << " order " << j <<" getcoeff x "<<
+                          // get_coeff2[0] << " t " <<get_coeff2[D]<< " entry "
+                          // <<trefftzbasis( basisn, IndexMap2(get_coeff2,
+                          // ord))<<endl;
                         }
+                      // cout << basisn<< " setting " << IndexMap2(get_coeff,
+                      // gppword) << " to " << gppwbasis( basisn,
+                      // IndexMap2(get_coeff, gppword)) << " x " <<
+                      // get_coeff[0] << " t " << get_coeff[D] << " j " << j <<
+                      // endl;
                     }
                 }
               // basisn++;
               // }
               // }
             }
-          cout << gppwbasis << endl;
-          cout << "size " << gppwbasis.Height () << " x " << gppwbasis.Width ()
-               << endl;
+          // cout << gppwbasis<< endl;
+          // cout << "size " << gppwbasis.Height() << " x " <<
+          // gppwbasis.Width() << endl;
 
           MatToCSR (gppwbasis, gtbstore[encode]);
         }
