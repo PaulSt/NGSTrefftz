@@ -67,6 +67,13 @@ namespace ngfem
     void TrefftzGppwFE<1> :: CalcShape (const BaseMappedIntegrationPoint & mip,
                                         BareSliceVector<> shape) const
     {
+        Vec<2> cpoint = mip.GetPoint();
+        cpoint -= elcenter;
+        cpoint *= (2.0/elsize);
+        Array<double> gam(gamma);
+        gam[0] += elcenter[0];
+        gam[1] *= (elsize/2.0);
+
         //Vec<2,double> cpoint = mip.GetPoint();
         //cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[1] *= c;
         //// calc 1 dimensional monomial basis
@@ -87,12 +94,6 @@ namespace ngfem
         //for (int i=2; i<=ord;i++)
         //for(int d=0;d<NDirections(i);d++)
         //shape(basisn++)=shape(basisn-2)*((d%2?-1:1)*cpoint[0]-c*cpoint[1]);
-        Vec<2> cpoint = mip.GetPoint();
-        cpoint -= elcenter;
-        cpoint *= (2.0/elsize);
-        Array<double> gam(gamma);
-        gam[0] += elcenter[0];
-        gam[1] *= (elsize/2.0);
         // calc 1 dimensional monomial basis
         //for (int i=0, basisn = 0; i<=ord; ++i)
         //for(int d=0;d<NDirections(i);++d)
@@ -122,7 +123,7 @@ namespace ngfem
                 shape(i) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
         }
 
-        cpoint[1] *= 1.0/sqrt(1+elcenter[0]);
+        cpoint[1] *= 1.0/sqrt(gam[0]);
         // calc 1 dimensional monomial basis
         STACK_ARRAY(double, mem2, 2*(ord+1));
         npoly = BinCoeff(1+1 + ord, ord);
@@ -208,7 +209,7 @@ namespace ngfem
             }
         }
 
-        cpoint[1] *= 1.0/sqrt(1+elcenter[0]);
+        cpoint[1] *= 1.0/sqrt(gam[0]);
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY(double, mem, 2*(ord+1)+1); mem[0]=0;
         npoly = BinCoeff(1+1 + ord, ord);
@@ -233,7 +234,7 @@ namespace ngfem
                 //dshape(i,d) = 0.0;
                 for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
                     dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]]
-                        * (d==1 ? 1.0/sqrt(1+elcenter[0]) : 1) * (2.0/elsize);
+                        * (d==1 ? 1.0/sqrt(gam[0]) : 1) * (2.0/elsize);
             }
         }
     }
