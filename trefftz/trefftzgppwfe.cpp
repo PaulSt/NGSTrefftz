@@ -74,32 +74,6 @@ namespace ngfem
         gam[0] += elcenter[0];
         gam[1] *= (elsize/2.0);
 
-        //Vec<2,double> cpoint = mip.GetPoint();
-        //cpoint -= elcenter; cpoint *= (2.0/elsize); cpoint[1] *= c;
-        //// calc 1 dimensional monomial basis
-        //STACK_ARRAY(double, mem, 2*(ord+1)+1);
-        //for(size_t d=0;d<2;d++)
-        //{
-        //double evalpoint = pow(-1,d)*cpoint[0]-cpoint[1];
-        //Monomial (ord, evalpoint, &mem[d*(ord+1)]);
-        //}
-        //for (int i=0; i<this->ndof; ++i)
-        //{
-        //shape(i) = i<=ord ? mem[i] : mem[i+1];
-        //}
-        //shape(0)=1;
-        //shape(1)=cpoint[0]-c*cpoint[1];
-        //shape(2)=-cpoint[0]-c*cpoint[1];
-        //int basisn=3;
-        //for (int i=2; i<=ord;i++)
-        //for(int d=0;d<NDirections(i);d++)
-        //shape(basisn++)=shape(basisn-2)*((d%2?-1:1)*cpoint[0]-c*cpoint[1]);
-        // calc 1 dimensional monomial basis
-        //for (int i=0, basisn = 0; i<=ord; ++i)
-        //for(int d=0;d<NDirections(i);++d)
-        //shape(basisn++) = pow(GetDirection(i,d)*cpoint[0]+c*cpoint[1],i);
-
-        //cpoint += 2.0/elsize*elcenter;
         // calc 1 dimensional monomial basis
         STACK_ARRAY(double, mem, 2*(gppword+1));
         int npoly = BinCoeff(1+1 + gppword, gppword);
@@ -123,29 +97,10 @@ namespace ngfem
                 shape(i) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
         }
 
-        cpoint[1] *= 1.0/sqrt(gam[0]);
-        // calc 1 dimensional monomial basis
-        STACK_ARRAY(double, mem2, 2*(ord+1));
-        npoly = BinCoeff(1+1 + ord, ord);
-        for(size_t d=0;d<2;d++)
-        {
-            polxt[d] = &mem2[d*(ord+1)];
-            Monomial (ord, cpoint[d], polxt[d]);
-        }
-        // calc D+1 dimenional monomial basis
-        Vector<double> pol2(npoly);
-        for (size_t i = 0, ii = 0; i <= ord; i++)
-            for (size_t j = 0; j <= ord-i; j++)
-                pol2[ii++] = polxt[0][i] * polxt[1][j];
-        // TB*monomials for trefftz shape fcts
-        localmat = TrefftzWaveBasis<1>::getInstance().TB(ord);
-        for (int i=0; i<this->ndof; ++i)
-        {
-            //shape(i) = 0.0;
-            for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                shape(i) += (*localmat)[2][j]*pol2[(*localmat)[1][j]];
-        }
-
+        //calc 1 dimensional monomial basis
+        for (int i=0, basisn = 0; i<=ord; ++i)
+            for(int d=0;d<NDirections(i);++d)
+                shape(basisn++) += pow(sqrt(gam[0])*cpoint[0]+GetDirection(i,d)*cpoint[1],i);
     }
 
     template<>
@@ -165,23 +120,12 @@ namespace ngfem
                                          BareSliceMatrix<> dshape) const
     {
         Vec<2> cpoint = mip.GetPoint();
-        //cpoint -= elcenter; cpoint *= (2.0/elsize);
-        // calc 1 dimensional monomial basis
-        //for(int d=0;d<2;d++)
-        //{
-        //for (int i=0, basisn = 0; i<=ord; ++i)
-        //for(int dir=0;dir<NDirections(i);++dir)
-        //dshape(basisn++,d) = i*pow(GetDirection(i,dir)*cpoint[0]+c*cpoint[1],(i-1)*(i>0))
-        //* (d==0 ? GetDirection(i,dir) : 1)
-        //* (d==1 ? (c) : 1) * (2.0/elsize);
-        //}
-
-
         cpoint -= elcenter;
         cpoint *= (2.0/elsize);
         Array<double> gam(gamma);
         gam[0] += elcenter[0];
         gam[1] *= (elsize/2.0);
+
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY(double, mem2, 2*(gppword+1)+1); mem2[0]=0;
         int npoly = BinCoeff(1+1 + gppword, gppword);
@@ -209,34 +153,20 @@ namespace ngfem
             }
         }
 
-        cpoint[1] *= 1.0/sqrt(gam[0]);
-        // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
-        STACK_ARRAY(double, mem, 2*(ord+1)+1); mem[0]=0;
-        npoly = BinCoeff(1+1 + ord, ord);
-        double* polxt[2];
-        for(size_t d=0;d<2;d++)
-        {
-            polxt[d] = &mem[d*(ord+1)+1];
-            Monomial (ord, cpoint[d], polxt[d]);
-        }
 
+
+        // calc 1 dimensional monomial basis
         for(int d=0;d<2;d++)
         {
-            Vector<double> pol(npoly);
-            for (size_t i = 0, ii = 0; i <=ord; i++)
-                for (size_t j = 0; j <= ord-i; j++)
-                    pol[ii++] = (d==0?i:(d==1?j:0))
-                        * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
-
-            const CSR* localmat = TrefftzWaveBasis<1>::getInstance().TB(ord);
-            for (int i=0; i<this->ndof; ++i)
-            {
-                //dshape(i,d) = 0.0;
-                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                    dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]]
-                        * (d==1 ? 1.0/sqrt(gam[0]) : 1) * (2.0/elsize);
-            }
+            for (int i=0, basisn = 0; i<=ord; ++i)
+                for(int dir=0;dir<NDirections(i);++dir)
+                    dshape(basisn++,d) += i*pow(sqrt(gam[0])*cpoint[0]
+                                               + GetDirection(i,dir)*cpoint[1],(i-1)*(i>0))
+                        * (d==1 ? GetDirection(i,dir) : 1)
+                        * (d==0 ? sqrt(gam[0]) : 1)
+                        * (2.0/elsize);
         }
+
     }
 
     template<>
@@ -273,88 +203,51 @@ namespace ngfem
                 Matrix<> gppwbasis(nbasis,npoly);
                 gppwbasis = 0;
                 //int basisn=0;
-
-                const int npoly2 = (BinCoeff(D+1 + ord, ord));
-                Matrix<> trefftzbasis(nbasis,npoly2);
-                trefftzbasis = 0;
-                Vec<D+1, int>  coeff = 0;
-                int count = 0;
-                for(int b=0;b<nbasis;b++)
-                {
-                    int tracker = 0;
-                    TB_inner(ord, trefftzbasis, coeff, b, D+1, tracker, basistype, 1/sqrt(gamma[0]));
-                }
                 //cout << "tb with " << nbasis << " and npoly "<< npoly2 <<endl<< trefftzbasis<<endl;
 
-                for(int basisn=0;basisn<nbasis;basisn++)
+                for (int j=0, basisn=0; j<=ord; j++)
                 {
-                    //for (int j=0; j<=ord; j++)
-                    //{
-                    //for(int dir=0;dir<TrefftzGppwFE<D>::NDirections(j);dir++)
-                    //{
-                    Vec<D+1, int> get_coeff;
-                    int j=0; // order of current basis fct
-                    for (size_t i = 0; i <=ord; i++)
+                    for(int dir=0;dir<TrefftzGppwFE<D>::NDirections(j);dir++)
                     {
-                        for (size_t k = 0; k <= ord-i; k++)
+                        for(int ell=j-1;ell<gppword-1;ell++)
                         {
-                            get_coeff[D] = k;
-                            get_coeff[0] = i;
-                            if (trefftzbasis( basisn, IndexMap2(get_coeff, ord))!=0 && i+k>j)
+                            Vec<D+1, int> get_coeff;
+                            get_coeff[D] = 0;
+                            get_coeff[0] = ell+2;
+                            gppwbasis( basisn, IndexMap2(get_coeff, gppword)) = 0;
+                            get_coeff[D] = 1;
+                            get_coeff[0] = ell+1;
+                            gppwbasis( basisn, IndexMap2(get_coeff, gppword)) = 0;
+                            for(int t=0;t<=ell;t++)
                             {
-                                j=i+k;
-                                //cout << basisn <<" new ord " << j << " with x " << i << " t " << k << " and entry " << trefftzbasis( basisn, IndexMap2(get_coeff, ord)) << endl;
+                                int x = ell - t;
+                                get_coeff[D] = t+2;
+                                get_coeff[0] = x;
+
+                                //cout << "setting " << get_coeff << " mapped to " << IndexMap2(get_coeff, gppword) << endl;
+                                Vec<D+1, int> get_coeff2;
+                                get_coeff2[D] = t;
+                                get_coeff2[0] = x+2;
+                                gppwbasis( basisn, IndexMap2(get_coeff, gppword)) =
+                                    (x+2)*(x+1)/((t+2)*(t+1)*gamma[0])
+                                    * gppwbasis( basisn, IndexMap2(get_coeff2, gppword))
+                                    - (t<=j-2)*BinCoeff(j,t+2) * gamma[x+t+2-j]*pow(gamma[0],0.5*(j-t-4))
+                                    * pow(TrefftzGppwFE<D>::GetDirection(j,dir),t)
+                                    //+ (x+t+2<=ord)*trefftzbasis( basisn, IndexMap2(get_coeff2, ord))
+                                    ;
+                                //if(t<=j-2) cout << "ell " << ell << " ord " << j << " at " << t << endl;
+                                for(int betax=max(0,j-t-1);betax<x;betax++)
+                                {
+                                    get_coeff2[D] = t+2;
+                                    get_coeff2[0] = betax;
+                                    gppwbasis( basisn, IndexMap2(get_coeff, gppword))
+                                        -= gamma[x-betax]*gppwbasis( basisn, IndexMap2(get_coeff2, gppword)) / gamma[0];
+                                }
+                                //cout << basisn<< " setting " << IndexMap2(get_coeff, gppword) << " to " << gppwbasis( basisn, IndexMap2(get_coeff, gppword)) << " x " << get_coeff[0] << " t " << get_coeff[D] << " j " << j << endl;
                             }
                         }
+                        basisn++;
                     }
-
-                    for(int ell=j-1;ell<gppword-1;ell++)
-                    {
-                        get_coeff[D] = 0;
-                        get_coeff[0] = ell+2;
-                        gppwbasis( basisn, IndexMap2(get_coeff, gppword)) = 0;
-                        get_coeff[D] = 1;
-                        get_coeff[0] = ell+1;
-                        gppwbasis( basisn, IndexMap2(get_coeff, gppword)) = 0;
-                        for(int t=0;t<=ell;t++)
-                        {
-                            int x = ell - t;
-                            get_coeff[D] = t+2;
-                            get_coeff[0] = x;
-
-                            //cout << "setting " << get_coeff << " mapped to " << IndexMap2(get_coeff, gppword) << endl;
-                            Vec<D+1, int> get_coeff2;
-                            get_coeff2[D] = t;
-                            get_coeff2[0] = x+2;
-                            gppwbasis( basisn, IndexMap2(get_coeff, gppword)) =
-                                (x+2)*(x+1)/((t+2)*(t+1)*gamma[0])
-                                * gppwbasis( basisn, IndexMap2(get_coeff2, gppword))
-                                //- (t<=j-2)*BinCoeff(j,t+2) * gamma[x+t+2-j]*pow(gamma[0],0.5*(j-t-4))
-                                //* pow(TrefftzGppwFE<D>::GetDirection(j,dir),x)
-                                //+ (x+t+2<=ord)*trefftzbasis( basisn, IndexMap2(get_coeff2, ord))
-                                ;
-                            //if(t<=j-2) cout << "ell " << ell << " ord " << j << " at " << t << endl;
-                            for(int betax=max(0,j-t-1);betax<x;betax++)
-                            {
-                                get_coeff2[D] = t+2;
-                                get_coeff2[0] = betax;
-                                gppwbasis( basisn, IndexMap2(get_coeff, gppword))
-                                    -= gamma[x-betax]*gppwbasis( basisn, IndexMap2(get_coeff2, gppword)) / gamma[0];
-                            }
-                            for(int betax=0;betax<=j-t-2;betax++)
-                            {
-                                get_coeff2[D] = (t+2);
-                                get_coeff2[0] = betax;
-                                gppwbasis( basisn, IndexMap2(get_coeff, gppword))
-                                    -= gamma[x-betax]*trefftzbasis( basisn, IndexMap2(get_coeff2, ord)) / gamma[0];
-                                //cout <<basisn << " order " << j <<" getcoeff x "<< get_coeff2[0] << " t " <<get_coeff2[D]<< " entry " <<trefftzbasis( basisn, IndexMap2(get_coeff2, ord))<<endl;
-                            }
-//cout << basisn<< " setting " << IndexMap2(get_coeff, gppword) << " to " << gppwbasis( basisn, IndexMap2(get_coeff, gppword)) << " x " << get_coeff[0] << " t " << get_coeff[D] << " j " << j << endl;
-                        }
-                    }
-                    //basisn++;
-                    //}
-                    //}
                 }
                 //cout << gppwbasis<< endl;
                 //cout << "size " << gppwbasis.Height() << " x " << gppwbasis.Width() << endl;
