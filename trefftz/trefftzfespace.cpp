@@ -28,7 +28,7 @@ namespace ngcomp
     order = int (flags.GetNumFlag ("order", 3));
     c = flags.GetNumFlag ("wavespeed", 1);
     basistype = flags.GetNumFlag ("basistype", 0);
-    useshift = flags.GetDefineFlag ("useshift");
+    useshift = flags.GetNumFlag ("useshift", 1);
     gppword = flags.GetNumFlag ("gppword", 1);
 
     // cout << "gamma" << gamma <<" size " << gamma.Size() << endl;
