@@ -1,4 +1,6 @@
 from trefftzngs.trefftzngs import *
+from trefftzngs.DGeq import *
+from trefftzngs.prodmesh import *
 from ngsolve import *
 # from types import MethodType
 

@@ -1,20 +1,9 @@
-import sys
-sys.path.append("..")
 from trefftzngs import *
-import numpy as np
-from DGeq import *
-import time
-from prodmesh import *
-from netgen.geom2d import unit_square
-from netgen.csg import unit_cube
-from ngsolve.TensorProductTools import *
-from ngsolve.comp import *
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from ngsolve.TensorProductTools import *
 from ngsolve import *
 import time
-import math
 
 
 def SolveWaveTents(initmesh, order, c, t_step):
@@ -29,20 +18,31 @@ def SolveWaveTents(initmesh, order, c, t_step):
 
     >>> for initmesh in meshes:
     ...    for maxh in ms:
-    ...        SolveWaveTents(initmesh, order, c, t_step)
+    ...        SolveWaveTents(initmesh, order, c, t_step) # doctest:+ELLIPSIS
     ...        if maxh != ms[-1] and initmesh.dim!=1:
     ...            initmesh.Refine()
     ...        elif initmesh.dim==1:
     ...            initmesh=Mesh(SegMesh(initmesh.ne*2,0,1))
-    [0.2..., 0.000..., 1.570...]
-    [...e-05, 0.00..., 0.25]
-    [...e-06, 0.00..., 0.125]
-    [0.0148..., 0.0..., 1.030...]
-    [0.0017..., 0...., 0.629...]
-    [0.0001..., 1...., 0.386...]
-    [0.1553..., 0...., 1.802...]
-    [0.0647..., 3...., 1.469...]
-    [0.0037..., 4..., 0.749...]
+    0.2...
+    ...e-05
+    ...e-06
+    0.0148...
+    0.0017...
+    0.0001...
+    0.1553...
+    0.0647...
+    0.0037...
+
+    if i ever feel like checking the times, here is example full output, 2 cores on my laptop:
+    [0.20661893329359113, 0.0006449222564697266, 1.5707963267948966]
+    [5.466177093375104e-05, 0.0021283626556396484, 0.25]
+    [3.5582731954669597e-06, 0.007055044174194336, 0.125]
+    [0.014848896883671806, 0.021959304809570312, 1.0302183658236426]
+    [0.0017425232736635377, 0.1491250991821289, 0.6291240085324618]
+    [0.00014440246076325523, 1.1876091957092285, 0.38677266732559074]
+    [0.15532255816903992, 0.2532687187194824, 1.8027756377319946]
+    [0.06472569782925318, 3.0337188243865967, 1.469563021303764]
+    [0.0037084177550868944, 47.547746419906616, 0.7499999999996284]
     """
 
     D = initmesh.dim
@@ -85,7 +85,8 @@ def SolveWaveTents(initmesh, order, c, t_step):
     error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
     adiam = TT.MaxAdiam(t_step)
 
-    return [error, timing, adiam]
+    # return [error, timing, adiam]
+    return error
 
 
 def TestSolution2D(fes,c,timeoffset=0):
@@ -105,10 +106,6 @@ def PostProcess(fes, truesol, sol):
     U.Set(truesol)
     L2error = sqrt(Integrate((truesol - sol)*(truesol - sol), mesh))
     sH1error = sqrt(Integrate((grad(U) - grad(sol))*(grad(U) - grad(sol)), mesh))
-    # print("error=", L2error)
-    # print("grad-error=", sH1error)
-    # Draw(sol,mesh,'sol')
-    # Draw(grad(sol),mesh,'gradsol')
     return [L2error,sH1error]
 
 
