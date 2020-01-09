@@ -12,7 +12,9 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 install (FILES
-        trefftz/__init__.py 
+        trefftz/python/__init__.py 
+        trefftz/python/DGeq.py 
+        trefftz/python/prodmesh.py 
         DESTINATION trefftzngs
         COMPONENT trefftzngs
         )
