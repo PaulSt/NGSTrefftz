@@ -74,7 +74,7 @@ def SolveWaveTents(initmesh, order, c, t_step):
             sin(math.pi*x)*cos(math.pi*t*c*sq)*c
             ))
 
-    TT=WaveTents(order,initmesh,c,bdd)
+    TT=WaveTents(order,initmesh,CoefficientFunction(c),bdd)
     TT.SetWavefront(bdd,t_start)
 
     start = time.time()
