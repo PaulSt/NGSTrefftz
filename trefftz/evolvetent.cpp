@@ -174,13 +174,34 @@ namespace ngcomp
                 //}
 
 
-                if(ndomains>1)
+                //if(ndomains>1)
                 {
                     for(auto fnr : tent->edges)
                     {
                         Array<int> elnums;
                         ma->GetFacetElements(fnr, elnums);
-                        if(macroel[elnums[0]] != macroel[elnums[1]] && elnums.Size()==2)
+                        Array<int> selnums;
+    ma->GetFacetSurfaceElements (fnr, selnums);
+
+                        if(selnums.Size()==1)
+                        {
+                    //int face = GetSElFace (surfel);
+                    //GetFacetElements (facet, elnums) const
+                    //auto el = ma->GetElement(ElementId(BND, surfel));
+
+                    //Array<int> elnum(1);
+                    //ma->GetFacetElements(ma->GetSElFace (surfel), elnum);
+
+                    tel.SetWavespeed(wavespeed[elnums[0]]);
+                    int eli = ndomains>1 ? macroel[elnums[0]] : 0;
+
+                    SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
+                    SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
+                    CalcTentBndEl(selnums[0],tent,tel,sir,slh,subm,subv);
+
+                        }
+
+                        if(ndomains>1 && macroel[elnums[0]] != macroel[elnums[1]] && elnums.Size()==2)
                         {
                             int nbasis = tel.GetNDof();
                             int nsimd = SIMD<double>::Size();
@@ -189,6 +210,7 @@ namespace ngcomp
 
                         Array<int> fnums;
                         Array<int> orient;
+                        // TODO use getelfaces in 3D
                         ma->GetElEdges (elnums[0], fnums, orient);
 
                             //cout << "here we go: " << endl << " tent els " << tent->els << endl
