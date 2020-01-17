@@ -44,239 +44,177 @@ namespace ngcomp
 
         TrefftzWaveBasis<D>::getInstance().CreateTB(order);
 
-        if(false)
-            RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
-                RegionTimer reg(ttent);
-                LocalHeap slh = lh.Split();  // split to threads
-                //HeapReset hr(slh);
-                Tent* tent = tps.tents[tentnr];
+        RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
+            LocalHeap slh = lh.Split();  // split to threads
+            Tent* tent = tps.tents[tentnr];
 
-                Vec<D+1> center;
-                center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
-                center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
-                TrefftzWaveFE<D> tel(order,wavespeed[0],center,TentAdiam(tent));
-                //TrefftzGppwFE<D> tel(order,wavespeed[0],center,TentAdiam(tent));
-                int nbasis = tel.GetNDof();
+            Vec<D+1> center;
+            center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
+            center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
+            TrefftzWaveFE<D> tel(order,max_wavespeed,center,TentAdiam(tent)); //TODO: fix scaling with correct wavespeed
+            int nbasis = tel.GetNDof();
 
-                FlatMatrix<> elmat(nbasis,slh);
-                FlatVector<> elvec(nbasis,slh);
-                elmat = 0; elvec = 0;
+            std::unordered_map<int,int> macroel;
+            int ndomains = MakeMacroEl(tent->els, macroel);
 
-                //FlatMatrix<SIMD<double>>* topdshapes[tent->els.Size()];
-                //for(auto& tds : topdshapes)
-                //tds = new FlatMatrix<SIMD<double>>((D+1)*nbasis,sir.Size(),slh);
+            FlatMatrix<> elmat(ndomains*nbasis,slh);
+            FlatVector<> elvec(ndomains*nbasis,slh);
+            elmat = 0; elvec = 0;
 
-                Array<FlatMatrix<SIMD<double>>> topdshapes(tent->els.Size());
-                for(auto& tds : topdshapes)
-                    tds.AssignMemory((D+1)*nbasis, sir.Size(), slh);
+            Array<FlatMatrix<SIMD<double>>> topdshapes(tent->els.Size());
+            for(auto& tds : topdshapes)
+                tds.AssignMemory((D+1)*nbasis, sir.Size(), slh);
 
-                // Integrate top and bottom space-like tent faces
-                for(int elnr=0;elnr<tent->els.Size();elnr++)
-                {
-                    RegionTimer reg1(ttentel);
-                    CalcTentEl(tent->els[elnr],tent,tel,sir,slh,elmat,elvec,topdshapes[elnr]);
-                }
+            // Integrate top and bottom space-like tent faces
+            for(int elnr=0;elnr<tent->els.Size();elnr++)
+            {
+                tel.SetWavespeed(wavespeed[tent->els[elnr]]);
+                int eli = ndomains>1 ? macroel[tent->els[elnr]] : 0;
+                SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
+                SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
+                CalcTentEl(tent->els[elnr],tent,tel,sir,slh,subm,subv,topdshapes[elnr]);
+            }
+
+            for(auto fnr : tent->edges)
+            {
+                Array<int> elnums;
+                ma->GetFacetElements(fnr, elnums);
+                Array<int> selnums;
+                ma->GetFacetSurfaceElements (fnr, selnums);
+                //switch (D)
+                //{
+                //case 1: selnums = ma->GetVertexSurfaceElements (fnr); break;
+                //case 2: ma->GetEdgeSurfaceElements (fnr, selnums); break;
+                //case 3: 
+                //{
+                //size_t v0 = ma->GetFacePNums(fnr)[0];
+                //selnums.SetSize0();
+                //for (auto sel : ma->GetVertexSurfaceElements(v0))
+                //{
+                ////int sface = ma->Ng_GetSurfaceElement_Face (sel+1)-1;
+                //netgen::Array<netgen::SurfaceElementIndex> sface;
+                //ma->GetNetgenMesh()->GetSurfaceElementsOfFace (sel, sface);
+                //if (sface[0]-1 == fnr)
+                //selnums.Append (sel);
+                //}
+                //break;
+                //}
+                //}
 
                 // Integrate boundary tent
-                for(auto surfel : ma->GetVertexSurfaceElements(tent->vertex))
+                if(selnums.Size()==1)
                 {
-                    RegionTimer reg2(ttentbnd);
-                    CalcTentBndEl(surfel,tent,tel,sir,slh,elmat,elvec);
-                }
+                    tel.SetWavespeed(wavespeed[elnums[0]]);
+                    int eli = ndomains>1 ? macroel[elnums[0]] : 0;
 
-                // solve
-                LapackSolve(elmat,elvec);
-                FlatVector<> sol(nbasis, &elvec(0));
-
-                // modifications for first order solver
-                //Matrix<> elmat2 = elmat.Rows(1,nbasis).Cols(1,nbasis);
-                //Vector<> elvec2 = elvec.Range(1,nbasis);
-                //LapackSolve(elmat2,elvec2);
-                //Vector<> sol(nbasis);
-                //sol[0] = 0;
-                //for(int i = 1; i<nbasis;i++)
-                //sol[i]=elvec2[i-1];
-
-                // eval solution on top of tent
-                for(int elnr=0;elnr<tent->els.Size();elnr++)
-                {
-                    RegionTimer reg3(ttenteval);
-                    CalcTentElEval(tent->els[elnr], tent, tel, sir, slh, sol,topdshapes[elnr]);
-                }
-            }); // end loop over tents
-
-        else
-            RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
-                LocalHeap slh = lh.Split();  // split to threads
-                Tent* tent = tps.tents[tentnr];
-
-                Vec<D+1> center;
-                center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
-                center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
-                TrefftzWaveFE<D> tel(order,max_wavespeed,center,TentAdiam(tent)); //TODO: fix scaling with correct wavespeed
-                int nbasis = tel.GetNDof();
-
-                std::unordered_map<int,int> macroel;
-                int ndomains = MakeMacroEl(tent->els, macroel);
-
-                FlatMatrix<> elmat(ndomains*nbasis,slh);
-                FlatVector<> elvec(ndomains*nbasis,slh);
-                elmat = 0; elvec = 0;
-
-                Array<FlatMatrix<SIMD<double>>> topdshapes(tent->els.Size());
-                for(auto& tds : topdshapes)
-                    tds.AssignMemory((D+1)*nbasis, sir.Size(), slh);
-
-                // Integrate top and bottom space-like tent faces
-                for(int elnr=0;elnr<tent->els.Size();elnr++)
-                {
-                    tel.SetWavespeed(wavespeed[tent->els[elnr]]);
-                    int eli = ndomains>1 ? macroel[tent->els[elnr]] : 0;
                     SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
                     SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
-                    CalcTentEl(tent->els[elnr],tent,tel,sir,slh,subm,subv,topdshapes[elnr]);
+                    CalcTentBndEl(selnums[0],tent,tel,sir,slh,subm,subv);
                 }
 
-                for(auto fnr : tent->edges)
+                // Integrate macro bnd inside tent
+                if(ndomains>1 && macroel[elnums[0]] != macroel[elnums[1]] && elnums.Size()==2)
                 {
-                    Array<int> elnums;
-                    ma->GetFacetElements(fnr, elnums);
-                    Array<int> selnums;
-                    ma->GetFacetSurfaceElements (fnr, selnums);
-                    //switch (D)
-                    //{
-                        //case 1: selnums = ma->GetVertexSurfaceElements (fnr); break;
-                        //case 2: ma->GetEdgeSurfaceElements (fnr, selnums); break;
-                        //case 3: 
-                                //{
-                                    //size_t v0 = ma->GetFacePNums(fnr)[0];
-                                    //selnums.SetSize0();
-                                    //for (auto sel : ma->GetVertexSurfaceElements(v0))
-                                    //{
-                                        ////int sface = ma->Ng_GetSurfaceElement_Face (sel+1)-1;
-                                        //netgen::Array<netgen::SurfaceElementIndex> sface;
-                                        //ma->GetNetgenMesh()->GetSurfaceElementsOfFace (sel, sface);
-                                        //if (sface[0]-1 == fnr)
-                                            //selnums.Append (sel);
-                                    //}
-                                    //break;
-                                //}
-                                //}
+                    int nbasis = tel.GetNDof();
+                    int nsimd = SIMD<double>::Size();
+                    int snip = sir.Size()*nsimd;
 
-                                // Integrate boundary tent
-                    if(selnums.Size()==1)
+
+                    Array<int> fnums;
+                    Array<int> orient;
+                    // TODO use getelfaces in 3D
+                    ma->GetElEdges (elnums[0], fnums, orient);
+
+                    Array<int> fnums2;
+                    Array<int> orient2;
+                    ma->GetElEdges (elnums[1], fnums2, orient2);
+
+                    // get vertices of tent face
+                    //Mat<D+1> vert = TentFaceVerts(tent, surfel, 0);
+                    //auto sel_verts = ma->GetElVertices(ElementId(BND,elnr));
+                    Mat<D+1, D+1> vert;
+                    Array<int> sel_verts(D);
+                    ma->GetFacetPNums (fnr, sel_verts);
+                    vert.Col(0).Range(0,D) = ma->GetPoint<D>(tent->vertex);
+                    vert(D,0) = tent->tbot;
+                    for(int n=0;n<D;n++)
                     {
-                        tel.SetWavespeed(wavespeed[elnums[0]]);
-                        int eli = ndomains>1 ? macroel[elnums[0]] : 0;
-
-                        SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
-                        SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
-                        CalcTentBndEl(selnums[0],tent,tel,sir,slh,subm,subv);
+                        vert.Col(n+1).Range(0,D) = ma->GetPoint<D>(sel_verts[n]);
+                        vert(D,n+1) = tent->vertex==sel_verts[n] ? tent->ttop : tent->nbtime[tent->nbv.Pos(sel_verts[n])];
                     }
 
-                    // Integrate macro bnd inside tent
-                    if(ndomains>1 && macroel[elnums[0]] != macroel[elnums[1]] && elnums.Size()==2)
+                    // build normal vector
+                    Vec<D+1> n;
+                    n = -orient[fnums.Pos(fnr)]*TentFaceNormal(vert,0);
+                    if(D==1) //D=1 special case
+                        n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n[D] = 0; // time-like faces only
+
+                    // build mapping to physical boundary simplex
+                    Mat<D+1,D> map;
+                    for(int i=0;i<D;i++)
+                        map.Col(i) = vert.Col(i+1) - vert.Col(0);
+                    Vec<D+1> shift = vert.Col(0);
+
+                    SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(0,slh),-1,slh);
+                    for(int imip=0;imip<snip;imip++)
+                        smir[imip].Point() = map * sir[imip].operator Vec<D,SIMD<double>>() + shift;
+
+                    tel.SetWavespeed(wavespeed[elnums[0]]);
+                    FlatMatrix<SIMD<double>> simddshapes1((D+1)*nbasis,sir.Size(),slh);
+                    tel.CalcDShape(smir,simddshapes1);
+                    FlatMatrix<double> bbmat1(nbasis,(D+1)*snip,&simddshapes1(0,0)[0]);
+
+                    tel.SetWavespeed(wavespeed[elnums[1]]);
+                    FlatMatrix<SIMD<double>> simddshapes2((D+1)*nbasis,sir.Size(),slh);
+                    tel.CalcDShape(smir,simddshapes2);
+                    FlatMatrix<double> bbmat2(nbasis,(D+1)*snip,&simddshapes2(0,0)[0]);
+
+                    Mat<D+1> Dmat1 = 0;
+                    Dmat1.Row(D).Range(0,D) = -0.5*TentFaceArea(vert)*n.Range(0,D); //0.5 for DG average
+                    Dmat1.Col(D).Range(0,D) = -0.5*TentFaceArea(vert)*n.Range(0,D);
+                    Mat<D+1> Dmat2 = -1 * Dmat1;
+
+                    FlatMatrix<>* bdbmat[4];
+                    for(int i=0;i<4;i++)
                     {
-                        int nbasis = tel.GetNDof();
-                        int nsimd = SIMD<double>::Size();
-                        int snip = sir.Size()*nsimd;
-
-
-                        Array<int> fnums;
-                        Array<int> orient;
-                        // TODO use getelfaces in 3D
-                        ma->GetElEdges (elnums[0], fnums, orient);
-
-                        Array<int> fnums2;
-                        Array<int> orient2;
-                        ma->GetElEdges (elnums[1], fnums2, orient2);
-
-                        // get vertices of tent face
-                        //Mat<D+1> vert = TentFaceVerts(tent, surfel, 0);
-                        //auto sel_verts = ma->GetElVertices(ElementId(BND,elnr));
-                        Mat<D+1, D+1> vert;
-                        Array<int> sel_verts(D);
-                        ma->GetFacetPNums (fnr, sel_verts);
-                        vert.Col(0).Range(0,D) = ma->GetPoint<D>(tent->vertex);
-                        vert(D,0) = tent->tbot;
-                        for(int n=0;n<D;n++)
-                        {
-                            vert.Col(n+1).Range(0,D) = ma->GetPoint<D>(sel_verts[n]);
-                            vert(D,n+1) = tent->vertex==sel_verts[n] ? tent->ttop : tent->nbtime[tent->nbv.Pos(sel_verts[n])];
-                        }
-
-                        // build normal vector
-                        Vec<D+1> n;
-                        n = -orient[fnums.Pos(fnr)]*TentFaceNormal(vert,0);
-                        if(D==1) //D=1 special case
-                            n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n[D] = 0; // time-like faces only
-
-                        // build mapping to physical boundary simplex
-                        Mat<D+1,D> map;
-                        for(int i=0;i<D;i++)
-                            map.Col(i) = vert.Col(i+1) - vert.Col(0);
-                        Vec<D+1> shift = vert.Col(0);
-
-                        SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(0,slh),-1,slh);
-                        for(int imip=0;imip<snip;imip++)
-                            smir[imip].Point() = map * sir[imip].operator Vec<D,SIMD<double>>() + shift;
-
-                        tel.SetWavespeed(wavespeed[elnums[0]]);
-                        FlatMatrix<SIMD<double>> simddshapes1((D+1)*nbasis,sir.Size(),slh);
-                        tel.CalcDShape(smir,simddshapes1);
-                        FlatMatrix<double> bbmat1(nbasis,(D+1)*snip,&simddshapes1(0,0)[0]);
-
-                        tel.SetWavespeed(wavespeed[elnums[1]]);
-                        FlatMatrix<SIMD<double>> simddshapes2((D+1)*nbasis,sir.Size(),slh);
-                        tel.CalcDShape(smir,simddshapes2);
-                        FlatMatrix<double> bbmat2(nbasis,(D+1)*snip,&simddshapes2(0,0)[0]);
-
-                        Mat<D+1> Dmat1 = 0;
-                        Dmat1.Row(D).Range(0,D) = -0.5*TentFaceArea(vert)*n.Range(0,D); //0.5 for DG average
-                        Dmat1.Col(D).Range(0,D) = -0.5*TentFaceArea(vert)*n.Range(0,D);
-                        Mat<D+1> Dmat2 = -1 * Dmat1;
-
-                        FlatMatrix<>* bdbmat[4];
-                        for(int i=0;i<4;i++)
-                        {
-                            bdbmat[i] = new FlatMatrix<>((D+1)*snip,nbasis,slh);
-                            *bdbmat[i] = 0;
-                        }
-                        //double alpha = 0.5;
-
-                        for(int imip=0;imip<snip;imip++)
-                            for(int r=0;r<(D+1);r++)
-                                for(int d=0;d<D+1;d++)
-                                {
-                                    bdbmat[0]->Row(r*snip+imip) += Dmat1(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat1.Col(d*snip+imip);
-                                    bdbmat[1]->Row(r*snip+imip) += Dmat1(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat2.Col(d*snip+imip);
-                                    bdbmat[2]->Row(r*snip+imip) += Dmat2(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat1.Col(d*snip+imip);
-                                    bdbmat[3]->Row(r*snip+imip) += Dmat2(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat2.Col(d*snip+imip);
-                                }
-
-                        int in = macroel[elnums[0]];
-                        int out = macroel[elnums[1]];
-                        elmat.Cols(in*nbasis,(in+1)*nbasis).Rows(in*nbasis,(in+1)*nbasis) += bbmat1 * (*bdbmat[0]);
-                        elmat.Cols(out*nbasis,(out+1)*nbasis).Rows(in*nbasis,(in+1)*nbasis) += bbmat1 * (*bdbmat[1]);
-                        elmat.Cols(in*nbasis,(in+1)*nbasis).Rows(out*nbasis,(out+1)*nbasis) += bbmat2 * (*bdbmat[2]);
-                        elmat.Cols(out*nbasis,(out+1)*nbasis).Rows(out*nbasis,(out+1)*nbasis) += bbmat2 * (*bdbmat[3]);
+                        bdbmat[i] = new FlatMatrix<>((D+1)*snip,nbasis,slh);
+                        *bdbmat[i] = 0;
                     }
-                }
+                    //double alpha = 0.5;
 
-                // solve
-                LapackSolve(elmat,elvec);
-                FlatVector<> sol(ndomains*nbasis, &elvec(0));
+                    for(int imip=0;imip<snip;imip++)
+                        for(int r=0;r<(D+1);r++)
+                            for(int d=0;d<D+1;d++)
+                            {
+                                bdbmat[0]->Row(r*snip+imip) += Dmat1(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat1.Col(d*snip+imip);
+                                bdbmat[1]->Row(r*snip+imip) += Dmat1(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat2.Col(d*snip+imip);
+                                bdbmat[2]->Row(r*snip+imip) += Dmat2(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat1.Col(d*snip+imip);
+                                bdbmat[3]->Row(r*snip+imip) += Dmat2(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat2.Col(d*snip+imip);
+                            }
 
-                // eval solution on top of tent
-                for(int elnr=0;elnr<tent->els.Size();elnr++)
-                {
-                    tel.SetWavespeed(wavespeed[tent->els[elnr]]);
-                    int eli = ndomains>1 ? macroel[tent->els[elnr]] : 0;
-                    SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
-                    SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
-                    CalcTentElEval(tent->els[elnr], tent, tel, sir, slh, sol.Range(eli*nbasis,(eli+1)*nbasis), topdshapes[elnr]);
+                    int in = macroel[elnums[0]];
+                    int out = macroel[elnums[1]];
+                    elmat.Cols(in*nbasis,(in+1)*nbasis).Rows(in*nbasis,(in+1)*nbasis) += bbmat1 * (*bdbmat[0]);
+                    elmat.Cols(out*nbasis,(out+1)*nbasis).Rows(in*nbasis,(in+1)*nbasis) += bbmat1 * (*bdbmat[1]);
+                    elmat.Cols(in*nbasis,(in+1)*nbasis).Rows(out*nbasis,(out+1)*nbasis) += bbmat2 * (*bdbmat[2]);
+                    elmat.Cols(out*nbasis,(out+1)*nbasis).Rows(out*nbasis,(out+1)*nbasis) += bbmat2 * (*bdbmat[3]);
                 }
-            }); // end loop over tents
+            }
+
+            // solve
+            LapackSolve(elmat,elvec);
+            FlatVector<> sol(ndomains*nbasis, &elvec(0));
+
+            // eval solution on top of tent
+            for(int elnr=0;elnr<tent->els.Size();elnr++)
+            {
+                tel.SetWavespeed(wavespeed[tent->els[elnr]]);
+                int eli = ndomains>1 ? macroel[tent->els[elnr]] : 0;
+                SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
+                SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
+                CalcTentElEval(tent->els[elnr], tent, tel, sir, slh, sol.Range(eli*nbasis,(eli+1)*nbasis), topdshapes[elnr]);
+            }
+        }); // end loop over tents
         cout<<"solved from " << timeshift;
         timeshift += dt;
         cout<<" to " << timeshift<<endl;
