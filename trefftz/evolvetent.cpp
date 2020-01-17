@@ -142,26 +142,37 @@ namespace ngcomp
                     Array<int> elnums;
                     ma->GetFacetElements(fnr, elnums);
                     Array<int> selnums;
-                    cout << D << " fnr " << fnr << " faces " << ma->GetNFaces() << endl;
-                    //ma->GetFacetSurfaceElements (fnr, selnums);
-
-      switch (D)
-        {
-        case 1: selnums = ma->GetVertexSurfaceElements (fnr); break;
-        case 2: ma->GetEdgeSurfaceElements (fnr, selnums); break;
-        case 3: ma->GetFaceSurfaceElements (fnr, selnums); break;
-        }
-
-                    // Integrate boundary tent
-                    //if(selnums.Size()==1)
+                    ma->GetFacetSurfaceElements (fnr, selnums);
+                    //switch (D)
                     //{
-                        //tel.SetWavespeed(wavespeed[elnums[0]]);
-                        //int eli = ndomains>1 ? macroel[elnums[0]] : 0;
+                        //case 1: selnums = ma->GetVertexSurfaceElements (fnr); break;
+                        //case 2: ma->GetEdgeSurfaceElements (fnr, selnums); break;
+                        //case 3: 
+                                //{
+                                    //size_t v0 = ma->GetFacePNums(fnr)[0];
+                                    //selnums.SetSize0();
+                                    //for (auto sel : ma->GetVertexSurfaceElements(v0))
+                                    //{
+                                        ////int sface = ma->Ng_GetSurfaceElement_Face (sel+1)-1;
+                                        //netgen::Array<netgen::SurfaceElementIndex> sface;
+                                        //ma->GetNetgenMesh()->GetSurfaceElementsOfFace (sel, sface);
+                                        //if (sface[0]-1 == fnr)
+                                            //selnums.Append (sel);
+                                    //}
+                                    //break;
+                                //}
+                                //}
 
-                        //SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
-                        //SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
-                        //CalcTentBndEl(selnums[0],tent,tel,sir,slh,subm,subv);
-                    //}
+                                // Integrate boundary tent
+                    if(selnums.Size()==1)
+                    {
+                        tel.SetWavespeed(wavespeed[elnums[0]]);
+                        int eli = ndomains>1 ? macroel[elnums[0]] : 0;
+
+                        SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
+                        SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
+                        CalcTentBndEl(selnums[0],tent,tel,sir,slh,subm,subv);
+                    }
 
                     // Integrate macro bnd inside tent
                     if(ndomains>1 && macroel[elnums[0]] != macroel[elnums[1]] && elnums.Size()==2)
