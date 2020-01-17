@@ -102,7 +102,7 @@ namespace ngcomp
                 //}
 
                 // Integrate boundary tent
-                if(selnums.Size()==1)
+                if(elnums.Size()==1 && selnums.Size()==1)
                 {
                     tel.SetWavespeed(wavespeed[elnums[0]]);
                     int eli = ndomains>1 ? macroel[elnums[0]] : 0;
@@ -113,21 +113,16 @@ namespace ngcomp
                 }
 
                 // Integrate macro bnd inside tent
-                if(ndomains>1 && macroel[elnums[0]] != macroel[elnums[1]] && elnums.Size()==2)
+                else if(elnums.Size()==2 && ndomains>1 && macroel[elnums[0]] != macroel[elnums[1]])
                 {
                     int nbasis = tel.GetNDof();
                     int nsimd = SIMD<double>::Size();
                     int snip = sir.Size()*nsimd;
 
-
                     Array<int> fnums;
                     Array<int> orient;
                     // TODO use getelfaces in 3D
                     ma->GetElEdges (elnums[0], fnums, orient);
-
-                    Array<int> fnums2;
-                    Array<int> orient2;
-                    ma->GetElEdges (elnums[1], fnums2, orient2);
 
                     // get vertices of tent face
                     //Mat<D+1> vert = TentFaceVerts(tent, surfel, 0);
@@ -159,20 +154,21 @@ namespace ngcomp
                     for(int imip=0;imip<snip;imip++)
                         smir[imip].Point() = map * sir[imip].operator Vec<D,SIMD<double>>() + shift;
 
+                    FlatMatrix<>* bbmat[2];
+
                     tel.SetWavespeed(wavespeed[elnums[0]]);
                     FlatMatrix<SIMD<double>> simddshapes1((D+1)*nbasis,sir.Size(),slh);
                     tel.CalcDShape(smir,simddshapes1);
-                    FlatMatrix<double> bbmat1(nbasis,(D+1)*snip,&simddshapes1(0,0)[0]);
+                    bbmat[0] = new FlatMatrix<>(nbasis,(D+1)*snip,&simddshapes1(0,0)[0]);
 
                     tel.SetWavespeed(wavespeed[elnums[1]]);
                     FlatMatrix<SIMD<double>> simddshapes2((D+1)*nbasis,sir.Size(),slh);
                     tel.CalcDShape(smir,simddshapes2);
-                    FlatMatrix<double> bbmat2(nbasis,(D+1)*snip,&simddshapes2(0,0)[0]);
+                    bbmat[1] = new FlatMatrix<>(nbasis,(D+1)*snip,&simddshapes2(0,0)[0]);
 
                     Mat<D+1> Dmat1 = 0;
                     Dmat1.Row(D).Range(0,D) = -0.5*TentFaceArea(vert)*n.Range(0,D); //0.5 for DG average
                     Dmat1.Col(D).Range(0,D) = -0.5*TentFaceArea(vert)*n.Range(0,D);
-                    Mat<D+1> Dmat2 = -1 * Dmat1;
 
                     FlatMatrix<>* bdbmat[4];
                     for(int i=0;i<4;i++)
@@ -185,19 +181,17 @@ namespace ngcomp
                     for(int imip=0;imip<snip;imip++)
                         for(int r=0;r<(D+1);r++)
                             for(int d=0;d<D+1;d++)
-                            {
-                                bdbmat[0]->Row(r*snip+imip) += Dmat1(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat1.Col(d*snip+imip);
-                                bdbmat[1]->Row(r*snip+imip) += Dmat1(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat2.Col(d*snip+imip);
-                                bdbmat[2]->Row(r*snip+imip) += Dmat2(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat1.Col(d*snip+imip);
-                                bdbmat[3]->Row(r*snip+imip) += Dmat2(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat2.Col(d*snip+imip);
-                            }
+                                for(int el=0;el<4;el++)
+                                {
+                                    bdbmat[el]->Row(r*snip+imip) += pow(-1,el/2) * Dmat1(r,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat[el%2]->Col(d*snip+imip);
+                                }
 
-                    int in = macroel[elnums[0]];
-                    int out = macroel[elnums[1]];
-                    elmat.Cols(in*nbasis,(in+1)*nbasis).Rows(in*nbasis,(in+1)*nbasis) += bbmat1 * (*bdbmat[0]);
-                    elmat.Cols(out*nbasis,(out+1)*nbasis).Rows(in*nbasis,(in+1)*nbasis) += bbmat1 * (*bdbmat[1]);
-                    elmat.Cols(in*nbasis,(in+1)*nbasis).Rows(out*nbasis,(out+1)*nbasis) += bbmat2 * (*bdbmat[2]);
-                    elmat.Cols(out*nbasis,(out+1)*nbasis).Rows(out*nbasis,(out+1)*nbasis) += bbmat2 * (*bdbmat[3]);
+                    for(int el=0;el<4;el++)
+                    {
+                        int in = macroel[elnums[el/2]];
+                        int out = macroel[elnums[el%2]];
+                        elmat.Cols(out*nbasis,(out+1)*nbasis).Rows(in*nbasis,(in+1)*nbasis) += *bbmat[el/2] * (*bdbmat[el]);
+                    }
                 }
             }
 
