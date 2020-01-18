@@ -80,26 +80,23 @@ namespace ngcomp
                 Array<int> elnums;
                 ma->GetFacetElements(fnr, elnums);
                 Array<int> selnums;
-                ma->GetFacetSurfaceElements (fnr, selnums);
-                //switch (D)
-                //{
-                //case 1: selnums = ma->GetVertexSurfaceElements (fnr); break;
-                //case 2: ma->GetEdgeSurfaceElements (fnr, selnums); break;
-                //case 3: 
-                //{
-                //size_t v0 = ma->GetFacePNums(fnr)[0];
-                //selnums.SetSize0();
-                //for (auto sel : ma->GetVertexSurfaceElements(v0))
-                //{
-                ////int sface = ma->Ng_GetSurfaceElement_Face (sel+1)-1;
-                //netgen::Array<netgen::SurfaceElementIndex> sface;
-                //ma->GetNetgenMesh()->GetSurfaceElementsOfFace (sel, sface);
-                //if (sface[0]-1 == fnr)
-                //selnums.Append (sel);
-                //}
-                //break;
-                //}
-                //}
+                //ma->GetFacetSurfaceElements (fnr, selnums);
+                if(elnums.Size()==1)
+                switch (D)
+                {
+                    case 1: selnums = ma->GetVertexSurfaceElements (fnr); break;
+                    case 2: ma->GetEdgeSurfaceElements (fnr, selnums); break;
+                    case 3: 
+                            {
+                                    for(int i : Range(ma->GetNSE()))
+                                    {
+                                        auto sel = ElementId(BND,i); //<-- ist das Oberflächenelement
+                                        auto fnums = ma->GetElFacets(sel);
+                                        if(fnr == fnums[0]) //<-- das ist dann die Facet-Nr., also unter allen Facets im Mesh, kannst du dir wo speichern
+                                        {selnums.Append(i); break;}
+                                    }
+                            } 
+                }
 
                 // Integrate boundary tent
                 if(elnums.Size()==1 && selnums.Size()==1)
