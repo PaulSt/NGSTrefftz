@@ -118,8 +118,12 @@ namespace ngcomp
 
                     Array<int> fnums;
                     Array<int> orient;
-                    // TODO use getelfaces in 3D
-                    ma->GetElEdges (elnums[0], fnums, orient);
+                    switch(D)
+                    {
+                        case 1: fnums.Append(fnr); orient.Append(1); break;
+                        case 2: ma->GetElEdges (elnums[0], fnums, orient); break;
+                        case 3: ma->GetElFaces (elnums[0], fnums, orient); break;
+                    }
 
                     // get vertices of tent face
                     //Mat<D+1> vert = TentFaceVerts(tent, surfel, 0);
