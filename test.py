@@ -14,7 +14,7 @@ def SolveWaveTents(initmesh, order, c, t_step):
     >>> c = 1
     >>> t_step = 2/sqrt(3)
     >>> ms = [0,1,2]
-    >>> meshes=[ Mesh(SegMesh(4,0,math.pi)), Mesh(unit_square.GenerateMesh(maxh = 0.4)), Mesh(unit_cube.GenerateMesh(maxh = 1))]
+    >>> meshes=[ Mesh(SegMesh(4,0,math.pi)), Mesh(unit_square.GenerateMesh(maxh = 0.4)) , Mesh(unit_cube.GenerateMesh(maxh = 1))]
 
     >>> for initmesh in meshes:
     ...    for maxh in ms:
@@ -75,6 +75,46 @@ def SolveWaveTents(initmesh, order, c, t_step):
             ))
 
     TT=WaveTents(order,initmesh,CoefficientFunction(c),bdd)
+    TT.SetWavefront(bdd,t_start)
+
+    start = time.time()
+    with TaskManager():
+        TT.EvolveTents(t_step)
+    timing = (time.time()-start)
+
+    error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
+    adiam = TT.MaxAdiam(t_step)
+
+    # return [error, timing, adiam]
+    return error
+
+
+
+
+
+
+def TestAiry(order, t_step):
+    """
+    Solve using tent pitching
+    >>> order = 4
+    >>> SetNumThreads(2)
+    >>> t_step = 2/sqrt(3)
+    >>> TestAiry(order,t_step)
+    """
+
+    initmesh = Mesh(SegMesh(4,0,math.pi))
+    D = initmesh.dim
+    t = CoordCF(D)
+    t_start = 0
+
+    c=1
+    bdd = CoefficientFunction((
+            airy(-x-c)*cos(t),
+            -airyp(-x-c)*cos(t),
+            -airy(-x-c)*sin(t)
+        ))
+
+    TT=WaveTents(order,initmesh,CoefficientFunction(x),bdd)
     TT.SetWavefront(bdd,t_start)
 
     start = time.time()
