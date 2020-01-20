@@ -27,8 +27,6 @@ namespace ngcomp
 
         string GetClassName () const override { return "trefftz"; }
 
-        void Update(LocalHeap & lh);
-
         void GetDofNrs (ElementId ei, Array<DofId> & dnums) const override;
 
         FiniteElement & GetFE (ElementId ei, Allocator & alloc) const override;

@@ -75,16 +75,6 @@ namespace ngcomp
 
     }
 
-
-
-
-    void TrefftzFESpace :: Update(LocalHeap & lh)
-    {
-        FESpace::Update(lh);
-        //cout << "update: order = " << order << " fullD: " << fullD << " ndof = " <<  ndof << " local_ndof:" << local_ndof << endl <<
-            //"================================================" << endl ;
-    }
-
     void TrefftzFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) const
     {
         dnums.SetSize(0);
