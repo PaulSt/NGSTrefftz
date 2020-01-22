@@ -41,6 +41,12 @@ namespace ngcomp
                    SliceMatrix<> elmat, SliceVector<> elvec);
 
     void
+    CalcTentMacroEl (int fnr, const Array<int> &elnums,
+                     std::unordered_map<int, int> &macroel, Tent *tent,
+                     TrefftzWaveFE<D> &tel, SIMD_IntegrationRule &sir,
+                     LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
+
+    void
     CalcTentElEval (int elnr, Tent *tent, ScalarMappedElement<D + 1> &tel,
                     SIMD_IntegrationRule &sir, LocalHeap &slh,
                     SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes);
