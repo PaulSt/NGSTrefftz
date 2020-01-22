@@ -25,6 +25,7 @@ namespace ngcomp
     int order;
     shared_ptr<MeshAccess> ma;
     Vector<> wavespeed;
+    shared_ptr<CoefficientFunction> wavespeedcf;
     Matrix<> wavefront;
     shared_ptr<CoefficientFunction> bddatum;
     double timeshift = 0;
@@ -69,11 +70,28 @@ namespace ngcomp
       wavespeed[0] = awavespeed;
     }
 
-    WaveTents (int aorder, shared_ptr<MeshAccess> ama, Vector<> awavespeed,
+    // WaveTents( int aorder, shared_ptr<MeshAccess> ama, Vector<> awavespeed,
+    // shared_ptr<CoefficientFunction> abddatum)
+    //: order(aorder), ma(ama), bddatum(abddatum), wavespeed(awavespeed)
+    //{ ; }
+
+    WaveTents (int aorder, shared_ptr<MeshAccess> ama,
+               shared_ptr<CoefficientFunction> awavespeedcf,
                shared_ptr<CoefficientFunction> abddatum)
-        : order (aorder), ma (ama), bddatum (abddatum), wavespeed (awavespeed)
+        : order (aorder), ma (ama), bddatum (abddatum),
+          wavespeedcf (awavespeedcf)
     {
-      ;
+      wavespeed.SetSize (ma->GetNE ());
+      LocalHeap lh (1000 * 1000);
+      for (Ngs_Element el : ma->Elements (VOL))
+        {
+          ElementId ei = ElementId (el);
+          ELEMENT_TYPE eltype = ma->GetElType (ei);
+          IntegrationRule ir (eltype, 0);
+          ElementTransformation &trafo = ma->GetTrafo (ei, lh);
+          MappedIntegrationPoint<D, D> mip (ir[0], trafo);
+          wavespeed[el.Nr ()] = wavespeedcf->Evaluate (mip);
+        }
     }
 
     void EvolveTents (double dt);
@@ -111,6 +129,24 @@ namespace ngcomp
     int GetOrder () { return order; }
     int GetSpaceDim () { return D; }
     shared_ptr<MeshAccess> GetInitmesh () { return ma; }
+
+    inline int MakeMacroEl (const Array<int> &tentel,
+                            std::unordered_map<int, int> &macroel)
+    {
+      // TODO fix if macro elements do not share faces
+      int nrmacroel = 0;
+      for (int i = 0; i < tentel.Size (); i++)
+        {
+          int j = 0;
+          while (wavespeed[tentel[i]] != wavespeed[tentel[j]])
+            j++;
+          if (j == i)
+            macroel[tentel[i]] = nrmacroel++;
+          else
+            macroel[tentel[i]] = macroel[tentel[j]];
+        }
+      return nrmacroel;
+    }
   };
 }
 
