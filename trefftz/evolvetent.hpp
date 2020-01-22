@@ -37,6 +37,8 @@ namespace ngcomp
 
             void CalcTentBndEl(int surfel, Tent* tent, ScalarMappedElement<D+1> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
 
+            void CalcTentMacroEl(int fnr, const Array<int> &elnums, std::unordered_map<int,int> &macroel, Tent* tent, TrefftzWaveFE<D> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
+
             void CalcTentElEval(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes);
 
             Mat<D+1,D+1> TentFaceVerts(Tent* tent, int elnr, int top);
