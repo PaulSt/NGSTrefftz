@@ -816,28 +816,30 @@ namespace ngcomp
     // vtime[0] = tent->tbot;
     // vtime[1] = tent->ttop;
 
+    double c = wavespeed[tent->els[0]];
+    for (auto el : tent->els)
+      c = max (c, wavespeed[el]);
+
     for (int k = 0; k < vnumber; k++)
       {
         Vec<D> v1 = ma->GetPoint<D> (tent->vertex);
         Vec<D> v2 = ma->GetPoint<D> (tent->nbv[k]);
-        anisotropicdiam = max (
-            anisotropicdiam,
-            sqrt (L2Norm2 (v1 - v2)
-                  + pow (wavespeed[0] * (tent->ttop - tent->nbtime[k]), 2)));
-        anisotropicdiam = max (
-            anisotropicdiam,
-            sqrt (L2Norm2 (v1 - v2)
-                  + pow (wavespeed[0] * (tent->tbot - tent->nbtime[k]), 2)));
+        anisotropicdiam
+            = max (anisotropicdiam,
+                   sqrt (L2Norm2 (v1 - v2)
+                         + pow (c * (tent->ttop - tent->nbtime[k]), 2)));
+        anisotropicdiam
+            = max (anisotropicdiam,
+                   sqrt (L2Norm2 (v1 - v2)
+                         + pow (c * (tent->tbot - tent->nbtime[k]), 2)));
         for (int j = 0; j < vnumber; j++)
           {
             v1 = ma->GetPoint<D> (tent->nbv[j]);
             v2 = ma->GetPoint<D> (tent->nbv[k]);
-            anisotropicdiam
-                = max (anisotropicdiam,
-                       sqrt (L2Norm2 (v1 - v2)
-                             + pow (wavespeed[0]
-                                        * (tent->nbtime[j] - tent->nbtime[k]),
-                                    2)));
+            anisotropicdiam = max (
+                anisotropicdiam,
+                sqrt (L2Norm2 (v1 - v2)
+                      + pow (c * (tent->nbtime[j] - tent->nbtime[k]), 2)));
           }
       }
 
