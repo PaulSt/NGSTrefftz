@@ -28,10 +28,9 @@ namespace ngcomp
         c = flags.GetNumFlag ("wavespeed", 1);
         basistype = flags.GetNumFlag ("basistype", 0);
         useshift = flags.GetNumFlag("useshift",1);
-        gppword = flags.GetNumFlag("gppword", 1);
 
         //cout << "gamma" << gamma <<" size " << gamma.Size() << endl;
-        if(gamma.Size()!=0) while(gamma.Size()<gppword) gamma.Append(0.0);
+        if(gamma.Size()!=0) while(gamma.Size()<order) gamma.Append(0.0);
 
         local_ndof = (BinCoeff(fullD-1 + order, order) + BinCoeff(fullD-1 + order-1, order-1));
         nel = ma->GetNE();
@@ -113,7 +112,7 @@ namespace ngcomp
             case ET_TRIG:
                 {
                     if(gamma.Size()!=0)
-                        return *(new (alloc) TrefftzGppwFE<1>(gamma, gppword, order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
+                        return *(new (alloc) TrefftzGppwFE<1>(gamma, order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
                     else
                         return *(new (alloc) TrefftzWaveFE<1>(order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
                     break;
@@ -165,8 +164,6 @@ namespace ngcomp
         docu.Arg("useshift") = "bool = True\n"
             "  use shift of basis functins to element center and scale them";
         docu.Arg("gamma") = "bool = True\n"
-            "  use shift of basis functins to element center and scale them";
-        docu.Arg("gppword") = "bool = True\n"
             "  use shift of basis functins to element center and scale them";
         docu.Arg("basistype") = "bool = True\n"
             "  use shift of basis functins to element center and scale them";
