@@ -9,15 +9,15 @@
 namespace ngfem
 {
   template <int D>
-  TrefftzGppwFE<D>::TrefftzGppwFE (const Array<double> &agamma, int agppword,
-                                   int aord, float ac, Vec<D + 1> aelcenter,
+  TrefftzGppwFE<D>::TrefftzGppwFE (const Array<double> &agamma, int aord,
+                                   float ac, Vec<D + 1> aelcenter,
                                    double aelsize, ELEMENT_TYPE aeltype,
                                    int abasistype)
       : ScalarMappedElement<D + 1> (
           BinCoeff (D + aord, aord) + BinCoeff (D + aord - 1, aord - 1), aord),
         ord (aord), c (ac), npoly (BinCoeff (D + 1 + ord, ord)),
         elcenter (aelcenter), elsize (aelsize), eltype (aeltype),
-        basistype (abasistype), gppword (agppword), gamma (agamma)
+        basistype (abasistype), gamma (agamma)
   {
     ;
   }
@@ -81,22 +81,21 @@ namespace ngfem
     gam[1] *= (elsize / 2.0);
 
     // calc 1 dimensional monomial basis
-    STACK_ARRAY (double, mem, 2 * (gppword + 1));
-    int npoly = BinCoeff (1 + 1 + gppword, gppword);
+    STACK_ARRAY (double, mem, 2 * (ord + 1));
+    int npoly = BinCoeff (1 + 1 + ord, ord);
     double *polxt[2];
     for (size_t d = 0; d < 2; d++)
       {
-        polxt[d] = &mem[d * (gppword + 1)];
-        Monomial (gppword, cpoint[d], polxt[d]);
+        polxt[d] = &mem[d * (ord + 1)];
+        Monomial (ord, cpoint[d], polxt[d]);
       }
     // calc D+1 dimenional monomial basis
     Vector<double> pol (npoly);
-    for (size_t i = 0, ii = 0; i <= gppword; i++)
-      for (size_t j = 0; j <= gppword - i; j++)
+    for (size_t i = 0, ii = 0; i <= ord; i++)
+      for (size_t j = 0; j <= ord - i; j++)
         pol[ii++] = polxt[0][i] * polxt[1][j];
     // TB*monomials for trefftz shape fcts
-    const CSR *localmat
-        = TrefftzGppwBasis<1>::getInstance ().TB (ord, gppword, gam);
+    const CSR *localmat = TrefftzGppwBasis<1>::getInstance ().TB (ord, gam);
     for (int i = 0; i < this->ndof; ++i)
       {
         shape (i) = 0.0;
@@ -131,26 +130,26 @@ namespace ngfem
     gam[1] *= (elsize / 2.0);
 
     // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
-    STACK_ARRAY (double, mem2, 2 * (gppword + 1) + 1);
+    STACK_ARRAY (double, mem2, 2 * (ord + 1) + 1);
     mem2[0] = 0;
-    int npoly = BinCoeff (1 + 1 + gppword, gppword);
+    int npoly = BinCoeff (1 + 1 + ord, ord);
     double *polxt2[2];
     for (size_t d = 0; d < 2; d++)
       {
-        polxt2[d] = &mem2[d * (gppword + 1) + 1];
-        Monomial (gppword, cpoint[d], polxt2[d]);
+        polxt2[d] = &mem2[d * (ord + 1) + 1];
+        Monomial (ord, cpoint[d], polxt2[d]);
       }
 
     for (int d = 0; d < 2; d++)
       {
         Vector<double> pol (npoly);
-        for (size_t i = 0, ii = 0; i <= gppword; i++)
-          for (size_t j = 0; j <= gppword - i; j++)
+        for (size_t i = 0, ii = 0; i <= ord; i++)
+          for (size_t j = 0; j <= ord - i; j++)
             pol[ii++] = (d == 0 ? i : (d == 1 ? j : 0))
                         * polxt2[0][i - (d == 0)] * polxt2[1][j - (d == 1)];
 
         const CSR *localmat
-            = TrefftzGppwBasis<1>::getInstance ().TB (ord, gppword, gam);
+            = TrefftzGppwBasis<1>::getInstance ().TB (ord, gam);
         for (int i = 0; i < this->ndof; ++i)
           {
             dshape (i, d) = 0.0;
@@ -181,8 +180,7 @@ namespace ngfem
 
   template <int D>
   const CSR *
-  TrefftzGppwBasis<D>::TB (int ord, int gppword, const Array<double> &gamma,
-                           int basistype)
+  TrefftzGppwBasis<D>::TB (int ord, const Array<double> &gamma, int basistype)
   {
     {
       lock_guard<mutex> lock (gentrefftzbasis);
@@ -195,15 +193,11 @@ namespace ngfem
           // cout << "creating gppw bstore for " << encode << endl;
           const int nbasis
               = (BinCoeff (D + ord, ord) + BinCoeff (D + ord - 1, ord - 1));
-          const int npoly = BinCoeff (D + 1 + gppword, gppword);
+          const int npoly = BinCoeff (D + 1 + ord, ord);
           Matrix<> gppwbasis (nbasis, npoly);
           gppwbasis = 0;
-          // int basisn=0;
-          // cout << "tb with " << nbasis << " and npoly "<< npoly2 <<endl<<
-          // trefftzbasis<<endl;
 
-          const int npoly2 = (BinCoeff (D + 1 + ord, ord));
-          Matrix<> trefftzbasis (nbasis, npoly2);
+          Matrix<> trefftzbasis (nbasis, npoly);
           trefftzbasis = 0;
           Vec<D + 1, int> coeff = 0;
           int count = 0;
@@ -231,15 +225,15 @@ namespace ngfem
                     }
                 }
 
-              for (int ell = -1; ell < gppword - 1; ell++)
+              for (int ell = -1; ell < ord - 1; ell++)
                 {
                   Vec<D + 1, int> get_coeff;
                   get_coeff[D] = 0;
                   get_coeff[0] = ell + 2;
-                  gppwbasis (basisn, IndexMap2 (get_coeff, gppword)) = 0;
+                  gppwbasis (basisn, IndexMap2 (get_coeff, ord)) = 0;
                   get_coeff[D] = 1;
                   get_coeff[0] = ell + 1;
-                  gppwbasis (basisn, IndexMap2 (get_coeff, gppword)) = 0;
+                  gppwbasis (basisn, IndexMap2 (get_coeff, ord)) = 0;
                   for (int t = 0; t <= ell; t++)
                     {
                       int x = ell - t;
@@ -249,22 +243,21 @@ namespace ngfem
                       get_coeff2[D] = t;
                       get_coeff2[0] = x + 2;
 
-                      gppwbasis (basisn, IndexMap2 (get_coeff, gppword))
+                      gppwbasis (basisn, IndexMap2 (get_coeff, ord))
                           = (x + 2) * (x + 1) / ((t + 2) * (t + 1) * gamma[0])
-                            * gppwbasis (basisn,
-                                         IndexMap2 (get_coeff2, gppword));
+                            * gppwbasis (basisn, IndexMap2 (get_coeff2, ord));
                       for (int betax = 0; betax < x; betax++)
                         {
                           get_coeff2[D] = t + 2;
                           get_coeff2[0] = betax;
 
-                          gppwbasis (basisn, IndexMap2 (get_coeff, gppword))
+                          gppwbasis (basisn, IndexMap2 (get_coeff, ord))
                               -= gamma[x - betax]
                                  * gppwbasis (basisn,
-                                              IndexMap2 (get_coeff2, gppword))
+                                              IndexMap2 (get_coeff2, ord))
                                  / gamma[0];
                           if (t <= j - 2)
-                            gppwbasis (basisn, IndexMap2 (get_coeff, gppword))
+                            gppwbasis (basisn, IndexMap2 (get_coeff, ord))
                                 -= gamma[x - betax]
                                    * trefftzbasis (basisn,
                                                    IndexMap2 (get_coeff2, ord))
@@ -275,7 +268,7 @@ namespace ngfem
             }
 
           for (int basisn = 0; basisn < nbasis; basisn++)
-            for (int polyn = 0; polyn < npoly2; polyn++)
+            for (int polyn = 0; polyn < npoly; polyn++)
               gppwbasis (basisn, polyn) += trefftzbasis (basisn, polyn);
 
           MatToCSR (gppwbasis, gtbstore[encode]);

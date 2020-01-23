@@ -17,14 +17,12 @@ namespace ngfem
     float c;
     ELEMENT_TYPE eltype;
     int basistype;
-    int gppword;
     const Array<double> &gamma;
 
   public:
-    TrefftzGppwFE (const Array<double> &agamma, int agppword = 0, int aord = 1,
-                   float ac = 1.0, Vec<D + 1> aelcenter = 0,
-                   double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG,
-                   int abasistype = 0);
+    TrefftzGppwFE (const Array<double> &agamma, int aord = 1, float ac = 1.0,
+                   Vec<D + 1> aelcenter = 0, double aelsize = 1,
+                   ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0);
 
     float GetWavespeed () const { return c; }
     void SetWavespeed (double wavespeed) { c = wavespeed; }
@@ -135,8 +133,7 @@ namespace ngfem
       return ginstance;
     }
 
-    const CSR *
-    TB (int ord, int gppword, const Array<double> &gamma, int basistype = 0);
+    const CSR *TB (int ord, const Array<double> &gamma, int basistype = 0);
 
   private:
     TrefftzGppwBasis () = default;
