@@ -107,6 +107,8 @@ namespace ngfem
 
             const CSR* TB(int ord);
             void CreateTB(int ord, int basistype = 0);
+            static void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker, int basistype, double wavespeed = 1.0);
+            static int IndexMap2(Vec<D+1, int> index, int ord);
 
         private:
             TrefftzWaveBasis()= default;
@@ -116,8 +118,6 @@ namespace ngfem
 
             Array<CSR> tbstore;
             //once_flag tbonceflag;
-            void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker, int basistype);
-            int IndexMap2(Vec<D+1, int> index, int ord);
     };
 }
 
