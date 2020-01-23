@@ -725,8 +725,6 @@ namespace ngcomp
                                                lh);
         for (int imip = 0; imip < snip; imip++)
           {
-            // error +=
-            // (wavefront(elnr,imip)-wavefront_corr(elnr,imip))*(wavefront(elnr,imip)-wavefront_corr(elnr,imip))*smir[imip/nsimd].GetWeight()[imip%nsimd];
             for (int d = 0; d < D + 1; d++)
               error
                   += pow (wavefront (elnr, snip + d * snip + imip)
@@ -736,6 +734,31 @@ namespace ngcomp
           }
       }
     return sqrt (error);
+  }
+
+  template <int D>
+  double WaveTents<D>::L2Error (Matrix<> wavefront, Matrix<> wavefront_corr)
+  {
+    LocalHeap lh (1000 * 1000 * 100, "l2error", 1);
+    double l2error = 0;
+    const ELEMENT_TYPE eltyp
+        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
+    SIMD_IntegrationRule sir (eltyp, order * 2);
+    int nsimd = SIMD<double>::Size ();
+    int snip = sir.Size () * nsimd;
+    for (int elnr = 0; elnr < ma->GetNE (); elnr++)
+      {
+        HeapReset hr (lh);
+        SIMD_MappedIntegrationRule<D, D> smir (sir, ma->GetTrafo (elnr, lh),
+                                               lh);
+        for (int imip = 0; imip < snip; imip++)
+          {
+            l2error += (wavefront (elnr, imip) - wavefront_corr (elnr, imip))
+                       * (wavefront (elnr, imip) - wavefront_corr (elnr, imip))
+                       * smir[imip / nsimd].GetWeight ()[imip % nsimd];
+          }
+      }
+    return sqrt (l2error);
   }
 
   template <int D> double WaveTents<D>::Energy (Matrix<> wavefront)
@@ -857,6 +880,7 @@ template <int D> void DeclareETClass (py::module &m, std::string typestr)
       .def ("SetWavefront", &PyETclass::SetWavefront)
       .def ("GetWavefront", &PyETclass::GetWavefront)
       .def ("Error", &PyETclass::Error)
+      .def ("L2Error", &PyETclass::L2Error)
       .def ("Energy", &PyETclass::Energy)
       .def ("MaxAdiam", &PyETclass::MaxAdiam)
       .def ("LocalDofs", &PyETclass::LocalDofs)
