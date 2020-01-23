@@ -682,7 +682,7 @@ namespace ngcomp
         //vtime[1] = tent->ttop;
 
         double c = wavespeed[tent->els[0]];
-        for(auto el : tent->els) c = max(c,wavespeed[el]);
+        //for(auto el : tent->els) c = max(c,wavespeed[el]);
 
         for (int k = 0; k < vnumber; k++)
         {
