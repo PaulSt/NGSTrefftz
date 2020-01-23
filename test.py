@@ -126,6 +126,8 @@ def TestAiry(order, h, t_step):
     error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
     adiam = TT.MaxAdiam(t_step)
 
+    # for t in Timers():
+        # print(t)
     # return [error, timing, adiam]
     return error
 

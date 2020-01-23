@@ -40,6 +40,7 @@ namespace ngcomp
         static Timer ttent("tent",2);
         static Timer ttentel("tentel",2);
         static Timer ttentbnd("tentbnd",2);
+        static Timer ttentmacro("tentmacro",2);
         static Timer ttenteval("tenteval",2);
 
         TrefftzWaveBasis<D>::getInstance().CreateTB(order);
