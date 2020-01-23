@@ -96,6 +96,8 @@ namespace ngcomp
 
             double Error(Matrix<> wavefront, Matrix<> wavefront_corr);
 
+            double L2Error(Matrix<> wavefront, Matrix<> wavefront_corr);
+
             double Energy(Matrix<> wavefront);
 
             double MaxAdiam(double dt);
