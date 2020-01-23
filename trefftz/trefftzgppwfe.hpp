@@ -143,14 +143,6 @@ namespace ngfem
 
     mutex gentrefftzbasis;
     std::map<std::string, CSR> gtbstore;
-    // once_flag tbonceflag;
-    // void TB_inner(const Array<double> &gamma, int ord, Matrix<>
-    // &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker,
-    // int basistype);
-    void TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D + 1, int> coeffnum,
-                   int basis, int dim, int &tracker, int basistype,
-                   double wavespeed);
-    int IndexMap2 (Vec<D + 1, int> index, int ord);
   };
 
 }

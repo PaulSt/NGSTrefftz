@@ -204,8 +204,9 @@ namespace ngfem
           for (int b = 0; b < nbasis; b++)
             {
               int tracker = 0;
-              TB_inner (ord, trefftzbasis, coeff, b, D + 1, tracker, basistype,
-                        1 / sqrt (gamma[0]));
+              TrefftzWaveBasis<D>::TB_inner (ord, trefftzbasis, coeff, b,
+                                             D + 1, tracker, basistype,
+                                             1 / sqrt (gamma[0]));
             }
 
           for (int basisn = 0; basisn < nbasis; basisn++)
@@ -218,7 +219,9 @@ namespace ngfem
                     {
                       get_coeff[D] = k;
                       get_coeff[0] = i;
-                      if (trefftzbasis (basisn, IndexMap2 (get_coeff, ord))
+                      if (trefftzbasis (
+                              basisn,
+                              TrefftzWaveBasis<D>::IndexMap2 (get_coeff, ord))
                               != 0
                           && i + k > j)
                         j = i + k;
@@ -230,10 +233,14 @@ namespace ngfem
                   Vec<D + 1, int> get_coeff;
                   get_coeff[D] = 0;
                   get_coeff[0] = ell + 2;
-                  gppwbasis (basisn, IndexMap2 (get_coeff, ord)) = 0;
+                  gppwbasis (basisn,
+                             TrefftzWaveBasis<D>::IndexMap2 (get_coeff, ord))
+                      = 0;
                   get_coeff[D] = 1;
                   get_coeff[0] = ell + 1;
-                  gppwbasis (basisn, IndexMap2 (get_coeff, ord)) = 0;
+                  gppwbasis (basisn,
+                             TrefftzWaveBasis<D>::IndexMap2 (get_coeff, ord))
+                      = 0;
                   for (int t = 0; t <= ell; t++)
                     {
                       int x = ell - t;
@@ -243,24 +250,31 @@ namespace ngfem
                       get_coeff2[D] = t;
                       get_coeff2[0] = x + 2;
 
-                      gppwbasis (basisn, IndexMap2 (get_coeff, ord))
+                      gppwbasis (basisn, TrefftzWaveBasis<D>::IndexMap2 (
+                                             get_coeff, ord))
                           = (x + 2) * (x + 1) / ((t + 2) * (t + 1) * gamma[0])
-                            * gppwbasis (basisn, IndexMap2 (get_coeff2, ord));
+                            * gppwbasis (basisn,
+                                         TrefftzWaveBasis<D>::IndexMap2 (
+                                             get_coeff2, ord));
                       for (int betax = 0; betax < x; betax++)
                         {
                           get_coeff2[D] = t + 2;
                           get_coeff2[0] = betax;
 
-                          gppwbasis (basisn, IndexMap2 (get_coeff, ord))
+                          gppwbasis (basisn, TrefftzWaveBasis<D>::IndexMap2 (
+                                                 get_coeff, ord))
                               -= gamma[x - betax]
                                  * gppwbasis (basisn,
-                                              IndexMap2 (get_coeff2, ord))
+                                              TrefftzWaveBasis<D>::IndexMap2 (
+                                                  get_coeff2, ord))
                                  / gamma[0];
                           if (t <= j - 2)
-                            gppwbasis (basisn, IndexMap2 (get_coeff, ord))
+                            gppwbasis (basisn, TrefftzWaveBasis<D>::IndexMap2 (
+                                                   get_coeff, ord))
                                 -= gamma[x - betax]
-                                   * trefftzbasis (basisn,
-                                                   IndexMap2 (get_coeff2, ord))
+                                   * trefftzbasis (
+                                       basisn, TrefftzWaveBasis<D>::IndexMap2 (
+                                                   get_coeff2, ord))
                                    / gamma[0];
                         }
                     }
@@ -284,130 +298,6 @@ namespace ngfem
       const CSR *tb = &gtbstore[encode];
       return tb;
     }
-  }
-
-  template <int D>
-  void
-  TrefftzGppwBasis<D>::TB_inner (int ord, Matrix<> &trefftzbasis,
-                                 Vec<D + 1, int> coeffnum, int basis, int dim,
-                                 int &tracker, int basistype, double wavespeed)
-  {
-    if (dim > 0)
-      {
-        while (coeffnum (dim - 1) <= ord)
-          {
-            TB_inner (ord, trefftzbasis, coeffnum, basis, dim - 1, tracker,
-                      basistype, wavespeed);
-            coeffnum (dim - 1)++;
-          }
-      }
-    else
-      {
-        int sum = 0;
-        for (int i = 0; i < D + 1; i++)
-          sum += coeffnum (i);
-        if (sum <= ord)
-          {
-            if (tracker >= 0)
-              tracker++;
-            int indexmap = IndexMap2 (coeffnum, ord);
-            int k = coeffnum (D);
-            if (k == 0 || k == 1)
-              {
-                switch (basistype)
-                  {
-                  case 0:
-                    if (tracker > basis)
-                      {
-                        // trefftzbasis( i, setbasis++ ) = 1.0; //set the l-th
-                        // coeff to 1
-                        trefftzbasis (basis, indexmap) = 1;
-                        tracker = -1;
-                      }
-                    // i += nbasis-1;	//jump to time = 2 if i=0
-                    break;
-                  case 1:
-                    if ((k == 0 && basis < BinCoeff (D + ord, ord))
-                        || (k == 1 && basis >= BinCoeff (D + ord, ord)))
-                      {
-                        trefftzbasis (basis, indexmap) = 1;
-                        for (int exponent : coeffnum.Range (0, D))
-                          trefftzbasis (basis, indexmap)
-                              *= LegCoeffMonBasis (basis, exponent);
-                      }
-                    break;
-                  case 2:
-                    if ((k == 0 && basis < BinCoeff (D + ord, ord))
-                        || (k == 1 && basis >= BinCoeff (D + ord, ord)))
-                      {
-                        trefftzbasis (basis, indexmap) = 1;
-                        for (int exponent : coeffnum.Range (0, D))
-                          trefftzbasis (basis, indexmap)
-                              *= ChebCoeffMonBasis (basis, exponent);
-                      }
-                    break;
-                  }
-              }
-            else if (coeffnum (D) > 1)
-              {
-                for (int m = 0; m < D; m++) // rekursive sum
-                  {
-                    Vec<D + 1, int> get_coeff = coeffnum;
-                    get_coeff[D] = get_coeff[D] - 2;
-                    get_coeff[m] = get_coeff[m] + 2;
-                    trefftzbasis (basis, indexmap)
-                        += (coeffnum (m) + 1) * (coeffnum (m) + 2)
-                           * trefftzbasis (basis, IndexMap2 (get_coeff, ord));
-                  }
-                trefftzbasis (basis, indexmap)
-                    *= wavespeed * wavespeed / (k * (k - 1));
-              }
-          }
-      }
-  }
-
-  // template<int D>
-  // void TrefftzGppwBasis<D> :: TB_inner(const Array<double> &gamma, int ord,
-  // Matrix<> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int
-  // &tracker, int basistype)
-  //{
-  ////if (dim>0)
-  ////{
-  ////while(coeffnum(dim-1)<=ord)
-  ////{
-  ////TB_inner(gamma, ord,trefftzbasis,coeffnum,basis, dim-1, tracker,
-  ///basistype); /coeffnum(dim-1)++;
-  ////}
-  ////}
-  ////else
-  ////{
-  ////int sum=0;
-  ////for(int i=0;i<D+1;i++)
-  ////sum += coeffnum(i);
-  ////if(sum<=ord)
-  ////{
-  ////int indexmap = IndexMap2(coeffnum, ord);
-  ////int k = coeffnum(D);
-  ////cout << coeffnum << endl;
-  //////trefftzbasis(basis, indexmap) *= 1.0/(k * (k-1));
-  ////}
-  ////}
-  //}
-
-  template <int D>
-  int TrefftzGppwBasis<D>::IndexMap2 (Vec<D + 1, int> index, int ord)
-  {
-    int sum = 0;
-    int temp_size = 0;
-    for (int d = 0; d < D + 1; d++)
-      {
-        for (int p = 0; p < index (d); p++)
-          {
-            sum += BinCoeff (D - d + ord - p - temp_size, ord - p - temp_size);
-          }
-        temp_size += index (d);
-      }
-    return sum;
   }
 
   template class TrefftzGppwBasis<1>;

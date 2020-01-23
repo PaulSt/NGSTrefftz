@@ -564,16 +564,17 @@ namespace ngfem
   }
 
   template <int D>
-  void TrefftzWaveBasis<D>::TB_inner (int ord, Matrix<> &trefftzbasis,
-                                      Vec<D + 1, int> coeffnum, int basis,
-                                      int dim, int &tracker, int basistype)
+  void
+  TrefftzWaveBasis<D>::TB_inner (int ord, Matrix<> &trefftzbasis,
+                                 Vec<D + 1, int> coeffnum, int basis, int dim,
+                                 int &tracker, int basistype, double wavespeed)
   {
     if (dim > 0)
       {
         while (coeffnum (dim - 1) <= ord)
           {
             TB_inner (ord, trefftzbasis, coeffnum, basis, dim - 1, tracker,
-                      basistype);
+                      basistype, wavespeed);
             coeffnum (dim - 1)++;
           }
       }
@@ -635,7 +636,8 @@ namespace ngfem
                         += (coeffnum (m) + 1) * (coeffnum (m) + 2)
                            * trefftzbasis (basis, IndexMap2 (get_coeff, ord));
                   }
-                trefftzbasis (basis, indexmap) *= 1.0 / (k * (k - 1));
+                trefftzbasis (basis, indexmap)
+                    *= wavespeed * wavespeed / (k * (k - 1));
               }
           }
       }
