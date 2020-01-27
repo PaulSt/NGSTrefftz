@@ -144,8 +144,16 @@ namespace ngcomp
       case ET_PYRAMID:
       case ET_TET:
         {
-          return *(new (alloc) TrefftzWaveFE<2> (
-              order, c, ElCenter<2> (ei), Adiam<2> (ei), ma->GetElType (ei)));
+
+          if (gamma.Size () != 0)
+            return *(new (alloc)
+                         TrefftzGppwFE<2> (gamma, order, c, ElCenter<2> (ei),
+                                           Adiam<2> (ei), ma->GetElType (ei)));
+          else
+            return *(new (alloc)
+                         TrefftzWaveFE<2> (order, c, ElCenter<2> (ei),
+                                           Adiam<2> (ei), ma->GetElType (ei)));
+          break;
           break;
         }
       }
