@@ -36,7 +36,8 @@ namespace ngcomp
         nel = ma->GetNE();
         ndof = local_ndof * nel;
 
-        switch (fullD) {
+        switch (fullD)
+        {
             case 1:
                 {
                     //evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<1>>>();
@@ -122,7 +123,12 @@ namespace ngcomp
             case ET_PYRAMID:
             case ET_TET:
                 {
-                    return *(new (alloc) TrefftzWaveFE<2>(order,c,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
+
+                    if(gamma.Size()!=0)
+                        return *(new (alloc) TrefftzGppwFE<2>(gamma, order,c,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
+                    else
+                        return *(new (alloc) TrefftzWaveFE<2>(order,c,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
+                    break;
                     break;
                 }
         }

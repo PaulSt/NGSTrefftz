@@ -75,7 +75,6 @@ namespace ngfem
 
         // calc 1 dimensional monomial basis
         STACK_ARRAY(double, mem, 2*(ord+1));
-        int npoly = BinCoeff(1+1 + ord, ord);
         double* polxt[2];
         for(size_t d=0;d<2;d++)
         {
@@ -194,50 +193,96 @@ namespace ngfem
 
                 for(int basisn=0;basisn<nbasis;basisn++)
                 {
-                    Vec<D+1, int> get_coeff;
                     int j=0; // order of current basis fct
                     for (size_t i = 0; i <=ord; i++)
-                    {
-                        for (size_t k = 0; k <= ord-i; k++)
-                        {
-                            get_coeff[D] = k;
-                            get_coeff[0] = i;
-                            if (trefftzbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(get_coeff, ord))!=0 && i+k>j)
-                                j=i+k;
-                        }
-                    }
+                        for (size_t k = 0; k <= (D==2)*(ord-i); k++)
+                            for (size_t l = 0; l <= ord-i-k; l++)
+                            {
+                                Vec<D+1, int> index;
+                                index[D] = l;
+                                index[0] = i;
+                                if(D==2) index[1] = k;
+                                if (trefftzbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(index, ord))!=0 && i+k+l>j)
+                                    j=i+k+l;
+                            }
 
                     for(int ell=-1;ell<ord-1;ell++)
                     {
-                        Vec<D+1, int> get_coeff;
-                        get_coeff[D] = 0;
-                        get_coeff[0] = ell+2;
-                        gppwbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(get_coeff, ord)) = 0;
-                        get_coeff[D] = 1;
-                        get_coeff[0] = ell+1;
-                        gppwbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(get_coeff, ord)) = 0;
                         for(int t=0;t<=ell;t++)
                         {
-                            int x = ell - t;
-                            get_coeff[D] = t+2;
-                            get_coeff[0] = x;
-                            Vec<D+1, int> get_coeff2;
-                            get_coeff2[D] = t;
-                            get_coeff2[0] = x+2;
-
-                            gppwbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(get_coeff, ord)) =
-                                (x+2)*(x+1)/((t+2)*(t+1)*gamma[0])
-                                * gppwbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(get_coeff2, ord));
-                            for(int betax=0;betax<x;betax++)
+                            if(D==1)
                             {
-                                get_coeff2[D] = t+2;
-                                get_coeff2[0] = betax;
+                                int x = ell - t;
+                                Vec<D+1, int> index;
+                                index[D] = t+2;
+                                index[0] = x;
+                                double* newcoeff =& gppwbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(index, ord));
+                                index[D] = t;
+                                index[0] = x+2;
+                                int getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
 
-                                gppwbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(get_coeff, ord))
-                                    -= gamma[x-betax]*gppwbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(get_coeff2, ord)) / gamma[0];
-                                if(t<=j-2)
-                                    gppwbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(get_coeff, ord))
-                                        -= gamma[x-betax]*trefftzbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(get_coeff2, ord)) / gamma[0];
+                                *newcoeff =
+                                    (x+2)*(x+1)/((t+2)*(t+1)*gamma[0])
+                                    * gppwbasis( basisn, getcoeff);
+                                for(int betax=0;betax<x;betax++)
+                                {
+                                    index[D] = t+2;
+                                    index[0] = betax;
+                                    getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
+
+                                    *newcoeff
+                                        -= gamma[x-betax]*gppwbasis( basisn, getcoeff) / gamma[0];
+                                    if(t<=j-2)
+                                        *newcoeff
+                                            -= gamma[x-betax]*trefftzbasis( basisn, getcoeff) / gamma[0];
+                                }
+                            }
+                            else if (D==2)
+                            {
+                                for(int x=0;x<=ell-t;x++)
+                                {
+                                    int y = ell-t-x;
+                                    Vec<D+1, int> index;
+                                    index[D] = t+2;
+                                    index[1] = y;
+                                    index[0] = x;
+                                    double* newcoeff =& gppwbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(index, ord));
+                                    index[D] = t;
+                                    index[1] = y;
+                                    index[0] = x+2;
+                                    int getcoeffx = TrefftzWaveBasis<D>::IndexMap2(index, ord);
+                                    index[D] = t;
+                                    index[1] = y+2;
+                                    index[0] = x;
+                                    int getcoeffy = TrefftzWaveBasis<D>::IndexMap2(index, ord);
+
+                                    *newcoeff =
+                                        (x+2)*(x+1)/((t+2)*(t+1)*gamma[0])
+                                        * gppwbasis( basisn, getcoeffx)
+                                        + (y+2)*(y+1)/((t+2)*(t+1)*gamma[0])
+                                        * gppwbasis( basisn, getcoeffy);
+                                    for(int betax=0;betax<=x;betax++)
+                                        for(int betay=0;betay<=y-(betax==x);betay++)
+                                        {
+                                            index[D] = t+2;
+                                            index[1] = betay;
+                                            index[0] = betax;
+                                            int getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
+
+                                            // TODO fix smart gamma, no only dummy
+                                            double fakegamma = 0;
+                                            if( (x-betax == 0 && y-betay == 0))
+                                                fakegamma=gamma[0];
+                                            else if((x-betax == 0 && y-betay == 1) || (x-betax == 1 && y-betay == 0))
+                                                fakegamma=gamma[1];
+
+                                            *newcoeff
+                                                -= fakegamma*gppwbasis( basisn, getcoeff) / gamma[0];
+                                            if(t<=j-2)
+                                                *newcoeff
+                                                    -= fakegamma*trefftzbasis( basisn, getcoeff) / gamma[0];
+                                        }
+                                }
                             }
                         }
                     }
