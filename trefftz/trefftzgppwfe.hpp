@@ -49,6 +49,9 @@ namespace ngfem
     virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
                              BareSliceMatrix<SIMD<double>> dshape) const;
 
+    void CalcDDSpecialShape (const SIMD_BaseMappedIntegrationRule &smir,
+                             BareSliceMatrix<SIMD<double>> dshape) const;
+
     int GetNDof () const { return this->ndof; }
 
     static int NDirections (int ord) { return ord == 0 ? 1 : 2; }
