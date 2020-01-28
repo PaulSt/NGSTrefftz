@@ -8,25 +8,10 @@
 
 namespace ngfem
 {
-    template<int D>
-    TrefftzGppwFE<D> :: TrefftzGppwFE(const Array<double> &agamma, int aord, float ac, Vec<D+1> aelcenter, double aelsize, ELEMENT_TYPE aeltype, int abasistype)
-    : ScalarMappedElement<D+1>(BinCoeff(D + aord, aord) + BinCoeff(D + aord-1, aord-1), aord),
-    ord(aord),
-    c(ac),
-    npoly(BinCoeff(D+1 + ord, ord)),
-    elcenter(aelcenter),
-    elsize(aelsize),
-    eltype(aeltype),
-    basistype(abasistype),
-    gamma(agamma)
-    {;}
-
-
     template<>
     void TrefftzGppwFE<1> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
                                         BareSliceMatrix<SIMD<double>> shape) const
-    { 
-
+    {
         for (int imip = 0; imip < smir.Size(); imip++)
         {
             Vec<2,SIMD<double>> cpoint = smir[imip].GetPoint();
@@ -62,7 +47,7 @@ namespace ngfem
     template<>
     void TrefftzGppwFE<2> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
                                         BareSliceMatrix<SIMD<double>> shape) const
-    { 
+    {
         for (int imip = 0; imip < smir.Size(); imip++)
         {
             Vec<3,SIMD<double>> cpoint = smir[imip].GetPoint();
@@ -106,7 +91,7 @@ namespace ngfem
     template<>
     void TrefftzGppwFE<1> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
                                          BareSliceMatrix<SIMD<double>> dshape) const
-    { 
+    {
         for (int imip = 0; imip < smir.Size(); imip++)
         {
             Vec<2,SIMD<double>> cpoint = smir[imip].GetPoint();
@@ -137,7 +122,7 @@ namespace ngfem
                 {
                     dshape(i*2+d,imip) = 0.0;
                     for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                        dshape(i*2+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (d==1 ? c : 1) * (2.0/elsize);
+                        dshape(i*2+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (2.0/elsize);
                 }
             }
         }

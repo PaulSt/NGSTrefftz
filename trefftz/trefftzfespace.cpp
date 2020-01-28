@@ -113,7 +113,7 @@ namespace ngcomp
             case ET_TRIG:
                 {
                     if(gamma.Size()!=0)
-                        return *(new (alloc) TrefftzGppwFE<1>(gamma, order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
+                        return *(new (alloc) TrefftzGppwFE<1>(gamma, order,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
                     else
                         return *(new (alloc) TrefftzWaveFE<1>(order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
                     break;
@@ -125,7 +125,7 @@ namespace ngcomp
                 {
 
                     if(gamma.Size()!=0)
-                        return *(new (alloc) TrefftzGppwFE<2>(gamma, order,c,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
+                        return *(new (alloc) TrefftzGppwFE<2>(gamma, order,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
                     else
                         return *(new (alloc) TrefftzWaveFE<2>(order,c,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
                     break;
