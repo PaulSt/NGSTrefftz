@@ -9,15 +9,14 @@
 
 namespace ngcomp
 {
-
-    class TrefftzTents {
+    class TrefftzTents 
+    {
         private:
 
         public:
             TrefftzTents(){;}
             //virtual ~TrefftzTents() = default;
             virtual int dimensio(){return 0;}
-
     };
 
     template<int D>
@@ -32,8 +31,9 @@ namespace ngcomp
             shared_ptr<CoefficientFunction> bddatum;
             double timeshift = 0;
 
+        protected:
             void CalcTentEl(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel,
-                 SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
+                    SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
 
             void CalcTentBndEl(int surfel, Tent* tent, ScalarMappedElement<D+1> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
 
@@ -56,6 +56,8 @@ namespace ngcomp
 
             inline void LapackSolve(SliceMatrix<double> a, SliceVector<double> b);
 
+            inline int MakeMacroEl(const Array<int> &tentel, std::unordered_map<int,int> &macroel);
+
         public:
             WaveTents(){;}
 
@@ -65,10 +67,6 @@ namespace ngcomp
                 wavespeed.SetSize(1);
                 wavespeed[0]=awavespeed;
             }
-
-            //WaveTents( int aorder, shared_ptr<MeshAccess> ama, Vector<> awavespeed, shared_ptr<CoefficientFunction> abddatum)
-                //: order(aorder), ma(ama), bddatum(abddatum), wavespeed(awavespeed)
-            //{ ; }
 
             WaveTents( int aorder, shared_ptr<MeshAccess> ama, shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> abddatum)
                 : order(aorder), ma(ama), bddatum(abddatum), wavespeedcf(awavespeedcf)
@@ -118,23 +116,39 @@ namespace ngcomp
             int GetOrder(){return order;}
             int GetSpaceDim(){return D;}
             shared_ptr<MeshAccess> GetInitmesh(){return ma;}
-
-            inline int MakeMacroEl(const Array<int> &tentel, std::unordered_map<int,int> &macroel)
-            {
-                // TODO fix if macro elements do not share faces
-                int nrmacroel = 0;
-                for(int i=0;i<tentel.Size();i++)
-                {
-                    int j=0;
-                    while(wavespeed[tentel[i]]!=wavespeed[tentel[j]]) j++;
-                    if(j==i)
-                        macroel[tentel[i]] = nrmacroel++;
-                    else
-                        macroel[tentel[i]] = macroel[tentel[j]];
-                }
-                return nrmacroel;
-            }
     };
+
+
+    template<int D>
+    class GppwTents : public WaveTents<D>
+    {
+        private:
+            int order;
+            shared_ptr<MeshAccess> ma;
+            Vector<> wavespeed;
+            shared_ptr<CoefficientFunction> wavespeedcf;
+            Matrix<> wavefront;
+            shared_ptr<CoefficientFunction> bddatum;
+            double timeshift = 0;
+            const Array<double> &gamma;
+
+    constexpr int factorial(int n)
+    {
+        return n>1 ? n * factorial(n-1) : 1;
+    }
+
+        using WaveTents<D>::TentAdiam;
+        using WaveTents<D>::LapackSolve;
+        using WaveTents<D>::TentFaceVerts;
+
+        public:
+            GppwTents( int aorder, shared_ptr<MeshAccess> ama, shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> abddatum, const Array<double> &agamma)
+                : order(aorder), ma(ama), bddatum(abddatum), wavespeedcf(awavespeedcf), gamma(agamma)
+            {;}
+
+            void EvolveTents(double dt);
+    };
+
 }
 
 #ifdef NGS_PYTHON

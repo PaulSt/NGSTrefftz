@@ -714,6 +714,160 @@ namespace ngcomp
     }
 
 
+    template<int D>
+    inline int WaveTents<D> :: MakeMacroEl(const Array<int> &tentel, std::unordered_map<int,int> &macroel)
+    {
+        // TODO fix if macro elements do not share faces
+        int nrmacroel = 0;
+        for(int i=0;i<tentel.Size();i++)
+        {
+            int j=0;
+            while(wavespeed[tentel[i]]!=wavespeed[tentel[j]]) j++;
+            if(j==i)
+                macroel[tentel[i]] = nrmacroel++;
+            else
+                macroel[tentel[i]] = macroel[tentel[j]];
+        }
+        return nrmacroel;
+    }
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    template<int D>
+    void GppwTents<D> :: EvolveTents(double dt)
+    {
+        //int nthreads = (task_manager) ? task_manager->GetNumThreads() : 1;
+        LocalHeap lh(1000 * 1000 * 100, "trefftz tents", 1);
+
+        const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
+        const int nsimd = SIMD<double>::Size();
+        SIMD_IntegrationRule sir(eltyp, order*2);
+        const int snip = sir.Size()*nsimd;
+
+        const int ndomains = ma->GetNDomains();
+        double max_wavespeed = wavespeed[0];
+        for(double c : wavespeed) max_wavespeed = max(c,max_wavespeed);
+
+        TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
+        tps.PitchTents(dt, max_wavespeed+5,lh); // adt = time slab height, wavespeed
+
+        cout << "solving " << tps.tents.Size() << " tents ";
+
+        RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
+            LocalHeap slh = lh.Split();  // split to threads
+            Tent* tent = tps.tents[tentnr];
+
+            Vec<D+1> center;
+            center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
+            center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
+
+            TrefftzGppwFE<D> tel(gamma, order, center, TentAdiam(tent));
+            int nbasis = tel.GetNDof();
+
+            FlatMatrix<> elmat(nbasis,slh);
+            FlatVector<> elvec(nbasis,slh);
+            elmat = 0; elvec = 0;
+
+            Array<FlatMatrix<SIMD<double>>> topdshapes(tent->els.Size());
+            for(auto& tds : topdshapes)
+                tds.AssignMemory((D+1)*nbasis, sir.Size(), slh);
+
+            // Integrate top and bottom space-like tent faces
+            for(int elnr=0;elnr<tent->els.Size();elnr++)
+            {
+                this->CalcTentEl(tent->els[elnr],tent,tel,sir,slh,elmat,elvec,topdshapes[elnr]);
+            }
+
+            for(auto fnr : tent->edges)
+            {
+                Array<int> elnums;
+                ma->GetFacetElements(fnr, elnums);
+                Array<int> selnums;
+                //ma->GetFacetSurfaceElements (fnr, selnums);
+                if(elnums.Size()==1)
+                switch (D)
+                {
+                    case 1: selnums = ma->GetVertexSurfaceElements (fnr); break;
+                    case 2: ma->GetEdgeSurfaceElements (fnr, selnums); break;
+                    case 3:
+                            {
+                                    for(int i : Range(ma->GetNSE()))
+                                    {
+                                        auto sel = ElementId(BND,i);
+                                        auto fnums = ma->GetElFacets(sel);
+                                        if(fnr == fnums[0])
+                                        {selnums.Append(i); break;}
+                                    }
+                            }
+                }
+
+                // Integrate boundary tent
+                if(elnums.Size()==1 && selnums.Size()==1)
+                {
+                    this->CalcTentBndEl(selnums[0],tent,tel,sir,slh,elmat,elvec);
+                }
+            }
+
+            // integrate volume of tent here
+            for(int elnr=0;elnr<tent->els.Size();elnr++)
+            {
+                /// Integration over bot and top volume of tent element
+                for(int part=-1;part==1;part+=2)
+                {
+                    HeapReset hr(slh);
+                    const ELEMENT_TYPE eltyp = (D==2) ? ET_TET : ET_TRIG;
+                    SIMD_IntegrationRule vsir(eltyp, order*2);
+                    const int vsnip = sir.Size()*nsimd;
+                    int nbasis = tel.GetNDof();
+
+                    Mat<D+1,D+1> map;
+                    Vec<D+1> shift;
+                    shift.Range(0,D) = ma->GetPoint<D>(tent->vertex);
+                    shift[D] = tent->nbtime[elnr];
+                    map = TentFaceVerts(tent, elnr, part);
+                    for(int i=0;i<D;i++)
+                        map.Col(i) -= shift;
+                    double area=Det(map)/factorial(D+1);
+
+                    SIMD_MappedIntegrationRule<D+1,D+1> smir(sir,ma->GetTrafo(elnr,slh),-1,slh);
+                    for(int imip=0;imip<vsir.Size();imip++)
+                    {
+                        smir[imip].Point() = map * vsir[imip].operator Vec<D,SIMD<double>>() + shift;
+                    }
+
+                    FlatMatrix<SIMD<double>> simdddshapes((D+1)*nbasis,sir.Size(),slh);
+                    tel.CalcDDSpecialShape(smir,simdddshapes);
+
+                    FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
+                    tel.CalcDShape(smir,simddshapes);
+
+                    // TODO correct reshape before addabt i guess, but finish for today, time to go climbing
+                    for(int imip=0;imip<sir.Size();imip++)
+                        simdshapes.Col(imip) *= area*sir[imip].Weight();
+                    AddABt(simddshapes,simdddshapes,elmat);
+                }
+            }
+
+            // integrate volume of tent here
+
+            // solve
+            LapackSolve(elmat,elvec);
+            FlatVector<> sol(ndomains*nbasis, &elvec(0));
+
+            // eval solution on top of tent
+            for(int elnr=0;elnr<tent->els.Size();elnr++)
+            {
+                tel.SetWavespeed(wavespeed[tent->els[elnr]]);
+                this->CalcTentElEval(tent->els[elnr], tent, tel, sir, slh, sol, topdshapes[elnr]);
+            }
+        }); // end loop over tents
+        cout<<"solved from " << timeshift;
+        timeshift += dt;
+        cout<<" to " << timeshift<<endl;
+    }
+
 }
 
 
@@ -721,20 +875,23 @@ template class WaveTents<1>;
 template class WaveTents<2>;
 template class WaveTents<3>;
 
+template class GppwTents<1>;
+template class GppwTents<2>;
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 #ifdef NGS_PYTHON
 #include <python_ngstd.hpp>
 
-    template<int D>
+    template<class T, int D>
     void DeclareETClass(py::module &m, std::string typestr)
 {
-    using PyETclass = WaveTents<D>;
-    std::string pyclass_name = std::string("WaveTents") + typestr;
+    using PyETclass = T;
+    std::string pyclass_name = typestr;
     //py::class_<PyETclass,shared_ptr<PyETclass> >(m, "EvolveTent")
     py::class_<PyETclass, shared_ptr<PyETclass>, TrefftzTents>(m, pyclass_name.c_str())//, py::buffer_protocol(), py::dynamic_attr())
-        .def(py::init<>())
+        //.def(py::init<>())
         .def("EvolveTents", &PyETclass::EvolveTents)
         .def("MakeWavefront", &PyETclass::MakeWavefront)
         .def("SetWavefront", &PyETclass::SetWavefront)
@@ -754,9 +911,12 @@ void ExportEvolveTent(py::module m)
 {
     py::class_<TrefftzTents, shared_ptr<TrefftzTents>>(m, "TrefftzTents");//, py::buffer_protocol(), py::dynamic_attr())
 
-    DeclareETClass<1>(m, "1");
-    DeclareETClass<2>(m, "2");
-    DeclareETClass<3>(m, "3");
+    DeclareETClass<WaveTents<1>, 1>(m, "WaveTents1");
+    DeclareETClass<WaveTents<2>, 2>(m, "WaveTents2");
+    DeclareETClass<WaveTents<3>, 3>(m, "WaveTents3");
+
+    DeclareETClass<GppwTents<1>, 1>(m, "GppwTents1");
+    DeclareETClass<GppwTents<2>, 2>(m, "GppwTents2");
 
     m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, shared_ptr<CoefficientFunction> bddatum) -> shared_ptr<TrefftzTents>
           {
