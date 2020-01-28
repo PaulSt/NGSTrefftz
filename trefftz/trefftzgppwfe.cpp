@@ -339,6 +339,54 @@ namespace ngfem
     {cout << "dim not implemented" << endl;}
 
 
+    template<>
+    void TrefftzGppwFE<1> :: CalcDDSpecialShape (const SIMD_BaseMappedIntegrationRule & smir,
+                                         BareSliceMatrix<SIMD<double>> dshape) const
+    {
+        for (int imip = 0; imip < smir.Size(); imip++)
+        {
+            Vec<2,SIMD<double>> cpoint = smir[imip].GetPoint();
+            cpoint -= elcenter; cpoint *= (2.0/elsize);
+            Array<double> gam(gamma);
+            gam[0] += elcenter[0];
+            gam[1] *= (elsize/2.0);
+
+            // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+            STACK_ARRAY(SIMD<double>, mem, 2*(ord+1)+2); mem[0]=0;mem[1]=0;
+            Vec<2,SIMD<double>*> polxt;
+            for(size_t d=0;d<2;d++)
+            {
+                polxt[d] = &mem[d*(ord+1)+2];
+                Monomial (ord, cpoint[d], polxt[d]);
+            }
+
+            for(int d=0;d<2;d++)
+            {
+                Vector<SIMD<double>> pol(npoly);
+                for (size_t i = 0, ii = 0; i <=ord; i++)
+                    for (size_t j = 0; j <= ord-i; j++)
+                        pol[ii++] = 
+                            (d==0?i*j:(d==1?i*(i-1):0)) * polxt[0][i-1-(d==1)] * polxt[1][j-1+(d==1)]
+                            + (d==0?j*i:(d==1?j*(j-1):0)) * polxt[0][i-1+(d==1)] * polxt[1][j-1-(d==1)] * (d==1?gamma[0]:1);
+
+
+                const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gam);
+                for (int i=0; i<this->ndof; ++i)
+                {
+                    dshape(i*2+d,imip) = 0.0;
+                    for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                        dshape(i*2+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (2.0/elsize);
+                }
+            }
+        }
+    }
+
+
+    template<>
+    void TrefftzGppwFE<2> :: CalcDDSpecialShape (const SIMD_BaseMappedIntegrationRule & smir,
+                                         BareSliceMatrix<SIMD<double>> dshape) const
+    {cout << "dim not implemented" << endl;}
+
 
     template class TrefftzGppwFE<1>;
     template class TrefftzGppwFE<2>;
