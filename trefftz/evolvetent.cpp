@@ -126,8 +126,6 @@ namespace ngcomp
             {
                 tel.SetWavespeed(wavespeed[tent->els[elnr]]);
                 int eli = ndomains>1 ? macroel[tent->els[elnr]] : 0;
-                SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
-                SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
                 CalcTentElEval(tent->els[elnr], tent, tel, sir, slh, sol.Range(eli*nbasis,(eli+1)*nbasis), topdshapes[elnr]);
             }
         }); // end loop over tents
@@ -236,7 +234,6 @@ namespace ngcomp
     void WaveTents<D> :: CalcTentBndEl(int surfel, Tent* tent, ScalarMappedElement<D+1> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
     {
         HeapReset hr(slh);
-        const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         double wavespeed = tel.GetWavespeed();
         int nbasis = tel.GetNDof();
         int nsimd = SIMD<double>::Size();
