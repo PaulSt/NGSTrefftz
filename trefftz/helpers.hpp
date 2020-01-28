@@ -92,14 +92,6 @@ namespace ngfem
   {
     return (T (0) <= val) - (val < T (0));
   }
-
-  // template <int D>
-  // double Dot(Vec<D> a, Vec<D> b){
-  // double d = 0;
-  // for(int i=0;i<D;i++)
-  // d += a[i]*b[i];
-  // return d;
-  //}
 }
 
 #endif

@@ -134,10 +134,10 @@ namespace ngfem
     // compute dshape, matrix: ndof x spacedim, Use CalcMappedDShape only for
     // consistancy, can use CalcDShape with BaseMappedIR
     HD NGS_DLL_HEADER virtual void
-    CalcMappedDShape (const MappedIntegrationPoint<D, D> &mip,
+    CalcMappedDShape (const BaseMappedIntegrationPoint &mip,
                       BareSliceMatrix<> dshape) const;
     HD NGS_DLL_HEADER virtual void
-    CalcMappedDShape (const MappedIntegrationRule<D, D> &mir,
+    CalcMappedDShape (const BaseMappedIntegrationRule &mir,
                       SliceMatrix<> dshapes) const;
 
     // Evaluates gradient in integration point ip.

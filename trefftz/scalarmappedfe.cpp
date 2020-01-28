@@ -167,7 +167,7 @@ namespace ngfem
 
   template <int D>
   void ScalarMappedElement<D>::CalcMappedDShape (
-      const MappedIntegrationPoint<D, D> &mip, BareSliceMatrix<> dshape) const
+      const BaseMappedIntegrationPoint &mip, BareSliceMatrix<> dshape) const
   {
     // no mapping - no inner derivative
     CalcDShape (mip, dshape);
@@ -175,7 +175,7 @@ namespace ngfem
 
   template <int D>
   void ScalarMappedElement<D>::CalcMappedDShape (
-      const MappedIntegrationRule<D, D> &mir, SliceMatrix<> dshapes) const
+      const BaseMappedIntegrationRule &mir, SliceMatrix<> dshapes) const
   {
     for (int i = 0; i < mir.Size (); i++)
       CalcMappedDShape (mir[i], dshapes.Cols (i * D, (i + 1) * D));
