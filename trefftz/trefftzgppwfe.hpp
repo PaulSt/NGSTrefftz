@@ -29,10 +29,11 @@ namespace ngfem
           elcenter (aelcenter), elsize (aelsize), eltype (aeltype),
           basistype (abasistype), gamma (agamma)
     {
-      ;
+      while (gamma.Size () <= ord)
+        gamma.Append (0.0);
     }
 
-    float GetWavespeed () const { return gamma[0]; }
+    double GetWavespeed () const { return 1.0 / sqrt (gamma[0]); }
     void SetWavespeed (double wavespeed) { gamma[0] = wavespeed; }
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
