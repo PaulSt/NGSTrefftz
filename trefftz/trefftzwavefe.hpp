@@ -23,7 +23,7 @@ namespace ngfem
             // TrefftzWaveFE();
             TrefftzWaveFE(int aord = 1, float ac = 1.0, Vec<D+1> aelcenter = 0, double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0);
 
-            float GetWavespeed() const { return c; }
+            double GetWavespeed() const { return c; }
             void SetWavespeed(double wavespeed) {c = wavespeed;}
 
             //TrefftzWaveFE<D> * SetCenter(Vec<D> acenter) {elcenter = acenter; return this;}
