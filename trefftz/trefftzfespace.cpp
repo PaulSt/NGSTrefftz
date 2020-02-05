@@ -79,7 +79,7 @@ namespace ngcomp
     {
         FESpace::Update(lh);
         //cout << "update: order = " << order << " fullD: " << fullD << " ndof = " <<  ndof << " local_ndof:" << local_ndof << endl <<
-            //"================================================" << endl ;
+        //"================================================" << endl ;
     }
 
     void TrefftzFESpace :: GetDofNrs (ElementId ei, Array<DofId> & dnums) const
