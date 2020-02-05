@@ -17,9 +17,6 @@ namespace ngfem
         Vec<2, SIMD<double>> cpoint = smir[imip].GetPoint ();
         cpoint -= elcenter;
         cpoint *= (2.0 / elsize);
-        Array<double> gam (gamma);
-        gam[0] += elcenter[0];
-        gam[1] *= (elsize / 2.0);
 
         // calc 1 dimensional monomial basis
         STACK_ARRAY (SIMD<double>, mem, 2 * (ord + 1));
@@ -36,7 +33,7 @@ namespace ngfem
             pol[ii++] = polxt[0][i] * polxt[1][j];
         // TB*monomials for trefftz shape fcts
         const CSR *localmat
-            = TrefftzGppwBasis<1>::getInstance ().TB (ord, gam);
+            = TrefftzGppwBasis<1>::getInstance ().TB (ord, gamma);
         for (int i = 0; i < this->ndof; ++i)
           {
             shape (i, imip) = 0.0;
@@ -55,9 +52,6 @@ namespace ngfem
         Vec<3, SIMD<double>> cpoint = smir[imip].GetPoint ();
         cpoint -= elcenter;
         cpoint *= (2.0 / elsize);
-        Array<double> gam (gamma);
-        gam[0] += elcenter[0];
-        gam[1] *= (elsize / 2.0);
 
         // calc 1 dimensional monomial basis
         STACK_ARRAY (SIMD<double>, mem, 3 * (ord + 1));
@@ -75,7 +69,7 @@ namespace ngfem
               pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
         // TB*monomials for trefftz shape fcts
         const CSR *localmat
-            = TrefftzGppwBasis<2>::getInstance ().TB (ord, gam);
+            = TrefftzGppwBasis<2>::getInstance ().TB (ord, gamma);
         for (int i = 0; i < this->ndof; ++i)
           {
             shape (i, imip) = 0.0;
@@ -102,9 +96,6 @@ namespace ngfem
         Vec<2, SIMD<double>> cpoint = smir[imip].GetPoint ();
         cpoint -= elcenter;
         cpoint *= (2.0 / elsize);
-        Array<double> gam (gamma);
-        gam[0] += elcenter[0];
-        gam[1] *= (elsize / 2.0);
 
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY (SIMD<double>, mem, 2 * (ord + 1) + 1);
@@ -125,7 +116,7 @@ namespace ngfem
                             * polxt[0][i - (d == 0)] * polxt[1][j - (d == 1)];
 
             const CSR *localmat
-                = TrefftzGppwBasis<1>::getInstance ().TB (ord, gam);
+                = TrefftzGppwBasis<1>::getInstance ().TB (ord, gamma);
             for (int i = 0; i < this->ndof; ++i)
               {
                 dshape (i * 2 + d, imip) = 0.0;
@@ -148,9 +139,6 @@ namespace ngfem
         Vec<3, SIMD<double>> cpoint = smir[imip].GetPoint ();
         cpoint -= elcenter;
         cpoint *= (2.0 / elsize);
-        Array<double> gam (gamma);
-        gam[0] += elcenter[0];
-        gam[1] *= (elsize / 2.0);
 
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY (SIMD<double>, mem, 3 * (ord + 1) + 1);
@@ -173,7 +161,7 @@ namespace ngfem
                               * polxt[2][k - (d == 2)];
 
             const CSR *localmat
-                = TrefftzGppwBasis<2>::getInstance ().TB (ord, gam);
+                = TrefftzGppwBasis<2>::getInstance ().TB (ord, gamma);
             for (int i = 0; i < this->ndof; ++i)
               {
                 dshape (i * 3 + d, imip) = 0.0;
@@ -203,9 +191,6 @@ namespace ngfem
     Vec<2> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
     cpoint *= (2.0 / elsize);
-    Array<double> gam (gamma);
-    gam[0] += elcenter[0];
-    gam[1] *= (elsize / 2.0);
 
     // calc 1 dimensional monomial basis
     STACK_ARRAY (double, mem, 2 * (ord + 1));
@@ -221,7 +206,7 @@ namespace ngfem
       for (size_t j = 0; j <= ord - i; j++)
         pol[ii++] = polxt[0][i] * polxt[1][j];
     // TB*monomials for trefftz shape fcts
-    const CSR *localmat = TrefftzGppwBasis<1>::getInstance ().TB (ord, gam);
+    const CSR *localmat = TrefftzGppwBasis<1>::getInstance ().TB (ord, gamma);
     for (int i = 0; i < this->ndof; ++i)
       {
         shape (i) = 0.0;
@@ -237,9 +222,6 @@ namespace ngfem
     Vec<3> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
     cpoint *= (2.0 / elsize);
-    Array<double> gam (gamma);
-    gam[0] += elcenter[0] + elcenter[1];
-    gam[1] *= (elsize / 2.0);
 
     // calc 1 dimensional monomial basis
     STACK_ARRAY (double, mem, 3 * (ord + 1));
@@ -256,7 +238,7 @@ namespace ngfem
         for (size_t k = 0; k <= ord - i - j; k++)
           pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
     // TB*monomials for trefftz shape fcts
-    const CSR *localmat = TrefftzGppwBasis<2>::getInstance ().TB (ord, gam);
+    const CSR *localmat = TrefftzGppwBasis<2>::getInstance ().TB (ord, gamma);
     for (int i = 0; i < this->ndof; ++i)
       {
         shape (i) = 0.0;
@@ -279,9 +261,6 @@ namespace ngfem
     Vec<2> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
     cpoint *= (2.0 / elsize);
-    Array<double> gam (gamma);
-    gam[0] += elcenter[0];
-    gam[1] *= (elsize / 2.0);
 
     // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
     STACK_ARRAY (double, mem2, 2 * (ord + 1) + 1);
@@ -303,7 +282,7 @@ namespace ngfem
                         * polxt2[0][i - (d == 0)] * polxt2[1][j - (d == 1)];
 
         const CSR *localmat
-            = TrefftzGppwBasis<1>::getInstance ().TB (ord, gam);
+            = TrefftzGppwBasis<1>::getInstance ().TB (ord, gamma);
         for (int i = 0; i < this->ndof; ++i)
           {
             dshape (i, d) = 0.0;
@@ -321,9 +300,6 @@ namespace ngfem
     Vec<3> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
     cpoint *= (2.0 / elsize);
-    Array<double> gam (gamma);
-    gam[0] += elcenter[0] + elcenter[1];
-    gam[1] *= (elsize / 2.0);
 
     // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
     STACK_ARRAY (double, mem, 3 * (ord + 1) + 1);
@@ -346,7 +322,7 @@ namespace ngfem
                           * polxt[2][k - (d == 2)];
 
         const CSR *localmat
-            = TrefftzGppwBasis<2>::getInstance ().TB (ord, gam);
+            = TrefftzGppwBasis<2>::getInstance ().TB (ord, gamma);
         for (int i = 0; i < this->ndof; ++i)
           {
             dshape (i, d) = 0.0;
@@ -374,9 +350,6 @@ namespace ngfem
         Vec<2, SIMD<double>> cpoint = smir[imip].GetPoint ();
         cpoint -= elcenter;
         cpoint *= (2.0 / elsize);
-        Array<double> gam (gamma);
-        gam[0] += elcenter[0];
-        gam[1] *= (elsize / 2.0);
 
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY (SIMD<double>, mem, 2 * (ord + 1) + 2);
@@ -430,7 +403,7 @@ namespace ngfem
 
   template <int D>
   const CSR *
-  TrefftzGppwBasis<D>::TB (int ord, const Array<double> &gamma, int basistype)
+  TrefftzGppwBasis<D>::TB (int ord, FlatArray<double> gamma, int basistype)
   {
     {
       lock_guard<mutex> lock (gentrefftzbasis);
