@@ -17,10 +17,10 @@ namespace ngfem
             double elsize;
             ELEMENT_TYPE eltype;
             int basistype;
-            const Array<double> &gamma;
+            Array<double> gamma;
 
         public:
-            TrefftzGppwFE(const Array<double> &agamma, int aord = 1, Vec<D+1> aelcenter = 0, double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0)
+            TrefftzGppwFE(FlatArray<double> agamma, int aord = 1, Vec<D+1> aelcenter = 0, double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0)
             : ScalarMappedElement<D+1>(BinCoeff(D + aord, aord) + BinCoeff(D + aord-1, aord-1), aord),
             ord(aord),
             npoly(BinCoeff(D+1 + ord, ord)),
@@ -115,7 +115,7 @@ namespace ngfem
                 return ginstance;
             }
 
-            const CSR* TB(int ord, const Array<double> &gamma, int basistype = 0);
+            const CSR* TB(int ord, FlatArray<double> gamma, int basistype = 0);
 
         private:
             TrefftzGppwBasis()= default;

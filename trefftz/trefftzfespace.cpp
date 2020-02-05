@@ -29,9 +29,6 @@ namespace ngcomp
         basistype = flags.GetNumFlag ("basistype", 0);
         useshift = flags.GetNumFlag("useshift",1);
 
-        //cout << "gamma" << gamma <<" size " << gamma.Size() << endl;
-        if(gamma.Size()!=0) while(gamma.Size()<order) gamma.Append(0.0);
-
         local_ndof = (BinCoeff(fullD-1 + order, order) + BinCoeff(fullD-1 + order-1, order-1));
         nel = ma->GetNE();
         ndof = local_ndof * nel;
@@ -113,7 +110,12 @@ namespace ngcomp
             case ET_TRIG:
                 {
                     if(gamma.Size()!=0)
-                        return *(new (alloc) TrefftzGppwFE<1>(gamma, order,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
+                    {
+                        Array<double> newgamma(gamma);
+                        newgamma[0] += ElCenter<1>(ei)[0];
+                        newgamma[1] *= Adiam<1>(ei)/2.0;
+                        return *(new (alloc) TrefftzGppwFE<1>(newgamma, order,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
+                    }
                     else
                         return *(new (alloc) TrefftzWaveFE<1>(order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
                     break;
