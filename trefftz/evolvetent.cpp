@@ -738,22 +738,18 @@ namespace ngcomp
     template<int D>
     void GppwTents<D> :: EvolveTents(double dt)
     {
-        //int nthreads = (task_manager) ? task_manager->GetNumThreads() : 1;
         LocalHeap lh(1000 * 1000 * 100, "trefftz tents", 1);
 
+        shared_ptr<MeshAccess> ma = this->ma;
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         const int nsimd = SIMD<double>::Size();
-        SIMD_IntegrationRule sir(eltyp, order*2);
+        SIMD_IntegrationRule sir(eltyp, this->order*2);
         const int snip = sir.Size()*nsimd;
 
-        const int ndomains = ma->GetNDomains();
-        double max_wavespeed = wavespeed[0];
-        for(double c : wavespeed) max_wavespeed = max(c,max_wavespeed);
+        TentPitchedSlab<D> tps = TentPitchedSlab<D>(this->ma);      // collection of tents in timeslab
+        tps.PitchTents(dt, 5,lh); // adt = time slab height, wavespeed
 
-        TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
-        tps.PitchTents(dt, max_wavespeed+5,lh); // adt = time slab height, wavespeed
-
-        cout << "solving " << tps.tents.Size() << " tents ";
+        cout << "solving gppw " << tps.tents.Size() << " tents " << endl;
 
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             LocalHeap slh = lh.Split();  // split to threads
@@ -762,8 +758,23 @@ namespace ngcomp
             Vec<D+1> center;
             center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
             center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
+            double tentsize = TentAdiam(tent);
 
-            TrefftzGppwFE<D> tel(gamma, order, center, TentAdiam(tent));
+                    ElementId ei = ElementId(0);
+                    ELEMENT_TYPE eltype = ma->GetElType(ei);
+                    IntegrationRule ir (eltype, 0);
+                    ElementTransformation & trafo = ma->GetTrafo (ei, lh);
+                    MappedIntegrationPoint<D,D> mip(ir[0], trafo);
+
+            mip.Point() = center.Range(0,D);
+            Array<double> newgamma(gamma);
+
+            shared_ptr<CoefficientFunction> wavespeedcf = this->wavespeedcf;
+            //newgamma[0] = 1+center[0]; //wavespeedcf->Evaluate(mip);
+            newgamma[0] = pow(wavespeedcf->Evaluate(mip),-2);
+            newgamma[1] *= tentsize/2.0;
+
+            TrefftzGppwFE<D> tel(newgamma, this->order, center, tentsize);
             int nbasis = tel.GetNDof();
 
             FlatMatrix<> elmat(nbasis,slh);
@@ -810,62 +821,80 @@ namespace ngcomp
                 }
             }
 
-            // integrate volume of tent here
+            //integrate volume of tent here
             for(int elnr=0;elnr<tent->els.Size();elnr++)
             {
                 /// Integration over bot and top volume of tent element
-                for(int part=-1;part==1;part+=2)
+                for(int part=-1;part<=1;part+=2)
                 {
+                    if(tent->nbtime[elnr]==(part<0?tent->tbot:tent->ttop)) continue;
+                    //cout << "part " << part << " times " << tent->ttop << " " << tent->tbot << " " << tent->nbtime[elnr] << endl;
                     HeapReset hr(slh);
                     const ELEMENT_TYPE eltyp = (D==2) ? ET_TET : ET_TRIG;
-                    SIMD_IntegrationRule vsir(eltyp, order*2);
-                    const int vsnip = sir.Size()*nsimd;
+                    SIMD_IntegrationRule vsir(eltyp, this->order*2);
                     int nbasis = tel.GetNDof();
 
-                    Mat<D+1,D+1> map;
                     Vec<D+1> shift;
                     shift.Range(0,D) = ma->GetPoint<D>(tent->vertex);
                     shift[D] = tent->nbtime[elnr];
-                    map = TentFaceVerts(tent, elnr, part);
-                    for(int i=0;i<D;i++)
-                        map.Col(i) -= shift;
-                    double area=Det(map)/factorial(D+1);
+                    //shift[D] = part==1 ? tent->nbtime[elnr] : tent->tbot;
+                    Mat<D+1,D+1> map = TentFaceVerts(tent, tent->els[elnr], part);
+                    //cout << "tentnr " << tentnr << " tentel " << elnr << " part " << part << endl;
+                    //cout << "mat " << endl << map << endl << "shift " << endl << shift << endl;
+                    //cout << "tent " << endl << *tent << endl;
 
-                    SIMD_MappedIntegrationRule<D+1,D+1> smir(sir,ma->GetTrafo(elnr,slh),-1,slh);
+            //INT<D+1> vnr = ma->GetElVertices(ElementId(VOL,elnr));
+            //for(int ivert = 0;ivert<vnr.Size();ivert++)
+            //{
+                //map.Col(ivert).Range(0,D) = ma->GetPoint<D>(vnr[ivert]);
+                //if(vnr[ivert] == tent->vertex) map(D,ivert) =  part==1 ? tent->ttop : tent->nbtime[elnr];
+                //else for (int k = 0; k < tent->nbv.Size(); k++)
+                    //if(vnr[ivert] == tent->nbv[k]) map(D,ivert) = tent->nbtime[k];
+            //}
+
+                    for(int i=0;i<D+1;i++)
+                        map.Col(i) -= shift;
+                    //cout << "real map " << endl << map << endl;
+                    double vol = abs(Det(map)/factorial(D+1));
+                    //cout << vol << endl;
+                    //if(vol<10e-10) continue;
+
+                    SIMD_MappedIntegrationRule<D+1,D+1> smir(vsir,ma->GetTrafo(tent->els[elnr],slh),-1,slh);
                     for(int imip=0;imip<vsir.Size();imip++)
                     {
-                        smir[imip].Point() = map * vsir[imip].operator Vec<D,SIMD<double>>() + shift;
+                        smir[imip].Point() = map * vsir[imip].operator Vec<D+1,SIMD<double>>() + shift;
+                        //cout << "point" << endl;
+                        //cout << smir[imip].Point() << endl;
+                        //cout << vsir[imip].operator Vec<D+1,SIMD<double>>()<<endl;
                     }
 
-                    FlatMatrix<SIMD<double>> simdddshapes((D+1)*nbasis,sir.Size(),slh);
+                    FlatMatrix<SIMD<double>> simdddshapes((D+1)*nbasis,vsir.Size(),slh);
                     tel.CalcDDSpecialShape(smir,simdddshapes);
+                    FlatMatrix<SIMD<double>> simdddshapes2(nbasis,(D+1)*vsir.Size(),&simdddshapes(0,0));
 
-                    FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
+                    FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,vsir.Size(),slh);
                     tel.CalcDShape(smir,simddshapes);
+                    for(int imip=0;imip<vsir.Size();imip++)
+                        simddshapes.Col(imip) *= part*vol*vsir[imip].Weight();
+                    FlatMatrix<SIMD<double>> simddshapes2(nbasis,(D+1)*vsir.Size(),&simddshapes(0,0));
 
-                    // TODO correct reshape before addabt i guess, but finish for today, time to go climbing
-                    for(int imip=0;imip<sir.Size();imip++)
-                        simdshapes.Col(imip) *= area*sir[imip].Weight();
-                    AddABt(simddshapes,simdddshapes,elmat);
+                    AddABt(simddshapes2,simdddshapes2,elmat);
                 }
             }
 
-            // integrate volume of tent here
-
             // solve
             LapackSolve(elmat,elvec);
-            FlatVector<> sol(ndomains*nbasis, &elvec(0));
+            FlatVector<> sol(nbasis, &elvec(0));
 
             // eval solution on top of tent
             for(int elnr=0;elnr<tent->els.Size();elnr++)
             {
-                tel.SetWavespeed(wavespeed[tent->els[elnr]]);
                 this->CalcTentElEval(tent->els[elnr], tent, tel, sir, slh, sol, topdshapes[elnr]);
             }
         }); // end loop over tents
-        cout<<"solved from " << timeshift;
-        timeshift += dt;
-        cout<<" to " << timeshift<<endl;
+        cout<<"solved from " << this->timeshift;
+        this->timeshift += dt;
+        cout<<" to " << this->timeshift<<endl;
     }
 
 }
@@ -949,6 +978,21 @@ void ExportEvolveTent(py::module m)
                   tr = make_shared<WaveTents<3>>(order,ma,wavespeedcf,bddatum);
               return tr;
               //return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma, wavespeed, bddatum));
+
+          });
+
+    m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> wavespeedcf, shared_ptr<CoefficientFunction> bddatum, Vector<double> agamma) -> shared_ptr<GppwTents<1>>
+          {
+              Array<double> gamma;
+              for(auto a : agamma) gamma.Append(a);
+              return make_shared<GppwTents<1>>(order,ma,wavespeedcf,bddatum,gamma);
+              //shared_ptr<TrefftzTents> tr;
+              //int D = ma->GetDimension();
+              //if(D==1)
+                  //tr = make_shared<GppwTents<1>>(order,ma,wavespeedcf,bddatum,gamma);
+              //else if(D==2)
+                  //tr = make_shared<GppwTents<2>>(order,ma,wavespeedcf,bddatum,gamma);
+              //return tr;
 
           });
 }

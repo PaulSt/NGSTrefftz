@@ -123,30 +123,30 @@ namespace ngcomp
     class GppwTents : public WaveTents<D>
     {
         private:
-            int order;
-            shared_ptr<MeshAccess> ma;
-            Vector<> wavespeed;
-            shared_ptr<CoefficientFunction> wavespeedcf;
-            Matrix<> wavefront;
-            shared_ptr<CoefficientFunction> bddatum;
-            double timeshift = 0;
-            const Array<double> &gamma;
+            //int order;
+            //shared_ptr<MeshAccess> ma;
+            //Vector<> wavespeed;
+            //shared_ptr<CoefficientFunction> wavespeedcf;
+            //Matrix<> wavefront;
+            //shared_ptr<CoefficientFunction> bddatum;
+            //double timeshift = 0;
+            Array<double> gamma;
 
-    constexpr int factorial(int n)
-    {
-        return n>1 ? n * factorial(n-1) : 1;
-    }
-
-        using WaveTents<D>::TentAdiam;
-        using WaveTents<D>::LapackSolve;
-        using WaveTents<D>::TentFaceVerts;
+            using WaveTents<D>::TentAdiam;
+            using WaveTents<D>::LapackSolve;
+            using WaveTents<D>::TentFaceVerts;
 
         public:
-            GppwTents( int aorder, shared_ptr<MeshAccess> ama, shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> abddatum, const Array<double> &agamma)
-                : order(aorder), ma(ama), bddatum(abddatum), wavespeedcf(awavespeedcf), gamma(agamma)
+            GppwTents( int aorder, shared_ptr<MeshAccess> ama, shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> abddatum, FlatArray<double> agamma)
+                : WaveTents<D>(aorder,ama,awavespeedcf,abddatum), gamma(agamma)
             {;}
 
             void EvolveTents(double dt);
+
+            constexpr int factorial(int n)
+            {
+                return n>1 ? n * factorial(n-1) : 1;
+            }
     };
 
 }
