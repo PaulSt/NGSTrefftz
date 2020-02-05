@@ -428,13 +428,13 @@ namespace ngcomp
 
     FlatMatrix<> *bbmat[2];
 
-    tel.SetWavespeed (wavespeed[elnums[0]]);
+    tel.SetWavespeed (this->wavespeed[elnums[0]]);
     FlatMatrix<SIMD<double>> simddshapes1 ((D + 1) * nbasis, sir.Size (), slh);
     tel.CalcDShape (smir, simddshapes1);
     bbmat[0]
         = new FlatMatrix<> (nbasis, (D + 1) * snip, &simddshapes1 (0, 0)[0]);
 
-    tel.SetWavespeed (wavespeed[elnums[1]]);
+    tel.SetWavespeed (this->wavespeed[elnums[1]]);
     FlatMatrix<SIMD<double>> simddshapes2 ((D + 1) * nbasis, sir.Size (), slh);
     tel.CalcDShape (smir, simddshapes2);
     bbmat[1]
@@ -1110,25 +1110,25 @@ void ExportEvolveTent (py::module m)
   DeclareETClass<GppwTents<1>, 1> (m, "GppwTents1");
   DeclareETClass<GppwTents<2>, 2> (m, "GppwTents2");
 
-  m.def ("WaveTents",
-         [] (int order, shared_ptr<MeshAccess> ma, double wavespeed,
-             shared_ptr<CoefficientFunction> bddatum)
-             -> shared_ptr<TrefftzTents> {
-           // TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed,
-           // bddatum);
-           shared_ptr<TrefftzTents> tr;
-           int D = ma->GetDimension ();
-           // return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
-           if (D == 1)
-             tr = make_shared<WaveTents<1>> (order, ma, wavespeed, bddatum);
-           else if (D == 2)
-             tr = make_shared<WaveTents<2>> (order, ma, wavespeed, bddatum);
-           else if (D == 3)
-             tr = make_shared<WaveTents<3>> (order, ma, wavespeed, bddatum);
-           return tr;
-           // return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma,
-           // wavespeed, bddatum));
-         });
+  // m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, double
+  // wavespeed, shared_ptr<CoefficientFunction> bddatum) ->
+  // shared_ptr<TrefftzTents>
+  //{
+  ////TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
+  // shared_ptr<TrefftzTents> tr;
+  // int D = ma->GetDimension();
+  ////return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
+  // if(D==1)
+  // tr = make_shared<WaveTents<1>>(order,ma,wavespeed,bddatum);
+  // else if(D==2)
+  // tr = make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
+  // else if(D==3)
+  // tr = make_shared<WaveTents<3>>(order,ma,wavespeed,bddatum);
+  // return tr;
+  ////return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma, wavespeed,
+  ///bddatum));
+
+  //});
 
   m.def ("WaveTents",
          [] (int order, shared_ptr<MeshAccess> ma,

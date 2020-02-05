@@ -20,7 +20,7 @@ namespace ngcomp
 
   template <int D> class WaveTents : public TrefftzTents
   {
-  private:
+  protected:
     int order;
     shared_ptr<MeshAccess> ma;
     Vector<> wavespeed;
@@ -29,7 +29,6 @@ namespace ngcomp
     shared_ptr<CoefficientFunction> bddatum;
     double timeshift = 0;
 
-  protected:
     void
     CalcTentEl (int elnr, Tent *tent, ScalarMappedElement<D + 1> &tel,
                 SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat,
@@ -85,16 +84,16 @@ namespace ngcomp
         : order (aorder), ma (ama), bddatum (abddatum),
           wavespeedcf (awavespeedcf)
     {
-      wavespeed.SetSize (ma->GetNE ());
+      wavespeed.SetSize (ama->GetNE ());
       LocalHeap lh (1000 * 1000);
-      for (Ngs_Element el : ma->Elements (VOL))
+      for (Ngs_Element el : ama->Elements (VOL))
         {
           ElementId ei = ElementId (el);
-          ELEMENT_TYPE eltype = ma->GetElType (ei);
+          ELEMENT_TYPE eltype = ama->GetElType (ei);
           IntegrationRule ir (eltype, 0);
-          ElementTransformation &trafo = ma->GetTrafo (ei, lh);
+          ElementTransformation &trafo = ama->GetTrafo (ei, lh);
           MappedIntegrationPoint<D, D> mip (ir[0], trafo);
-          wavespeed[el.Nr ()] = wavespeedcf->Evaluate (mip);
+          wavespeed[el.Nr ()] = awavespeedcf->Evaluate (mip);
         }
     }
 
