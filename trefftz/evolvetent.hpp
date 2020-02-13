@@ -142,6 +142,9 @@ namespace ngcomp
 
             void EvolveTents(double dt);
 
+        void CalcTentEl(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel,
+                                    SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
+
             constexpr int factorial(int n)
             {
                 return n>1 ? n * factorial(n-1) : 1;
