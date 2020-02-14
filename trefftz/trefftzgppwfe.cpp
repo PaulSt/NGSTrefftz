@@ -316,7 +316,8 @@ namespace ngfem
 
     template<>
     void TrefftzGppwFE<1> :: CalcDDSpecialShape (const SIMD_BaseMappedIntegrationRule & smir,
-                                         BareSliceMatrix<SIMD<double>> dshape) const
+                                         BareSliceMatrix<SIMD<double>> dshape,
+                                         BareSliceMatrix<SIMD<double>> wavespeed) const
     {
         for (int imip = 0; imip < smir.Size(); imip++)
         {
@@ -332,22 +333,24 @@ namespace ngfem
                 Monomial (ord, cpoint[d], polxt[d]);
             }
 
-            int d = 1;
             Vector<SIMD<double>> pol(npoly);
             for (size_t i = 0, ii = 0; i <=ord; i++)
                 for (size_t j = 0; j <= ord-i; j++)
                     pol[ii++] =
-                          i*(i-1) * polxt[0][i-2] * polxt[1][j]
-                        - j*(j-1) * polxt[0][i] * polxt[1][j-2] * (gamma[0]);
+                          (-1.0) * i*(i-1) * polxt[0][i-2] * polxt[1][j]
+                          + j*(j-1) * polxt[0][i] * polxt[1][j-2]
+                          * wavespeed(0,imip);
+                          //* (gamma[0]);
+            //cout << wavespeed(0,imip) << endl;
 
 
             const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gamma);
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i*2,imip) = 0.0;
-                dshape(i*2+d,imip) = 0.0;
+                dshape(i*2+1,imip) = 0.0;
                 for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
-                    dshape(i*2+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * pow(2.0/elsize,2);
+                    dshape(i*2+1,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * pow(2.0/elsize,2);
             }
 
             //for (int i=0; i<this->ndof; ++i)
@@ -358,7 +361,8 @@ namespace ngfem
 
     template<>
     void TrefftzGppwFE<2> :: CalcDDSpecialShape (const SIMD_BaseMappedIntegrationRule & smir,
-                                         BareSliceMatrix<SIMD<double>> dshape) const
+                                         BareSliceMatrix<SIMD<double>> dshape,
+                                         BareSliceMatrix<SIMD<double>> wavespeed) const
     {cout << "dim not implemented" << endl;}
 
 
@@ -403,7 +407,7 @@ namespace ngfem
                                 gppwbasis( basisn++, TrefftzWaveBasis<D>::IndexMap2(index, ord))=1;
 
                     }
-            
+
                 for(int basisn=0;basisn<nbasis;basisn++)
                 {
                     //int j=0; // order of current basis fct

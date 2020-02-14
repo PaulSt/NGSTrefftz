@@ -44,7 +44,7 @@ namespace ngfem
             virtual void CalcDShape (const BaseMappedIntegrationPoint & mip, BareSliceMatrix<> dshape) const;
             virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape) const;
 
-            void CalcDDSpecialShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape) const;
+            void CalcDDSpecialShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape, BareSliceMatrix<SIMD<double>> wavespeed) const;
 
             int GetNDof() const {return this->ndof;}
 

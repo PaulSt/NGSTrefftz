@@ -837,49 +837,77 @@ namespace ngcomp
 
                     Vec<D+1> shift;
                     shift.Range(0,D) = ma->GetPoint<D>(tent->vertex);
-                    shift[D] = tent->nbtime[elnr];
+                    shift[D] = (tent->ttop-tent->tbot)/2+tent->tbot;
+                    //shift[D] = tent->nbtime[elnr];
                     //shift[D] = part==1 ? tent->nbtime[elnr] : tent->tbot;
                     Mat<D+1,D+1> map = TentFaceVerts(tent, tent->els[elnr], part);
+
+                    //double sum = 0;
+                    //Vec<D+1> bla = map.Col(D)-shift;
+                    //Vec<D+1> bla2 = this->TentFaceNormal(map,part);
+                    //for(int i=0;i<D+1;i++)
+                        //sum+=bla2[i]*bla[i];
+                    //int orient = sgn(sum);
+                    //int orient = -sgn(this->TentFaceNormal(map,part)[0]*this->TentFaceNormal(map,part)[1]);
+                    //cout << orient << endl;
+
                     //cout << "tentnr " << tentnr << " tentel " << elnr << " part " << part << endl;
-                    //cout << "mat " << endl << map << endl << "shift " << endl << shift << endl;
+                    //cout << "map " << endl << map << endl << "shift " << endl << shift << endl;
                     //cout << "tent " << endl << *tent << endl;
 
-            //INT<D+1> vnr = ma->GetElVertices(ElementId(VOL,elnr));
-            //for(int ivert = 0;ivert<vnr.Size();ivert++)
-            //{
-                //map.Col(ivert).Range(0,D) = ma->GetPoint<D>(vnr[ivert]);
-                //if(vnr[ivert] == tent->vertex) map(D,ivert) =  part==1 ? tent->ttop : tent->nbtime[elnr];
-                //else for (int k = 0; k < tent->nbv.Size(); k++)
+                    //INT<D+1> vnr = ma->GetElVertices(ElementId(VOL,elnr));
+                    //for(int ivert = 0;ivert<vnr.Size();ivert++)
+                    //{
+                    //map.Col(ivert).Range(0,D) = ma->GetPoint<D>(vnr[ivert]);
+                    //if(vnr[ivert] == tent->vertex) map(D,ivert) =  part==1 ? tent->ttop : tent->nbtime[elnr];
+                    //else for (int k = 0; k < tent->nbv.Size(); k++)
                     //if(vnr[ivert] == tent->nbv[k]) map(D,ivert) = tent->nbtime[k];
-            //}
+                    //}
 
                     for(int i=0;i<D+1;i++)
                         map.Col(i) -= shift;
                     //cout << "real map " << endl << map << endl;
-                    double vol = abs(Det(map)/factorial(D+1));
+                    //double vol = abs(Det(map)/factorial(D+1));
+                    double vol = (-1.0)*(Det(map)/factorial(D+1));
+                    //double vol = part*abs(Det(map)/factorial(D+1));
+                    //cout << "corr" << endl;
                     //cout << vol << endl;
-                    //if(vol<10e-10) continue;
+                    //cout << part << endl;
+                    if(abs(vol)<10e-16) continue;
 
-                    SIMD_MappedIntegrationRule<D+1,D+1> smir(vsir,ma->GetTrafo(tent->els[elnr],slh),-1,slh);
+                    SIMD_MappedIntegrationRule<D+1,D+1> vsmir(vsir,ma->GetTrafo(tent->els[elnr],slh),-1,slh);
                     for(int imip=0;imip<vsir.Size();imip++)
                     {
-                        smir[imip].Point() = map * vsir[imip].operator Vec<D+1,SIMD<double>>() + shift;
-                        //cout << "point" << endl;
-                        //cout << smir[imip].Point() << endl;
-                        //cout << vsir[imip].operator Vec<D+1,SIMD<double>>()<<endl;
+                        vsmir[imip].Point() = map * vsir[imip].operator Vec<D+1,SIMD<double>>() + shift;
+                        cout << "point" << endl;
+                        cout << vsmir[imip].Point() << endl;
+                        cout << vsir[imip].operator Vec<D+1,SIMD<double>>()<<endl;
                     }
 
+                    FlatMatrix<SIMD<double>> wavespeed(1,vsir.Size(),slh);
+                    //shared_ptr<CoefficientFunction> wavespeedcf = this->wavespeedcf;
+                    wavespeedcf->Evaluate(vsmir,wavespeed);
+                    //for(int s=0;s<vsmir.Size();s++)
+                        //cout << "point " << vsmir[s].Point() << " speed " << wavespeed(0,s) << endl;
+
                     FlatMatrix<SIMD<double>> simdddshapes((D+1)*nbasis,vsir.Size(),slh);
-                    tel.CalcDDSpecialShape(smir,simdddshapes);
+                    tel.CalcDDSpecialShape(vsmir,simdddshapes,wavespeed);
                     FlatMatrix<SIMD<double>> simdddshapes2(nbasis,(D+1)*vsir.Size(),&simdddshapes(0,0));
+                    //cout << "simmdd " << simdddshapes2 << endl;
 
                     FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,vsir.Size(),slh);
-                    tel.CalcDShape(smir,simddshapes);
+                    tel.CalcDShape(vsmir,simddshapes);
+                    double referencevol = D==2 ? 6.0 : 2.0;
                     for(int imip=0;imip<vsir.Size();imip++)
-                        simddshapes.Col(imip) *= part*vol*vsir[imip].Weight();
+                        simddshapes.Col(imip) *= referencevol*vol*vsir[imip].Weight();
                     FlatMatrix<SIMD<double>> simddshapes2(nbasis,(D+1)*vsir.Size(),&simddshapes(0,0));
+                    //cout << "simd " << simddshapes2 << endl;
+                    //for(int imip=0;imip<vsir.Size();imip++)
+                    //cout << "part " << part << " vol " << vol << " weight " << vsir[imip].Weight()<<  " bla " << part*vol*vsir[imip].Weight() << endl;
 
-                    AddABt(simddshapes2,simdddshapes2,elmat);
+                    //cout << "in " << elmat << endl;
+                    AddABt(simdddshapes2,simddshapes2,elmat);
+                    //cout << "out " << elmat << endl;
                 }
             }
 
@@ -1038,21 +1066,21 @@ void ExportEvolveTent(py::module m)
     DeclareETClass<GppwTents<2>, 2>(m, "GppwTents2");
 
     //m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, double wavespeed, shared_ptr<CoefficientFunction> bddatum) -> shared_ptr<TrefftzTents>
-          //{
-              ////TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
-              //shared_ptr<TrefftzTents> tr;
-              //int D = ma->GetDimension();
-              ////return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
-              //if(D==1)
-                  //tr = make_shared<WaveTents<1>>(order,ma,wavespeed,bddatum);
-              //else if(D==2)
-                  //tr = make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
-              //else if(D==3)
-                  //tr = make_shared<WaveTents<3>>(order,ma,wavespeed,bddatum);
-              //return tr;
-              ////return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma, wavespeed, bddatum));
+    //{
+    ////TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
+    //shared_ptr<TrefftzTents> tr;
+    //int D = ma->GetDimension();
+    ////return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
+    //if(D==1)
+    //tr = make_shared<WaveTents<1>>(order,ma,wavespeed,bddatum);
+    //else if(D==2)
+    //tr = make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
+    //else if(D==3)
+    //tr = make_shared<WaveTents<3>>(order,ma,wavespeed,bddatum);
+    //return tr;
+    ////return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma, wavespeed, bddatum));
 
-          //});
+    //});
 
     m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> wavespeedcf, shared_ptr<CoefficientFunction> bddatum) -> shared_ptr<TrefftzTents>
           {
@@ -1079,9 +1107,9 @@ void ExportEvolveTent(py::module m)
               //shared_ptr<TrefftzTents> tr;
               //int D = ma->GetDimension();
               //if(D==1)
-                  //tr = make_shared<GppwTents<1>>(order,ma,wavespeedcf,bddatum,gamma);
+              //tr = make_shared<GppwTents<1>>(order,ma,wavespeedcf,bddatum,gamma);
               //else if(D==2)
-                  //tr = make_shared<GppwTents<2>>(order,ma,wavespeedcf,bddatum,gamma);
+              //tr = make_shared<GppwTents<2>>(order,ma,wavespeedcf,bddatum,gamma);
               //return tr;
 
           });
