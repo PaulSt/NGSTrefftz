@@ -92,6 +92,15 @@ namespace ngfem
   {
     return (T (0) <= val) - (val < T (0));
   }
+
+  template <int D, typename SCAL>
+  inline SCAL Dot (const AutoDiff<D, SCAL> &u, const AutoDiff<D, SCAL> &v)
+  {
+    SCAL sum = 0;
+    for (int i = 0; i < D; i++)
+      sum += u.DValue (i) * v.DValue (i);
+    return sum;
+  }
 }
 
 #endif
