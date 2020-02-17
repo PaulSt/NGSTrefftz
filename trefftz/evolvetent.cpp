@@ -995,30 +995,10 @@ namespace ngcomp
               Mat<D + 1, D + 1> map
                   = TentFaceVerts (tent, tent->els[elnr], part);
 
-              // double sum = 0;
-              // Vec<D+1> bla = map.Col(D)-shift;
-              // Vec<D+1> bla2 = this->TentFaceNormal(map,part);
-              // for(int i=0;i<D+1;i++)
-              // sum+=bla2[i]*bla[i];
-              // int orient = sgn(sum);
-              // int orient =
-              // -sgn(this->TentFaceNormal(map,part)[0]*this->TentFaceNormal(map,part)[1]);
-              // cout << orient << endl;
-
               // cout << "tentnr " << tentnr << " tentel " << elnr << " part "
               // << part << endl; cout << "map " << endl << map << endl <<
               // "shift " << endl << shift << endl; cout << "tent " << endl <<
               // *tent << endl;
-
-              // INT<D+1> vnr = ma->GetElVertices(ElementId(VOL,elnr));
-              // for(int ivert = 0;ivert<vnr.Size();ivert++)
-              //{
-              // map.Col(ivert).Range(0,D) = ma->GetPoint<D>(vnr[ivert]);
-              // if(vnr[ivert] == tent->vertex) map(D,ivert) =  part==1 ?
-              // tent->ttop : tent->nbtime[elnr]; else for (int k = 0; k <
-              // tent->nbv.Size(); k++) if(vnr[ivert] == tent->nbv[k])
-              // map(D,ivert) = tent->nbtime[k];
-              // }
 
               for (int i = 0; i < D + 1; i++)
                 map.Col (i) -= shift;
