@@ -752,14 +752,14 @@ namespace ngcomp
         cout << "solving gppw " << tps.tents.Size() << " tents " << endl;
 
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
-            cout << endl<< "TENT " << tentnr << endl;
+            //cout << endl<< "TENT " << tentnr << endl;
             LocalHeap slh = lh.Split();  // split to threads
             Tent* tent = tps.tents[tentnr];
 
             Vec<D+1> center;
             center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
             center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
-            double tentsize = 2.0; TentAdiam(tent);
+            double tentsize = TentAdiam(tent);
 
 
                     ElementId ei = ElementId(0);
@@ -828,7 +828,7 @@ namespace ngcomp
                 /// Integration over bot and top volume of tent element
                 for(int part=-1;part<=1;part+=2)
                 {
-                    if(tent->nbtime[elnr]==(part<0?tent->tbot:tent->ttop)) continue;
+                    //if(tent->nbtime[elnr]==(part<0?tent->tbot:tent->ttop)) continue;
                     //cout << "part " << part << " times " << tent->ttop << " " << tent->tbot << " " << tent->nbtime[elnr] << endl;
                     HeapReset hr(slh);
                     const ELEMENT_TYPE eltyp = (D==2) ? ET_TET : ET_TRIG;
@@ -850,20 +850,22 @@ namespace ngcomp
                         map.Col(i) -= shift;
                     //cout << "real map " << endl << map << endl;
                     //double vol = abs(Det(map)/factorial(D+1));
-                    double vol = (-1.0)*(Det(map)/factorial(D+1));
+                    //double vol = (Det(map)/factorial(D+1));
+                    double vol = abs(Det(map));
                     //double vol = part*abs(Det(map)/factorial(D+1));
                     //cout << "corr" << endl;
                     //cout << vol << endl;
                     //cout << part << endl;
+                    //cout << "sign " << sgn(vol) << endl;
                     if(abs(vol)<10e-16) continue;
 
                     SIMD_MappedIntegrationRule<D+1,D+1> vsmir(vsir,ma->GetTrafo(tent->els[elnr],slh),-1,slh);
                     for(int imip=0;imip<vsir.Size();imip++)
                     {
                         vsmir[imip].Point() = map * vsir[imip].operator Vec<D+1,SIMD<double>>() + shift;
-                        cout << "point" << endl;
-                        cout << vsmir[imip].Point() << endl;
-                        cout << vsir[imip].operator Vec<D+1,SIMD<double>>()<<endl;
+                        //cout << "point" << endl;
+                        //cout << "mapped " <<vsmir[imip].Point() << endl;
+                        //cout << "sir    " << vsir[imip].operator Vec<D+1,SIMD<double>>()<<endl;
                     }
 
                     FlatMatrix<SIMD<double>> wavespeed(1,vsir.Size(),slh);
@@ -881,7 +883,8 @@ namespace ngcomp
                     tel.CalcDShape(vsmir,simddshapes);
                     double referencevol = D==2 ? 6.0 : 2.0;
                     for(int imip=0;imip<vsir.Size();imip++)
-                        simddshapes.Col(imip) *= referencevol*vol*vsir[imip].Weight();
+                        simddshapes.Col(imip) *= vol*vsir[imip].Weight();
+                        //simddshapes.Col(imip) *= referencevol*vol*vsir[imip].Weight();
                     FlatMatrix<SIMD<double>> simddshapes2(nbasis,(D+1)*vsir.Size(),&simddshapes(0,0));
                     //cout << "simd " << simddshapes2 << endl;
                     //for(int imip=0;imip<vsir.Size();imip++)

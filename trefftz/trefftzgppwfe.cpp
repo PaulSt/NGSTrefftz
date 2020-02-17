@@ -337,12 +337,11 @@ namespace ngfem
             for (size_t i = 0, ii = 0; i <=ord; i++)
                 for (size_t j = 0; j <= ord-i; j++)
                     pol[ii++] =
-                          (-1.0) * i*(i-1) * polxt[0][i-2] * polxt[1][j]
-                          + j*(j-1) * polxt[0][i] * polxt[1][j-2]
+                          i*(i-1) * polxt[0][i-2] * polxt[1][j]
+                          - j*(j-1) * polxt[0][i] * polxt[1][j-2]
                           * wavespeed(0,imip);
-                          //* (gamma[0]);
+            //cout << (gamma[0]) << endl;
             //cout << wavespeed(0,imip) << endl;
-
 
             const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gamma);
             for (int i=0; i<this->ndof; ++i)
