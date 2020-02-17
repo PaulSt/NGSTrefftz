@@ -352,7 +352,6 @@ namespace ngfem
         cpoint -= elcenter;
         cpoint *= (2.0 / elsize);
 
-        // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY (SIMD<double>, mem, 2 * (ord + 1) + 2);
         mem[0] = 0;
         mem[1] = 0;
@@ -369,8 +368,6 @@ namespace ngfem
             pol[ii++] = i * (i - 1) * polxt[0][i - 2] * polxt[1][j]
                         - j * (j - 1) * polxt[0][i] * polxt[1][j - 2]
                               * wavespeed (0, imip);
-        // cout << (gamma[0]) << endl;
-        // cout << wavespeed(0,imip) << endl;
 
         const CSR *localmat
             = TrefftzGppwBasis<1>::getInstance ().TB (ord, gamma);
@@ -383,10 +380,6 @@ namespace ngfem
                                           * pol[(*localmat)[1][j]]
                                           * pow (2.0 / elsize, 2);
           }
-
-        // for (int i=0; i<this->ndof; ++i)
-        // cout << "this should cancel " << dshape(i*2,imip) <<" - " <<
-        // dshape(i*2+1,imip) << endl;
       }
   }
 
