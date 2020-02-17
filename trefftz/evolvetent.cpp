@@ -752,7 +752,6 @@ namespace ngcomp
         cout << "solving gppw " << tps.tents.Size() << " tents " << endl;
 
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
-            //cout << endl<< "TENT " << tentnr << endl;
             LocalHeap slh = lh.Split();  // split to threads
             Tent* tent = tps.tents[tentnr];
 
@@ -829,7 +828,6 @@ namespace ngcomp
                 for(int part=-1;part<=1;part+=2)
                 {
                     //if(tent->nbtime[elnr]==(part<0?tent->tbot:tent->ttop)) continue;
-                    //cout << "part " << part << " times " << tent->ttop << " " << tent->tbot << " " << tent->nbtime[elnr] << endl;
                     HeapReset hr(slh);
                     const ELEMENT_TYPE eltyp = (D==2) ? ET_TET : ET_TRIG;
                     SIMD_IntegrationRule vsir(eltyp, this->order*2);
@@ -842,42 +840,25 @@ namespace ngcomp
                     //shift[D] = part==1 ? tent->nbtime[elnr] : tent->tbot;
                     Mat<D+1,D+1> map = TentFaceVerts(tent, tent->els[elnr], part);
 
-                    //cout << "tentnr " << tentnr << " tentel " << elnr << " part " << part << endl;
-                    //cout << "map " << endl << map << endl << "shift " << endl << shift << endl;
-                    //cout << "tent " << endl << *tent << endl;
-
                     for(int i=0;i<D+1;i++)
                         map.Col(i) -= shift;
-                    //cout << "real map " << endl << map << endl;
                     //double vol = abs(Det(map)/factorial(D+1));
                     //double vol = (Det(map)/factorial(D+1));
                     double vol = abs(Det(map));
                     //double vol = part*abs(Det(map)/factorial(D+1));
-                    //cout << "corr" << endl;
-                    //cout << vol << endl;
-                    //cout << part << endl;
-                    //cout << "sign " << sgn(vol) << endl;
                     if(abs(vol)<10e-16) continue;
 
                     SIMD_MappedIntegrationRule<D+1,D+1> vsmir(vsir,ma->GetTrafo(tent->els[elnr],slh),-1,slh);
                     for(int imip=0;imip<vsir.Size();imip++)
-                    {
                         vsmir[imip].Point() = map * vsir[imip].operator Vec<D+1,SIMD<double>>() + shift;
-                        //cout << "point" << endl;
-                        //cout << "mapped " <<vsmir[imip].Point() << endl;
-                        //cout << "sir    " << vsir[imip].operator Vec<D+1,SIMD<double>>()<<endl;
-                    }
 
                     FlatMatrix<SIMD<double>> wavespeed(1,vsir.Size(),slh);
                     //shared_ptr<CoefficientFunction> wavespeedcf = this->wavespeedcf;
                     wavespeedcf->Evaluate(vsmir,wavespeed);
-                    //for(int s=0;s<vsmir.Size();s++)
-                        //cout << "point " << vsmir[s].Point() << " speed " << wavespeed(0,s) << endl;
 
                     FlatMatrix<SIMD<double>> simdddshapes((D+1)*nbasis,vsir.Size(),slh);
                     tel.CalcDDSpecialShape(vsmir,simdddshapes,wavespeed);
                     FlatMatrix<SIMD<double>> simdddshapes2(nbasis,(D+1)*vsir.Size(),&simdddshapes(0,0));
-                    //cout << "simmdd " << simdddshapes2 << endl;
 
                     FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,vsir.Size(),slh);
                     tel.CalcDShape(vsmir,simddshapes);
@@ -886,13 +867,8 @@ namespace ngcomp
                         simddshapes.Col(imip) *= vol*vsir[imip].Weight();
                         //simddshapes.Col(imip) *= referencevol*vol*vsir[imip].Weight();
                     FlatMatrix<SIMD<double>> simddshapes2(nbasis,(D+1)*vsir.Size(),&simddshapes(0,0));
-                    //cout << "simd " << simddshapes2 << endl;
-                    //for(int imip=0;imip<vsir.Size();imip++)
-                    //cout << "part " << part << " vol " << vol << " weight " << vsir[imip].Weight()<<  " bla " << part*vol*vsir[imip].Weight() << endl;
 
-                    //cout << "in " << elmat << endl;
                     AddABt(simdddshapes2,simddshapes2,elmat);
-                    //cout << "out " << elmat << endl;
                 }
             }
 
