@@ -876,7 +876,7 @@ namespace ngcomp
 
   template <int D> void GppwTents<D>::EvolveTents (double dt)
   {
-    LocalHeap lh (1000 * 1000 * 100, "trefftz tents", 1);
+    LocalHeap lh (1000 * 1000 * 100, "gppw tents", 1);
 
     shared_ptr<MeshAccess> ma = this->ma;
     const ELEMENT_TYPE eltyp
@@ -900,11 +900,8 @@ namespace ngcomp
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
       double tentsize = TentAdiam (tent);
 
-      ElementId ei = ElementId (0);
-      ELEMENT_TYPE eltype = ma->GetElType (ei);
-      IntegrationRule ir (eltype, 0);
-      ElementTransformation &trafo = ma->GetTrafo (ei, lh);
-      MappedIntegrationPoint<D, D> mip (ir[0], trafo);
+      ElementTransformation &trafo = ma->GetTrafo (ElementId (0), lh);
+      MappedIntegrationPoint<D, D> mip (sir[0][0], trafo);
       mip.Point () = center.Range (0, D);
 
       shared_ptr<CoefficientFunction> wavespeedcf = this->wavespeedcf;
@@ -993,10 +990,7 @@ namespace ngcomp
 
               for (int i = 0; i < D + 1; i++)
                 map.Col (i) -= shift;
-              // double vol = abs(Det(map)/factorial(D+1));
-              // double vol = (Det(map)/factorial(D+1));
               double vol = abs (Det (map));
-              // double vol = part*abs(Det(map)/factorial(D+1));
               if (abs (vol) < 10e-16)
                 continue;
 
@@ -1008,8 +1002,6 @@ namespace ngcomp
                       + shift;
 
               FlatMatrix<SIMD<double>> wavespeed (1, vsir.Size (), slh);
-              // shared_ptr<CoefficientFunction> wavespeedcf =
-              // this->wavespeedcf;
               wavespeedcf->Evaluate (vsmir, wavespeed);
 
               FlatMatrix<SIMD<double>> simdddshapes ((D + 1) * nbasis,
@@ -1021,10 +1013,8 @@ namespace ngcomp
               FlatMatrix<SIMD<double>> simddshapes ((D + 1) * nbasis,
                                                     vsir.Size (), slh);
               tel.CalcDShape (vsmir, simddshapes);
-              double referencevol = D == 2 ? 6.0 : 2.0;
               for (int imip = 0; imip < vsir.Size (); imip++)
                 simddshapes.Col (imip) *= vol * vsir[imip].Weight ();
-              // simddshapes.Col(imip) *= referencevol*vol*vsir[imip].Weight();
               FlatMatrix<SIMD<double>> simddshapes2 (
                   nbasis, (D + 1) * vsir.Size (), &simddshapes (0, 0));
 
