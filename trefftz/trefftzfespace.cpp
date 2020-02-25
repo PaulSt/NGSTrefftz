@@ -144,10 +144,12 @@ namespace ngcomp
       case ET_PYRAMID:
       case ET_TET:
         {
-
+          Array<double> newgamma (gamma);
+          newgamma[0] += ElCenter<2> (ei)[0] + ElCenter<2> (ei)[1];
+          newgamma[1] *= Adiam<2> (ei) / 2.0;
           if (gamma.Size () != 0)
             return *(new (alloc)
-                         TrefftzGppwFE<2> (gamma, order, ElCenter<2> (ei),
+                         TrefftzGppwFE<2> (newgamma, order, ElCenter<2> (ei),
                                            Adiam<2> (ei), ma->GetElType (ei)));
           else
             return *(new (alloc)

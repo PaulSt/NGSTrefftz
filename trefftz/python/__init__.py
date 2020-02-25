@@ -33,5 +33,7 @@ def GetWave(self): # Have to add self since this will become a method
 setattr(WaveTents1, 'GetWave', GetWave)
 setattr(WaveTents2, 'GetWave', GetWave)
 setattr(WaveTents3, 'GetWave', GetWave)
+setattr(GppwTents1, 'GetWave', GetWave)
+setattr(GppwTents2, 'GetWave', GetWave)
 # = MethodType(GetWave, None, TrefftzTent)
 # TrefftzTent.GetWave = classmethod(GetWave)
