@@ -798,23 +798,12 @@ namespace ngcomp
                 {
                     case 1: selnums = ma->GetVertexSurfaceElements (fnr); break;
                     case 2: ma->GetEdgeSurfaceElements (fnr, selnums); break;
-                    case 3:
-                            {
-                                    for(int i : Range(ma->GetNSE()))
-                                    {
-                                        auto sel = ElementId(BND,i);
-                                        auto fnums = ma->GetElFacets(sel);
-                                        if(fnr == fnums[0])
-                                        {selnums.Append(i); break;}
-                                    }
-                            }
+                    case 3: cout << "not impl" << endl; break;
                 }
 
                 // Integrate boundary tent
                 if(elnums.Size()==1 && selnums.Size()==1)
-                {
                     this->CalcTentBndEl(selnums[0],tent,tel,sir,slh,elmat,elvec);
-                }
             }
 
             //integrate volume of tent here
@@ -834,12 +823,12 @@ namespace ngcomp
                     shift[D] = (tent->ttop-tent->tbot)/2+tent->tbot;
                     //shift[D] = tent->nbtime[elnr];
                     //shift[D] = part==1 ? tent->nbtime[elnr] : tent->tbot;
-                    Mat<D+1,D+1> map = TentFaceVerts(tent, tent->els[elnr], part);
+                    Mat<D+1,D+1> map = this->TentFaceVerts(tent, tent->els[elnr], part);
 
                     for(int i=0;i<D+1;i++)
                         map.Col(i) -= shift;
                     double vol = abs(Det(map));
-                    if(abs(vol)<10e-16) continue;
+                    if(vol<10e-16) continue;
 
                     SIMD_MappedIntegrationRule<D+1,D+1> vsmir(vsir,ma->GetTrafo(tent->els[elnr],slh),-1,slh);
                     for(int imip=0;imip<vsir.Size();imip++)
@@ -1050,19 +1039,18 @@ void ExportEvolveTent(py::module m)
 
           });
 
-    m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> wavespeedcf, shared_ptr<CoefficientFunction> bddatum, Vector<double> agamma) -> shared_ptr<GppwTents<1>>
+    m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> wavespeedcf, shared_ptr<CoefficientFunction> bddatum, Vector<double> agamma) -> shared_ptr<TrefftzTents>
           {
               Array<double> gamma;
               for(auto a : agamma) gamma.Append(a);
-              return make_shared<GppwTents<1>>(order,ma,wavespeedcf,bddatum,gamma);
-              //shared_ptr<TrefftzTents> tr;
-              //int D = ma->GetDimension();
-              //if(D==1)
-              //tr = make_shared<GppwTents<1>>(order,ma,wavespeedcf,bddatum,gamma);
-              //else if(D==2)
-              //tr = make_shared<GppwTents<2>>(order,ma,wavespeedcf,bddatum,gamma);
-              //return tr;
-
+              //return make_shared<GppwTents<2>>(order,ma,wavespeedcf,bddatum,gamma);
+              shared_ptr<TrefftzTents> tr;
+              int D = ma->GetDimension();
+              if(D==1)
+              tr = make_shared<GppwTents<1>>(order,ma,wavespeedcf,bddatum,gamma);
+              else if(D==2)
+              tr = make_shared<GppwTents<2>>(order,ma,wavespeedcf,bddatum,gamma);
+              return tr;
           });
 }
 #endif // NGS_PYTHON
