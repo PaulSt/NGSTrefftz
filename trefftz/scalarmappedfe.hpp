@@ -132,7 +132,7 @@ namespace ngfem
 
             //public:
             //	NGS_DLL_HEADER virtual std::list<std::tuple<std::string,double>> Timing () const;
-            virtual float GetWavespeed() const {return 0;} //ugly parent hack for trefftzwave
+            virtual double GetWavespeed() const {return 0;} //ugly parent hack for trefftzwave
 
 
             NGS_DLL_HEADER virtual void CalcMappedDDShape (const BaseMappedIntegrationPoint & bmip, BareSliceMatrix<> hddshape) const;
