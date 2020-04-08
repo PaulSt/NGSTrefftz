@@ -29,12 +29,6 @@ namespace ngcomp
     c = flags.GetNumFlag ("wavespeed", 1);
     basistype = flags.GetNumFlag ("basistype", 0);
     useshift = flags.GetNumFlag ("useshift", 1);
-    gppword = flags.GetNumFlag ("gppword", 1);
-
-    // cout << "gamma" << gamma <<" size " << gamma.Size() << endl;
-    if (gamma.Size () != 0)
-      while (gamma.Size () < gppword)
-        gamma.Append (0.0);
 
     local_ndof = (BinCoeff (fullD - 1 + order, order)
                   + BinCoeff (fullD - 1 + order - 1, order - 1));
@@ -123,9 +117,14 @@ namespace ngcomp
       case ET_TRIG:
         {
           if (gamma.Size () != 0)
-            return *(new (alloc) TrefftzGppwFE<1> (
-                gamma, gppword, order, c, ElCenter<1> (ei), Adiam<1> (ei),
-                ma->GetElType (ei)));
+            {
+              Array<double> newgamma (gamma);
+              newgamma[0] += ElCenter<1> (ei)[0];
+              newgamma[1] *= Adiam<1> (ei) / 2.0;
+              return *(new (alloc) TrefftzGppwFE<1> (
+                  newgamma, order, ElCenter<1> (ei), Adiam<1> (ei),
+                  ma->GetElType (ei)));
+            }
           else
             return *(new (alloc)
                          TrefftzWaveFE<1> (order, c, ElCenter<1> (ei),
@@ -137,8 +136,18 @@ namespace ngcomp
       case ET_PYRAMID:
       case ET_TET:
         {
-          return *(new (alloc) TrefftzWaveFE<2> (
-              order, c, ElCenter<2> (ei), Adiam<2> (ei), ma->GetElType (ei)));
+          Array<double> newgamma (gamma);
+          newgamma[0] += ElCenter<2> (ei)[0] + ElCenter<2> (ei)[1];
+          newgamma[1] *= Adiam<2> (ei) / 2.0;
+          if (gamma.Size () != 0)
+            return *(new (alloc)
+                         TrefftzGppwFE<2> (newgamma, order, ElCenter<2> (ei),
+                                           Adiam<2> (ei), ma->GetElType (ei)));
+          else
+            return *(new (alloc)
+                         TrefftzWaveFE<2> (order, c, ElCenter<2> (ei),
+                                           Adiam<2> (ei), ma->GetElType (ei)));
+          break;
           break;
         }
       }
@@ -182,9 +191,6 @@ namespace ngcomp
         = "bool = True\n"
           "  use shift of basis functins to element center and scale them";
     docu.Arg ("gamma")
-        = "bool = True\n"
-          "  use shift of basis functins to element center and scale them";
-    docu.Arg ("gppword")
         = "bool = True\n"
           "  use shift of basis functins to element center and scale them";
     docu.Arg ("basistype")

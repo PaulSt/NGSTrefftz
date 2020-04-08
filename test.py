@@ -23,15 +23,15 @@ def SolveWaveTents(initmesh, order, c, t_step):
     ...            initmesh.Refine()
     ...        elif initmesh.dim==1:
     ...            initmesh=Mesh(SegMesh(initmesh.ne*2,0,1))
-    0.2...
+    0.206...
     ...e-05
     ...e-06
-    0.0148...
-    0.0017...
-    0.0001...
-    0.1553...
-    0.0647...
-    0.0037...
+    0.014...
+    0.001...
+    0.000...
+    0.155...
+    0.064...
+    0.003...
 
     if i ever feel like checking the times, here is example full output, 2 cores on my laptop:
     [0.20661893329359113, 0.0006449222564697266, 1.5707963267948966]
@@ -89,20 +89,21 @@ def SolveWaveTents(initmesh, order, c, t_step):
     return error
 
 
-
-
-
-
-def TestAiry(order, t_step):
+def TestAiry(order, h, t_step):
     """
     Solve using tent pitching
     >>> order = 4
     >>> SetNumThreads(2)
     >>> t_step = 2/sqrt(3)
-    >>> TestAiry(order,t_step)
+    >>> for h in [4,8,16,32]:
+    ...        TestAiry(order,h,t_step) # doctest:+ELLIPSIS
+    0.0112...
+    0.0027...
+    0.0004...
+    ...e-05
     """
 
-    initmesh = Mesh(SegMesh(4,0,math.pi))
+    initmesh = Mesh(SegMesh(h,0,math.pi))
     D = initmesh.dim
     t = CoordCF(D)
     t_start = 0
@@ -114,7 +115,7 @@ def TestAiry(order, t_step):
             -airy(-x-c)*sin(t)
         ))
 
-    TT=WaveTents(order,initmesh,CoefficientFunction(x),bdd)
+    TT=WaveTents(order,initmesh,CoefficientFunction(1/sqrt(c+x)),bdd)
     TT.SetWavefront(bdd,t_start)
 
     start = time.time()
@@ -125,6 +126,8 @@ def TestAiry(order, t_step):
     error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
     adiam = TT.MaxAdiam(t_step)
 
+    # for t in Timers():
+        # print(t)
     # return [error, timing, adiam]
     return error
 

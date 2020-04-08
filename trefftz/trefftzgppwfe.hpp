@@ -14,25 +14,27 @@ namespace ngfem
     const int npoly;
     Vec<D + 1> elcenter;
     double elsize;
-    float c;
     ELEMENT_TYPE eltype;
     int basistype;
-    int gppword;
-    const Array<double> &gamma;
+    Array<double> gamma;
 
   public:
-    TrefftzGppwFE (const Array<double> &agamma, int agppword = 0, int aord = 1,
-                   float ac = 1.0, Vec<D + 1> aelcenter = 0,
-                   double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG,
-                   int abasistype = 0);
+    TrefftzGppwFE (FlatArray<double> agamma, int aord = 1,
+                   Vec<D + 1> aelcenter = 0, double aelsize = 1,
+                   ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0)
+        : ScalarMappedElement<D + 1> (BinCoeff (D + aord, aord)
+                                          + BinCoeff (D + aord - 1, aord - 1),
+                                      aord),
+          ord (aord), npoly (BinCoeff (D + 1 + ord, ord)),
+          elcenter (aelcenter), elsize (aelsize), eltype (aeltype),
+          basistype (abasistype), gamma (agamma)
+    {
+      while (gamma.Size () <= ord)
+        gamma.Append (0.0);
+    }
 
-    float GetWavespeed () const { return c; }
-    void SetWavespeed (double wavespeed) { c = wavespeed; }
-
-    // TrefftzWaveFE<D> * SetCenter(Vec<D> acenter) {elcenter = acenter; return
-    // this;} TrefftzWaveFE<D> * SetElSize(double aelsize) {elsize = aelsize;
-    // return this;}
-    //  TrefftzWaveFE<D> * SetWavespeed(float ac) {c = ac; return this;}
+    double GetWavespeed () const { return 1.0 / sqrt (gamma[0]); }
+    void SetWavespeed (double wavespeed) { gamma[0] = wavespeed; }
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
 
@@ -47,6 +49,10 @@ namespace ngfem
                              BareSliceMatrix<> dshape) const;
     virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
                              BareSliceMatrix<SIMD<double>> dshape) const;
+
+    void CalcDDSpecialShape (const SIMD_BaseMappedIntegrationRule &smir,
+                             BareSliceMatrix<SIMD<double>> dshape,
+                             BareSliceMatrix<SIMD<double>> wavespeed) const;
 
     int GetNDof () const { return this->ndof; }
 
@@ -135,8 +141,7 @@ namespace ngfem
       return ginstance;
     }
 
-    const CSR *
-    TB (int ord, int gppword, const Array<double> &gamma, int basistype = 0);
+    const CSR *TB (int ord, FlatArray<double> gamma, int basistype = 0);
 
   private:
     TrefftzGppwBasis () = default;
@@ -146,14 +151,6 @@ namespace ngfem
 
     mutex gentrefftzbasis;
     std::map<std::string, CSR> gtbstore;
-    // once_flag tbonceflag;
-    // void TB_inner(const Array<double> &gamma, int ord, Matrix<>
-    // &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker,
-    // int basistype);
-    void TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D + 1, int> coeffnum,
-                   int basis, int dim, int &tracker, int basistype,
-                   double wavespeed);
-    int IndexMap2 (Vec<D + 1, int> index, int ord);
   };
 
 }

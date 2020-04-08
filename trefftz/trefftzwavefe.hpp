@@ -24,7 +24,7 @@ namespace ngfem
                    double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG,
                    int abasistype = 0);
 
-    float GetWavespeed () const { return c; }
+    double GetWavespeed () const { return c; }
     void SetWavespeed (double wavespeed) { c = wavespeed; }
 
     // TrefftzWaveFE<D> * SetCenter(Vec<D> acenter) {elcenter = acenter; return
@@ -130,6 +130,10 @@ namespace ngfem
 
     const CSR *TB (int ord);
     void CreateTB (int ord, int basistype = 0);
+    static void TB_inner (int ord, Matrix<> &trefftzbasis,
+                          Vec<D + 1, int> coeffnum, int basis, int dim,
+                          int &tracker, int basistype, double wavespeed = 1.0);
+    static int IndexMap2 (Vec<D + 1, int> index, int ord);
 
   private:
     TrefftzWaveBasis () = default;
@@ -139,9 +143,6 @@ namespace ngfem
 
     Array<CSR> tbstore;
     // once_flag tbonceflag;
-    void TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D + 1, int> coeffnum,
-                   int basis, int dim, int &tracker, int basistype);
-    int IndexMap2 (Vec<D + 1, int> index, int ord);
   };
 }
 
