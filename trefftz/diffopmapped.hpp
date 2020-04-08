@@ -86,7 +86,7 @@ namespace ngfem
             // using DiffOp<DiffOpId<D, FEL> >::ApplyIR;
             template <class MIR, class TMY>
             static void ApplyIR (const FiniteElement & fel, const MIR & mir,
-                    FlatVector<double> x, TMY y,
+                    BareSliceVector<double> x, TMY y,
                     LocalHeap & lh)
             {
                 Cast(fel).Evaluate (mir, x, FlatVector<> (mir.Size(), &y(0,0)));
@@ -94,7 +94,7 @@ namespace ngfem
 
             template <class MIR>
             static void ApplyIR (const FiniteElement & fel, const MIR & mir,
-                    FlatVector<Complex> x, SliceMatrix<Complex> y,
+                    BareSliceVector<Complex> x, SliceMatrix<Complex> y,
                     LocalHeap & lh)
             {
                 Cast(fel).Evaluate (mir,
@@ -116,14 +116,14 @@ namespace ngfem
                     LocalHeap & lh)
             {
                 HeapReset hr(lh);
-                y = Cast(fel).GetShape (mip, lh) * x;
+                y.Range(0,fel.GetNDof()) = Cast(fel).GetShape (mip, lh) * x;
             }
 
             // using DiffOp<DiffOpId<D, FEL> >::ApplyTransIR;
             template <class MIR>
             static void ApplyTransIR (const FiniteElement & fel,
                     const MIR & mir,
-                    FlatMatrix<double> x, FlatVector<double> y,
+                    FlatMatrix<double> x, BareSliceVector<double> y,
                     LocalHeap & lh)
             {
                 Cast(fel).EvaluateTrans (mir, FlatVector<> (mir.Size(), &x(0,0)), y);
@@ -132,7 +132,7 @@ namespace ngfem
             template <class MIR>
             static void ApplyTransIR (const FiniteElement & fel,
                     const MIR & mir,
-                    FlatMatrix<Complex> x, FlatVector<Complex> y,
+                    FlatMatrix<Complex> x, BareSliceVector<Complex> y,
                     LocalHeap & lh)
             {
                 DiffOp<DiffOpMapped<D, FEL> > :: ApplyTransIR (fel, mir, x, y, lh);
@@ -350,7 +350,7 @@ namespace ngfem
                 typedef typename TVX::TSCAL TSCAL;
                 Vec<D,TSCAL> vx = x;
                 //auto hv = mip.GetJacobianInverse() * vx;
-                y = Cast(fel).GetDShape(mip,lh) * vx; //* hv;
+                y.Range(0,fel.GetNDof()) = Cast(fel).GetDShape(mip,lh) * vx; //* hv;
             }
 
             using DiffOp<DiffOpMappedGradient<D, FEL> >::AddTransSIMDIR;
