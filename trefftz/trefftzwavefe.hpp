@@ -70,7 +70,7 @@ namespace ngfem
       FlatMatrix<double> bdbmat (this->ndof, mir.Size () * nsimd,
                                  &shape (0, 0)[0]);
       FlatVector<double> bdbvec (mir.Size () * nsimd, &values (0)[0]);
-      coefs.AddSize (this->ndof) += bdbmat * bdbvec;
+      coefs.Range (0, this->ndof) += bdbmat * bdbvec;
     }
 
     // using ScalarMappedElement<D>::CalcMappedDShape;
@@ -108,7 +108,7 @@ namespace ngfem
                                   &simddshapes (0, 0)[0]);
       FlatVector<double> bdbvec ((D + 1) * nsimd * mir.Size (),
                                  &values (0, 0)[0]);
-      coefs.AddSize (this->ndof) += dshapes * bdbvec;
+      coefs.Range (0, this->ndof) += dshapes * bdbvec;
     }
 
     void CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
