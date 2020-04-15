@@ -75,11 +75,11 @@ namespace ngfem
     EvaluateTrans (const BaseMappedIntegrationRule & mir, FlatVector<double> vals, BareSliceVector<double> coefs) const
     {
         VectorMem<20, double> shape(ndof);
-        coefs.AddSize(ndof) = 0.0;
+        coefs.Range(0,ndof) = 0.0;
         for (int i = 0; i < mir.Size(); i++) //GetNIP()
         {
             CalcShape (mir[i], shape);
-            coefs.AddSize(ndof) += vals(i) * shape;
+            coefs.Range(0,ndof) += vals(i) * shape;
         }
     }
 
@@ -193,11 +193,11 @@ namespace ngfem
                        BareSliceVector<double> coefs) const
     {
         MatrixFixWidth<D> dshape(ndof);
-        coefs.AddSize(ndof) = 0.0;
+        coefs.Range(0,ndof) = 0.0;
         for (int i = 0; i < ir.Size(); i++)
         {
             CalcDShape (ir[i], dshape);
-            coefs.AddSize(ndof) += dshape * vals.Row(i);
+            coefs.Range(0,ndof) += dshape * vals.Row(i);
         }
     }
 
@@ -230,6 +230,11 @@ namespace ngfem
     }
 
 
+
+    template<>
+    void ScalarMappedElement<4> :: CalcMappedDDShape (const BaseMappedIntegrationPoint & bmip,
+                                                BareSliceMatrix<> hddshape) const
+    {;}
 
     template<int D>
     void ScalarMappedElement<D> :: CalcMappedDDShape (const BaseMappedIntegrationPoint & bmip,
