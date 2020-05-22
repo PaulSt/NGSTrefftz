@@ -3,9 +3,11 @@
 //#include <comp.hpp>    // provides FESpace, ...
 #include <solve.hpp>
 #include <h1lofe.hpp>
+#include <fem.hpp>
 #include "tents/tents.hpp"
 #include "trefftzwavefe.hpp"
 #include "trefftzgppwfe.hpp"
+
 
 namespace ngcomp
 {
@@ -129,21 +131,48 @@ namespace ngcomp
             //Matrix<> wavefront;
             //shared_ptr<CoefficientFunction> bddatum;
             //double timeshift = 0;
-            Array<double> gamma;
+            Array<Matrix<double>> gamma;
 
             using WaveTents<D>::TentAdiam;
             using WaveTents<D>::LapackSolve;
             using WaveTents<D>::TentFaceVerts;
 
         public:
-            GppwTents( int aorder, shared_ptr<MeshAccess> ama, shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> abddatum, FlatArray<double> agamma)
-                : WaveTents<D>(aorder,ama,awavespeedcf,abddatum), gamma(agamma)
-            {;}
+            GppwTents( int aorder, shared_ptr<MeshAccess> ama, shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> abddatum, shared_ptr<CoefficientFunction> x, shared_ptr<CoefficientFunction> y)
+                : WaveTents<D>(aorder,ama,awavespeedcf,abddatum)
+            {
+                LocalHeap lh(1000 * 1000);
+                const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
+                const int nsimd = SIMD<double>::Size();
+                SIMD_IntegrationRule sir(eltyp, this->order*2);
+
+                IntegrationRule ir (eltyp, 0);
+                for(int nv=0;nv<ama->GetNV();nv++)
+                {
+                    shared_ptr<CoefficientFunction> localwavespeedcf = awavespeedcf;
+                    shared_ptr<CoefficientFunction> localwavespeedcfx = awavespeedcf;
+                    MappedIntegrationPoint<D,D> mip(ir[0], ama->GetTrafo (ElementId(0), lh));
+                    mip.Point() = ama->GetPoint<D>(nv);
+                    Matrix<> b(this->order,this->order);
+                    for(int nx=0;nx<this->order;nx++)
+                    {
+                        int ny = 0;
+                        for(int ny=0;ny<this->order;ny++)
+                        {
+                            b(nx,ny) = localwavespeedcfx->Evaluate(mip);
+                            localwavespeedcfx = localwavespeedcfx->Diff(y.get(), make_shared<ConstantCoefficientFunction>(1) );
+                        }
+                        localwavespeedcf = localwavespeedcf->Diff(x.get(), make_shared<ConstantCoefficientFunction>(1) );
+                        localwavespeedcfx = localwavespeedcf;
+                    }
+                    this->gamma.Append(b);
+                }
+            }
 
             void EvolveTents(double dt);
 
-        void CalcTentEl(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel,
-                                    SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
+            void CalcTentEl(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel,
+                    SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
 
             constexpr int factorial(int n)
             {
