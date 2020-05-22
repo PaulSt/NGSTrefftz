@@ -900,15 +900,12 @@ namespace ngcomp
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
       double tentsize = TentAdiam (tent);
 
-      ElementTransformation &trafo = ma->GetTrafo (ElementId (0), lh);
-      MappedIntegrationPoint<D, D> mip (sir[0][0], trafo);
-      mip.Point () = center.Range (0, D);
-
-      shared_ptr<CoefficientFunction> wavespeedcf = this->wavespeedcf;
+      Array<double> newgamma (2);
+      // newgamma[0] = localwavespeedcf->Evaluate(mip);
       // newgamma[0] = 1+center[0]; //wavespeedcf->Evaluate(mip);
-      Array<double> newgamma (gamma);
-      newgamma[0] = wavespeedcf->Evaluate (mip);
-      newgamma[1] *= tentsize / 2.0;
+      newgamma[0] = this->gamma[tent->vertex](0, 0);
+      ////newgamma[0] = (*localwavespeed[tent->vertex])(0,0);
+      newgamma[1] = this->gamma[tent->vertex](1, 0) * tentsize / 2.0;
 
       TrefftzGppwFE<D> tel (newgamma, this->order, center, tentsize);
       int nbasis = tel.GetNDof ();
@@ -990,7 +987,9 @@ namespace ngcomp
                       + shift;
 
               FlatMatrix<SIMD<double>> wavespeed (1, vsir.Size (), slh);
-              wavespeedcf->Evaluate (vsmir, wavespeed);
+              shared_ptr<CoefficientFunction> localwavespeedcf
+                  = this->wavespeedcf;
+              localwavespeedcf->Evaluate (vsmir, wavespeed);
 
               FlatMatrix<SIMD<double>> simdddshapes ((D + 1) * nbasis,
                                                      vsir.Size (), slh);
@@ -1221,20 +1220,20 @@ void ExportEvolveTent (py::module m)
          [] (int order, shared_ptr<MeshAccess> ma,
              shared_ptr<CoefficientFunction> wavespeedcf,
              shared_ptr<CoefficientFunction> bddatum,
-             Vector<double> agamma) -> shared_ptr<TrefftzTents> {
-           Array<double> gamma;
-           for (auto a : agamma)
-             gamma.Append (a);
+             shared_ptr<CoefficientFunction> x,
+             shared_ptr<CoefficientFunction> y) -> shared_ptr<TrefftzTents> {
+           // Array<double> gamma;
+           // for(auto a : agamma) gamma.Append(a);
            // return
            // make_shared<GppwTents<2>>(order,ma,wavespeedcf,bddatum,gamma);
            shared_ptr<TrefftzTents> tr;
            int D = ma->GetDimension ();
            if (D == 1)
              tr = make_shared<GppwTents<1>> (order, ma, wavespeedcf, bddatum,
-                                             gamma);
+                                             x, y);
            else if (D == 2)
              tr = make_shared<GppwTents<2>> (order, ma, wavespeedcf, bddatum,
-                                             gamma);
+                                             x, y);
            return tr;
          });
 }

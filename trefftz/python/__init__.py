@@ -5,7 +5,7 @@ from ngsolve import *
 from ngsolve.fem import CoordCF
 from types import MethodType
 
-def GetWave(self): # Have to add self since this will become a method
+def GetWave(self):
     order=self.GetOrder()
     D = self.GetSpaceDim()
     initmesh = self.GetInitmesh()
