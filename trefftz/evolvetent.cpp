@@ -761,11 +761,8 @@ namespace ngcomp
             double tentsize = TentAdiam(tent);
 
             Array<double> newgamma(2);
-            //newgamma[0] = localwavespeedcf->Evaluate(mip);
-            //newgamma[0] = 1+center[0]; //wavespeedcf->Evaluate(mip);
             newgamma[0] = this->gamma[tent->vertex](0,0);
-            ////newgamma[0] = (*localwavespeed[tent->vertex])(0,0);
-            newgamma[1] = this->gamma[tent->vertex](1,0) * tentsize/2.0;
+            newgamma[1] = this->gamma[tent->vertex](1,0);
 
             TrefftzGppwFE<D> tel(newgamma, this->order, center, tentsize);
             int nbasis = tel.GetNDof();
