@@ -848,6 +848,8 @@ namespace ngcomp
                     FlatMatrix<SIMD<double>> simddshapes2(nbasis,(D+1)*vsir.Size(),&simddshapes(0,0));
 
                     AddABt(simdddshapes2,simddshapes2,elmat);
+                    //simdddshapes2*=sqrt(mu);
+                    //AddABt(simdddshapes2,simdddshapes2,elmat);
                 }
             }
 
