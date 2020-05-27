@@ -29,7 +29,10 @@ namespace ngfem
             eltype(aeltype),
             basistype(abasistype),
             gamma(agamma)
-            { while(gamma.Size()<=ord) gamma.Append(0.0);}
+            { 
+                while(gamma.Size()<=ord) gamma.Append(0.0);
+                for(int i=0;i<=ord;i++) gamma[i] *= pow(aelsize/2.0,i);
+            }
 
             double GetWavespeed() const { return 1.0/sqrt(gamma[0]); }
             void SetWavespeed(double wavespeed) {gamma[0] = wavespeed;}
