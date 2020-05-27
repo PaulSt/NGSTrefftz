@@ -468,7 +468,7 @@ namespace ngfem
 
           for (int basisn = 0; basisn < nbasis; basisn++)
             {
-              for (int ell = -1; ell < ord - 1; ell++)
+              for (int ell = 0; ell < ord - 1; ell++)
                 {
                   for (int t = 0; t <= ell; t++)
                     {
