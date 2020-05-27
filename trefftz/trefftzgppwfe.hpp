@@ -31,6 +31,8 @@ namespace ngfem
     {
       while (gamma.Size () <= ord)
         gamma.Append (0.0);
+      for (int i = 0; i <= ord; i++)
+        gamma[i] *= pow (aelsize / 2.0, i);
     }
 
     double GetWavespeed () const { return 1.0 / sqrt (gamma[0]); }
