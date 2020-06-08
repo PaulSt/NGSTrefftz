@@ -16,12 +16,19 @@ namespace ngcomp
     int local_ndof;
     float c = 1;
     int useshift = 1;
+    int useqt = 0;
     int basistype;
     Array<double> gamma;
     int gppword;
+    shared_ptr<CoefficientFunction> wavespeedcf;
 
   public:
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
+
+    void SetWavespeed (shared_ptr<CoefficientFunction> awavespeedcf)
+    {
+      wavespeedcf = awavespeedcf;
+    }
 
     string GetClassName () const override { return "trefftz"; }
 
