@@ -760,11 +760,7 @@ namespace ngcomp
             center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
             double tentsize = TentAdiam(tent);
 
-            Array<double> newgamma(2);
-            newgamma[0] = this->gamma[tent->vertex](0,0);
-            newgamma[1] = this->gamma[tent->vertex](1,0);
-
-            TrefftzGppwFE<D> tel(newgamma, this->order, center, tentsize);
+            TrefftzGppwFE<D> tel(this->gamma[tent->vertex], this->order, center, tentsize);
             int nbasis = tel.GetNDof();
 
             FlatMatrix<> elmat(nbasis,slh);
@@ -1019,36 +1015,31 @@ void ExportEvolveTent(py::module m)
 
     //});
 
-    m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> wavespeedcf, shared_ptr<CoefficientFunction> bddatum) -> shared_ptr<TrefftzTents>
+    m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> wavespeedcf, shared_ptr<CoefficientFunction> bddatum, bool QT) -> shared_ptr<TrefftzTents>
           {
               //TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
               shared_ptr<TrefftzTents> tr;
               int D = ma->GetDimension();
               //return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
+              if(!QT)
+              {
               if(D==1)
                   tr = make_shared<WaveTents<1>>(order,ma,wavespeedcf,bddatum);
               else if(D==2)
                   tr = make_shared<WaveTents<2>>(order,ma,wavespeedcf,bddatum);
               else if(D==3)
                   tr = make_shared<WaveTents<3>>(order,ma,wavespeedcf,bddatum);
-              return tr;
-              //return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma, wavespeed, bddatum));
-
-          });
-
-    m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> wavespeedcf, shared_ptr<CoefficientFunction> bddatum, shared_ptr<CoefficientFunction> x, shared_ptr<CoefficientFunction> y) -> shared_ptr<TrefftzTents>
-          {
-              //Array<double> gamma;
-              //for(auto a : agamma) gamma.Append(a);
-              //return make_shared<GppwTents<2>>(order,ma,wavespeedcf,bddatum,gamma);
-              shared_ptr<TrefftzTents> tr;
-              int D = ma->GetDimension();
+              } else {
               if(D==1)
-              tr = make_shared<GppwTents<1>>(order,ma,wavespeedcf,bddatum,x,y);
+              tr = make_shared<GppwTents<1>>(order,ma,wavespeedcf,bddatum);
               else if(D==2)
-              tr = make_shared<GppwTents<2>>(order,ma,wavespeedcf,bddatum,x,y);
+              tr = make_shared<GppwTents<2>>(order,ma,wavespeedcf,bddatum);
               return tr;
-          });
+              }
+              //return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma, wavespeed, bddatum));
+          }, "Create Wavetent object", 
+        py::arg("order"), py::arg("ma"), py::arg("wavespeedcf"), py::arg("bddatum"), py::arg("QT")=false
+    );
 }
 #endif // NGS_PYTHON
 
