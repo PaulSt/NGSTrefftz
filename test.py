@@ -168,7 +168,7 @@ def Cartsolve2D(fes,c,fullsys=False,inputsol=None):
     or normal L2 basis, requiring the full system
     >>> fes = L2(mesh, order=order, dgjumps=True)
     >>> Cartsolve2D(fes,c,True) # doctest:+ELLIPSIS
-    [81.0, ..., ...e-10, ...e-09]
+    [81.0, ..., ...e-12, ...e-10]
     """
     if inputsol is None:
         inputsol = TestSolution2D(fes,c)
