@@ -31,12 +31,12 @@ namespace ngfem
                 for (size_t j = 0; j <= ord-i; j++)
                     pol[ii++] = polxt[0][i] * polxt[1][j];
             // TB*monomials for trefftz shape fcts
-            CSR localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gamma);
+            const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gamma);
             for (int i=0; i<this->ndof; ++i)
             {
                 shape(i,imip) = 0.0;
-                for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                    shape(i,imip) += (localmat)[2][j]*pol[(localmat)[1][j]];
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    shape(i,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
             }
         }
     }
@@ -65,12 +65,12 @@ namespace ngfem
                     for (size_t k = 0; k <= ord-i-j; k++)
                         pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
             // TB*monomials for trefftz shape fcts
-            CSR localmat = TrefftzGppwBasis<2>::getInstance().TB(ord,gamma);
+            const CSR* localmat = TrefftzGppwBasis<2>::getInstance().TB(ord,gamma);
             for (int i=0; i<this->ndof; ++i)
             {
                 shape(i,imip) = 0.0;
-                for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                    shape(i,imip) += (localmat)[2][j]*pol[(localmat)[1][j]];
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    shape(i,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
             }
         }
     }
@@ -108,12 +108,12 @@ namespace ngfem
                         pol[ii++] = (d==0?i:(d==1?j:0))
                             * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
 
-                CSR localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gamma);
+                const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gamma);
                 for (int i=0; i<this->ndof; ++i)
                 {
                     dshape(i*2+d,imip) = 0.0;
-                    for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                        dshape(i*2+d,imip) += (localmat)[2][j]*pol[(localmat)[1][j]] * (2.0/elsize);
+                    for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                        dshape(i*2+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (2.0/elsize);
                 }
             }
         }
@@ -147,12 +147,12 @@ namespace ngfem
                             pol[ii++] = (d==0?i:(d==1?j:(d==2?k:0)))
                                 * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)];
 
-                CSR localmat = TrefftzGppwBasis<2>::getInstance().TB(ord,gamma);
+                const CSR* localmat = TrefftzGppwBasis<2>::getInstance().TB(ord,gamma);
                 for (int i=0; i<this->ndof; ++i)
                 {
                     dshape(i*3+d,imip) = 0.0;
-                    for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                        dshape(i*3+d,imip) += (localmat)[2][j]*pol[(localmat)[1][j]] * (2.0/elsize);
+                    for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                        dshape(i*3+d,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (2.0/elsize);
                 }
             }
         }
@@ -188,12 +188,12 @@ namespace ngfem
             for (size_t j = 0; j <= ord-i; j++)
                 pol[ii++] = polxt[0][i] * polxt[1][j];
         // TB*monomials for trefftz shape fcts
-        CSR localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gamma);
+        const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gamma);
         for (int i=0; i<this->ndof; ++i)
         {
             shape(i) = 0.0;
-            for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                shape(i) += (localmat)[2][j]*pol[(localmat)[1][j]];
+            for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                shape(i) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
         }
     }
 
@@ -220,12 +220,12 @@ namespace ngfem
                 for (size_t k = 0; k <= ord-i-j; k++)
                     pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
         // TB*monomials for trefftz shape fcts
-        CSR localmat = TrefftzGppwBasis<2>::getInstance().TB(ord,gamma);
+        const CSR* localmat = TrefftzGppwBasis<2>::getInstance().TB(ord,gamma);
         for (int i=0; i<this->ndof; ++i)
         {
             shape(i) = 0.0;
-            for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                shape(i) += (localmat)[2][j]*pol[(localmat)[1][j]];
+            for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                shape(i) += (*localmat)[2][j]*pol[(*localmat)[1][j]];
         }
     }
 
@@ -262,12 +262,12 @@ namespace ngfem
                     pol[ii++] = (d==0?i:(d==1?j:0))
                         * polxt2[0][i-(d==0)] * polxt2[1][j-(d==1)];
 
-            CSR localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gamma);
+            const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gamma);
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i,d) = 0.0;
-                for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                    dshape(i,d) += (localmat)[2][j]*pol[(localmat)[1][j]] * (2.0/elsize);
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (2.0/elsize);
             }
         }
     }
@@ -298,12 +298,12 @@ namespace ngfem
                         pol[ii++] = (d==0?i:(d==1?j:(d==2?k:0)))
                             * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)];
 
-            CSR localmat = TrefftzGppwBasis<2>::getInstance().TB(ord,gamma);
+            const CSR* localmat = TrefftzGppwBasis<2>::getInstance().TB(ord,gamma);
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i,d) = 0.0;
-                for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                    dshape(i,d) += (localmat)[2][j]*pol[(localmat)[1][j]] * (2.0/elsize);
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    dshape(i,d) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * (2.0/elsize);
             }
         }
     }
@@ -340,13 +340,13 @@ namespace ngfem
                           - j*(j-1) * polxt[0][i] * polxt[1][j-2]
                           * wavespeed(0,imip);
 
-            CSR localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gamma);
+            const CSR* localmat = TrefftzGppwBasis<1>::getInstance().TB(ord,gamma);
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i*2,imip) = 0.0;
                 dshape(i*2+1,imip) = 0.0;
-                for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                    dshape(i*2+1,imip) += (localmat)[2][j]*pol[(localmat)[1][j]] * pow(2.0/elsize,2);
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    dshape(i*2+1,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * pow(2.0/elsize,2);
             }
         }
     }
@@ -380,14 +380,14 @@ namespace ngfem
                               - k*(k-1) * polxt[0][i] * polxt[1][j] * polxt[2][k-2]
                               * wavespeed(0,imip);
 
-            CSR localmat = TrefftzGppwBasis<2>::getInstance().TB(ord,gamma);
+            const CSR* localmat = TrefftzGppwBasis<2>::getInstance().TB(ord,gamma);
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i*3,imip) = 0.0;
                 dshape(i*3+1,imip) = 0.0;
                 dshape(i*3+2,imip) = 0.0;
-                for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                    dshape(i*3+2,imip) += (localmat)[2][j]*pol[(localmat)[1][j]] * pow(2.0/elsize,2);
+                for (int j=(*localmat)[0][i]; j<(*localmat)[0][i+1]; ++j)
+                    dshape(i*3+2,imip) += (*localmat)[2][j]*pol[(*localmat)[1][j]] * pow(2.0/elsize,2);
             }
         }
     }
@@ -398,16 +398,16 @@ namespace ngfem
 
 
     template<int D>
-    CSR TrefftzGppwBasis<D> :: TB(int ord, FlatMatrix<double> gamma, int basistype)
+    const CSR* TrefftzGppwBasis<D> :: TB(int ord, FlatArray<double> gamma, int basistype)
     {
-        //{
-            //lock_guard<mutex> lock(gentrefftzbasis);
-            //string encode = to_string(ord);
-            //for(int i=0;i<ord*ord;i++)
-                //encode += to_string(gamma(i));
+        {
+            lock_guard<mutex> lock(gentrefftzbasis);
+            string encode = to_string(ord);
+            for(auto g : gamma)
+                encode += to_string(g);
 
-            //if ( gtbstore[encode][0].Size() == 0)
-            //{
+            if ( gtbstore[encode][0].Size() == 0)
+            {
                 //cout << "creating gppw bstore for " << encode << endl;
                 const int nbasis = (BinCoeff(D + ord, ord) + BinCoeff(D + ord-1, ord-1));
                 const int npoly = BinCoeff(D+1 + ord, ord);
@@ -427,7 +427,7 @@ namespace ngfem
 
                 for(int basisn=0;basisn<nbasis;basisn++)
                 {
-                    for(int ell=-1;ell<ord-1;ell++)
+                    for(int ell=0;ell<ord-1;ell++)
                     {
                         for(int t=0;t<=ell;t++)
                         {
@@ -443,7 +443,7 @@ namespace ngfem
                                 int getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
 
                                 *newcoeff =
-                                    (x+2)*(x+1)/((t+2)*(t+1)*gamma(0))
+                                    (x+2)*(x+1)/((t+2)*(t+1)*gamma[0])
                                     * gppwbasis( basisn, getcoeff);
                                 for(int betax=0;betax<x;betax++)
                                 {
@@ -452,7 +452,7 @@ namespace ngfem
                                     getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
 
                                     *newcoeff
-                                        -= gamma(x-betax,0)*gppwbasis( basisn, getcoeff) / gamma(0);
+                                        -= gamma[x-betax]*gppwbasis( basisn, getcoeff) / gamma[0];
                                 }
                             }
                             else if (D==2)
@@ -475,9 +475,9 @@ namespace ngfem
                                     int getcoeffy = TrefftzWaveBasis<D>::IndexMap2(index, ord);
 
                                     *newcoeff =
-                                        (x+2)*(x+1)/((t+2)*(t+1)*gamma(0))
+                                        (x+2)*(x+1)/((t+2)*(t+1)*gamma[0])
                                         * gppwbasis( basisn, getcoeffx)
-                                        + (y+2)*(y+1)/((t+2)*(t+1)*gamma(0))
+                                        + (y+2)*(y+1)/((t+2)*(t+1)*gamma[0])
                                         * gppwbasis( basisn, getcoeffy);
                                     for(int betax=0;betax<=x;betax++)
                                         for(int betay=0;betay<=y-(betax==x);betay++)
@@ -488,14 +488,14 @@ namespace ngfem
                                             int getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
 
                                             // TODO fix smart gamma, no only dummy
-                                            //double fakegamma = 0;
-                                            //if( (x-betax == 0 && y-betay == 0))
-                                                //fakegamma=gamma[0];
-                                            //else if((x-betax == 0 && y-betay == 1) || (x-betax == 1 && y-betay == 0))
-                                                //fakegamma=gamma[1];
+                                            double fakegamma = 0;
+                                            if( (x-betax == 0 && y-betay == 0))
+                                                fakegamma=gamma[0];
+                                            else if((x-betax == 0 && y-betay == 1) || (x-betax == 1 && y-betay == 0))
+                                                fakegamma=gamma[1];
 
                                             *newcoeff
-                                                -= gamma(x,y)*gppwbasis( basisn, getcoeff) / gamma(0);
+                                                -= fakegamma*gppwbasis( basisn, getcoeff) / gamma[0];
                                         }
                                 }
                             }
@@ -503,21 +503,19 @@ namespace ngfem
                     }
                 }
 
-                //MatToCSR(gppwbasis,gtbstore[encode]);
-            //}
+                MatToCSR(gppwbasis,gtbstore[encode]);
+            }
 
-            //if ( gtbstore[encode].Size() == 0)
-            //{
-                //stringstream str;
-                //str << "failed to generate trefftz basis of order " << ord << endl;
-                //throw Exception (str.str());
-            //}
+            if ( gtbstore[encode].Size() == 0)
+            {
+                stringstream str;
+                str << "failed to generate trefftz basis of order " << ord << endl;
+                throw Exception (str.str());
+            }
 
-            //const CSR* tb =& gtbstore[encode];
-            CSR tb;
-            MatToCSR(gppwbasis,tb);
+            const CSR* tb =& gtbstore[encode];
             return tb;
-        //}
+        }
     }
 
     template class TrefftzGppwBasis<1>;
