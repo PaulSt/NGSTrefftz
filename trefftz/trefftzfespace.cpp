@@ -14,7 +14,7 @@ namespace ngcomp
 {
 
     TrefftzFESpace :: TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags)
-        : FESpace (ama, flags), gamma(flags.GetNumListFlag ("gamma"))
+        : FESpace (ama, flags)
     {
         type="trefftzfespace";
 
@@ -28,6 +28,8 @@ namespace ngcomp
         c = flags.GetNumFlag ("wavespeed", 1);
         basistype = flags.GetNumFlag ("basistype", 0);
         useshift = flags.GetNumFlag("useshift",1);
+        useqt = flags.GetNumFlag("useqt",0);
+
 
         local_ndof = (BinCoeff(fullD-1 + order, order) + BinCoeff(fullD-1 + order-1, order-1));
         nel = ma->GetNE();
@@ -100,12 +102,32 @@ namespace ngcomp
             case ET_QUAD:
             case ET_TRIG:
                 {
-                    if(gamma.Size()!=0)
+                    if(wavespeedcf!=NULL)
                     {
-                        Array<double> newgamma(gamma);
-                        newgamma[0] += ElCenter<1>(ei)[0];
-                        newgamma[1] *= Adiam<1>(ei)/2.0;
-                        return *(new (alloc) TrefftzGppwFE<1>(newgamma, order,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
+                        LocalHeap lh(1000 * 1000);
+                        const ELEMENT_TYPE eltyp = ET_TRIG ;
+                        const int D=2;
+                        const int nsimd = SIMD<double>::Size();
+                        SIMD_IntegrationRule sir(eltyp, this->order*2);
+
+                        IntegrationRule ir (eltyp, 0);
+                        Matrix<> b(this->order,this->order);
+                        shared_ptr<CoefficientFunction> localwavespeedcf = wavespeedcf;
+                        shared_ptr<CoefficientFunction> localwavespeedcfx = wavespeedcf;
+                        MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
+                        mip.Point() = ElCenter<1>(ei).Range(0,1);
+                        for(int nx=0;nx<this->order;nx++)
+                        {
+                            int ny = 0;
+                            for(int ny=0;ny<this->order;ny++)
+                            {
+                                b(nx,ny) = localwavespeedcfx->Evaluate(mip);
+                                localwavespeedcfx = localwavespeedcfx->Diff(MakeCoordinateCoefficientFunction(1).get(), make_shared<ConstantCoefficientFunction>(1) );
+                            }
+                            localwavespeedcf = localwavespeedcf->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
+                            localwavespeedcfx = localwavespeedcf;
+                        }
+                        return *(new (alloc) TrefftzGppwFE<1>(b, order,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
                     }
                     else
                         return *(new (alloc) TrefftzWaveFE<1>(order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
@@ -116,16 +138,38 @@ namespace ngcomp
             case ET_PYRAMID:
             case ET_TET:
                 {
-                    Array<double> newgamma(gamma);
-                    newgamma[0] += ElCenter<2>(ei)[0]+ElCenter<2>(ei)[1];
-                    newgamma[1] *= Adiam<2>(ei)/2.0;
-                    if(gamma.Size()!=0)
-                        return *(new (alloc) TrefftzGppwFE<2>(newgamma, order,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
+
+                    if(wavespeedcf!=NULL)
+                    {
+                        LocalHeap lh(1000 * 1000);
+                        const ELEMENT_TYPE eltyp = ET_TRIG ;
+                        const int D=3;
+                        const int nsimd = SIMD<double>::Size();
+                        SIMD_IntegrationRule sir(eltyp, this->order*2);
+
+                        IntegrationRule ir (eltyp, 0);
+                        Matrix<> b(this->order,this->order);
+                        shared_ptr<CoefficientFunction> localwavespeedcf = wavespeedcf;
+                        shared_ptr<CoefficientFunction> localwavespeedcfx = wavespeedcf;
+                        MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
+                        mip.Point() = ElCenter<2>(ei).Range(0,2);
+                        for(int nx=0;nx<this->order;nx++)
+                        {
+                            int ny = 0;
+                            for(int ny=0;ny<this->order;ny++)
+                            {
+                                b(nx,ny) = localwavespeedcfx->Evaluate(mip);
+                                localwavespeedcfx = localwavespeedcfx->Diff(MakeCoordinateCoefficientFunction(1).get(), make_shared<ConstantCoefficientFunction>(1) );
+                            }
+                            localwavespeedcf = localwavespeedcf->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
+                            localwavespeedcfx = localwavespeedcf;
+                        }
+                        return *(new (alloc) TrefftzGppwFE<2>(b, order,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
+                    }
                     else
                         return *(new (alloc) TrefftzWaveFE<2>(order,c,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
-                    break;
-                    break;
                 }
+                break;
         }
         return *(new (alloc) TrefftzWaveFE<1>());
     }
@@ -205,6 +249,7 @@ void ExportTrefftzFESpace(py::module m)
     ExportFESpace<TrefftzFESpace>(m, "trefftzfespace")
         .def("GetDocu", &TrefftzFESpace::GetDocu)
         .def("GetNDof", &TrefftzFESpace::GetNDof)
+        .def("SetWavespeed", &TrefftzFESpace::SetWavespeed)
         ;
 }
 #endif // NGS_PYTHON
