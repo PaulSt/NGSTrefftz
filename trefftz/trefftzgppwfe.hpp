@@ -16,10 +16,10 @@ namespace ngfem
     double elsize;
     ELEMENT_TYPE eltype;
     int basistype;
-    Matrix<double> gamma;
+    Array<double> gamma;
 
   public:
-    TrefftzGppwFE (FlatMatrix<double> agamma, int aord = 1,
+    TrefftzGppwFE (FlatArray<double> agamma, int aord = 1,
                    Vec<D + 1> aelcenter = 0, double aelsize = 1,
                    ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0)
         : ScalarMappedElement<D + 1> (BinCoeff (D + aord, aord)
@@ -29,14 +29,14 @@ namespace ngfem
           elcenter (aelcenter), elsize (aelsize), eltype (aeltype),
           basistype (abasistype), gamma (agamma)
     {
-      // while(gamma.Size()<=ord) gamma.Append(0.0);
-      for (int i = 0; i < ord; i++)
-        for (int j = 0; j < ord; j++)
-          gamma (i, j) *= pow (aelsize / 2.0, i + j);
+      while (gamma.Size () <= ord)
+        gamma.Append (0.0);
+      for (int i = 0; i <= ord; i++)
+        gamma[i] *= pow (aelsize / 2.0, i);
     }
 
-    double GetWavespeed () const { return 1.0 / sqrt (gamma (0)); }
-    void SetWavespeed (double wavespeed) { gamma (0) = wavespeed; }
+    double GetWavespeed () const { return 1.0 / sqrt (gamma[0]); }
+    void SetWavespeed (double wavespeed) { gamma[0] = wavespeed; }
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
 
@@ -143,7 +143,7 @@ namespace ngfem
       return ginstance;
     }
 
-    CSR TB (int ord, FlatMatrix<double> gamma, int basistype = 0);
+    const CSR *TB (int ord, FlatArray<double> gamma, int basistype = 0);
 
   private:
     TrefftzGppwBasis () = default;
