@@ -900,11 +900,8 @@ namespace ngcomp
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
       double tentsize = TentAdiam (tent);
 
-      Array<double> newgamma (2);
-      newgamma[0] = this->gamma[tent->vertex](0, 0);
-      newgamma[1] = this->gamma[tent->vertex](1, 0);
-
-      TrefftzGppwFE<D> tel (newgamma, this->order, center, tentsize);
+      TrefftzGppwFE<D> tel (this->gamma[tent->vertex], this->order, center,
+                            tentsize);
       int nbasis = tel.GetNDof ();
 
       FlatMatrix<> elmat (nbasis, slh);
