@@ -156,9 +156,7 @@ namespace ngcomp
   public:
     GppwTents (int aorder, shared_ptr<MeshAccess> ama,
                shared_ptr<CoefficientFunction> awavespeedcf,
-               shared_ptr<CoefficientFunction> abddatum,
-               shared_ptr<CoefficientFunction> x,
-               shared_ptr<CoefficientFunction> y)
+               shared_ptr<CoefficientFunction> abddatum)
         : WaveTents<D> (aorder, ama, awavespeedcf, abddatum)
     {
       LocalHeap lh (1000 * 1000);
@@ -183,10 +181,12 @@ namespace ngcomp
                 {
                   b (nx, ny) = localwavespeedcfx->Evaluate (mip);
                   localwavespeedcfx = localwavespeedcfx->Diff (
-                      y.get (), make_shared<ConstantCoefficientFunction> (1));
+                      MakeCoordinateCoefficientFunction (1).get (),
+                      make_shared<ConstantCoefficientFunction> (1));
                 }
               localwavespeedcf = localwavespeedcf->Diff (
-                  x.get (), make_shared<ConstantCoefficientFunction> (1));
+                  MakeCoordinateCoefficientFunction (0).get (),
+                  make_shared<ConstantCoefficientFunction> (1));
               localwavespeedcfx = localwavespeedcf;
             }
           this->gamma.Append (b);
