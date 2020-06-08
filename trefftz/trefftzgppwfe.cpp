@@ -443,7 +443,7 @@ namespace ngfem
                                 int getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
 
                                 *newcoeff =
-                                    (x+2)*(x+1)/((t+2)*(t+1)*gamma[0])
+                                    (x+2)*(x+1)/((t+2)*(t+1)*gamma(0))
                                     * gppwbasis( basisn, getcoeff);
                                 for(int betax=0;betax<x;betax++)
                                 {
@@ -452,7 +452,7 @@ namespace ngfem
                                     getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
 
                                     *newcoeff
-                                        -= gamma[x-betax]*gppwbasis( basisn, getcoeff) / gamma[0];
+                                        -= gamma(x-betax,0)*gppwbasis( basisn, getcoeff) / gamma(0);
                                 }
                             }
                             else if (D==2)
@@ -475,9 +475,9 @@ namespace ngfem
                                     int getcoeffy = TrefftzWaveBasis<D>::IndexMap2(index, ord);
 
                                     *newcoeff =
-                                        (x+2)*(x+1)/((t+2)*(t+1)*gamma[0])
+                                        (x+2)*(x+1)/((t+2)*(t+1)*gamma(0))
                                         * gppwbasis( basisn, getcoeffx)
-                                        + (y+2)*(y+1)/((t+2)*(t+1)*gamma[0])
+                                        + (y+2)*(y+1)/((t+2)*(t+1)*gamma(0))
                                         * gppwbasis( basisn, getcoeffy);
                                     for(int betax=0;betax<=x;betax++)
                                         for(int betay=0;betay<=y-(betax==x);betay++)
@@ -488,14 +488,14 @@ namespace ngfem
                                             int getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
 
                                             // TODO fix smart gamma, no only dummy
-                                            double fakegamma = 0;
-                                            if( (x-betax == 0 && y-betay == 0))
-                                                fakegamma=gamma[0];
-                                            else if((x-betax == 0 && y-betay == 1) || (x-betax == 1 && y-betay == 0))
-                                                fakegamma=gamma[1];
+                                            //double fakegamma = 0;
+                                            //if( (x-betax == 0 && y-betay == 0))
+                                                //fakegamma=gamma[0];
+                                            //else if((x-betax == 0 && y-betay == 1) || (x-betax == 1 && y-betay == 0))
+                                                //fakegamma=gamma[1];
 
                                             *newcoeff
-                                                -= fakegamma*gppwbasis( basisn, getcoeff) / gamma[0];
+                                                -= gamma(x,y)*gppwbasis( basisn, getcoeff) / gamma(0);
                                         }
                                 }
                             }
