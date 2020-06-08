@@ -398,13 +398,13 @@ namespace ngfem
 
 
     template<int D>
-    const CSR* TrefftzGppwBasis<D> :: TB(int ord, FlatArray<double> gamma, int basistype)
+    const CSR* TrefftzGppwBasis<D> :: TB(int ord, FlatMatrix<double> gamma, int basistype)
     {
         {
             lock_guard<mutex> lock(gentrefftzbasis);
             string encode = to_string(ord);
-            for(auto g : gamma)
-                encode += to_string(g);
+            for(int i=0;i<ord*ord;i++)
+                encode += to_string(gamma(i));
 
             if ( gtbstore[encode][0].Size() == 0)
             {
