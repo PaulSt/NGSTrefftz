@@ -77,6 +77,8 @@ namespace ngcomp
     {
       wavespeed.SetSize (1);
       wavespeed[0] = awavespeed;
+      this->wavespeedcf
+          = make_shared<ConstantCoefficientFunction> (awavespeed);
     }
 
     WaveTents (int aorder, shared_ptr<MeshAccess> ama,
@@ -168,15 +170,18 @@ namespace ngcomp
       IntegrationRule ir (eltyp, 0);
       for (int nv = 0; nv < ama->GetNV (); nv++)
         {
-          shared_ptr<CoefficientFunction> localwavespeedcf = awavespeedcf;
-          shared_ptr<CoefficientFunction> localwavespeedcfx = awavespeedcf;
+          // shared_ptr<CoefficientFunction> localwavespeedcf =
+          // make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
+          // shared_ptr<CoefficientFunction> localwavespeedcfx =
+          // make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
+          auto localwavespeedcf = this->wavespeedcf;
+          auto localwavespeedcfx = this->wavespeedcf;
           MappedIntegrationPoint<D, D> mip (ir[0],
                                             ama->GetTrafo (ElementId (0), lh));
           mip.Point () = ama->GetPoint<D> (nv);
           Matrix<> b (this->order, this->order);
           for (int nx = 0; nx < this->order; nx++)
             {
-              int ny = 0;
               for (int ny = 0; ny < this->order; ny++)
                 {
                   b (nx, ny) = localwavespeedcfx->Evaluate (mip);
