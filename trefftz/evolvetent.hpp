@@ -170,12 +170,14 @@ namespace ngcomp
       IntegrationRule ir (eltyp, 0);
       for (int nv = 0; nv < ama->GetNV (); nv++)
         {
-          // shared_ptr<CoefficientFunction> localwavespeedcf =
-          // make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
-          // shared_ptr<CoefficientFunction> localwavespeedcfx =
-          // make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
-          auto localwavespeedcf = this->wavespeedcf;
-          auto localwavespeedcfx = this->wavespeedcf;
+          shared_ptr<CoefficientFunction> localwavespeedcf
+              = make_shared<ConstantCoefficientFunction> (1)
+                / (awavespeedcf * awavespeedcf);
+          shared_ptr<CoefficientFunction> localwavespeedcfx
+              = make_shared<ConstantCoefficientFunction> (1)
+                / (awavespeedcf * awavespeedcf);
+          // auto localwavespeedcf = this->wavespeedcf;
+          // auto localwavespeedcfx = this->wavespeedcf;
           MappedIntegrationPoint<D, D> mip (ir[0],
                                             ama->GetTrafo (ElementId (0), lh));
           mip.Point () = ama->GetPoint<D> (nv);
