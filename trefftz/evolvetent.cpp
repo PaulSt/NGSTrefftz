@@ -747,10 +747,10 @@ namespace ngcomp
         const int snip = sir.Size()*nsimd;
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(this->ma);      // collection of tents in timeslab
+        tps.PitchTents(dt, 5, lh); // adt = time slab height, wavespeed
         //tps.PitchTents(dt, this->wavespeedcf, lh); // adt = time slab height, wavespeed
-
-        auto localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(this->wavespeedcf*this->wavespeedcf);
-        tps.PitchTents(dt, localwavespeedcf, lh); // adt = time slab height, wavespeed
+        //auto localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(this->wavespeedcf*this->wavespeedcf);
+        //tps.PitchTents(dt, localwavespeedcf, lh); // adt = time slab height, wavespeed
 
         cout << "solving gppw " << tps.tents.Size() << " tents " << endl;
 
@@ -828,8 +828,8 @@ namespace ngcomp
                         vsmir[imip].Point() = map * vsir[imip].operator Vec<D+1,SIMD<double>>() + shift;
 
                     FlatMatrix<SIMD<double>> wavespeed(1,vsir.Size(),slh);
-                    //auto localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(this->wavespeedcf*this->wavespeedcf);
-                    auto localwavespeedcf = this->wavespeedcf;
+                    auto localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(this->wavespeedcf*this->wavespeedcf);
+                    //auto localwavespeedcf = this->wavespeedcf;
                     localwavespeedcf->Evaluate(vsmir,wavespeed);
 
                     FlatMatrix<SIMD<double>> simdddshapes((D+1)*nbasis,vsir.Size(),slh);
@@ -902,8 +902,8 @@ namespace ngcomp
         double DmatDD = Dmat(D,D);
 
         FlatMatrix<SIMD<double>> wavespeed(1,sir.Size(),slh);
-        //auto localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(this->wavespeedcf*this->wavespeedcf);
-        auto localwavespeedcf = this->wavespeedcf;
+        auto localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(this->wavespeedcf*this->wavespeedcf);
+        //auto localwavespeedcf = this->wavespeedcf;
         localwavespeedcf->Evaluate(smir_fix,wavespeed);
         //for(int s=0;s<smir.Size();s++)
             //cout << "point " << smir[s].Point() << " speed " << wavespeed(0,s) << endl;
