@@ -48,8 +48,8 @@ void TentPitchedSlab <DIM>::PitchTents(double dt,
       IntegrationRule ir (eltype, 0);
       ElementTransformation & trafo = ma->GetTrafo (ei, lh);
       MappedIntegrationPoint<DIM,DIM> mip(ir[0], trafo);
-      cmax[el.Nr()] = wavespeed->Evaluate(mip);
-      
+      cmax[el.Nr()] = wavespeed->Evaluate(mip)+2.0;
+
       for (int e : el.Edges())
 	{
           auto pnts = ma->GetEdgePNums(e);
