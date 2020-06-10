@@ -463,7 +463,7 @@ namespace ngfem
                     index[1] = y;
                   gppwbasis (basisn++,
                              TrefftzWaveBasis<D>::IndexMap2 (index, ord))
-                      = 1;
+                      = 1.0;
                 }
 
           for (int basisn = 0; basisn < nbasis; basisn++)

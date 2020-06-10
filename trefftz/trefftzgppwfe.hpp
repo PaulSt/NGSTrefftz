@@ -35,8 +35,8 @@ namespace ngfem
           gamma (i, j) *= pow (aelsize / 2.0, i + j);
     }
 
-    double GetWavespeed () const { return 1.0 / sqrt (gamma (0)); }
-    void SetWavespeed (double wavespeed) { gamma (0) = wavespeed; }
+    // double GetWavespeed() const { return 1.0/sqrt(gamma(0)); }
+    // void SetWavespeed(double wavespeed) {gamma(0) = wavespeed;}
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
 
