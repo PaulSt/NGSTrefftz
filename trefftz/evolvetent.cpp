@@ -38,8 +38,9 @@ namespace ngcomp
 
     TentPitchedSlab<D> tps
         = TentPitchedSlab<D> (ma); // collection of tents in timeslab
-    tps.PitchTents (dt, max_wavespeed + 5,
-                    lh); // adt = time slab height, wavespeed
+    tps.PitchTents (
+        dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction> (5),
+        lh); // adt = time slab height, wavespeed
 
     cout << "solving " << tps.tents.Size () << " tents ";
     static Timer ttent ("tent", 2);
@@ -845,7 +846,7 @@ namespace ngcomp
     double h = 0.0;
     TentPitchedSlab<D> tps = TentPitchedSlab<D> (ma);
     LocalHeap lh (1000 * 1000 * 100);
-    tps.PitchTents (dt, wavespeed[0] + 1, lh);
+    tps.PitchTents (dt, this->wavespeedcf, lh);
     RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
       Tent *tent = tps.tents[tentnr];
       h = max (h, TentAdiam (tent));
@@ -887,7 +888,14 @@ namespace ngcomp
 
     TentPitchedSlab<D> tps
         = TentPitchedSlab<D> (this->ma); // collection of tents in timeslab
-    tps.PitchTents (dt, 5, lh);          // adt = time slab height, wavespeed
+    // tps.PitchTents(dt, 5, lh); // adt = time slab height, wavespeed
+    tps.PitchTents (
+        dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction> (5),
+        lh); // adt = time slab height, wavespeed
+    // auto localwavespeedcf =
+    // make_shared<ConstantCoefficientFunction>(1)/(this->wavespeedcf*this->wavespeedcf);
+    // tps.PitchTents(dt, localwavespeedcf, lh); // adt = time slab height,
+    // wavespeed
 
     cout << "solving gppw " << tps.tents.Size () << " tents " << endl;
 
@@ -981,8 +989,10 @@ namespace ngcomp
                       + shift;
 
               FlatMatrix<SIMD<double>> wavespeed (1, vsir.Size (), slh);
-              shared_ptr<CoefficientFunction> localwavespeedcf
-                  = this->wavespeedcf;
+              auto localwavespeedcf
+                  = make_shared<ConstantCoefficientFunction> (1)
+                    / (this->wavespeedcf * this->wavespeedcf);
+              // auto localwavespeedcf = this->wavespeedcf;
               localwavespeedcf->Evaluate (vsmir, wavespeed);
 
               FlatMatrix<SIMD<double>> simdddshapes ((D + 1) * nbasis,
@@ -1065,8 +1075,10 @@ namespace ngcomp
     double DmatDD = Dmat (D, D);
 
     FlatMatrix<SIMD<double>> wavespeed (1, sir.Size (), slh);
-    shared_ptr<CoefficientFunction> wavespeedcf = this->wavespeedcf;
-    wavespeedcf->Evaluate (smir_fix, wavespeed);
+    auto localwavespeedcf = make_shared<ConstantCoefficientFunction> (1)
+                            / (this->wavespeedcf * this->wavespeedcf);
+    // auto localwavespeedcf = this->wavespeedcf;
+    localwavespeedcf->Evaluate (smir_fix, wavespeed);
     // for(int s=0;s<smir.Size();s++)
     // cout << "point " << smir[s].Point() << " speed " << wavespeed(0,s) <<
     // endl;

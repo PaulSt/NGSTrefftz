@@ -478,12 +478,13 @@ namespace ngfem
                           Vec<D + 1, int> index;
                           index[D] = t + 2;
                           index[0] = x;
-                          double *newcoeff = &gppwbasis (
-                              basisn,
-                              TrefftzWaveBasis<D>::IndexMap2 (index, ord));
+                          int getcoeff
+                              = TrefftzWaveBasis<D>::IndexMap2 (index, ord);
+                          double *newcoeff = &gppwbasis (basisn, getcoeff);
+
                           index[D] = t;
                           index[0] = x + 2;
-                          int getcoeff
+                          getcoeff
                               = TrefftzWaveBasis<D>::IndexMap2 (index, ord);
 
                           *newcoeff = (x + 2) * (x + 1)
