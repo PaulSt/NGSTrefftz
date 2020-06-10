@@ -422,7 +422,7 @@ namespace ngfem
                                 index[D] = t;
                                 index[0] = x;
                                 if(D==2) index[1]=y;
-                                gppwbasis( basisn++, TrefftzWaveBasis<D>::IndexMap2(index, ord))=1;
+                                gppwbasis( basisn++, TrefftzWaveBasis<D>::IndexMap2(index, ord))=1.0;
                         }
 
                 for(int basisn=0;basisn<nbasis;basisn++)

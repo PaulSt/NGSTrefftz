@@ -67,6 +67,7 @@ namespace ngcomp
             {
                 wavespeed.SetSize(1);
                 wavespeed[0]=awavespeed;
+                this->wavespeedcf = make_shared<ConstantCoefficientFunction>(awavespeed);
             }
 
             WaveTents( int aorder, shared_ptr<MeshAccess> ama, shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> abddatum)
