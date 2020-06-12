@@ -92,6 +92,8 @@ namespace ngfem
   {
     return (T (0) <= val) - (val < T (0));
   }
+
+  constexpr int factorial (int n) { return n > 1 ? n * factorial (n - 1) : 1; }
 }
 
 #endif
