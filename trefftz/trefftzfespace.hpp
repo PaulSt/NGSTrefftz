@@ -43,7 +43,7 @@ namespace ngcomp
         protected:
 
         template<int D>
-        double Adiam(ElementId ei) const;
+        double Adiam(ElementId ei, double c) const;
 
         template<int D>
         Vec<D+1> ElCenter(ElementId ei) const;

@@ -102,35 +102,33 @@ namespace ngcomp
             case ET_QUAD:
             case ET_TRIG:
                 {
-                    if(wavespeedcf!=NULL)
+                    LocalHeap lh(1000 * 1000);
+                    const ELEMENT_TYPE eltyp = ET_TRIG ;
+                    const int D=2;
+                    IntegrationRule ir (eltyp, 0);
+                    MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
+                    mip.Point() = ElCenter<1>(ei).Range(0,1);
+                    if(useqt)
                     {
-                        LocalHeap lh(1000 * 1000);
-                        const ELEMENT_TYPE eltyp = ET_TRIG ;
-                        const int D=2;
-                        const int nsimd = SIMD<double>::Size();
-                        SIMD_IntegrationRule sir(eltyp, this->order*2);
 
-                        IntegrationRule ir (eltyp, 0);
                         Matrix<> b(this->order,this->order);
-                        shared_ptr<CoefficientFunction> localwavespeedcf = wavespeedcf;
-                        shared_ptr<CoefficientFunction> localwavespeedcfx = wavespeedcf;
-                        MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
-                        mip.Point() = ElCenter<1>(ei).Range(0,1);
+                    shared_ptr<CoefficientFunction> localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(wavespeedcf*wavespeedcf);
+                    shared_ptr<CoefficientFunction> localwavespeedcfx = make_shared<ConstantCoefficientFunction>(1)/(wavespeedcf*wavespeedcf);
                         for(int nx=0;nx<this->order;nx++)
                         {
                             int ny = 0;
                             for(int ny=0;ny<this->order;ny++)
                             {
-                                b(nx,ny) = localwavespeedcfx->Evaluate(mip);
+                                b(nx,ny) = localwavespeedcfx->Evaluate(mip)/(factorial(nx)*factorial(ny));
                                 localwavespeedcfx = localwavespeedcfx->Diff(MakeCoordinateCoefficientFunction(1).get(), make_shared<ConstantCoefficientFunction>(1) );
                             }
                             localwavespeedcf = localwavespeedcf->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
                             localwavespeedcfx = localwavespeedcf;
                         }
-                        return *(new (alloc) TrefftzGppwFE<1>(b, order,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
+                        return *(new (alloc) TrefftzGppwFE<1>(b, order,ElCenter<1>(ei),Adiam<1>(ei,wavespeedcf->Evaluate(mip)),ma->GetElType(ei)));
                     }
                     else
-                        return *(new (alloc) TrefftzWaveFE<1>(order,c,ElCenter<1>(ei),Adiam<1>(ei),ma->GetElType(ei)));
+                        return *(new (alloc) TrefftzWaveFE<1>(order,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c,ElCenter<1>(ei),Adiam<1>(ei,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c),ma->GetElType(ei)));
                     break;
                 }
             case ET_HEX:
@@ -138,21 +136,20 @@ namespace ngcomp
             case ET_PYRAMID:
             case ET_TET:
                 {
+                    LocalHeap lh(1000 * 1000);
+                    const ELEMENT_TYPE eltyp = ET_TRIG ;
+                    const int D=3;
+                    IntegrationRule ir (eltyp, 0);
+                    MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
+                    mip.Point() = ElCenter<2>(ei).Range(0,2);
 
-                    if(wavespeedcf!=NULL)
+                    if(useqt)
                     {
-                        LocalHeap lh(1000 * 1000);
-                        const ELEMENT_TYPE eltyp = ET_TRIG ;
-                        const int D=3;
-                        const int nsimd = SIMD<double>::Size();
-                        SIMD_IntegrationRule sir(eltyp, this->order*2);
 
-                        IntegrationRule ir (eltyp, 0);
                         Matrix<> b(this->order,this->order);
-                        shared_ptr<CoefficientFunction> localwavespeedcf = wavespeedcf;
-                        shared_ptr<CoefficientFunction> localwavespeedcfx = wavespeedcf;
-                        MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
-                        mip.Point() = ElCenter<2>(ei).Range(0,2);
+                    shared_ptr<CoefficientFunction> localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(wavespeedcf*wavespeedcf);
+                    shared_ptr<CoefficientFunction> localwavespeedcfx = make_shared<ConstantCoefficientFunction>(1)/(wavespeedcf*wavespeedcf);
+                        double localwavespeed = wavespeedcf->Evaluate(mip);
                         for(int nx=0;nx<this->order;nx++)
                         {
                             int ny = 0;
@@ -164,10 +161,10 @@ namespace ngcomp
                             localwavespeedcf = localwavespeedcf->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
                             localwavespeedcfx = localwavespeedcf;
                         }
-                        return *(new (alloc) TrefftzGppwFE<2>(b, order,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
+                        return *(new (alloc) TrefftzGppwFE<2>(b, order,ElCenter<2>(ei),Adiam<2>(ei,wavespeedcf->Evaluate(mip)),ma->GetElType(ei)));
                     }
                     else
-                        return *(new (alloc) TrefftzWaveFE<2>(order,c,ElCenter<2>(ei),Adiam<2>(ei),ma->GetElType(ei)));
+                        return *(new (alloc) TrefftzWaveFE<2>(order,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c,ElCenter<2>(ei),Adiam<2>(ei,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c),ma->GetElType(ei)));
                 }
                 break;
         }
@@ -176,7 +173,7 @@ namespace ngcomp
 
 
     template<int D>
-    double TrefftzFESpace :: Adiam(ElementId ei) const
+    double TrefftzFESpace :: Adiam(ElementId ei, double c) const
     {
         double anisotropicdiam = 0.0;
         auto vertices_index = ma->GetElVertices(ei);
