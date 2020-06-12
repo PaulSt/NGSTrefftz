@@ -35,7 +35,7 @@ namespace ngfem
           gamma (i, j) *= pow (aelsize / 2.0, i + j);
     }
 
-    // double GetWavespeed() const { return 1.0/sqrt(gamma(0)); }
+    double GetWavespeed () const { return gamma (0); }
     // void SetWavespeed(double wavespeed) {gamma(0) = wavespeed;}
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
@@ -56,10 +56,10 @@ namespace ngfem
                              BareSliceMatrix<SIMD<double>> dshape,
                              BareSliceMatrix<SIMD<double>> wavespeed) const;
 
-    int GetNDof () const { return this->ndof; }
+    // int GetNDof() const {return this->ndof;}
 
-    static int NDirections (int ord) { return ord == 0 ? 1 : 2; }
-    static double GetDirection (int ord, int k) { return k % 2 ? 1 : -1; }
+    // static int NDirections(int ord) { return ord==0?1:2;}
+    // static double GetDirection(int ord, int k) { return k%2?1:-1;}
 
     // using ScalarMappedElement<D>::CalcMappedDShape;
     // HD NGS_DLL_HEADER virtual
