@@ -111,7 +111,7 @@ namespace ngcomp
             {
                 LocalHeap lh(1000 * 1000 * 100);
                 TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);
-                tps.PitchTents(dt, wavespeed[0]+1,lh);
+                tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(1), lh);
                 return tps.tents.Size();
             }
 
