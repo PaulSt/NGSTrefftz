@@ -41,7 +41,7 @@ namespace ngcomp
     static DocInfo GetDocu ();
 
   protected:
-    template <int D> double Adiam (ElementId ei) const;
+    template <int D> double Adiam (ElementId ei, double c) const;
 
     template <int D> Vec<D + 1> ElCenter (ElementId ei) const;
   };
