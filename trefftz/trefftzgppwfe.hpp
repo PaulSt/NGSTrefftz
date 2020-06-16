@@ -7,6 +7,31 @@
 
 namespace ngfem
 {
+
+  template <int D> class TrefftzGppwBasis
+  {
+  public:
+    // static TrefftzGppwBasis& getInstance(){
+    // static TrefftzGppwBasis ginstance;
+    //// volatile int dummy{};
+    // return ginstance;
+    //}
+
+    TrefftzGppwBasis (int ord, FlatMatrix<double> gamma, int basistype = 0);
+
+    CSR TB () const { return tb; }
+
+  private:
+    CSR tb;
+    // TrefftzGppwBasis()= default;
+    //~TrefftzGppwBasis()= default;
+    // TrefftzGppwBasis(const TrefftzGppwBasis&)= delete;
+    // TrefftzGppwBasis& operator=(const TrefftzGppwBasis&)= delete;
+
+    // mutex gentrefftzbasis;
+    // std::map<std::string,CSR> gtbstore;
+  };
+
   template <int D> class TrefftzGppwFE : public ScalarMappedElement<D + 1>
   {
   private:
@@ -17,6 +42,7 @@ namespace ngfem
     ELEMENT_TYPE eltype;
     int basistype;
     Matrix<double> gamma;
+    TrefftzGppwBasis<D> Basis;
 
   public:
     TrefftzGppwFE (FlatMatrix<double> agamma, int aord = 1,
@@ -27,7 +53,7 @@ namespace ngfem
                                       aord),
           ord (aord), npoly (BinCoeff (D + 1 + ord, ord)),
           elcenter (aelcenter), elsize (aelsize), eltype (aeltype),
-          basistype (abasistype), gamma (agamma)
+          basistype (abasistype), gamma (agamma), Basis (aord, agamma)
     {
       // while(gamma.Size()<=ord) gamma.Append(0.0);
       for (int i = 0; i < ord; i++)
@@ -131,28 +157,6 @@ namespace ngfem
                                  &values (0, 0)[0]);
       coefs.Range (0, this->ndof) += dshapes * bdbvec;
     }
-  };
-
-  template <int D> class TrefftzGppwBasis
-  {
-  public:
-    static TrefftzGppwBasis &getInstance ()
-    {
-      static TrefftzGppwBasis ginstance;
-      // volatile int dummy{};
-      return ginstance;
-    }
-
-    CSR TB (int ord, FlatMatrix<double> gamma, int basistype = 0);
-
-  private:
-    TrefftzGppwBasis () = default;
-    ~TrefftzGppwBasis () = default;
-    TrefftzGppwBasis (const TrefftzGppwBasis &) = delete;
-    TrefftzGppwBasis &operator= (const TrefftzGppwBasis &) = delete;
-
-    mutex gentrefftzbasis;
-    // std::map<std::string,CSR> gtbstore;
   };
 
 }
