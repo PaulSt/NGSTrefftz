@@ -12,25 +12,10 @@ namespace ngfem
     template<int D>
     class TrefftzGppwBasis{
         public:
-            //static TrefftzGppwBasis& getInstance(){
-                //static TrefftzGppwBasis ginstance;
-                //// volatile int dummy{};
-                //return ginstance;
-            //}
-
             TrefftzGppwBasis(int ord,  FlatMatrix<double> gamma, int basistype = 0);
-
             CSR TB() const {return tb;}
-
         private:
             CSR tb;
-            //TrefftzGppwBasis()= default;
-            //~TrefftzGppwBasis()= default;
-            //TrefftzGppwBasis(const TrefftzGppwBasis&)= delete;
-            //TrefftzGppwBasis& operator=(const TrefftzGppwBasis&)= delete;
-
-            //mutex gentrefftzbasis;
-            //std::map<std::string,CSR> gtbstore;
     };
 
 
@@ -59,7 +44,6 @@ namespace ngfem
             gamma(agamma),
             Basis(aord,agamma)
             {
-                //while(gamma.Size()<=ord) gamma.Append(0.0);
                 for(int i=0;i<ord;i++)
                     for(int j=0;j<ord;j++)
                         gamma(i,j) *= pow(aelsize/2.0,i+j);
@@ -79,11 +63,6 @@ namespace ngfem
             virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape) const;
 
             void CalcDDSpecialShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape, BareSliceMatrix<SIMD<double>> wavespeed) const;
-
-            //int GetNDof() const {return this->ndof;}
-
-            //static int NDirections(int ord) { return ord==0?1:2;}
-            //static double GetDirection(int ord, int k) { return k%2?1:-1;}
 
             //using ScalarMappedElement<D>::CalcMappedDShape;
             //HD NGS_DLL_HEADER virtual
@@ -141,12 +120,5 @@ namespace ngfem
 
 
 }
-
-
-//#ifdef NGS_PYTHON
-//#include <python_ngstd.hpp>
-//void ExportTrefftzElement(py::module m);
-//#endif // NGS_PYTHON
-
 
 #endif // FILE_TrefftzGPPWElement_HPP
