@@ -143,7 +143,7 @@ namespace ngfem
       return ginstance;
     }
 
-    const CSR *TB (int ord, FlatMatrix<double> gamma, int basistype = 0);
+    CSR TB (int ord, FlatMatrix<double> gamma, int basistype = 0);
 
   private:
     TrefftzGppwBasis () = default;
@@ -152,7 +152,7 @@ namespace ngfem
     TrefftzGppwBasis &operator= (const TrefftzGppwBasis &) = delete;
 
     mutex gentrefftzbasis;
-    std::map<std::string, CSR> gtbstore;
+    // std::map<std::string,CSR> gtbstore;
   };
 
 }
