@@ -7,6 +7,33 @@
 
 namespace ngfem
 {
+
+
+    template<int D>
+    class TrefftzGppwBasis{
+        public:
+            //static TrefftzGppwBasis& getInstance(){
+                //static TrefftzGppwBasis ginstance;
+                //// volatile int dummy{};
+                //return ginstance;
+            //}
+
+            TrefftzGppwBasis(int ord,  FlatMatrix<double> gamma, int basistype = 0);
+
+            CSR TB() const {return tb;}
+
+        private:
+            CSR tb;
+            //TrefftzGppwBasis()= default;
+            //~TrefftzGppwBasis()= default;
+            //TrefftzGppwBasis(const TrefftzGppwBasis&)= delete;
+            //TrefftzGppwBasis& operator=(const TrefftzGppwBasis&)= delete;
+
+            //mutex gentrefftzbasis;
+            //std::map<std::string,CSR> gtbstore;
+    };
+
+
     template <int D>
         class TrefftzGppwFE : public ScalarMappedElement<D+1>
     {
@@ -18,6 +45,7 @@ namespace ngfem
             ELEMENT_TYPE eltype;
             int basistype;
             Matrix<double> gamma;
+            TrefftzGppwBasis<D> Basis;
 
         public:
             TrefftzGppwFE(FlatMatrix<double> agamma, int aord = 1, Vec<D+1> aelcenter = 0, double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0)
@@ -28,7 +56,8 @@ namespace ngfem
             elsize(aelsize),
             eltype(aeltype),
             basistype(abasistype),
-            gamma(agamma)
+            gamma(agamma),
+            Basis(aord,agamma)
             {
                 //while(gamma.Size()<=ord) gamma.Append(0.0);
                 for(int i=0;i<ord;i++)
@@ -110,27 +139,6 @@ namespace ngfem
 
     };
 
-
-    template<int D>
-    class TrefftzGppwBasis{
-        public:
-            static TrefftzGppwBasis& getInstance(){
-                static TrefftzGppwBasis ginstance;
-                // volatile int dummy{};
-                return ginstance;
-            }
-
-            CSR TB(int ord, FlatMatrix<double> gamma, int basistype = 0);
-
-        private:
-            TrefftzGppwBasis()= default;
-            ~TrefftzGppwBasis()= default;
-            TrefftzGppwBasis(const TrefftzGppwBasis&)= delete;
-            TrefftzGppwBasis& operator=(const TrefftzGppwBasis&)= delete;
-
-            mutex gentrefftzbasis;
-            //std::map<std::string,CSR> gtbstore;
-    };
 
 }
 
