@@ -27,8 +27,8 @@ namespace ngfem
     double elsize;
     ELEMENT_TYPE eltype;
     int basistype;
-    Matrix<double> gamma;
-    TrefftzGppwBasis<D> Basis;
+    FlatMatrix<double> gamma;
+    TrefftzGppwBasis<D> *Basis;
 
   public:
     TrefftzGppwFE (FlatMatrix<double> agamma, int aord = 1,
@@ -39,11 +39,12 @@ namespace ngfem
                                       aord),
           ord (aord), npoly (BinCoeff (D + 1 + ord, ord)),
           elcenter (aelcenter), elsize (aelsize), eltype (aeltype),
-          basistype (abasistype), gamma (agamma), Basis (aord, agamma)
+          basistype (abasistype), gamma (agamma)
     {
       for (int i = 0; i < ord; i++)
         for (int j = 0; j < ord; j++)
           gamma (i, j) *= pow (aelsize / 2.0, i + j);
+      Basis = new TrefftzGppwBasis<D> (aord, gamma);
     }
 
     double GetWavespeed () const { return gamma (0); }
