@@ -425,19 +425,12 @@ namespace ngfem
   template class TrefftzGppwFE<1>;
   template class TrefftzGppwFE<2>;
 
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
   template <int D>
   TrefftzGppwBasis<D>::TrefftzGppwBasis (int ord, FlatMatrix<double> gamma,
                                          int basistype)
   {
-    //{
-    // lock_guard<mutex> lock(gentrefftzbasis);
-    // string encode = to_string(ord);
-    // for(int i=0;i<ord*ord;i++)
-    // encode += to_string(gamma(i));
-
-    // if ( gtbstore[encode][0].Size() == 0)
-    //{
-    // cout << "creating gppw bstore for " << encode << endl;
     const int nbasis
         = (BinCoeff (D + ord, ord) + BinCoeff (D + ord - 1, ord - 1));
     const int npoly = BinCoeff (D + 1 + ord, ord);
@@ -529,14 +522,6 @@ namespace ngfem
                               int getcoeff = TrefftzWaveBasis<D>::IndexMap2 (
                                   index, ord);
 
-                              // TODO fix smart gamma, no only dummy
-                              // double fakegamma = 0;
-                              // if( (x-betax == 0 && y-betay == 0))
-                              // fakegamma=gamma[0];
-                              // else if((x-betax == 0 && y-betay == 1) ||
-                              // (x-betax == 1 && y-betay == 0))
-                              // fakegamma=gamma[1];
-
                               *newcoeff -= gamma (x, y)
                                            * gppwbasis (basisn, getcoeff)
                                            / gamma (0);
@@ -547,20 +532,7 @@ namespace ngfem
           }
       }
 
-    // MatToCSR(gppwbasis,gtbstore[encode]);
     MatToCSR (gppwbasis, tb);
-    //}
-
-    // if ( gtbstore[encode].Size() == 0)
-    //{
-    // stringstream str;
-    // str << "failed to generate trefftz basis of order " << ord << endl;
-    // throw Exception (str.str());
-    //}
-
-    // const CSR* tb =& gtbstore[encode];
-    // return tb;
-    //}
   }
 
   template class TrefftzGppwBasis<1>;
@@ -568,23 +540,3 @@ namespace ngfem
   template class TrefftzGppwBasis<3>;
 
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//#ifdef NGS_PYTHON
-// void ExportTrefftzElement(py::module m)
-//{
-//// py::class_<TrefftzGppwFE<3>, shared_ptr<TrefftzGppwFE<3>>, FiniteElement>
-//// 	(m, "TrefftzWaveFE3", "Trefftz space for wave eq")
-//// 	.def(py::init<>())
-//// 	;
-//// py::class_<TrefftzGppwFE<2>, shared_ptr<TrefftzGppwFE<2>>, FiniteElement>
-//// 	(m, "TrefftzWaveFE2", "Trefftz space for wave eq")
-//// 	.def(py::init<>())
-//// 	;
-//// py::class_<TrefftzGppwFE<1>, shared_ptr<TrefftzGppwFE<1>>, FiniteElement>
-//// 	(m, "TrefftzWaveFE1", "Trefftz space for wave eq")
-//// 	.def(py::init<>())
-//// 	;
-//}
-//#endif // NGS_PYTHON
