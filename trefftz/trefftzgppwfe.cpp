@@ -31,7 +31,7 @@ namespace ngfem
                 for (size_t j = 0; j <= ord-i; j++)
                     pol[ii++] = polxt[0][i] * polxt[1][j];
             // TB*monomials for trefftz shape fcts
-            CSR localmat = Basis.TB();
+            CSR localmat = Basis->TB();
             for (int i=0; i<this->ndof; ++i)
             {
                 shape(i,imip) = 0.0;
@@ -65,7 +65,7 @@ namespace ngfem
                     for (size_t k = 0; k <= ord-i-j; k++)
                         pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
             // TB*monomials for trefftz shape fcts
-            CSR localmat = Basis.TB();
+            CSR localmat = Basis->TB();
             for (int i=0; i<this->ndof; ++i)
             {
                 shape(i,imip) = 0.0;
@@ -108,7 +108,7 @@ namespace ngfem
                         pol[ii++] = (d==0?i:(d==1?j:0))
                             * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
 
-                CSR localmat = Basis.TB();
+                CSR localmat = Basis->TB();
                 for (int i=0; i<this->ndof; ++i)
                 {
                     dshape(i*2+d,imip) = 0.0;
@@ -147,7 +147,7 @@ namespace ngfem
                             pol[ii++] = (d==0?i:(d==1?j:(d==2?k:0)))
                                 * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)];
 
-                CSR localmat = Basis.TB();
+                CSR localmat = Basis->TB();
                 for (int i=0; i<this->ndof; ++i)
                 {
                     dshape(i*3+d,imip) = 0.0;
@@ -188,7 +188,7 @@ namespace ngfem
             for (size_t j = 0; j <= ord-i; j++)
                 pol[ii++] = polxt[0][i] * polxt[1][j];
         // TB*monomials for trefftz shape fcts
-        CSR localmat = Basis.TB();
+        CSR localmat = Basis->TB();
         for (int i=0; i<this->ndof; ++i)
         {
             shape(i) = 0.0;
@@ -220,7 +220,7 @@ namespace ngfem
                 for (size_t k = 0; k <= ord-i-j; k++)
                     pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
         // TB*monomials for trefftz shape fcts
-        CSR localmat = Basis.TB();
+        CSR localmat = Basis->TB();
         for (int i=0; i<this->ndof; ++i)
         {
             shape(i) = 0.0;
@@ -262,7 +262,7 @@ namespace ngfem
                     pol[ii++] = (d==0?i:(d==1?j:0))
                         * polxt2[0][i-(d==0)] * polxt2[1][j-(d==1)];
 
-            CSR localmat = Basis.TB();
+            CSR localmat = Basis->TB();
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i,d) = 0.0;
@@ -298,7 +298,7 @@ namespace ngfem
                         pol[ii++] = (d==0?i:(d==1?j:(d==2?k:0)))
                             * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)];
 
-            CSR localmat = Basis.TB();
+            CSR localmat = Basis->TB();
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i,d) = 0.0;
@@ -340,7 +340,7 @@ namespace ngfem
                           - j*(j-1) * polxt[0][i] * polxt[1][j-2]
                           * wavespeed(0,imip);
 
-            CSR localmat = Basis.TB();
+            CSR localmat = Basis->TB();
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i*2,imip) = 0.0;
@@ -380,7 +380,7 @@ namespace ngfem
                               - k*(k-1) * polxt[0][i] * polxt[1][j] * polxt[2][k-2]
                               * wavespeed(0,imip);
 
-            CSR localmat = Basis.TB();
+            CSR localmat = Basis->TB();
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i*3,imip) = 0.0;
