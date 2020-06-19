@@ -27,11 +27,11 @@ namespace ngfem
     double elsize;
     ELEMENT_TYPE eltype;
     int basistype;
-    FlatMatrix<double> gamma;
+    Matrix<double> gamma;
     TrefftzGppwBasis<D> *Basis;
 
   public:
-    TrefftzGppwFE (FlatMatrix<double> agamma, int aord = 1,
+    TrefftzGppwFE (Matrix<double> agamma, int aord = 1,
                    Vec<D + 1> aelcenter = 0, double aelsize = 1,
                    ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0)
         : ScalarMappedElement<D + 1> (BinCoeff (D + aord, aord)
