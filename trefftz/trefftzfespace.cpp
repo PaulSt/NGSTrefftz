@@ -126,29 +126,13 @@ namespace ngcomp
           mip.Point () = ElCenter<1> (ei).Range (0, 1);
           if (useqt)
             {
-
               Matrix<> b (this->order, this->order);
-              shared_ptr<CoefficientFunction> localwavespeedcf
-                  = make_shared<ConstantCoefficientFunction> (1)
-                    / (wavespeedcf * wavespeedcf);
-              shared_ptr<CoefficientFunction> localwavespeedcfx
-                  = make_shared<ConstantCoefficientFunction> (1)
-                    / (wavespeedcf * wavespeedcf);
+              b = 0;
               for (int nx = 0; nx < this->order; nx++)
                 {
                   int ny = 0;
-                  for (int ny = 0; ny < this->order; ny++)
-                    {
-                      b (nx, ny) = localwavespeedcfx->Evaluate (mip)
-                                   / (factorial (nx) * factorial (ny));
-                      localwavespeedcfx = localwavespeedcfx->Diff (
-                          MakeCoordinateCoefficientFunction (1).get (),
-                          make_shared<ConstantCoefficientFunction> (1));
-                    }
-                  localwavespeedcf = localwavespeedcf->Diff (
-                      MakeCoordinateCoefficientFunction (0).get (),
-                      make_shared<ConstantCoefficientFunction> (1));
-                  localwavespeedcfx = localwavespeedcf;
+                  b (nx, ny) = wavespeedmatrix (nx, ny)->Evaluate (mip)
+                               / (factorial (nx) * factorial (ny));
                 }
               return *(new (alloc) TrefftzGppwFE<1> (
                   b, order, ElCenter<1> (ei),
@@ -179,29 +163,15 @@ namespace ngcomp
 
           if (useqt)
             {
-
               Matrix<> b (this->order, this->order);
-              shared_ptr<CoefficientFunction> localwavespeedcf
-                  = make_shared<ConstantCoefficientFunction> (1)
-                    / (wavespeedcf * wavespeedcf);
-              shared_ptr<CoefficientFunction> localwavespeedcfx
-                  = make_shared<ConstantCoefficientFunction> (1)
-                    / (wavespeedcf * wavespeedcf);
-              double localwavespeed = wavespeedcf->Evaluate (mip);
+              b = 0;
               for (int nx = 0; nx < this->order; nx++)
                 {
-                  int ny = 0;
                   for (int ny = 0; ny < this->order; ny++)
                     {
-                      b (nx, ny) = localwavespeedcfx->Evaluate (mip);
-                      localwavespeedcfx = localwavespeedcfx->Diff (
-                          MakeCoordinateCoefficientFunction (1).get (),
-                          make_shared<ConstantCoefficientFunction> (1));
+                      b (nx, ny) = wavespeedmatrix (nx, ny)->Evaluate (mip)
+                                   / (factorial (nx) * factorial (ny));
                     }
-                  localwavespeedcf = localwavespeedcf->Diff (
-                      MakeCoordinateCoefficientFunction (0).get (),
-                      make_shared<ConstantCoefficientFunction> (1));
-                  localwavespeedcfx = localwavespeedcf;
                 }
               return *(new (alloc) TrefftzGppwFE<2> (
                   b, order, ElCenter<2> (ei),
