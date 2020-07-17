@@ -598,10 +598,17 @@ namespace ngcomp
         {
             HeapReset hr(lh);
             SIMD_MappedIntegrationRule<D,D> smir(sir,ma->GetTrafo(elnr,lh),lh);
+
             for(int imip=0;imip<snip;imip++)
             {
+                IntegrationRule ir (eltyp, 0);
+                MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
+                for(int d=0;d<D;d++)
+                    mip.Point()[d] = smir[imip/nsimd].Point()[d][0];
+                //mip.Point()[D] = timeshift;
                 for(int d=0;d<D+1;d++)
-                    error += pow(wavefront(elnr,snip+d*snip+imip)-wavefront_corr(elnr,snip+d*snip+imip),2)* smir[imip/nsimd].GetWeight()[imip%nsimd];
+                    error += pow(wavespeedcf->Evaluate(mip)  ,-2*(d==D)) * pow(wavefront(elnr,snip+d*snip+imip)-wavefront_corr(elnr,snip+d*snip+imip),2) * smir[imip/nsimd].GetWeight()[imip%nsimd];
+                    //error += (pow(wavefront(elnr,snip+d*snip+imip)-wavefront_corr(elnr,snip+d*snip+imip),2)* smir[imip/nsimd].GetWeight()[imip%nsimd]);
             }
         }
         return sqrt(error);
