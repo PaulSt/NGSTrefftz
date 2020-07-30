@@ -672,7 +672,7 @@ namespace ngcomp
     template<int D>
     double WaveTents<D> :: TentAdiam(Tent* tent)
     {
-        double anisotropicdiam = 0;
+        LocalHeap lh(100 * 100);
         int vnumber = tent->nbv.Size();
 
         //Array<int> verts(vnumber);
@@ -687,18 +687,30 @@ namespace ngcomp
 
         double c = wavespeed[tent->els[0]];
         //for(auto el : tent->els) c = max(c,wavespeed[el]);
+        IntegrationRule ir (ma->GetElType(ElementId(VOL,0)), 0);
+        ElementTransformation & trafo = ma->GetTrafo (0, lh);
+        MappedIntegrationPoint<D,D> mip(ir[0], trafo);
+        Vec<D> v1 = ma->GetPoint<D>(tent->vertex);
+        double c1 = wavespeedcf->Evaluate(mip);
+        double anisotropicdiam = c1*tent->ttop - c1*tent->tbot;
 
         for (int k = 0; k < vnumber; k++)
         {
             Vec<D> v1 = ma->GetPoint<D>(tent->vertex);
             Vec<D> v2 = ma->GetPoint<D>(tent->nbv[k]);
-            anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(c*(tent->ttop - tent->nbtime[k]),2) ) );
-            anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(c*(tent->tbot - tent->nbtime[k]),2) ) );
+            mip.Point() = v1;
+            double c1 = wavespeedcf->Evaluate(mip);
+            mip.Point() = v2;
+            double c2 = wavespeedcf->Evaluate(mip);
+
+            anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(c1*tent->ttop - c2*tent->nbtime[k],2) ) );
+            anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(c1*tent->tbot - c2*tent->nbtime[k],2) ) );
             for (int j = 0; j < vnumber; j++)
             {
                 v1 = ma->GetPoint<D>(tent->nbv[j]);
-                v2 = ma->GetPoint<D>(tent->nbv[k]);
-                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(c*(tent->nbtime[j]-tent->nbtime[k]),2) ) );
+                mip.Point() = v1;
+                c1 = wavespeedcf->Evaluate(mip);
+                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(c1*tent->nbtime[j] - c2*tent->nbtime[k],2) ) );
             }
         }
 
