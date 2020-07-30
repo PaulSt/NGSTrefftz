@@ -134,6 +134,96 @@ namespace ngfem
       return shape[basisfunction];
     }
   };
+
+  class WeightedRadiusFunction : public CoefficientFunction
+  {
+  private:
+    Vector<> values;
+
+  public:
+    WeightedRadiusFunction (shared_ptr<MeshAccess> mesh,
+                            shared_ptr<CoefficientFunction> wavespeedcf)
+        : CoefficientFunction (1)
+    {
+      LocalHeap lh (1000 * 1000);
+      values.SetSize (mesh->GetNE ());
+      int elnr = 0;
+      for (auto &vec : values)
+        {
+          double anisotropicdiam = 0.0;
+          int D = mesh->GetDimension ();
+          Vector<> center (D);
+          center = 0;
+          Vector<> v1 (D);
+          auto vertices_index = mesh->GetElVertices (elnr);
+          switch (mesh->GetDimension ())
+            {
+            case 2:
+              for (auto vertex : vertices_index)
+                center += mesh->GetPoint<2> (vertex);
+              break;
+            case 3:
+              for (auto vertex : vertices_index)
+                center += mesh->GetPoint<3> (vertex);
+              break;
+            }
+          center *= (1.0 / vertices_index.Size ());
+
+          ElementId ei = ElementId (elnr);
+          IntegrationRule ir (mesh->GetElType (ei), 0);
+          ElementTransformation &trafo = mesh->GetTrafo (ei, lh);
+
+          for (auto vertex1 : vertices_index)
+            {
+              double c1, c2;
+              switch (mesh->GetDimension ())
+                {
+                case 2:
+                  {
+                    MappedIntegrationPoint<2, 2> mip (ir[0], trafo);
+                    v1 = mesh->GetPoint<2> (vertex1);
+                    mip.Point () = v1;
+                    c1 = wavespeedcf->Evaluate (mip);
+                    mip.Point () = center;
+                    c2 = wavespeedcf->Evaluate (mip);
+                    break;
+                  }
+                case 3:
+                  {
+                    MappedIntegrationPoint<3, 3> mip (ir[0], trafo);
+                    v1 = mesh->GetPoint<3> (vertex1);
+                    mip.Point () = v1;
+                    c1 = wavespeedcf->Evaluate (mip);
+                    mip.Point () = center;
+                    c2 = wavespeedcf->Evaluate (mip);
+                    break;
+                  }
+                }
+              anisotropicdiam = max (
+                  anisotropicdiam,
+                  sqrt (L2Norm2 (v1 (0, D - 1) - center (0, D - 1))
+                        + pow (c1 * v1 (D - 1) - c2 * center (D - 1), 2)));
+            }
+          values[elnr] = anisotropicdiam;
+          elnr++;
+        }
+    }
+
+    virtual double Evaluate (const BaseMappedIntegrationPoint &ip) const
+    {
+      int p = ip.GetIPNr ();
+      int el = ip.GetTransformation ().GetElementNr ();
+
+      if (el < 0 || el >= values.Size ())
+        {
+          cout << "got illegal element number " << el << endl;
+          return 0;
+        }
+
+      return values[el];
+    }
+  };
+
 }
 
 #ifdef NGS_PYTHON
