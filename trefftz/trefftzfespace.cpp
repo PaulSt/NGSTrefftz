@@ -101,94 +101,117 @@ namespace ngcomp
 
   FiniteElement &TrefftzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
   {
-    auto vertices_index = ma->GetElVertices (ei);
+    // auto vertices_index = ma->GetElVertices(ei);
     // cout << "element vectice coord: \n"  <<
     // ma->GetPoint<3>(vertices_index[0]) << endl<<
     // ma->GetPoint<3>(vertices_index[1])
     // <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
-    switch (ma->GetElType (ei))
-      {
-      case ET_SEGM:
-        {
-          // return *(new (alloc)
-          // TrefftzWaveFE<1>(order,c,ElCenter<1>(ei),Adiam<1>(ei),ET_SEGM));
-          // break;
-        }
-      case ET_QUAD:
-      case ET_TRIG:
-        {
-          LocalHeap lh (1000 * 1000);
-          const ELEMENT_TYPE eltyp = ET_TRIG;
-          const int D = 2;
-          IntegrationRule ir (eltyp, 0);
-          MappedIntegrationPoint<D, D> mip (ir[0],
-                                            ma->GetTrafo (ElementId (0), lh));
-          mip.Point () = ElCenter<1> (ei).Range (0, 1);
-          if (useqt)
-            {
-              Matrix<> b (this->order, this->order);
-              b = 0;
-              for (int nx = 0; nx < this->order; nx++)
-                {
-                  int ny = 0;
-                  b (nx, ny) = wavespeedmatrix (nx, ny)->Evaluate (mip)
-                               / (factorial (nx) * factorial (ny));
-                }
-              return *(new (alloc) TrefftzGppwFE<1> (
-                  b, order, ElCenter<1> (ei),
-                  Adiam<1> (ei, wavespeedcf->Evaluate (mip)),
-                  ma->GetElType (ei)));
-            }
-          else
-            return *(new (alloc) TrefftzWaveFE<1> (
-                order, wavespeedcf != NULL ? wavespeedcf->Evaluate (mip) : c,
-                ElCenter<1> (ei),
-                Adiam<1> (ei, wavespeedcf != NULL ? wavespeedcf->Evaluate (mip)
-                                                  : c),
-                ma->GetElType (ei)));
-          break;
-        }
-      case ET_HEX:
-      case ET_PRISM:
-      case ET_PYRAMID:
-      case ET_TET:
-        {
-          LocalHeap lh (1000 * 1000);
-          const ELEMENT_TYPE eltyp = ET_TRIG;
-          const int D = 3;
-          IntegrationRule ir (eltyp, 0);
-          MappedIntegrationPoint<D, D> mip (ir[0],
-                                            ma->GetTrafo (ElementId (0), lh));
-          mip.Point () = ElCenter<2> (ei).Range (0, 2);
 
-          if (useqt)
+    Ngs_Element ngel = ma->GetElement (ei);
+    ELEMENT_TYPE eltype = ngel.GetType ();
+
+    if (ei.IsVolume ())
+      {
+        switch (ma->GetElType (ei))
+          {
+          case ET_SEGM:
             {
-              Matrix<> b (this->order, this->order);
-              b = 0;
-              for (int nx = 0; nx < this->order; nx++)
+              // return *(new (alloc)
+              // TrefftzWaveFE<1>(order,c,ElCenter<1>(ei),Adiam<1>(ei),ET_SEGM));
+              // break;
+            }
+          case ET_QUAD:
+          case ET_TRIG:
+            {
+              LocalHeap lh (1000 * 1000);
+              const ELEMENT_TYPE eltyp = ET_TRIG;
+              const int D = 2;
+              IntegrationRule ir (eltyp, 0);
+              MappedIntegrationPoint<D, D> mip (
+                  ir[0], ma->GetTrafo (ElementId (0), lh));
+              mip.Point () = ElCenter<1> (ei).Range (0, 1);
+              if (useqt)
                 {
-                  for (int ny = 0; ny < this->order; ny++)
+                  Matrix<> b (this->order, this->order);
+                  b = 0;
+                  for (int nx = 0; nx < this->order; nx++)
                     {
+                      int ny = 0;
                       b (nx, ny) = wavespeedmatrix (nx, ny)->Evaluate (mip)
                                    / (factorial (nx) * factorial (ny));
                     }
+                  return *(new (alloc) TrefftzGppwFE<1> (
+                      b, order, ElCenter<1> (ei), Adiam<1> (ei, wavespeedcf),
+                      ma->GetElType (ei)));
                 }
-              return *(new (alloc) TrefftzGppwFE<2> (
-                  b, order, ElCenter<2> (ei),
-                  Adiam<2> (ei, wavespeedcf->Evaluate (mip)),
-                  ma->GetElType (ei)));
+              else
+                return *(new (alloc) TrefftzWaveFE<1> (
+                    order,
+                    wavespeedcf != NULL ? wavespeedcf->Evaluate (mip) : c,
+                    ElCenter<1> (ei),
+                    Adiam<1> (ei, wavespeedcf != NULL
+                                      ? wavespeedcf->Evaluate (mip)
+                                      : c),
+                    ma->GetElType (ei)));
+              break;
             }
-          else
-            return *(new (alloc) TrefftzWaveFE<2> (
-                order, wavespeedcf != NULL ? wavespeedcf->Evaluate (mip) : c,
-                ElCenter<2> (ei),
-                Adiam<2> (ei, wavespeedcf != NULL ? wavespeedcf->Evaluate (mip)
-                                                  : c),
-                ma->GetElType (ei)));
-        }
-        break;
+          case ET_HEX:
+          case ET_PRISM:
+          case ET_PYRAMID:
+          case ET_TET:
+            {
+              LocalHeap lh (1000 * 1000);
+              const ELEMENT_TYPE eltyp = ET_TRIG;
+              const int D = 3;
+              IntegrationRule ir (eltyp, 0);
+              MappedIntegrationPoint<D, D> mip (
+                  ir[0], ma->GetTrafo (ElementId (0), lh));
+              mip.Point () = ElCenter<2> (ei).Range (0, 2);
+
+              if (useqt)
+                {
+                  Matrix<> b (this->order, this->order);
+                  b = 0;
+                  for (int nx = 0; nx < this->order; nx++)
+                    {
+                      for (int ny = 0; ny < this->order; ny++)
+                        {
+                          b (nx, ny) = wavespeedmatrix (nx, ny)->Evaluate (mip)
+                                       / (factorial (nx) * factorial (ny));
+                        }
+                    }
+                  return *(new (alloc) TrefftzGppwFE<2> (
+                      b, order, ElCenter<2> (ei), Adiam<2> (ei, wavespeedcf),
+                      ma->GetElType (ei)));
+                }
+              else
+                return *(new (alloc) TrefftzWaveFE<2> (
+                    order,
+                    wavespeedcf != NULL ? wavespeedcf->Evaluate (mip) : c,
+                    ElCenter<2> (ei),
+                    Adiam<2> (ei, wavespeedcf != NULL
+                                      ? wavespeedcf->Evaluate (mip)
+                                      : c),
+                    ma->GetElType (ei)));
+            }
+            break;
+          }
+        return *(new (alloc) TrefftzWaveFE<1> ());
       }
-    return *(new (alloc) TrefftzWaveFE<1> ());
+    else
+      {
+        try
+          {
+            return SwitchET<ET_POINT, ET_SEGM, ET_TRIG, ET_QUAD> (
+                eltype, [&alloc] (auto et) -> FiniteElement & {
+                  return *new (alloc) DummyFE<et.ElementType ()>;
+                });
+          }
+        catch (Exception e)
+          {
+            throw Exception ("illegal element type in L2::GetSurfaceFE");
+          }
+      }
   }
 
   template <int D> double TrefftzFESpace ::Adiam (ElementId ei, double c) const
