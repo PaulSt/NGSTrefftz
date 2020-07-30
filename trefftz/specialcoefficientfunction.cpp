@@ -51,15 +51,26 @@ void ExportSpecialCoefficientFunction(py::module m)
                  {
                      new (instance) IntegrationPointFunction(mesh, intrule, data);
                  }, py::arg("mesh"), py::arg("intrule"), py::arg("Vector"))
-            .def("__init__",
-                 [](IntegrationPointFunction *instance,
-                    shared_ptr<MeshAccess> mesh, IntegrationRule& intrule, Matrix<> data)
-                 {
-                     new (instance) IntegrationPointFunction(mesh, intrule, data);
-                 }, py::arg("mesh"), py::arg("intrule"), py::arg("Matrix"))
-
+    .def("__init__",
+         [](IntegrationPointFunction *instance,
+            shared_ptr<MeshAccess> mesh, IntegrationRule& intrule, Matrix<> data)
+         {
+             new (instance) IntegrationPointFunction(mesh, intrule, data);
+         }, py::arg("mesh"), py::arg("intrule"), py::arg("Matrix"))
     .def("PrintTable", &IntegrationPointFunction::PrintTable)
         ;
+
+
+    py::class_<WeightedRadiusFunction,
+        shared_ptr<WeightedRadiusFunction>, CoefficientFunction>
+            (m, "WeightedRadiusFunction")
+            .def("__init__",
+                 [](WeightedRadiusFunction *instance,
+                    shared_ptr<MeshAccess> mesh, shared_ptr<CoefficientFunction> wavespeedcf)
+                 {
+                     new (instance) WeightedRadiusFunction(mesh, wavespeedcf );
+                 }, py::arg("mesh"), py::arg("CoefficientFunction"));
+
 
     py::class_<TrefftzCoefficientFunction, shared_ptr<TrefftzCoefficientFunction>, CoefficientFunction>
         (m, "TrefftzCoefficient", "")
