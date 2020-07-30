@@ -226,9 +226,43 @@ namespace ngcomp
             Vec<D + 1> v2 = ma->GetPoint<D + 1> (vertex2);
             // cout << "v1: " << v1 << " v1 part: " << v1(1,D-1) << "norm " <<
             // L2Norm(v1) << endl ;
-            anisotropicdiam = max (
-                anisotropicdiam, sqrt (L2Norm2 (v1 (0, D - 1) - v2 (0, D - 1))
-                                       + pow (c * (v1 (D) - v2 (D)), 2)));
+            anisotropicdiam
+                = max (anisotropicdiam,
+                       sqrt (L2Norm2 (v1.Range (0, D) - v2.Range (0, D))
+                             + pow (c * (v1 (D) - v2 (D)), 2)));
+          }
+      }
+    return anisotropicdiam * useshift + (useshift == 0);
+  }
+
+  template <int D>
+  double TrefftzFESpace ::Adiam (ElementId ei,
+                                 shared_ptr<CoefficientFunction> c) const
+  {
+    LocalHeap lh (1000 * 1000);
+    double anisotropicdiam = 0.0;
+    auto vertices_index = ma->GetElVertices (ei);
+
+    for (auto vertex1 : vertices_index)
+      {
+        for (auto vertex2 : vertices_index)
+          {
+            Vec<D + 1> v1 = ma->GetPoint<D + 1> (vertex1);
+            Vec<D + 1> v2 = ma->GetPoint<D + 1> (vertex2);
+            // cout << "v1: " << v1 << " v1 part: " << v1.Range(0,D) << " el
+            // type: " << ma->GetElType(ei) << " norm " << L2Norm(v1) << endl ;
+            IntegrationRule ir (ma->GetElType (ei), 0);
+            ElementTransformation &trafo = ma->GetTrafo (ei, lh);
+            MappedIntegrationPoint<D + 1, D + 1> mip (ir[0], trafo);
+            mip.Point () = v1;
+            double c1 = wavespeedcf->Evaluate (mip);
+            mip.Point () = v2;
+            double c2 = wavespeedcf->Evaluate (mip);
+
+            anisotropicdiam
+                = max (anisotropicdiam,
+                       sqrt (L2Norm2 (v1.Range (0, D) - v2.Range (0, D))
+                             + pow (c1 * v1 (D) - c2 * v2 (D), 2)));
           }
       }
     return anisotropicdiam * useshift + (useshift == 0);

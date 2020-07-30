@@ -71,6 +71,9 @@ namespace ngcomp
   protected:
     template <int D> double Adiam (ElementId ei, double c) const;
 
+    template <int D>
+    double Adiam (ElementId ei, shared_ptr<CoefficientFunction> c) const;
+
     template <int D> Vec<D + 1> ElCenter (ElementId ei) const;
   };
 }
