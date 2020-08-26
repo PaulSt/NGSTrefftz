@@ -261,12 +261,11 @@ namespace ngfem
     // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
     STACK_ARRAY (double, mem2, 2 * (ord + 1) + 1);
     mem2[0] = 0;
-    int npoly = BinCoeff (1 + 1 + ord, ord);
-    double *polxt2[2];
+    double *polxt[2];
     for (size_t d = 0; d < 2; d++)
       {
-        polxt2[d] = &mem2[d * (ord + 1) + 1];
-        Monomial (ord, cpoint[d], polxt2[d]);
+        polxt[d] = &mem2[d * (ord + 1) + 1];
+        Monomial (ord, cpoint[d], polxt[d]);
       }
 
     for (int d = 0; d < 2; d++)
@@ -275,7 +274,7 @@ namespace ngfem
         for (size_t i = 0, ii = 0; i <= ord; i++)
           for (size_t j = 0; j <= ord - i; j++)
             pol[ii++] = (d == 0 ? i : (d == 1 ? j : 0))
-                        * polxt2[0][i - (d == 0)] * polxt2[1][j - (d == 1)];
+                        * polxt[0][i - (d == 0)] * polxt[1][j - (d == 1)];
 
         CSR localmat = Basis->TB ();
         for (int i = 0; i < this->ndof; ++i)
