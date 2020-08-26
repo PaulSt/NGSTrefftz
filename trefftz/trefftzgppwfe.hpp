@@ -43,8 +43,8 @@ namespace ngfem
             basistype(abasistype),
             gamma(agamma)
             {
-                for(int i=0;i<ord;i++)
-                    for(int j=0;j<ord;j++)
+                for(int i=0;i<aord;i++)
+                    for(int j=0;j<aord;j++)
                         gamma(i,j) *= pow(aelsize/2.0,i+j);
                 Basis = new TrefftzGppwBasis<D>(aord,gamma);
             }
