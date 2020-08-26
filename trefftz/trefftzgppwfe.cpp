@@ -421,6 +421,104 @@ namespace ngfem
       }
   }
 
+  template <>
+  void
+  TrefftzGppwFE<1>::CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
+                                       BareSliceMatrix<> hddshape) const
+  {
+    auto ddshape = hddshape.AddSize (this->ndof, 2 * 2);
+
+    // auto & mip = static_cast<const MappedIntegrationPoint<2,2> &> (bmip);
+    Vec<2> cpoint = bmip.GetPoint ();
+    cpoint -= elcenter;
+    cpoint *= (2.0 / elsize);
+
+    // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+    STACK_ARRAY (double, mem2, 2 * (ord + 1) + 1);
+    mem2[0] = 0;
+    double *polxt[2];
+    for (size_t d = 0; d < 2; d++)
+      {
+        polxt[d] = &mem2[d * (ord + 1) + 1];
+        Monomial (ord, cpoint[d], polxt[d]);
+      }
+
+    for (int d1 = 0; d1 < 2; d1++)
+      {
+        for (int d2 = 0; d2 < 2; d2++)
+          {
+            Vector<double> pol (npoly);
+            for (size_t i = 0, ii = 0; i <= ord; i++)
+              for (size_t j = 0; j <= ord - i; j++)
+                pol[ii++] = (d1 != d2 ? i * j
+                                      : (d1 == 0 ? i * (i - 1) : j * (j - 1)))
+                            * polxt[0][i - (d1 == 0) - (d2 == 0)]
+                            * polxt[1][j - (d1 == 1) - (d2 == 1)];
+
+            CSR localmat = Basis->TB ();
+            for (int i = 0; i < this->ndof; ++i)
+              {
+                ddshape (i, d2 * 2 + d1) = 0.0;
+                for (int j = (localmat)[0][i]; j < (localmat)[0][i + 1]; ++j)
+                  ddshape (i, d2 * 2 + d1) += (localmat)[2][j]
+                                              * pol[(localmat)[1][j]]
+                                              * pow (2.0 / elsize, 2);
+              }
+          }
+      }
+  }
+
+  template <>
+  void
+  TrefftzGppwFE<2>::CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
+                                       BareSliceMatrix<> hddshape) const
+  {
+    auto ddshape = hddshape.AddSize (this->ndof, 3 * 3);
+    // auto & mip = static_cast<const MappedIntegrationPoint<2,2> &> (bmip);
+    Vec<3> cpoint = bmip.GetPoint ();
+    cpoint -= elcenter;
+    cpoint *= (2.0 / elsize);
+
+    // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+    STACK_ARRAY (double, mem2, 3 * (ord + 1) + 1);
+    mem2[0] = 0;
+    double *polxt[3];
+    for (size_t d = 0; d < 3; d++)
+      {
+        polxt[d] = &mem2[d * (ord + 1) + 1];
+        Monomial (ord, cpoint[d], polxt[d]);
+      }
+
+    for (int d1 = 0; d1 < 3; d1++)
+      {
+        for (int d2 = 0; d2 < 3; d2++)
+          {
+            Vector<double> pol (npoly);
+            for (int i = 0, ii = 0; i <= ord; i++)
+              for (int j = 0; j <= ord - i; j++)
+                for (int k = 0; k <= ord - i - j; k++)
+                  pol[ii++] = (d1 == d2 ? (d1 == 0 ? i * (i - 1)
+                                                   : (d1 == 1 ? j * (j - 1)
+                                                              : k * (k - 1)))
+                                        : (int[3]){ i, j, k }[d1]
+                                              * (int[3]){ i, j, k }[d2])
+                              * polxt[0][i - (d1 == 0) - (d2 == 0)]
+                              * polxt[1][j - (d1 == 1) - (d2 == 1)]
+                              * polxt[2][k - (d1 == 2) - (d2 == 2)];
+
+            CSR localmat = Basis->TB ();
+            for (int i = 0; i < this->ndof; ++i)
+              {
+                ddshape (i, d2 * 3 + d1) = 0.0;
+                for (int j = (localmat)[0][i]; j < (localmat)[0][i + 1]; ++j)
+                  ddshape (i, d2 * 3 + d1) += (localmat)[2][j]
+                                              * pol[(localmat)[1][j]]
+                                              * pow (2.0 / elsize, 2);
+              }
+          }
+      }
+  }
+
   template class TrefftzGppwFE<1>;
   template class TrefftzGppwFE<2>;
 

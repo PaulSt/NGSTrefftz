@@ -64,6 +64,9 @@ namespace ngfem
     virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
                              BareSliceMatrix<SIMD<double>> dshape) const;
 
+    // using ScalarMappedElement<D+1>::CalcMappedDDShape;
+    void CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
+                            BareSliceMatrix<> hddshape) const;
     void CalcDDSpecialShape (const SIMD_BaseMappedIntegrationRule &smir,
                              BareSliceMatrix<SIMD<double>> dshape,
                              BareSliceMatrix<SIMD<double>> wavespeed) const;
