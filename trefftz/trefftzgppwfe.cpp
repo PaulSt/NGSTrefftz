@@ -553,34 +553,6 @@ namespace ngfem
           {
             for (int t = 0; t <= ell; t++)
               {
-                // if(D==1)
-                //{
-                // int x = ell - t;
-                // Vec<D+1, int> index;
-                // index[D] = t+2;
-                // index[0] = x;
-                // int getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
-                // double* newcoeff =& gppwbasis( basisn, getcoeff);
-
-                // index[D] = t;
-                // index[0] = x+2;
-                // getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
-
-                //*newcoeff =
-                //(x+2)*(x+1)/((t+2)*(t+1)*gamma(0))
-                //* gppwbasis( basisn, getcoeff);
-                // for(int betax=0;betax<x;betax++)
-                //{
-                // index[D] = t+2;
-                // index[0] = betax;
-                // getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
-
-                //*newcoeff
-                //-= gamma(x-betax,0)*gppwbasis( basisn, getcoeff) / gamma(0);
-                //}
-                //}
-                // else if (D==2)
-                //{
                 for (int x = 0; x <= ell - t; x++)
                   {
                     if (D == 1)
@@ -624,7 +596,6 @@ namespace ngfem
                                        / gamma (0);
                         }
                   }
-                //}
               }
           }
       }
