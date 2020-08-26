@@ -196,7 +196,6 @@ namespace ngcomp
             }
             break;
           }
-        return *(new (alloc) TrefftzWaveFE<1> ());
       }
     else
       {
@@ -209,7 +208,7 @@ namespace ngcomp
           }
         catch (Exception e)
           {
-            throw Exception ("illegal element type in L2::GetSurfaceFE");
+            throw Exception ("illegal element type in Trefftz::GetSurfaceFE");
           }
       }
   }
