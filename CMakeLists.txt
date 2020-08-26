@@ -33,6 +33,7 @@ add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
     )
 
 #add_compile_options(PRIVATE -Wall -Wextra -pedantic)
+#add_compile_options(-g -O0)
 
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
 install(TARGETS trefftzngs DESTINATION trefftzngs)

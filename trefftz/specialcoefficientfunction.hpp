@@ -145,7 +145,7 @@ namespace ngfem
                             shared_ptr<CoefficientFunction> wavespeedcf)
         : CoefficientFunction (1)
     {
-      LocalHeap lh (1000 * 1000);
+      LocalHeap lh (1000 * 1000 * 100);
       values.SetSize (mesh->GetNE ());
       int elnr = 0;
       for (auto &vec : values)
