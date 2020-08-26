@@ -150,31 +150,67 @@ namespace ngcomp
                 IntegrationRule ir (eltyp, 0);
                 shared_ptr<CoefficientFunction> localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
                 shared_ptr<CoefficientFunction> localwavespeedcfx = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
-                //auto localwavespeedcf = this->wavespeedcf;
-                //auto localwavespeedcfx = this->wavespeedcf;
+
                 //this->gamma.SetSize(ama->GetNV());
-                for(int i=0;i<ama->GetNV();i++) this->gamma.Append(Matrix<>(this->order,this->order));
                 //for(auto &m : this->gamma)
                 //{
-                    //Matrix<> b(this->order,(this->order-1)*(D==2)+1);
-                    //m = b;
+                //Matrix<> b(this->order,(this->order-1)*(D==2)+1);
+                //m = b;
                 //}
+
+                cout << "start" << ama->GetNV() << endl;
+                for(int i=0;i<ama->GetNV();i++) this->gamma.Append(Matrix<>(this->order));
                 MappedIntegrationPoint<D,D> mip(ir[0], ama->GetTrafo (ElementId(0), lh));
-                for(int nx=0;nx<this->order;nx++)
+                for(int ny=0;ny<=(this->order-2)*(D==2);ny++)
                 {
-                    for(int ny=0;ny<=(this->order-1)*(D==2);ny++)
+                    for(int nx=0;nx<this->order-1;nx++)
                     {
+                        double fac = (factorial(nx)*factorial(ny));
+                        cout << "points";
                         for(int nv=0;nv<ama->GetNV();nv++)
                         {
                             mip.Point() = ama->GetPoint<D>(nv);
-                            this->gamma[nv](nx,ny) = localwavespeedcfx->Evaluate(mip)/(factorial(nx)*factorial(ny));
+                            this->gamma[nv](nx,ny) = localwavespeedcfx->Evaluate(mip)/fac;
                         }
-                        localwavespeedcfx = localwavespeedcfx->Diff(MakeCoordinateCoefficientFunction(1).get(), make_shared<ConstantCoefficientFunction>(1) );
+                        cout << "done"<<endl;
+                        localwavespeedcfx = localwavespeedcfx->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
                     }
-                    localwavespeedcf = localwavespeedcf->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
+                    localwavespeedcf = localwavespeedcf->Diff(MakeCoordinateCoefficientFunction(1).get(), make_shared<ConstantCoefficientFunction>(1) );
                     localwavespeedcfx = localwavespeedcf;
                 }
+                cout << "finish" << endl;
             }
+
+
+            GppwTents( int aorder, shared_ptr<MeshAccess> ama, shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> abddatum, vector<shared_ptr<CoefficientFunction>> taylorcf)
+                : WaveTents<D>(aorder,ama,awavespeedcf,abddatum)
+            {
+                LocalHeap lh(1000 * 1000 * 100);
+                const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
+                const int nsimd = SIMD<double>::Size();
+                SIMD_IntegrationRule sir(eltyp, this->order*2);
+
+                IntegrationRule ir (eltyp, 0);
+
+                cout << "start" << ama->GetNV() << endl;
+                for(int i=0;i<ama->GetNV();i++) this->gamma.Append(Matrix<>(this->order,this->order));
+                MappedIntegrationPoint<D,D> mip(ir[0], ama->GetTrafo (ElementId(0), lh));
+                for(int nx,count=0;nx<this->order;nx++)
+                {
+                    for(int ny=0;ny<=(this->order-1)*(D==2);ny++)
+                    {
+                        double fac = (factorial(nx)*factorial(ny));
+                        for(int nv=0;nv<ama->GetNV();nv++)
+                        {
+                            mip.Point() = ama->GetPoint<D>(nv);
+                            this->gamma[nv](nx,ny) = taylorcf[count]->Evaluate(mip)/fac;
+                        }
+                        count++;
+                    }
+                }
+                cout << "finish" << endl;
+            }
+
 
             void EvolveTents(double dt);
 

@@ -1061,6 +1061,22 @@ void ExportEvolveTent(py::module m)
           }, "Create Wavetent object",
         py::arg("order"), py::arg("ma"), py::arg("wavespeedcf"), py::arg("bddatum"), py::arg("QT")=false
     );
+
+    m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> wavespeedcf, shared_ptr<CoefficientFunction> bddatum, vector<shared_ptr<CoefficientFunction>> taylorcf) -> shared_ptr<TrefftzTents>
+          {
+              //TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
+              shared_ptr<TrefftzTents> tr;
+              int D = ma->GetDimension();
+              //return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
+              if(D==1)
+                  tr = make_shared<GppwTents<1>>(order,ma,wavespeedcf,bddatum,taylorcf);
+              else if(D==2)
+                  tr = make_shared<GppwTents<2>>(order,ma,wavespeedcf,bddatum,taylorcf);
+              return tr;
+              //return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma, wavespeed, bddatum));
+          }
+    );
+
 }
 #endif // NGS_PYTHON
 
