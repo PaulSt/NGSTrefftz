@@ -1248,8 +1248,8 @@ void ExportEvolveTent (py::module m)
               tr = make_shared<GppwTents<1>> (order, ma, wavespeedcf, bddatum);
             else if (D == 2)
               tr = make_shared<GppwTents<2>> (order, ma, wavespeedcf, bddatum);
-            return tr;
           }
+        return tr;
         // return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma,
         // wavespeed, bddatum));
       },
