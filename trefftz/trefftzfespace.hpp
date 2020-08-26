@@ -31,26 +31,25 @@ namespace ngcomp
       wavespeedcf = awavespeedcf;
       if (useqt)
         {
-          wavespeedmatrix.SetSize (this->order);
+          cout << "started auto diff.... ";
+          wavespeedmatrix.SetSize (this->order - 1);
           shared_ptr<CoefficientFunction> localwavespeedcf
               = make_shared<ConstantCoefficientFunction> (1)
                 / (wavespeedcf * wavespeedcf);
           shared_ptr<CoefficientFunction> localwavespeedcfx
               = make_shared<ConstantCoefficientFunction> (1)
                 / (wavespeedcf * wavespeedcf);
-          for (int nx = 0; nx < this->order; nx++)
+          for (int ny = 0; ny <= (this->order - 2) * (D == 2); ny++)
             {
-              for (int ny = 0; ny < this->order; ny++)
+              for (int nx = 0; nx < this->order - 1; nx++)
                 {
                   wavespeedmatrix (nx, ny) = localwavespeedcfx;
-                  if (D == 1)
-                    break;
                   localwavespeedcfx = localwavespeedcfx->Diff (
-                      MakeCoordinateCoefficientFunction (1).get (),
+                      MakeCoordinateCoefficientFunction (0).get (),
                       make_shared<ConstantCoefficientFunction> (1));
                 }
               localwavespeedcf = localwavespeedcf->Diff (
-                  MakeCoordinateCoefficientFunction (0).get (),
+                  MakeCoordinateCoefficientFunction (1).get (),
                   make_shared<ConstantCoefficientFunction> (1));
               localwavespeedcfx = localwavespeedcf;
             }

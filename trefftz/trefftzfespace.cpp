@@ -134,7 +134,7 @@ namespace ngcomp
                 {
                   Matrix<> b (this->order, this->order);
                   b = 0;
-                  for (int nx = 0; nx < this->order; nx++)
+                  for (int nx = 0; nx < this->order - 1; nx++)
                     {
                       int ny = 0;
                       b (nx, ny) = wavespeedmatrix (nx, ny)->Evaluate (mip)
@@ -172,9 +172,9 @@ namespace ngcomp
                 {
                   Matrix<> b (this->order, this->order);
                   b = 0;
-                  for (int nx = 0; nx < this->order; nx++)
+                  for (int nx = 0; nx < this->order - 1; nx++)
                     {
-                      for (int ny = 0; ny < this->order; ny++)
+                      for (int ny = 0; ny < this->order - 1; ny++)
                         {
                           b (nx, ny) = wavespeedmatrix (nx, ny)->Evaluate (mip)
                                        / (factorial (nx) * factorial (ny));
