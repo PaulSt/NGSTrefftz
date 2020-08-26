@@ -672,7 +672,7 @@ namespace ngcomp
     template<int D>
     double WaveTents<D> :: TentAdiam(Tent* tent)
     {
-        LocalHeap lh(100 * 100);
+        LocalHeap lh(1000*1000*100);
         int vnumber = tent->nbv.Size();
 
         //Array<int> verts(vnumber);
@@ -724,7 +724,7 @@ namespace ngcomp
         double h = 0.0;
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);
         LocalHeap lh(1000 * 1000 * 100);
-        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(1), lh); 
+        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(1), lh);
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             Tent* tent = tps.tents[tentnr];
             h = max(h,TentAdiam(tent));
