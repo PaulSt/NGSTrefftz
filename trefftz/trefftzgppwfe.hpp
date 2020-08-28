@@ -69,7 +69,18 @@ namespace ngfem
                             BareSliceMatrix<> hddshape) const;
     void CalcDDSpecialShape (const SIMD_BaseMappedIntegrationRule &smir,
                              BareSliceMatrix<SIMD<double>> dshape,
-                             BareSliceMatrix<SIMD<double>> wavespeed) const;
+                             BareSliceMatrix<SIMD<double>> wavespeed,
+                             BareSliceMatrix<SIMD<double>> mu) const;
+
+    void CalcDDSpecialShape (const SIMD_BaseMappedIntegrationRule &smir,
+                             BareSliceMatrix<SIMD<double>> dshape,
+                             BareSliceMatrix<SIMD<double>> wavespeed) const
+    {
+      Matrix<SIMD<double>> mu (1, wavespeed.Dist ());
+      SIMD<double> a = 1.0;
+      mu = a;
+      CalcDDSpecialShape (smir, dshape, wavespeed, mu);
+    }
 
     // using ScalarMappedElement<D>::CalcMappedDShape;
     // HD NGS_DLL_HEADER virtual

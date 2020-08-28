@@ -337,7 +337,8 @@ namespace ngfem
   void TrefftzGppwFE<1>::CalcDDSpecialShape (
       const SIMD_BaseMappedIntegrationRule &smir,
       BareSliceMatrix<SIMD<double>> dshape,
-      BareSliceMatrix<SIMD<double>> wavespeed) const
+      BareSliceMatrix<SIMD<double>> wavespeed,
+      BareSliceMatrix<SIMD<double>> mu) const
   {
     for (int imip = 0; imip < smir.Size (); imip++)
       {
@@ -379,7 +380,8 @@ namespace ngfem
   void TrefftzGppwFE<2>::CalcDDSpecialShape (
       const SIMD_BaseMappedIntegrationRule &smir,
       BareSliceMatrix<SIMD<double>> dshape,
-      BareSliceMatrix<SIMD<double>> wavespeed) const
+      BareSliceMatrix<SIMD<double>> wavespeed,
+      BareSliceMatrix<SIMD<double>> mu) const
   {
     for (int imip = 0; imip < smir.Size (); imip++)
       {
