@@ -494,10 +494,10 @@ namespace ngcomp
                        //double b = L2Norm(ve.Col(1)-ve.Col(2));
                        //double c = L2Norm(ve.Col(0)-ve.Col(2));
                        //SwapIfGreater<>(a,b); SwapIfGreater<>(a,c); SwapIfGreater<>(b,c);
-                       //return 0.25 * sqrt((a+(b+c))*(c-(a-b))*(c+(a-b))*(a+(b-c)));
+                       //return 0.25 * sqrt((a+(b+c))*(c-(a-b))*(c+(a-b))*(a+(b-c)))  *2.0;
                        Vec<3> ba=ve.Col(0)-ve.Col(1);
                        Vec<3> baa=ve.Col(0)-ve.Col(2);
-                       return L2Norm(Cross(ba,baa))/2.0  *2;
+                       return L2Norm(Cross(ba,baa))/2.0  *2.0;
                        break;
                    }
             case 3:{
