@@ -158,7 +158,6 @@ namespace ngcomp
                 //m = b;
                 //}
 
-                cout << "start" << ama->GetNV() << endl;
                 for(int i=0;i<ama->GetNV();i++) this->gamma.Append(Matrix<>(this->order));
                 MappedIntegrationPoint<D,D> mip(ir[0], ama->GetTrafo (ElementId(0), lh));
                 for(int ny=0;ny<=(this->order-2)*(D==2);ny++)
@@ -166,19 +165,16 @@ namespace ngcomp
                     for(int nx=0;nx<this->order-1;nx++)
                     {
                         double fac = (factorial(nx)*factorial(ny));
-                        cout << "points";
                         for(int nv=0;nv<ama->GetNV();nv++)
                         {
                             mip.Point() = ama->GetPoint<D>(nv);
                             this->gamma[nv](nx,ny) = localwavespeedcfx->Evaluate(mip)/fac;
                         }
-                        cout << "done"<<endl;
                         localwavespeedcfx = localwavespeedcfx->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
                     }
                     localwavespeedcf = localwavespeedcf->Diff(MakeCoordinateCoefficientFunction(1).get(), make_shared<ConstantCoefficientFunction>(1) );
                     localwavespeedcfx = localwavespeedcf;
                 }
-                cout << "finish" << endl;
             }
 
 
