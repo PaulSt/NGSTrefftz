@@ -15,7 +15,6 @@ def SolveWaveTents(initmesh, order, c, t_step):
     >>> t_step = 2/sqrt(3)
     >>> ms = [0,1,2]
     >>> meshes=[ Mesh(SegMesh(4,0,math.pi)), Mesh(unit_square.GenerateMesh(maxh = 0.4)) , Mesh(unit_cube.GenerateMesh(maxh = 1))]
-
     >>> for initmesh in meshes:
     ...    for maxh in ms:
     ...        SolveWaveTents(initmesh, order, c, t_step) # doctest:+ELLIPSIS
