@@ -23,14 +23,14 @@ def SolveWaveTents(initmesh, order, c, t_step):
     ...            initmesh.Refine()
     ...        elif initmesh.dim==1:
     ...            initmesh=Mesh(SegMesh(initmesh.ne*2,0,1))
-    0.206...
+    0.134...
     ...e-05
     ...e-06
-    0.014...
-    0.001...
+    0.015...
+    0.002...
     0.000...
-    0.155...
-    0.067...
+    0.138...
+    0.045...
     0.003...
 
     if i ever feel like checking the times, here is example full output, 2 cores on my laptop:
@@ -89,33 +89,60 @@ def SolveWaveTents(initmesh, order, c, t_step):
     return error
 
 
-def TestAiry(order, h, t_step):
+def TestAiry(order, initmesh, t_step):
     """
     Solve using tent pitching
     >>> order = 4
     >>> SetNumThreads(2)
-    >>> t_step = 2/sqrt(3)
+    >>> t_step = 1
     >>> for h in [4,8,16,32]:
-    ...        TestAiry(order,h,t_step) # doctest:+ELLIPSIS
+    ...        initmesh = Mesh(SegMesh(h,0,math.pi))
+    ...        TestAiry(order,initmesh,t_step) # doctest:+ELLIPSIS
+    0.012...
+    0.0007...
+    ...e-05
+    ...e-06
+    >>> initmesh = Mesh(unit_square.GenerateMesh(maxh = 0.5))
+    >>> for h in range(4):
+    ...        TestAiry(order,initmesh,t_step) # doctest:+ELLIPSIS
+    ...        initmesh.Refine()
+    0.004...
+    0.0006...
+    ...e-05
+    ...e-06
+
+    notes for non gppw solution
     0.0112...
     0.0027...
     0.0004...
     ...e-05
     """
 
-    initmesh = Mesh(SegMesh(h,0,math.pi))
+    # for i in range(0,len(initmesh.GetBoundaries())):
+       # initmesh.ngmesh.SetBCName(i,"neumann")
     D = initmesh.dim
     t = CoordCF(D)
     t_start = 0
 
     c=1
-    bdd = CoefficientFunction((
-            airy(-x-c)*cos(t),
-            -airyp(-x-c)*cos(t),
-            -airy(-x-c)*sin(t)
-        ))
+    if D is 1:
+        bdd = CoefficientFunction((
+            airy(-x-c)*cos(y),
+            -airyp(-x-c)*cos(y),
+            -airy(-x-c)*sin(y)
+            ))
+        wavespeed=CoefficientFunction(1/sqrt(c+x))
+    else:
+        bdd = CoefficientFunction((
+            airy(-x-y-c)*cos(sqrt(2)*z),
+            -airyp(-x-y-c)*cos(sqrt(2)*z),
+            -airyp(-x-y-c)*cos(sqrt(2)*z),
+            -airy(-x-y-c)*sin(sqrt(2)*z)*sqrt(2)
+            ))
+        wavespeed=CoefficientFunction(1/sqrt(c+x+y))
 
-    TT=WaveTents(order,initmesh,CoefficientFunction(1/sqrt(c+x)),bdd)
+
+    TT=WaveTents(order,initmesh,wavespeed,bdd,True)
     TT.SetWavefront(bdd,t_start)
 
     start = time.time()
