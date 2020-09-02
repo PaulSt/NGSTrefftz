@@ -869,17 +869,26 @@ namespace ngcomp
 
                     FlatMatrix<SIMD<double>> simdddshapes((D+1)*nbasis,vsir.Size(),slh);
                     tel.CalcDDSpecialShape(vsmir,simdddshapes,wavespeed);
+                    for(int imip=0;imip<vsir.Size();imip++)
+                        simdddshapes.Col(imip) *= vol*vsir[imip].Weight();
                     FlatMatrix<SIMD<double>> simdddshapes2(nbasis,(D+1)*vsir.Size(),&simdddshapes(0,0));
 
                     FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,vsir.Size(),slh);
                     tel.CalcDShape(vsmir,simddshapes);
-                    for(int imip=0;imip<vsir.Size();imip++)
-                        simddshapes.Col(imip) *= vol*vsir[imip].Weight();
                     FlatMatrix<SIMD<double>> simddshapes2(nbasis,(D+1)*vsir.Size(),&simddshapes(0,0));
 
                     AddABt(simdddshapes2,simddshapes2,elmat);
-                    //simdddshapes2*=sqrt(mu);
-                    //AddABt(simdddshapes2,simdddshapes2,elmat);
+
+                    double cmax = sqrt(abs(wavespeed(0,0)[0]));
+                    for(int j=0;j<vsir.Size();j++)//auto ws : wavespeed.AsVector())
+                        for(int i=0;i<nsimd;i++)
+                            cmax = min(cmax,sqrt(abs(wavespeed(0,j)[i])));
+                    FlatMatrix<SIMD<double>> mu(1,vsir.Size(),slh);
+                    localwavespeedcf = make_shared<ConstantCoefficientFunction>(tentsize*cmax)*this->wavespeedcf*this->wavespeedcf;
+                    localwavespeedcf->Evaluate(vsmir,mu);
+                    FlatMatrix<SIMD<double>> simdddshapescor((D+1)*nbasis,vsir.Size(),slh);
+                    tel.CalcDDSpecialShape(vsmir,simdddshapescor,wavespeed,mu);
+                    AddABt( FlatMatrix<SIMD<double>>(nbasis,(D+1)*vsir.Size(),&simdddshapescor(0,0)),simdddshapes2,elmat);
                 }
             }
 
