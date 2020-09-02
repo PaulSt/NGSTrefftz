@@ -173,6 +173,7 @@ namespace ngfem
           IntegrationRule ir (mesh->GetElType (ei), 0);
           ElementTransformation &trafo = mesh->GetTrafo (ei, lh);
 
+          double maxc = 0;
           for (auto vertex1 : vertices_index)
             {
               double c1, c2;
@@ -184,8 +185,10 @@ namespace ngfem
                     v1 = mesh->GetPoint<2> (vertex1);
                     mip.Point () = v1;
                     c1 = wavespeedcf->Evaluate (mip);
+                    maxc = max (abs (c1), maxc);
                     mip.Point () = center;
                     c2 = wavespeedcf->Evaluate (mip);
+                    maxc = max (abs (c2), maxc);
                     break;
                   }
                 case 3:
@@ -194,8 +197,10 @@ namespace ngfem
                     v1 = mesh->GetPoint<3> (vertex1);
                     mip.Point () = v1;
                     c1 = wavespeedcf->Evaluate (mip);
+                    maxc = max (abs (c1), maxc);
                     mip.Point () = center;
                     c2 = wavespeedcf->Evaluate (mip);
+                    maxc = max (abs (c2), maxc);
                     break;
                   }
                 }
@@ -204,7 +209,7 @@ namespace ngfem
                   sqrt (L2Norm2 (v1 (0, D - 1) - center (0, D - 1))
                         + pow (c1 * v1 (D - 1) - c2 * center (D - 1), 2)));
             }
-          values[elnr] = anisotropicdiam;
+          values[elnr] = anisotropicdiam / maxc;
           elnr++;
         }
     }
