@@ -277,30 +277,46 @@ namespace ngcomp
 
         FlatVector<> bdbvec((D+1)*snip, slh ) ;
         bdbvec = 0;
-        if(D>1 && ma->GetMaterial(ElementId(BND,surfel)) == "neumann")
+        if(ma->GetMaterial(ElementId(BND,surfel)) == "neumann")
         {
+            double beta = 0.5;
+            double A = TentFaceArea(vert);
             for(int imip=0;imip<snip;imip++)
-                for(int r=0;r<(D+1);r++)
-                    bdbmat.Row(r*snip+imip) += Dmat(D,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(D*snip+imip); //neumann
+                for(int r=0;r<D;r++)
+                    for(int d=0;d<(D+1);d++)
+                    bdbmat.Row(r*snip+imip) += (d<D?-n(d)*beta:1.0) * (-n(r)) * sir[imip/nsimd].Weight()[imip%nsimd]*A * bbmat.Col(d*snip+imip);
             elmat += bbmat * bdbmat;
 
             for(int imip=0;imip<snip;imip++)
-                for(int d=0;d<D+1;d++)
-                    bdbvec(D*snip+imip) += Dmat(D,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bdeval(d+1,imip/nsimd)[imip%nsimd];
-            elvec -= bbmat * bdbvec;
+                for(int r=0;r<D;r++)
+                    for(int d=0;d<D+1;d++)
+                    bdbvec(d*snip+imip) += (d<D?-n(d)*beta:-1.0) * (-n(r)) * bdeval(r+1,imip/nsimd)[imip%nsimd] * sir[imip/nsimd].Weight()[imip%nsimd]*A;
+            elvec += bbmat * bdbvec;
         } else { // dirichlet
-            double alpha = 0.5;
-            Dmat(D,D) = TentFaceArea(vert)*alpha;
+            //double alpha = 0.5;
+            //Dmat(D,D) = TentFaceArea(vert)*alpha;
+
+            FlatMatrix<SIMD<double>> wavespeed(1,sir.Size(),slh);
+            auto localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(this->wavespeedcf);
+            localwavespeedcf->Evaluate(smir,wavespeed);
+            double DmatDD = TentFaceArea(vert);
+
             for(int imip=0;imip<snip;imip++)
                 //for(int r=0;r<(D+1);r++) // r=D since only last row non-zero
                 for(int d=0;d<D+1;d++)
+                {
+                    Dmat(D,D) = DmatDD*wavespeed(0,imip/nsimd)[imip%nsimd];
                     bdbmat.Row(D*snip+imip) += Dmat(D,d) * sir[imip/nsimd].Weight()[imip%nsimd] * bbmat.Col(d*snip+imip);
+                }
             elmat += bbmat * bdbmat;
 
             Dmat(D,D) *= -1.0;
             for(int imip=0;imip<snip;imip++)
                 for(int r=0;r<(D+1);r++)
+                {
+                    Dmat(D,D) = -DmatDD*wavespeed(0,imip/nsimd)[imip%nsimd];
                     bdbvec(r*snip+imip) += Dmat(D,r) * sir[imip/nsimd].Weight()[imip%nsimd] * bdeval(D+1,imip/nsimd)[imip%nsimd];//use Dmat transposed
+                }
             elvec -= bbmat * bdbvec;
         }
     }
