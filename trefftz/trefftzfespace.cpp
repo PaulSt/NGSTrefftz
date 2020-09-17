@@ -28,6 +28,7 @@ namespace ngcomp
         c = flags.GetNumFlag ("wavespeed", 1);
         basistype = flags.GetNumFlag ("basistype", 0);
         useshift = flags.GetNumFlag("useshift",1);
+        usescale = flags.GetNumFlag("usescale",1);
         useqt = flags.GetNumFlag("useqt",0);
 
 
@@ -192,7 +193,7 @@ namespace ngcomp
                 anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1.Range(0,D) - v2.Range(0,D)) + pow(c*(v1(D)-v2(D)),2) ) );
             }
         }
-        return anisotropicdiam * useshift + (useshift==0);
+        return anisotropicdiam * usescale + (usescale==0);
     }
 
 
@@ -221,7 +222,7 @@ namespace ngcomp
                 anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1.Range(0,D) - v2.Range(0,D)) + pow(c1*v1(D)-c2*v2(D),2) ) );
             }
         }
-        return anisotropicdiam * useshift + (useshift==0);
+        return anisotropicdiam * usescale + (usescale==0);
     }
 
     template<int D>
