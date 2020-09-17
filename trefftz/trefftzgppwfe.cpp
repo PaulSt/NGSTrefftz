@@ -509,9 +509,8 @@ namespace ngfem
             {
                 for(int t=0;t<=ell;t++)
                 {
-                    for(int x=0;x<=ell-t;x++)
+                    for(int x=(D==1?ell-t:0);x<=ell-t;x++)
                     {
-                        if(D==1) x=ell-t;
                         int y = ell-t-x;
                         Vec<D+1, int> index;
                         index[1] = y;
