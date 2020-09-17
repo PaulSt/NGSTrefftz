@@ -102,6 +102,7 @@ namespace ngcomp
 
   FiniteElement &TrefftzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
   {
+
     // auto vertices_index = ma->GetElVertices(ei);
     // cout << "element vectice coord: \n"  <<
     // ma->GetPoint<3>(vertices_index[0]) << endl<<
@@ -133,17 +134,16 @@ namespace ngcomp
               mip.Point () = ElCenter<1> (ei).Range (0, 1);
               if (useqt)
                 {
-                  Matrix<> b (this->order, this->order);
-                  b = 0;
-                  for (int nx = 0; nx < this->order - 1; nx++)
-                    {
-                      int ny = 0;
-                      b (nx, ny) = wavespeedmatrix (nx, ny)->Evaluate (mip)
-                                   / (factorial (nx) * factorial (ny));
-                    }
+                  // Matrix<> gamma(this->order,this->order);
+                  // for(int nx=0;nx<this->order-1;nx++)
+                  //{
+                  // int ny = 0;
+                  // gamma(nx,ny) =
+                  // wavespeedmatrix(nx,ny)->Evaluate(mip)/(factorial(nx)*factorial(ny));
+                  //}
                   return *(new (alloc) TrefftzGppwFE<1> (
-                      b, order, ElCenter<1> (ei), Adiam<1> (ei, wavespeedcf),
-                      ma->GetElType (ei)));
+                      this->gamma[ei.Nr ()], order, ElCenter<1> (ei),
+                      Adiam<1> (ei, wavespeedcf), ma->GetElType (ei)));
                 }
               else
                 return *(new (alloc) TrefftzWaveFE<1> (
@@ -171,19 +171,21 @@ namespace ngcomp
 
               if (useqt)
                 {
-                  Matrix<> b (this->order, this->order);
-                  b = 0;
-                  for (int nx = 0; nx < this->order - 1; nx++)
-                    {
-                      for (int ny = 0; ny < this->order - 1; ny++)
-                        {
-                          b (nx, ny) = wavespeedmatrix (nx, ny)->Evaluate (mip)
-                                       / (factorial (nx) * factorial (ny));
-                        }
-                    }
+                  static Timer timereval ("evalc", 2);
+                  timereval.Start ();
+                  // Matrix<> gamma(this->order-1);
+                  // for(int nx=0;nx<this->order-1;nx++)
+                  //{
+                  // for(int ny=0;ny<this->order-1;ny++)
+                  //{
+                  // gamma(nx,ny) =
+                  // wavespeedmatrix(nx,ny)->Evaluate(mip)/(factorial(nx)*factorial(ny));
+                  //}
+                  //}
+                  timereval.Stop ();
                   return *(new (alloc) TrefftzGppwFE<2> (
-                      b, order, ElCenter<2> (ei), Adiam<2> (ei, wavespeedcf),
-                      ma->GetElType (ei)));
+                      this->gamma[ei.Nr ()], order, ElCenter<2> (ei),
+                      Adiam<2> (ei, wavespeedcf), ma->GetElType (ei)));
                 }
               else
                 return *(new (alloc) TrefftzWaveFE<2> (
@@ -282,9 +284,6 @@ namespace ngcomp
   {
     auto docu = FESpace::GetDocu ();
     docu.Arg ("useshift")
-        = "bool = True\n"
-          "  use shift of basis functins to element center and scale them";
-    docu.Arg ("gamma")
         = "bool = True\n"
           "  use shift of basis functins to element center and scale them";
     docu.Arg ("basistype")
