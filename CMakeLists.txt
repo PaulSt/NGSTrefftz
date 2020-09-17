@@ -23,8 +23,10 @@ add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
     trefftz/helpers.cpp
     trefftz/trefftzwavefe.cpp
     trefftz/trefftzgppwfe.cpp
+    trefftz/monomialfe.cpp
     trefftz/diffopmapped.hpp
     trefftz/trefftzfespace.cpp
+    trefftz/monomialfespace.cpp
     trefftz/scalarmappedfe.cpp
     trefftz/specialcoefficientfunction.cpp
     trefftz/tents/tents.cpp
