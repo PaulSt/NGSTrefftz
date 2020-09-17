@@ -3,6 +3,7 @@ using namespace ngsolve;
 #include <python_ngstd.hpp>
 //#include "trefftz/trefftzwavefe.hpp"
 #include "trefftz/trefftzfespace.hpp"
+#include "trefftz/monomialfespace.hpp"
 #include "trefftz/diffopmapped.hpp"
 #include "trefftz/specialcoefficientfunction.hpp"
 //#include "trefftz/mappedelement.hpp"
@@ -18,6 +19,7 @@ PYBIND11_PLUGIN(trefftzngs) {
 
     //ExportMappedElement(m);
     ExportTrefftzFESpace(m);
+    ExportMonomialFESpace(m);
     ExportSpecialCoefficientFunction(m);
     ExportEvolveTent(m);
     ExportMeshTentSlab(m);
