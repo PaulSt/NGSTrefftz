@@ -184,8 +184,9 @@ namespace ngcomp
       // m = b;
       // }
 
+      this->gamma.SetSize (0);
       for (int i = 0; i < ama->GetNV (); i++)
-        this->gamma.Append (Matrix<> (this->order));
+        this->gamma.Append (Matrix<> (this->order - 1));
       MappedIntegrationPoint<D, D> mip (ir[0],
                                         ama->GetTrafo (ElementId (0), lh));
       for (int ny = 0; ny <= (this->order - 2) * (D == 2); ny++)
