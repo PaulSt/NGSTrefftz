@@ -29,6 +29,7 @@ namespace ngcomp
     c = flags.GetNumFlag ("wavespeed", 1);
     basistype = flags.GetNumFlag ("basistype", 0);
     useshift = flags.GetNumFlag ("useshift", 1);
+    usescale = flags.GetNumFlag ("usescale", 1);
     useqt = flags.GetNumFlag ("useqt", 0);
 
     local_ndof = (BinCoeff (fullD - 1 + order, order)
@@ -231,7 +232,7 @@ namespace ngcomp
                              + pow (c * (v1 (D) - v2 (D)), 2)));
           }
       }
-    return anisotropicdiam * useshift + (useshift == 0);
+    return anisotropicdiam * usescale + (usescale == 0);
   }
 
   template <int D>
@@ -264,7 +265,7 @@ namespace ngcomp
                              + pow (c1 * v1 (D) - c2 * v2 (D), 2)));
           }
       }
-    return anisotropicdiam * useshift + (useshift == 0);
+    return anisotropicdiam * usescale + (usescale == 0);
   }
 
   template <int D> Vec<D + 1> TrefftzFESpace ::ElCenter (ElementId ei) const
