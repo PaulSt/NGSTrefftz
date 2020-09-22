@@ -855,7 +855,7 @@ namespace ngcomp
 
                     for(int i=0;i<D+1;i++)
                         map.Col(i) -= shift;
-                    double vol = abs(Det(map));
+                    double vol = abs(Det(map)); // no need for this * (D==2?6.0:2.0); bc of Det 
                     if(vol<10e-16) continue;
 
                     SIMD_MappedIntegrationRule<D+1,D+1> vsmir(vsir,ma->GetTrafo(tent->els[elnr],slh),-1,slh);
