@@ -178,7 +178,7 @@ namespace ngcomp
 
         Vec<D+1> nnn = TentFaceNormal(vert,1);
 
-        static bool displaytenterror = true; if(L2Norm(nnn.Range(0,D))*(wavespeed)>nnn[D] && displaytenterror){ 
+        static bool displaytenterror = true; if(L2Norm(nnn.Range(0,D))*(wavespeed)>nnn[D] && displaytenterror){
             cout << endl << "some tents pitched too high" << endl;displaytenterror=false;
         }
         //if(TentFaceArea<D>(vert)<smir_fix[0].GetMeasure()[0]&& tent->nbtime[0]==0)
@@ -785,7 +785,7 @@ namespace ngcomp
         const int snip = sir.Size()*nsimd;
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(this->ma);      // collection of tents in timeslab
-        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(1), lh); 
+        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(1), lh);
 
         cout << "solving gppw " << tps.tents.Size() << " tents " << endl;
 
@@ -855,7 +855,7 @@ namespace ngcomp
 
                     for(int i=0;i<D+1;i++)
                         map.Col(i) -= shift;
-                    double vol = abs(Det(map)); // no need for this * (D==2?6.0:2.0); bc of Det 
+                    double vol = abs(Det(map)); // no need for this * (D==2?6.0:2.0); bc of Det
                     if(vol<10e-16) continue;
 
                     SIMD_MappedIntegrationRule<D+1,D+1> vsmir(vsir,ma->GetTrafo(tent->els[elnr],slh),-1,slh);
@@ -879,12 +879,13 @@ namespace ngcomp
 
                     AddABt(simdddshapes2,simddshapes2,elmat);
 
-                    double cmax = sqrt(abs(wavespeed(0,0)[0]));
+                    // volume correction term
+                    double cmax = abs(wavespeed(0,0)[0]);
                     for(int j=0;j<vsir.Size();j++)//auto ws : wavespeed.AsVector())
                         for(int i=0;i<nsimd;i++)
-                            cmax = min(cmax,sqrt(abs(wavespeed(0,j)[i])));
+                            cmax = max(cmax,abs(wavespeed(0,j)[i]));
                     FlatMatrix<SIMD<double>> mu(1,vsir.Size(),slh);
-                    localwavespeedcf = make_shared<ConstantCoefficientFunction>(tentsize*cmax)*this->wavespeedcf*this->wavespeedcf;
+                    localwavespeedcf = make_shared<ConstantCoefficientFunction>(tentsize/cmax)*this->wavespeedcf*this->wavespeedcf;
                     localwavespeedcf->Evaluate(vsmir,mu);
                     FlatMatrix<SIMD<double>> simdddshapescor((D+1)*nbasis,vsir.Size(),slh);
                     tel.CalcDDSpecialShape(vsmir,simdddshapescor,wavespeed,mu);
