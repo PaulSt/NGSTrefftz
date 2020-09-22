@@ -1057,14 +1057,15 @@ namespace ngcomp
 
               AddABt (simdddshapes2, simddshapes2, elmat);
 
-              double cmax = sqrt (abs (wavespeed (0, 0)[0]));
+              // volume correction term
+              double cmax = abs (wavespeed (0, 0)[0]);
               for (int j = 0; j < vsir.Size ();
                    j++) // auto ws : wavespeed.AsVector())
                 for (int i = 0; i < nsimd; i++)
-                  cmax = min (cmax, sqrt (abs (wavespeed (0, j)[i])));
+                  cmax = max (cmax, abs (wavespeed (0, j)[i]));
               FlatMatrix<SIMD<double>> mu (1, vsir.Size (), slh);
               localwavespeedcf
-                  = make_shared<ConstantCoefficientFunction> (tentsize * cmax)
+                  = make_shared<ConstantCoefficientFunction> (tentsize / cmax)
                     * this->wavespeedcf * this->wavespeedcf;
               localwavespeedcf->Evaluate (vsmir, mu);
               FlatMatrix<SIMD<double>> simdddshapescor ((D + 1) * nbasis,
