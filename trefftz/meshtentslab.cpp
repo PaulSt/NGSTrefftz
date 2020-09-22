@@ -6,6 +6,14 @@ namespace ngcomp
   shared_ptr<MeshAccess>
   NgsTPmesh (shared_ptr<MeshAccess> ma, double wavespeed, double dt)
   {
+    auto wavespeedcf = make_shared<ConstantCoefficientFunction> (wavespeed);
+    return NgsTPmesh (ma, wavespeedcf, dt);
+  }
+
+  shared_ptr<MeshAccess>
+  NgsTPmesh (shared_ptr<MeshAccess> ma,
+             shared_ptr<CoefficientFunction> wavespeedcf, double dt)
+  {
     Point2IndexMap *pim = new Point2IndexMap (); // Your map type may vary,
                                                  // just change the typedef
     int index = 1;
@@ -19,7 +27,7 @@ namespace ngcomp
     TentPitchedSlab<1> tps
         = TentPitchedSlab<1> (ma); // collection of tents in timeslab
     LocalHeap lh (1000 * 1000 * 100);
-    tps.PitchTents (dt, wavespeed, lh); // adt = time slab height, wavespeed
+    tps.PitchTents (dt, wavespeedcf, lh); // adt = time slab height, wavespeed
     cout << "numb of tents: " << tps.tents.Size () << endl;
 
     auto mesh = make_shared<netgen::Mesh> ();
@@ -169,6 +177,13 @@ namespace ngcomp
 #include <python_ngstd.hpp>
 void ExportMeshTentSlab (py::module m)
 {
+  m.def ("NgsTPmesh",
+         [] (shared_ptr<MeshAccess> ma,
+             shared_ptr<CoefficientFunction> wavespeedcf,
+             double dt) -> shared_ptr<MeshAccess> {
+           return NgsTPmesh (ma, wavespeedcf, dt);
+         } //, py::call_guard<py::gil_scoped_release>()
+  );
   m.def ("NgsTPmesh",
          [] (shared_ptr<MeshAccess> ma, double wavespeed,
              double dt) -> shared_ptr<MeshAccess> {

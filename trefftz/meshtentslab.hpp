@@ -14,6 +14,9 @@ namespace ngcomp
   typedef map<netgen::Point3d, netgen::PointIndex> Point2IndexMap;
 
   shared_ptr<MeshAccess>
+  NgsTPmesh (shared_ptr<MeshAccess> ma,
+             shared_ptr<CoefficientFunction> wavespeedcf, double dt);
+  shared_ptr<MeshAccess>
   NgsTPmesh (shared_ptr<MeshAccess> ma, double wavespeed, double dt);
   netgen::PointIndex
   Point2Index (map<netgen::Point3d, netgen::PointIndex> *point2index_map,

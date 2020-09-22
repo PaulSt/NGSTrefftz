@@ -581,7 +581,7 @@ namespace ngcomp
           // return 0.25 * sqrt((a+(b+c))*(c-(a-b))*(c+(a-b))*(a+(b-c)));
           Vec<3> ba = ve.Col (0) - ve.Col (1);
           Vec<3> baa = ve.Col (0) - ve.Col (2);
-          return L2Norm (Cross (ba, baa)) / 2.0 * 2;
+          return L2Norm (Cross (ba, baa)) / 2.0 * 2.0;
           break;
         }
       case 3:
@@ -997,7 +997,8 @@ namespace ngcomp
 
               for (int i = 0; i < D + 1; i++)
                 map.Col (i) -= shift;
-              double vol = abs (Det (map));
+              double vol = abs (
+                  Det (map)); // no need for this * (D==2?6.0:2.0); bc of Det
               if (vol < 10e-16)
                 continue;
 
