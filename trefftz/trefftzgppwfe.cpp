@@ -31,7 +31,6 @@ namespace ngfem
                 for (size_t j = 0; j <= ord-i; j++)
                     pol[ii++] = polxt[0][i] * polxt[1][j];
             // TB*monomials for trefftz shape fcts
-            CSR localmat = Basis->TB();
             for (int i=0; i<this->ndof; ++i)
             {
                 shape(i,imip) = 0.0;
@@ -65,7 +64,6 @@ namespace ngfem
                     for (size_t k = 0; k <= ord-i-j; k++)
                         pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
             // TB*monomials for trefftz shape fcts
-            CSR localmat = Basis->TB();
             for (int i=0; i<this->ndof; ++i)
             {
                 shape(i,imip) = 0.0;
@@ -108,7 +106,6 @@ namespace ngfem
                         pol[ii++] = (d==0?i:(d==1?j:0))
                             * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
 
-                CSR localmat = Basis->TB();
                 for (int i=0; i<this->ndof; ++i)
                 {
                     dshape(i*2+d,imip) = 0.0;
@@ -147,7 +144,6 @@ namespace ngfem
                             pol[ii++] = (d==0?i:(d==1?j:(d==2?k:0)))
                                 * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)];
 
-                CSR localmat = Basis->TB();
                 for (int i=0; i<this->ndof; ++i)
                 {
                     dshape(i*3+d,imip) = 0.0;
@@ -188,7 +184,6 @@ namespace ngfem
             for (size_t j = 0; j <= ord-i; j++)
                 pol[ii++] = polxt[0][i] * polxt[1][j];
         // TB*monomials for trefftz shape fcts
-        CSR localmat = Basis->TB();
         for (int i=0; i<this->ndof; ++i)
         {
             shape(i) = 0.0;
@@ -220,7 +215,6 @@ namespace ngfem
                 for (size_t k = 0; k <= ord-i-j; k++)
                     pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
         // TB*monomials for trefftz shape fcts
-        CSR localmat = Basis->TB();
         for (int i=0; i<this->ndof; ++i)
         {
             shape(i) = 0.0;
@@ -261,7 +255,6 @@ namespace ngfem
                     pol[ii++] = (d==0?i:(d==1?j:0))
                         * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
 
-            CSR localmat = Basis->TB();
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i,d) = 0.0;
@@ -297,7 +290,6 @@ namespace ngfem
                         pol[ii++] = (d==0?i:(d==1?j:(d==2?k:0)))
                             * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)];
 
-            CSR localmat = Basis->TB();
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i,d) = 0.0;
@@ -340,7 +332,6 @@ namespace ngfem
                           - j*(j-1) * polxt[0][i] * polxt[1][j-2]
                           * wavespeed(0,imip) ) * mu(0,imip);
 
-            CSR localmat = Basis->TB();
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i*2,imip) = 0.0;
@@ -381,7 +372,6 @@ namespace ngfem
                               - k*(k-1) * polxt[0][i] * polxt[1][j] * polxt[2][k-2]
                               * wavespeed(0,imip) ) * mu(0,imip);
 
-            CSR localmat = Basis->TB();
             for (int i=0; i<this->ndof; ++i)
             {
                 dshape(i*3,imip) = 0.0;
@@ -425,7 +415,6 @@ namespace ngfem
                         pol[ii++] = (d1!=d2?i*j:(d1==0?i*(i-1):j*(j-1)))
                             * polxt[0][i-(d1==0)-(d2==0)] * polxt[1][j-(d1==1)-(d2==1)];
 
-                CSR localmat = Basis->TB();
                 for (int i=0; i<this->ndof; ++i)
                 {
                     ddshape(i,d2*2+d1) = 0.0;
@@ -466,7 +455,6 @@ namespace ngfem
                             pol[ii++] = (d1==d2?(d1==0?i*(i-1):(d1==1?j*(j-1):k*(k-1))) : (int[3]){i,j,k}[d1]*(int[3]){i,j,k}[d2])
                                 * polxt[0][i-(d1==0)-(d2==0)] * polxt[1][j-(d1==1)-(d2==1)] * polxt[2][k-(d1==2)-(d2==2)];
 
-                CSR localmat = Basis->TB();
                 for (int i=0; i<this->ndof; ++i)
                 {
                     ddshape(i,d2*3+d1) = 0.0;
@@ -485,70 +473,88 @@ namespace ngfem
 
 
     template<int D>
-    TrefftzGppwBasis<D> :: TrefftzGppwBasis(int ord, FlatMatrix<double> gamma, int basistype)
+    CSR TrefftzGppwBasis<D> :: TB(int ord, FlatMatrix<double> gamma, int basistype)
     {
-        const int nbasis = (BinCoeff(D + ord, ord) + BinCoeff(D + ord-1, ord-1));
-        const int npoly = BinCoeff(D+1 + ord, ord);
-        Matrix<> gppwbasis(nbasis,npoly);
-        gppwbasis = 0;
+        lock_guard<mutex> lock(gentrefftzbasis);
+        string encode = to_string(ord);
+        for(int i=0;i<ord*ord;i++)
+            encode += to_string(gamma(i));
 
-        for(int t=0, basisn=0;t<2;t++)
-            for(int x=0;x<=ord-t;x++)
-                for(int y=0;y<=(ord-x-t)*(D==2);y++)
-                {
-                    Vec<D+1, int> index;
-                    index[D] = t;
-                    index[0] = x;
-                    if(D==2) index[1]=y;
-                    gppwbasis( basisn++, TrefftzWaveBasis<D>::IndexMap2(index, ord))=1.0;
-                }
-
-        for(int basisn=0;basisn<nbasis;basisn++)
+        if ( gtbstore[encode][0].Size() == 0)
         {
-            for(int ell=0;ell<ord-1;ell++)
-            {
-                for(int t=0;t<=ell;t++)
-                {
-                    for(int x=(D==1?ell-t:0);x<=ell-t;x++)
+            const int nbasis = (BinCoeff(D + ord, ord) + BinCoeff(D + ord-1, ord-1));
+            const int npoly = BinCoeff(D+1 + ord, ord);
+            Matrix<> gppwbasis(nbasis,npoly);
+            gppwbasis = 0;
+
+            for(int t=0, basisn=0;t<2;t++)
+                for(int x=0;x<=ord-t;x++)
+                    for(int y=0;y<=(ord-x-t)*(D==2);y++)
                     {
-                        int y = ell-t-x;
                         Vec<D+1, int> index;
-                        index[1] = y;
-                        index[0] = x;
-                        index[D] = t+2;
-                        double* newcoeff =& gppwbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(index, ord));
-                        index[1] = y;
-                        index[0] = x+2;
                         index[D] = t;
-                        int getcoeffx = TrefftzWaveBasis<D>::IndexMap2(index, ord);
-                        index[1] = y+2;
                         index[0] = x;
-                        index[D] = t;
-                        int getcoeffy = TrefftzWaveBasis<D>::IndexMap2(index, ord);
+                        if(D==2) index[1]=y;
+                        gppwbasis( basisn++, TrefftzWaveBasis<D>::IndexMap2(index, ord))=1.0;
+                    }
 
-                        *newcoeff =
-                            (x+2)*(x+1)/((t+2)*(t+1)*gamma(0))
-                            * gppwbasis( basisn, getcoeffx)
-                            + (y+2)*(y+1)/((t+2)*(t+1)*gamma(0))
-                            * gppwbasis( basisn, getcoeffy) * (D==2);
-                        for(int betax=0;betax<=x;betax++)
-                            for(int betay=0;betay<=y;betay++)
-                            {
-                                if(betax+betay == x+y) continue;
-                                index[1] = betay;
-                                index[0] = betax;
-                                index[D] = t+2;
-                                int getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
+            for(int basisn=0;basisn<nbasis;basisn++)
+            {
+                for(int ell=0;ell<ord-1;ell++)
+                {
+                    for(int t=0;t<=ell;t++)
+                    {
+                        for(int x=(D==1?ell-t:0);x<=ell-t;x++)
+                        {
+                            int y = ell-t-x;
+                            Vec<D+1, int> index;
+                            index[1] = y;
+                            index[0] = x;
+                            index[D] = t+2;
+                            double* newcoeff =& gppwbasis( basisn, TrefftzWaveBasis<D>::IndexMap2(index, ord));
+                            index[1] = y;
+                            index[0] = x+2;
+                            index[D] = t;
+                            int getcoeffx = TrefftzWaveBasis<D>::IndexMap2(index, ord);
+                            index[1] = y+2;
+                            index[0] = x;
+                            index[D] = t;
+                            int getcoeffy = TrefftzWaveBasis<D>::IndexMap2(index, ord);
 
-                                *newcoeff
-                                    -= gamma(x-betax,y-betay)*gppwbasis( basisn, getcoeff) / gamma(0);
-                            }
+                            *newcoeff =
+                                (x+2)*(x+1)/((t+2)*(t+1)*gamma(0))
+                                * gppwbasis( basisn, getcoeffx)
+                                + (y+2)*(y+1)/((t+2)*(t+1)*gamma(0))
+                                * gppwbasis( basisn, getcoeffy) * (D==2);
+                            for(int betax=0;betax<=x;betax++)
+                                for(int betay=0;betay<=y;betay++)
+                                {
+                                    if(betax+betay == x+y) continue;
+                                    index[1] = betay;
+                                    index[0] = betax;
+                                    index[D] = t+2;
+                                    int getcoeff = TrefftzWaveBasis<D>::IndexMap2(index, ord);
+
+                                    *newcoeff
+                                        -= gamma(x-betax,y-betay)*gppwbasis( basisn, getcoeff) / gamma(0);
+                                }
+                        }
                     }
                 }
             }
+
+
+            MatToCSR(gppwbasis,gtbstore[encode]);
         }
 
-        MatToCSR(gppwbasis,tb);
+        if ( gtbstore[encode].Size() == 0)
+        {
+            stringstream str;
+            str << "failed to generate trefftz basis of order " << ord << endl;
+            throw Exception (str.str());
+        }
+
+        return gtbstore[encode];
     }
 
     template class TrefftzGppwBasis<1>;
