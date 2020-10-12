@@ -11,11 +11,23 @@ namespace ngfem
   template <int D> class TrefftzGppwBasis
   {
   public:
-    TrefftzGppwBasis (int ord, FlatMatrix<double> gamma, int basistype = 0);
-    CSR TB () const { return tb; }
+    static TrefftzGppwBasis &getInstance ()
+    {
+      static TrefftzGppwBasis ginstance;
+      volatile int dummy{};
+      return ginstance;
+    }
+
+    CSR TB (int ord, FlatMatrix<double> gamma, int basistype = 0);
 
   private:
-    CSR tb;
+    TrefftzGppwBasis () = default;
+    ~TrefftzGppwBasis () = default;
+    TrefftzGppwBasis (const TrefftzGppwBasis &) = delete;
+    TrefftzGppwBasis &operator= (const TrefftzGppwBasis &) = delete;
+
+    mutex gentrefftzbasis;
+    std::map<std::string, CSR> gtbstore;
   };
 
   template <int D> class TrefftzGppwFE : public ScalarMappedElement<D + 1>
@@ -28,7 +40,7 @@ namespace ngfem
     ELEMENT_TYPE eltype;
     int basistype;
     Matrix<double> gamma;
-    TrefftzGppwBasis<D> *Basis;
+    CSR localmat;
 
   public:
     TrefftzGppwFE (Matrix<double> agamma, int aord = 1,
@@ -46,7 +58,7 @@ namespace ngfem
       for (int i = 0; i < aord - 1; i++)
         for (int j = 0; j < aord - 1; j++)
           gamma (i, j) *= pow (aelsize / 2.0, i + j);
-      Basis = new TrefftzGppwBasis<D> (aord, gamma);
+      localmat = TrefftzGppwBasis<D>::getInstance ().TB (ord, gamma);
       timerbasis.Stop ();
     }
 
