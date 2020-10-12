@@ -668,9 +668,11 @@ namespace ngcomp
         {
             HeapReset hr(lh);
             SIMD_MappedIntegrationRule<D,D> smir(sir,ma->GetTrafo(elnr,lh),lh);
+            FlatMatrix<SIMD<double>> wavespeed(1,smir.Size(),lh);
+            wavespeedcf->Evaluate(smir,wavespeed);
             for(int imip=0;imip<snip;imip++)
                 for(int d=0;d<D+1;d++)
-                    energy += 0.5*( ((d==D?1.0:pow(wavespeed[0],2))/pow(wavespeed[0],2))*wavefront(elnr,snip+d*snip+imip)*wavefront(elnr,snip+d*snip+imip))*smir[imip/nsimd].GetWeight()[imip%nsimd];
+                    energy += 0.5*( pow(wavespeed(0,imip/nsimd)[imip%nsimd],-2*(d==D))*pow(wavefront(elnr,snip+d*snip+imip),2)*smir[imip/nsimd].GetWeight()[imip%nsimd] );
         }
 
         return energy;
