@@ -142,8 +142,8 @@ namespace ngcomp
                   // wavespeedmatrix(nx,ny)->Evaluate(mip)/(factorial(nx)*factorial(ny));
                   //}
                   return *(new (alloc) TrefftzGppwFE<1> (
-                      this->gamma[ei.Nr ()], order, ElCenter<1> (ei),
-                      Adiam<1> (ei, wavespeedcf), ma->GetElType (ei)));
+                      this->gamma[ei.Nr ()], order, ElCenter<1> (ei), 1.0,
+                      ma->GetElType (ei)));
                 }
               else
                 return *(new (alloc) TrefftzWaveFE<1> (
@@ -184,8 +184,8 @@ namespace ngcomp
                   //}
                   timereval.Stop ();
                   return *(new (alloc) TrefftzGppwFE<2> (
-                      this->gamma[ei.Nr ()], order, ElCenter<2> (ei),
-                      Adiam<2> (ei, wavespeedcf), ma->GetElType (ei)));
+                      this->gamma[ei.Nr ()], order, ElCenter<2> (ei), 1.0,
+                      ma->GetElType (ei)));
                 }
               else
                 return *(new (alloc) TrefftzWaveFE<2> (
