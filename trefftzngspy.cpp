@@ -7,7 +7,7 @@ using namespace ngsolve;
 #include "trefftz/diffopmapped.hpp"
 #include "trefftz/specialcoefficientfunction.hpp"
 //#include "trefftz/mappedelement.hpp"
-#include "trefftz/tents/tents.hpp"
+#include "tents/tents.hpp"
 #include "trefftz/evolvetent.hpp"
 #include "trefftz/meshtentslab.hpp"
 
