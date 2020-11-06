@@ -6,7 +6,7 @@
 #include <regex>
 #include <fem.hpp>
 #include <multigrid.hpp>
-#include "tents/tents.hpp"
+#include "../tents/tents.hpp"
 #include "trefftzwavefe.hpp"
 
 namespace ngcomp

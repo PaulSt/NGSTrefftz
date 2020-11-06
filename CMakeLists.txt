@@ -12,9 +12,9 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 install (FILES
-        trefftz/python/__init__.py 
-        trefftz/python/DGeq.py 
-        trefftz/python/prodmesh.py 
+        python/__init__.py 
+        python/DGeq.py 
+        python/prodmesh.py 
         DESTINATION trefftzngs
         COMPONENT trefftzngs
         )
@@ -29,7 +29,7 @@ add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
     trefftz/monomialfespace.cpp
     trefftz/scalarmappedfe.cpp
     trefftz/specialcoefficientfunction.cpp
-    trefftz/tents/tents.cpp
+    tents/tents.cpp
     trefftz/evolvetent.cpp
     trefftz/meshtentslab.cpp
     )

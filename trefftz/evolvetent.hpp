@@ -4,7 +4,7 @@
 #include <solve.hpp>
 #include <h1lofe.hpp>
 #include <fem.hpp>
-#include "tents/tents.hpp"
+#include "../tents/tents.hpp"
 #include "trefftzwavefe.hpp"
 #include "trefftzgppwfe.hpp"
 
