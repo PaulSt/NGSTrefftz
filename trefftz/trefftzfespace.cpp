@@ -6,7 +6,7 @@
 #include <multigrid.hpp>
 
 #include "trefftzwavefe.hpp"
-#include "trefftzgppwfe.hpp"
+#include "qtrefftzwavefe.hpp"
 #include "trefftzfespace.hpp"
 #include "diffopmapped.hpp"
 
@@ -124,7 +124,7 @@ namespace ngcomp
                                 //int ny = 0;
                                 //gamma(nx,ny) = wavespeedmatrix(nx,ny)->Evaluate(mip)/(factorial(nx)*factorial(ny));
                             //}
-                            return *(new (alloc) TrefftzGppwFE<1>(this->gamma[ei.Nr()], order,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
+                            return *(new (alloc) QTrefftzWaveFE<1>(this->gamma[ei.Nr()], order,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
                         }
                         else
                             return *(new (alloc) TrefftzWaveFE<1>(order,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c,ElCenter<1>(ei),Adiam<1>(ei,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c),ma->GetElType(ei)));
@@ -155,7 +155,7 @@ static Timer timereval("evalc",2);
                                 //}
                             //}
                         timereval.Stop();
-                            return *(new (alloc) TrefftzGppwFE<2>(this->gamma[ei.Nr()], order,ElCenter<2>(ei),1.0,ma->GetElType(ei)));
+                            return *(new (alloc) QTrefftzWaveFE<2>(this->gamma[ei.Nr()], order,ElCenter<2>(ei),1.0,ma->GetElType(ei)));
                         }
                         else
                             return *(new (alloc) TrefftzWaveFE<2>(order,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c,ElCenter<2>(ei),Adiam<2>(ei,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c),ma->GetElType(ei)));

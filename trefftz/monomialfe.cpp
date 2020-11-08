@@ -488,12 +488,12 @@ namespace ngfem
     MonomialBasis<D> :: MonomialBasis(int ord, int basistype)
     {
         const int npoly = BinCoeff(D+1 + ord, ord);
-        Matrix<> gppwbasis(npoly,npoly);
-        gppwbasis = 0.0;
+        Matrix<> basis(npoly,npoly);
+        basis = 0.0;
         for(int i = 0;i<npoly;i++)
-            gppwbasis(i,i)=1.0;
+            basis(i,i)=1.0;
 
-        MatToCSR(gppwbasis,tb);
+        MatToCSR(basis,tb);
     }
 
     template class MonomialBasis<1>;

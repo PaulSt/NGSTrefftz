@@ -20,7 +20,6 @@ namespace ngcomp
         int usescale=1;
         int useqt=0;
         int basistype;
-        int gppword;
         shared_ptr<CoefficientFunction> wavespeedcf;
         Matrix<shared_ptr<CoefficientFunction>> wavespeedmatrix;
             Array<Matrix<double>> gamma;
