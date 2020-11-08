@@ -6,7 +6,7 @@
 #include <fem.hpp>
 #include "../tents/tents.hpp"
 #include "trefftzwavefe.hpp"
-#include "trefftzgppwfe.hpp"
+#include "qtrefftzwavefe.hpp"
 
 namespace ngcomp
 {
@@ -141,7 +141,7 @@ namespace ngcomp
     shared_ptr<MeshAccess> GetInitmesh () { return ma; }
   };
 
-  template <int D> class GppwTents : public WaveTents<D>
+  template <int D> class QTWaveTents : public WaveTents<D>
   {
   private:
     // int order;
@@ -158,9 +158,9 @@ namespace ngcomp
     using WaveTents<D>::TentFaceVerts;
 
   public:
-    GppwTents (int aorder, shared_ptr<MeshAccess> ama,
-               shared_ptr<CoefficientFunction> awavespeedcf,
-               shared_ptr<CoefficientFunction> abddatum)
+    QTWaveTents (int aorder, shared_ptr<MeshAccess> ama,
+                 shared_ptr<CoefficientFunction> awavespeedcf,
+                 shared_ptr<CoefficientFunction> abddatum)
         : WaveTents<D> (aorder, ama, awavespeedcf, abddatum)
     {
       LocalHeap lh (1000 * 1000 * 100);
@@ -211,10 +211,10 @@ namespace ngcomp
         }
     }
 
-    GppwTents (int aorder, shared_ptr<MeshAccess> ama,
-               shared_ptr<CoefficientFunction> awavespeedcf,
-               shared_ptr<CoefficientFunction> abddatum,
-               vector<shared_ptr<CoefficientFunction>> taylorcf)
+    QTWaveTents (int aorder, shared_ptr<MeshAccess> ama,
+                 shared_ptr<CoefficientFunction> awavespeedcf,
+                 shared_ptr<CoefficientFunction> abddatum,
+                 vector<shared_ptr<CoefficientFunction>> taylorcf)
         : WaveTents<D> (aorder, ama, awavespeedcf, abddatum)
     {
       LocalHeap lh (1000 * 1000 * 100);

@@ -1,4 +1,4 @@
-#include "trefftzgppwfe.hpp"
+#include "qtrefftzwavefe.hpp"
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
 #include "helpers.hpp"
@@ -9,8 +9,9 @@
 namespace ngfem
 {
   template <>
-  void TrefftzGppwFE<1>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                    BareSliceMatrix<SIMD<double>> shape) const
+  void
+  QTrefftzWaveFE<1>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                BareSliceMatrix<SIMD<double>> shape) const
   {
     for (int imip = 0; imip < smir.Size (); imip++)
       {
@@ -42,8 +43,9 @@ namespace ngfem
   }
 
   template <>
-  void TrefftzGppwFE<2>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                    BareSliceMatrix<SIMD<double>> shape) const
+  void
+  QTrefftzWaveFE<2>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                BareSliceMatrix<SIMD<double>> shape) const
   {
     for (int imip = 0; imip < smir.Size (); imip++)
       {
@@ -76,16 +78,17 @@ namespace ngfem
   }
 
   template <>
-  void TrefftzGppwFE<3>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                    BareSliceMatrix<SIMD<double>> shape) const
+  void
+  QTrefftzWaveFE<3>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                BareSliceMatrix<SIMD<double>> shape) const
   {
     throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
   }
 
   template <>
   void
-  TrefftzGppwFE<1>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                BareSliceMatrix<SIMD<double>> dshape) const
+  QTrefftzWaveFE<1>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                 BareSliceMatrix<SIMD<double>> dshape) const
   {
     for (int imip = 0; imip < smir.Size (); imip++)
       {
@@ -125,8 +128,8 @@ namespace ngfem
 
   template <>
   void
-  TrefftzGppwFE<2>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                BareSliceMatrix<SIMD<double>> dshape) const
+  QTrefftzWaveFE<2>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                 BareSliceMatrix<SIMD<double>> dshape) const
   {
     for (int imip = 0; imip < smir.Size (); imip++)
       {
@@ -168,8 +171,8 @@ namespace ngfem
   }
   template <>
   void
-  TrefftzGppwFE<3>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                BareSliceMatrix<SIMD<double>> dshape) const
+  QTrefftzWaveFE<3>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
+                                 BareSliceMatrix<SIMD<double>> dshape) const
   {
     throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
   }
@@ -177,8 +180,8 @@ namespace ngfem
   /////////////// non-simd
 
   template <>
-  void TrefftzGppwFE<1>::CalcShape (const BaseMappedIntegrationPoint &mip,
-                                    BareSliceVector<> shape) const
+  void QTrefftzWaveFE<1>::CalcShape (const BaseMappedIntegrationPoint &mip,
+                                     BareSliceVector<> shape) const
   {
     Vec<2> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
@@ -207,8 +210,8 @@ namespace ngfem
   }
 
   template <>
-  void TrefftzGppwFE<2>::CalcShape (const BaseMappedIntegrationPoint &mip,
-                                    BareSliceVector<> shape) const
+  void QTrefftzWaveFE<2>::CalcShape (const BaseMappedIntegrationPoint &mip,
+                                     BareSliceVector<> shape) const
   {
     Vec<3> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
@@ -238,15 +241,15 @@ namespace ngfem
   }
 
   template <>
-  void TrefftzGppwFE<3>::CalcShape (const BaseMappedIntegrationPoint &mip,
-                                    BareSliceVector<> shape) const
+  void QTrefftzWaveFE<3>::CalcShape (const BaseMappedIntegrationPoint &mip,
+                                     BareSliceVector<> shape) const
   {
     cout << "dim not implemented" << endl;
   }
 
   template <>
-  void TrefftzGppwFE<1>::CalcDShape (const BaseMappedIntegrationPoint &mip,
-                                     BareSliceMatrix<> dshape) const
+  void QTrefftzWaveFE<1>::CalcDShape (const BaseMappedIntegrationPoint &mip,
+                                      BareSliceMatrix<> dshape) const
   {
     Vec<2> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
@@ -281,8 +284,8 @@ namespace ngfem
   }
 
   template <>
-  void TrefftzGppwFE<2>::CalcDShape (const BaseMappedIntegrationPoint &mip,
-                                     BareSliceMatrix<> dshape) const
+  void QTrefftzWaveFE<2>::CalcDShape (const BaseMappedIntegrationPoint &mip,
+                                      BareSliceMatrix<> dshape) const
   {
     Vec<3> cpoint = mip.GetPoint ();
     cpoint -= elcenter;
@@ -319,14 +322,14 @@ namespace ngfem
   }
 
   template <>
-  void TrefftzGppwFE<3>::CalcDShape (const BaseMappedIntegrationPoint &mip,
-                                     BareSliceMatrix<> dshape) const
+  void QTrefftzWaveFE<3>::CalcDShape (const BaseMappedIntegrationPoint &mip,
+                                      BareSliceMatrix<> dshape) const
   {
     cout << "dim not implemented" << endl;
   }
 
   template <>
-  void TrefftzGppwFE<1>::CalcDDSpecialShape (
+  void QTrefftzWaveFE<1>::CalcDDSpecialShape (
       const SIMD_BaseMappedIntegrationRule &smir,
       BareSliceMatrix<SIMD<double>> dshape,
       BareSliceMatrix<SIMD<double>> wavespeed,
@@ -369,7 +372,7 @@ namespace ngfem
   }
 
   template <>
-  void TrefftzGppwFE<2>::CalcDDSpecialShape (
+  void QTrefftzWaveFE<2>::CalcDDSpecialShape (
       const SIMD_BaseMappedIntegrationRule &smir,
       BareSliceMatrix<SIMD<double>> dshape,
       BareSliceMatrix<SIMD<double>> wavespeed,
@@ -418,8 +421,8 @@ namespace ngfem
 
   template <>
   void
-  TrefftzGppwFE<1>::CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
-                                       BareSliceMatrix<> hddshape) const
+  QTrefftzWaveFE<1>::CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
+                                        BareSliceMatrix<> hddshape) const
   {
     auto ddshape = hddshape.AddSize (this->ndof, 2 * 2);
 
@@ -464,8 +467,8 @@ namespace ngfem
 
   template <>
   void
-  TrefftzGppwFE<2>::CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
-                                       BareSliceMatrix<> hddshape) const
+  QTrefftzWaveFE<2>::CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
+                                        BareSliceMatrix<> hddshape) const
   {
     auto ddshape = hddshape.AddSize (this->ndof, 3 * 3);
     // auto & mip = static_cast<const MappedIntegrationPoint<2,2> &> (bmip);
@@ -512,14 +515,14 @@ namespace ngfem
       }
   }
 
-  template class TrefftzGppwFE<1>;
-  template class TrefftzGppwFE<2>;
+  template class QTrefftzWaveFE<1>;
+  template class QTrefftzWaveFE<2>;
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   template <int D>
-  CSR TrefftzGppwBasis<D>::TB (int ord, FlatMatrix<double> gamma,
-                               int basistype)
+  CSR QTrefftzWaveBasis<D>::TB (int ord, FlatMatrix<double> gamma,
+                                int basistype)
   {
     lock_guard<mutex> lock (gentrefftzbasis);
     string encode = to_string (ord);
@@ -531,8 +534,8 @@ namespace ngfem
         const int nbasis
             = (BinCoeff (D + ord, ord) + BinCoeff (D + ord - 1, ord - 1));
         const int npoly = BinCoeff (D + 1 + ord, ord);
-        Matrix<> gppwbasis (nbasis, npoly);
-        gppwbasis = 0;
+        Matrix<> qbasis (nbasis, npoly);
+        qbasis = 0;
 
         for (int t = 0, basisn = 0; t < 2; t++)
           for (int x = 0; x <= ord - t; x++)
@@ -543,8 +546,7 @@ namespace ngfem
                 index[0] = x;
                 if (D == 2)
                   index[1] = y;
-                gppwbasis (basisn++,
-                           TrefftzWaveBasis<D>::IndexMap2 (index, ord))
+                qbasis (basisn++, TrefftzWaveBasis<D>::IndexMap2 (index, ord))
                     = 1.0;
               }
 
@@ -561,7 +563,7 @@ namespace ngfem
                         index[1] = y;
                         index[0] = x;
                         index[D] = t + 2;
-                        double *newcoeff = &gppwbasis (
+                        double *newcoeff = &qbasis (
                             basisn,
                             TrefftzWaveBasis<D>::IndexMap2 (index, ord));
                         index[1] = y;
@@ -577,10 +579,10 @@ namespace ngfem
 
                         *newcoeff = (x + 2) * (x + 1)
                                         / ((t + 2) * (t + 1) * gamma (0))
-                                        * gppwbasis (basisn, getcoeffx)
+                                        * qbasis (basisn, getcoeffx)
                                     + (y + 2) * (y + 1)
                                           / ((t + 2) * (t + 1) * gamma (0))
-                                          * gppwbasis (basisn, getcoeffy)
+                                          * qbasis (basisn, getcoeffy)
                                           * (D == 2);
                         for (int betax = 0; betax <= x; betax++)
                           for (int betay = 0; betay <= y; betay++)
@@ -594,7 +596,7 @@ namespace ngfem
                                   index, ord);
 
                               *newcoeff -= gamma (x - betax, y - betay)
-                                           * gppwbasis (basisn, getcoeff)
+                                           * qbasis (basisn, getcoeff)
                                            / gamma (0);
                             }
                       }
@@ -602,7 +604,7 @@ namespace ngfem
               }
           }
 
-        MatToCSR (gppwbasis, gtbstore[encode]);
+        MatToCSR (qbasis, gtbstore[encode]);
       }
 
     if (gtbstore[encode].Size () == 0)
@@ -615,8 +617,8 @@ namespace ngfem
     return gtbstore[encode];
   }
 
-  template class TrefftzGppwBasis<1>;
-  template class TrefftzGppwBasis<2>;
-  template class TrefftzGppwBasis<3>;
+  template class QTrefftzWaveBasis<1>;
+  template class QTrefftzWaveBasis<2>;
+  template class QTrefftzWaveBasis<3>;
 
 }

@@ -1,5 +1,5 @@
-#ifndef FILE_TREFFTZGPPWELEMENT_HPP
-#define FILE_TREFFTZGPPWELEMENT_HPP
+#ifndef FILE_QTREFFTZWAVEELEMENT_HPP
+#define FILE_QTREFFTZWAVEELEMENT_HPP
 
 #include <fem.hpp>
 #include "helpers.hpp"
@@ -8,12 +8,12 @@
 namespace ngfem
 {
 
-  template <int D> class TrefftzGppwBasis
+  template <int D> class QTrefftzWaveBasis
   {
   public:
-    static TrefftzGppwBasis &getInstance ()
+    static QTrefftzWaveBasis &getInstance ()
     {
-      static TrefftzGppwBasis ginstance;
+      static QTrefftzWaveBasis ginstance;
       volatile int dummy{};
       return ginstance;
     }
@@ -21,16 +21,16 @@ namespace ngfem
     CSR TB (int ord, FlatMatrix<double> gamma, int basistype = 0);
 
   private:
-    TrefftzGppwBasis () = default;
-    ~TrefftzGppwBasis () = default;
-    TrefftzGppwBasis (const TrefftzGppwBasis &) = delete;
-    TrefftzGppwBasis &operator= (const TrefftzGppwBasis &) = delete;
+    QTrefftzWaveBasis () = default;
+    ~QTrefftzWaveBasis () = default;
+    QTrefftzWaveBasis (const QTrefftzWaveBasis &) = delete;
+    QTrefftzWaveBasis &operator= (const QTrefftzWaveBasis &) = delete;
 
     mutex gentrefftzbasis;
     std::map<std::string, CSR> gtbstore;
   };
 
-  template <int D> class TrefftzGppwFE : public ScalarMappedElement<D + 1>
+  template <int D> class QTrefftzWaveFE : public ScalarMappedElement<D + 1>
   {
   private:
     const int ord;
@@ -43,9 +43,9 @@ namespace ngfem
     CSR localmat;
 
   public:
-    TrefftzGppwFE (Matrix<double> agamma, int aord = 1,
-                   Vec<D + 1> aelcenter = 0, double aelsize = 1,
-                   ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0)
+    QTrefftzWaveFE (Matrix<double> agamma, int aord = 1,
+                    Vec<D + 1> aelcenter = 0, double aelsize = 1,
+                    ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0)
         : ScalarMappedElement<D + 1> (BinCoeff (D + aord, aord)
                                           + BinCoeff (D + aord - 1, aord - 1),
                                       aord),
@@ -58,7 +58,7 @@ namespace ngfem
       for (int i = 0; i < aord - 1; i++)
         for (int j = 0; j < aord - 1; j++)
           gamma (i, j) *= pow (aelsize / 2.0, i + j);
-      localmat = TrefftzGppwBasis<D>::getInstance ().TB (ord, gamma);
+      localmat = QTrefftzWaveBasis<D>::getInstance ().TB (ord, gamma);
       timerbasis.Stop ();
     }
 
@@ -171,4 +171,4 @@ namespace ngfem
 
 }
 
-#endif // FILE_TrefftzGPPWElement_HPP
+#endif // FILE_QTREFFTZWAVEELEMENT_HPP

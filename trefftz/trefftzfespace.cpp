@@ -6,7 +6,7 @@
 #include <multigrid.hpp>
 
 #include "trefftzwavefe.hpp"
-#include "trefftzgppwfe.hpp"
+#include "qtrefftzwavefe.hpp"
 #include "trefftzfespace.hpp"
 #include "diffopmapped.hpp"
 
@@ -141,7 +141,7 @@ namespace ngcomp
                   // gamma(nx,ny) =
                   // wavespeedmatrix(nx,ny)->Evaluate(mip)/(factorial(nx)*factorial(ny));
                   //}
-                  return *(new (alloc) TrefftzGppwFE<1> (
+                  return *(new (alloc) QTrefftzWaveFE<1> (
                       this->gamma[ei.Nr ()], order, ElCenter<1> (ei), 1.0,
                       ma->GetElType (ei)));
                 }
@@ -183,7 +183,7 @@ namespace ngcomp
                   //}
                   //}
                   timereval.Stop ();
-                  return *(new (alloc) TrefftzGppwFE<2> (
+                  return *(new (alloc) QTrefftzWaveFE<2> (
                       this->gamma[ei.Nr ()], order, ElCenter<2> (ei), 1.0,
                       ma->GetElType (ei)));
                 }

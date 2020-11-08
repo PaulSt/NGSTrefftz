@@ -926,9 +926,9 @@ namespace ngcomp
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  template <int D> void GppwTents<D>::EvolveTents (double dt)
+  template <int D> void QTWaveTents<D>::EvolveTents (double dt)
   {
-    LocalHeap lh (1000 * 1000 * 100, "gppw tents", 1);
+    LocalHeap lh (1000 * 1000 * 100, "QT tents", 1);
 
     shared_ptr<MeshAccess> ma = this->ma;
     const ELEMENT_TYPE eltyp
@@ -943,7 +943,7 @@ namespace ngcomp
         dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction> (1),
         lh);
 
-    cout << "solving gppw " << tps.tents.Size () << " tents " << endl;
+    cout << "solving qt " << tps.tents.Size () << " tents " << endl;
 
     RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
       LocalHeap slh = lh.Split (); // split to threads
@@ -954,8 +954,8 @@ namespace ngcomp
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
       double tentsize = TentAdiam (tent);
 
-      TrefftzGppwFE<D> tel (this->gamma[tent->vertex], this->order, center,
-                            tentsize);
+      QTrefftzWaveFE<D> tel (this->gamma[tent->vertex], this->order, center,
+                             tentsize);
       int nbasis = tel.GetNDof ();
 
       FlatMatrix<> elmat (nbasis, slh);
@@ -1095,11 +1095,11 @@ namespace ngcomp
   }
 
   template <int D>
-  void GppwTents<D>::CalcTentEl (int elnr, Tent *tent,
-                                 ScalarMappedElement<D + 1> &tel,
-                                 SIMD_IntegrationRule &sir, LocalHeap &slh,
-                                 SliceMatrix<> elmat, SliceVector<> elvec,
-                                 SliceMatrix<SIMD<double>> simddshapes)
+  void QTWaveTents<D>::CalcTentEl (int elnr, Tent *tent,
+                                   ScalarMappedElement<D + 1> &tel,
+                                   SIMD_IntegrationRule &sir, LocalHeap &slh,
+                                   SliceMatrix<> elmat, SliceVector<> elvec,
+                                   SliceMatrix<SIMD<double>> simddshapes)
   {
     HeapReset hr (slh);
     const ELEMENT_TYPE eltyp
@@ -1202,8 +1202,8 @@ template class WaveTents<1>;
 template class WaveTents<2>;
 template class WaveTents<3>;
 
-template class GppwTents<1>;
-template class GppwTents<2>;
+template class QTWaveTents<1>;
+template class QTWaveTents<2>;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1243,8 +1243,8 @@ void ExportEvolveTent (py::module m)
   DeclareETClass<WaveTents<2>, 2> (m, "WaveTents2");
   DeclareETClass<WaveTents<3>, 3> (m, "WaveTents3");
 
-  DeclareETClass<GppwTents<1>, 1> (m, "GppwTents1");
-  DeclareETClass<GppwTents<2>, 2> (m, "GppwTents2");
+  DeclareETClass<QTWaveTents<1>, 1> (m, "QTWaveTents1");
+  DeclareETClass<QTWaveTents<2>, 2> (m, "QTWaveTents2");
 
   // m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, double
   // wavespeed, shared_ptr<CoefficientFunction> bddatum) ->
@@ -1288,9 +1288,11 @@ void ExportEvolveTent (py::module m)
         else
           {
             if (D == 1)
-              tr = make_shared<GppwTents<1>> (order, ma, wavespeedcf, bddatum);
+              tr = make_shared<QTWaveTents<1>> (order, ma, wavespeedcf,
+                                                bddatum);
             else if (D == 2)
-              tr = make_shared<GppwTents<2>> (order, ma, wavespeedcf, bddatum);
+              tr = make_shared<QTWaveTents<2>> (order, ma, wavespeedcf,
+                                                bddatum);
           }
         return tr;
         // return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma,
@@ -1311,11 +1313,11 @@ void ExportEvolveTent (py::module m)
            int D = ma->GetDimension ();
            // return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
            if (D == 1)
-             tr = make_shared<GppwTents<1>> (order, ma, wavespeedcf, bddatum,
-                                             taylorcf);
+             tr = make_shared<QTWaveTents<1>> (order, ma, wavespeedcf, bddatum,
+                                               taylorcf);
            else if (D == 2)
-             tr = make_shared<GppwTents<2>> (order, ma, wavespeedcf, bddatum,
-                                             taylorcf);
+             tr = make_shared<QTWaveTents<2>> (order, ma, wavespeedcf, bddatum,
+                                               taylorcf);
            return tr;
            // return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma,
            // wavespeed, bddatum));
