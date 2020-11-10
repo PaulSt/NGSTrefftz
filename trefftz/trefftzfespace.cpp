@@ -25,6 +25,7 @@ namespace ngcomp
     fullD = ma->GetDimension ();
     D = fullD - 1;
 
+    this->dgjumps = true;
     order = int (flags.GetNumFlag ("order", 3));
     c = flags.GetNumFlag ("wavespeed", 1);
     basistype = flags.GetNumFlag ("basistype", 0);
