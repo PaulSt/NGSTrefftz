@@ -54,7 +54,7 @@ def Cartsolve2D(fes,c,inputsol,fullsys=False):
 
     or quasi-Trefftz basis for smooth wavespeeds, also requiring the full system
     >>> c = CoefficientFunction((x+1))
-    >>> fes = trefftzfespace(mesh, order=order, dgjumps=True, basistype=0, useshift=True, useqt=True)
+    >>> fes = trefftzfespace(mesh, order=order, useqt=True)
     >>> fes.SetWavespeed(c)
     >>> Cartsolve2D(fes,c,TestSolutionSmoothWavespeed(),True) # doctest:+ELLIPSIS
     [17.0, ..., ...e-11, ...e-11]
