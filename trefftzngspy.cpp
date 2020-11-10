@@ -1,11 +1,14 @@
-#include <solve.hpp>
-using namespace ngsolve;
 #include <python_ngstd.hpp>
+#include <solve.hpp>
+#include <fem.hpp>
+using namespace ngsolve;
+#include "python_fem.hpp"
 //#include "trefftz/trefftzwavefe.hpp"
 #include "trefftz/trefftzfespace.hpp"
 #include "trefftz/monomialfespace.hpp"
 #include "trefftz/diffopmapped.hpp"
 #include "trefftz/specialcoefficientfunction.hpp"
+#include "trefftz/helpers.hpp"
 //#include "trefftz/mappedelement.hpp"
 #include "tents/tents.hpp"
 #include "trefftz/evolvetent.hpp"
@@ -23,6 +26,8 @@ PYBIND11_PLUGIN(trefftzngs) {
     ExportSpecialCoefficientFunction(m);
     ExportEvolveTent(m);
     ExportMeshTentSlab(m);
+    ExportStdMathFunction<GenericAiry>(m, "airy", "airy function");
+    ExportStdMathFunction<GenericAiryP>(m, "airyp", "airyp function");
 
     return m.ptr();
 }
