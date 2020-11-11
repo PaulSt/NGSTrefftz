@@ -12,9 +12,6 @@ namespace ngfem
   private:
     const int ord;
     const int npoly;
-    Vec<D + 1> elcenter;
-    double elsize;
-    float c;
     ELEMENT_TYPE eltype;
     int basistype;
 
@@ -24,8 +21,8 @@ namespace ngfem
                    double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG,
                    int abasistype = 0);
 
-    double GetWavespeed () const { return c; }
-    void SetWavespeed (double wavespeed) { c = wavespeed; }
+    double GetWavespeed () const { return this->c; }
+    void SetWavespeed (double wavespeed) { this->c = wavespeed; }
 
     // TrefftzWaveFE<D> * SetCenter(Vec<D> acenter) {elcenter = acenter; return
     // this;} TrefftzWaveFE<D> * SetElSize(double aelsize) {elsize = aelsize;
@@ -35,81 +32,9 @@ namespace ngfem
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
 
     using ScalarMappedElement<D + 1>::CalcShape;
-    virtual void CalcShape (const BaseMappedIntegrationPoint &mip,
-                            BareSliceVector<> shape) const;
-    virtual void CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
-                            BareSliceMatrix<SIMD<double>> shape) const;
-
     using ScalarMappedElement<D + 1>::CalcDShape;
-    virtual void CalcDShape (const BaseMappedIntegrationPoint &mip,
-                             BareSliceMatrix<> dshape) const;
-    virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
-                             BareSliceMatrix<SIMD<double>> dshape) const;
 
-    void
-    Evaluate (const SIMD_BaseMappedIntegrationRule &mir,
-              BareSliceVector<> coefs, BareVector<SIMD<double>> values) const
-    {
-      STACK_ARRAY (SIMD<double>, mem, this->ndof * mir.Size ());
-      FlatMatrix<SIMD<double>> shape (this->ndof, mir.Size (), &mem[0]);
-      CalcShape (mir, shape);
-      const int nsimd = SIMD<double>::Size ();
-      FlatMatrix<double> bdbmat (this->ndof, mir.Size () * nsimd,
-                                 &shape (0, 0)[0]);
-      FlatVector<double> bdbvec (mir.Size () * nsimd, &values (0)[0]);
-      bdbvec = Trans (bdbmat) * coefs;
-    }
-    void
-    AddTrans (const SIMD_BaseMappedIntegrationRule &mir,
-              BareVector<SIMD<double>> values, BareSliceVector<> coefs) const
-    {
-      STACK_ARRAY (SIMD<double>, mem, this->ndof * mir.Size ());
-      FlatMatrix<SIMD<double>> shape (this->ndof, mir.Size (), &mem[0]);
-      CalcShape (mir, shape);
-      const int nsimd = SIMD<double>::Size ();
-      FlatMatrix<double> bdbmat (this->ndof, mir.Size () * nsimd,
-                                 &shape (0, 0)[0]);
-      FlatVector<double> bdbvec (mir.Size () * nsimd, &values (0)[0]);
-      coefs.Range (0, this->ndof) += bdbmat * bdbvec;
-    }
-
-    // using ScalarMappedElement<D>::CalcMappedDShape;
-    // HD NGS_DLL_HEADER virtual
-    void CalcMappedDShape (const SIMD_BaseMappedIntegrationRule &mir,
-                           BareSliceMatrix<SIMD<double>> dshapes) const
-    {
-      CalcDShape (mir, dshapes);
-    }
-    void EvaluateGrad (const SIMD_BaseMappedIntegrationRule &ir,
-                       BareSliceVector<> coefs,
-                       BareSliceMatrix<SIMD<double>> values) const
-    {
-      STACK_ARRAY (SIMD<double>, mem, (D + 1) * this->ndof * ir.Size ());
-      FlatMatrix<SIMD<double>> simddshapes ((D + 1) * this->ndof, ir.Size (),
-                                            &mem[0]);
-      CalcDShape (ir, simddshapes);
-      const int nsimd = SIMD<double>::Size ();
-      FlatMatrix<double> dshapes (this->ndof, (D + 1) * nsimd * ir.Size (),
-                                  &simddshapes (0, 0)[0]);
-      FlatVector<double> bdbvec ((D + 1) * nsimd * ir.Size (),
-                                 &values (0, 0)[0]);
-      bdbvec = Trans (dshapes) * coefs;
-    }
-    void AddGradTrans (const SIMD_BaseMappedIntegrationRule &mir,
-                       BareSliceMatrix<SIMD<double>> values,
-                       BareSliceVector<> coefs) const
-    {
-      STACK_ARRAY (SIMD<double>, mem, (D + 1) * this->ndof * mir.Size ());
-      FlatMatrix<SIMD<double>> simddshapes ((D + 1) * this->ndof, mir.Size (),
-                                            &mem[0]);
-      CalcDShape (mir, simddshapes);
-      const int nsimd = SIMD<double>::Size ();
-      FlatMatrix<double> dshapes (this->ndof, (D + 1) * nsimd * mir.Size (),
-                                  &simddshapes (0, 0)[0]);
-      FlatVector<double> bdbvec ((D + 1) * nsimd * mir.Size (),
-                                 &values (0, 0)[0]);
-      coefs.Range (0, this->ndof) += dshapes * bdbvec;
-    }
+    using ScalarMappedElement<D + 1>::CalcMappedDShape;
 
     void CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
                             BareSliceMatrix<> hddshape) const
@@ -128,7 +53,7 @@ namespace ngfem
       return instance;
     }
 
-    const CSR *TB (int ord);
+    const CSR TB (int ord);
     void CreateTB (int ord, int basistype = 0);
     static void TB_inner (int ord, Matrix<> &trefftzbasis,
                           Vec<D + 1, int> coeffnum, int basis, int dim,
