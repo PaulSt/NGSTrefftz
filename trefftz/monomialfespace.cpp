@@ -23,11 +23,7 @@ namespace ngcomp
         D = fullD-1;
 
         order = int(flags.GetNumFlag ("order", 3));
-        c = flags.GetNumFlag ("wavespeed", 1);
-        basistype = flags.GetNumFlag ("basistype", 0);
         useshift = flags.GetNumFlag("useshift",1);
-        useqt = flags.GetNumFlag("useqt",0);
-
 
         this->local_ndof = BinCoeff(D+1 + order, order);
         this->nel = ma->GetNE();
