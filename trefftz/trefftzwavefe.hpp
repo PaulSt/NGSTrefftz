@@ -1,5 +1,5 @@
-#ifndef FILE_TREFFTZELEMENT_HPP
-#define FILE_TREFFTZELEMENT_HPP
+#ifndef FILE_TREFFTZWAVEELEMENT_HPP
+#define FILE_TREFFTZWAVEELEMENT_HPP
 
 #include <fem.hpp>
 #include "helpers.hpp"
@@ -76,4 +76,4 @@ namespace ngfem
 void ExportTrefftzElement (py::module m);
 #endif // NGS_PYTHON
 
-#endif // FILE_TrefftzElement_HPP
+#endif // FILE_TrefftzWaveElement_HPP
