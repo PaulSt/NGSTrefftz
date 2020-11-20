@@ -201,7 +201,7 @@ def Cartsolve2D(fes,c,fullsys=False,inputsol=None):
     [truesol,U0,sig0,v0,gD] = inputsol
 
     start = time.time()
-    [a,f] = DGeqsys(fes,U0,v0,sig0,c,gD,fullsys,False,0.5,0.5,1)
+    [a,f] = DGwaveeqsys(fes,U0,v0,sig0,c,gD,fullsys,False,0.5,0.5,1)
     # print("DGsys: ", str(time.clock()-start))
 
     start = time.time()
