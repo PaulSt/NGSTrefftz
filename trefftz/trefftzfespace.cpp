@@ -7,6 +7,7 @@
 
 #include "trefftzwavefe.hpp"
 #include "qtrefftzwavefe.hpp"
+#include "trefftzheatfe.hpp"
 #include "trefftzfespace.hpp"
 #include "diffopmapped.hpp"
 
@@ -26,15 +27,17 @@ namespace ngcomp
     D = fullD - 1;
 
     this->dgjumps = true;
-    order = int (flags.GetNumFlag ("order", 3));
+    heat = flags.GetNumFlag ("heat", 0);
+    heattest = flags.GetNumFlag ("heattest", 0);
+    order = int (flags.GetNumFlag ("order", 3)) * (1 + (heat > 0));
     c = flags.GetNumFlag ("wavespeed", 1);
     basistype = flags.GetNumFlag ("basistype", 0);
     useshift = flags.GetNumFlag ("useshift", 1);
     usescale = flags.GetNumFlag ("usescale", 1);
     useqt = flags.GetNumFlag ("useqt", 0);
 
-    local_ndof = (BinCoeff (fullD - 1 + order, order)
-                  + BinCoeff (fullD - 1 + order - 1, order - 1));
+    local_ndof = BinCoeff (D + order, order)
+                 + BinCoeff (D + order - 1, order - 1) * (!heat);
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
 
@@ -56,6 +59,11 @@ namespace ngcomp
           flux_evaluator[VOL] = make_shared<
               T_DifferentialOperator<DiffOpMappedGradient<2>>> ();
           TrefftzWaveBasis<1>::getInstance ().CreateTB (order, basistype);
+          if (heat)
+            TrefftzHeatBasis<1>::getInstance ().CreateTB (order, basistype);
+          if (heattest)
+            TrefftzHeatTestBasis<1>::getInstance ().CreateTB (order,
+                                                              basistype);
           break;
         }
       case 3:
@@ -65,6 +73,11 @@ namespace ngcomp
           flux_evaluator[VOL] = make_shared<
               T_DifferentialOperator<DiffOpMappedGradient<3>>> ();
           TrefftzWaveBasis<2>::getInstance ().CreateTB (order, basistype);
+          if (heat)
+            TrefftzHeatBasis<2>::getInstance ().CreateTB (order, basistype);
+          if (heattest)
+            TrefftzHeatTestBasis<2>::getInstance ().CreateTB (order,
+                                                              basistype);
           break;
         }
       }
@@ -98,7 +111,7 @@ namespace ngcomp
       }
     // cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " local_ndof:" <<
     // local_ndof << " ndof: " << ndof << " dnums: \n" << dnums << endl <<
-    // "================================================" << endl ;
+    //"================================================" << endl ;
   }
 
   FiniteElement &TrefftzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
@@ -146,6 +159,17 @@ namespace ngcomp
                       this->gamma[ei.Nr ()], order, ElCenter<1> (ei), 1.0,
                       ma->GetElType (ei)));
                 }
+              if (heat)
+                {
+                  if (heattest)
+                    {
+                      return *(new (alloc) TrefftzHeatTestFE<1> (
+                          order, 1.0, ElCenter<1> (ei), 1.0,
+                          ma->GetElType (ei)));
+                    }
+                  return *(new (alloc) TrefftzHeatFE<1> (
+                      order, 1.0, ElCenter<1> (ei), 1.0, ma->GetElType (ei)));
+                }
               else
                 return *(new (alloc) TrefftzWaveFE<1> (
                     order,
@@ -187,6 +211,17 @@ namespace ngcomp
                   return *(new (alloc) QTrefftzWaveFE<2> (
                       this->gamma[ei.Nr ()], order, ElCenter<2> (ei), 1.0,
                       ma->GetElType (ei)));
+                }
+              if (heat)
+                {
+                  if (heattest)
+                    {
+                      return *(new (alloc) TrefftzHeatTestFE<2> (
+                          order, 1.0, ElCenter<1> (ei), 1.0,
+                          ma->GetElType (ei)));
+                    }
+                  return *(new (alloc) TrefftzHeatFE<2> (
+                      order, 1.0, ElCenter<1> (ei), 1.0, ma->GetElType (ei)));
                 }
               else
                 return *(new (alloc) TrefftzWaveFE<2> (
