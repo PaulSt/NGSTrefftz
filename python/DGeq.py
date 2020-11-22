@@ -358,16 +358,16 @@ def DGheateqsysnew(fes,fes2,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alph
     a += SymbolicBFI( ( alpha*jump_ux*jump_vx ) , VOL, skeleton=True )
     # a += SymbolicBFI( ( -mean_gv*jump_ux ) , VOL, skeleton=True )
     a += SymbolicBFI( ( mean_u*jump_gvx ) , VOL, skeleton=True )
-    a += SymbolicBFI( ( -alpha*jump_gux*jump_gvx ) , VOL, skeleton=True )
+    a += SymbolicBFI( ( -beta*jump_gux*jump_gvx ) , VOL, skeleton=True )
     # a += SymbolicBFI( ( mean_v*jump_gux ) , VOL, skeleton=True )
 
     a += SymbolicBFI( u*v, BND, definedon=fes.mesh.Boundaries("outflow"), skeleton=True)
-    a += SymbolicBFI( ( u*n_x*gv ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
+    a += SymbolicBFI( ( (u+beta*n_x*gu)*(n_x*gv) ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
     a.Assemble()
 
     f = LinearForm(fes2)
     f += SymbolicLFI( ( U0*v ), BND, definedon=fes.mesh.Boundaries("inflow"), skeleton=True) #t=0 (or *(1-x))
-    f += SymbolicLFI( ( gD*n_x*v ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
+    f += SymbolicLFI( ( gD*v+(beta*gD*n_x*gv) ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
     f.Assemble()
 
     return [a,f]

@@ -4,6 +4,7 @@ from netgen.csg import unit_cube
 from ngsolve.TensorProductTools import *
 from ngsolve import *
 import time
+import pandas as pd
 
 
 def TestSolution2D():
@@ -20,10 +21,9 @@ def TestSolution2D():
 
 def PostProcess(fes, truesol, sol):
     mesh = fes.mesh
-    U = GridFunction(fes)
-    U.Set(truesol)
+    gradtruesol = CoefficientFunction((-exp(-y)*sin(x),-exp(-y)*cos(x)))
     L2error = sqrt(Integrate((truesol - sol)*(truesol - sol), mesh))
-    sH1error = sqrt(Integrate((grad(U) - grad(sol))*(grad(U) - grad(sol)), mesh))
+    sH1error = sqrt(Integrate((gradtruesol - grad(sol))*(gradtruesol - grad(sol)), mesh))
     return [L2error,sH1error]
 
 
@@ -94,3 +94,26 @@ if __name__ == "__main__":
     [gfu,cond] = DGsolve(fes,a,f)
     [L2error, sH1error] = PostProcess(fes,truesol,gfu)
     print(L2error, sH1error, fes.ndof/fes.mesh.ne)
+
+
+    df = pd.DataFrame()
+    for order in [2,3,4]:
+        for N in range(5):
+            mesh = CartSquare(2**N,2**N)
+            fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0,heat=1)
+            fes2 = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0,heat=1,heattest=1)
+            U = GridFunction(fes)
+            U.Set(truesol)
+            print("CHECK",sqrt(Integrate((truesol-U)*(truesol-U),mesh)))
+
+            [a,f] = DGheateqsysnew(fes,fes2,U0,v0,sig0,c,gD,False,False,0.5,0.5,1)
+            [gfu,cond] = DGsolve(fes,a,f)
+            [L2error, sH1error] = PostProcess(fes,truesol,gfu)
+            rate = 0 if N==0 else log(errorold/L2error)/log(2)
+            errorold=L2error
+            print(L2error, sH1error, fes.ndof/fes.mesh.ne, rate)
+            df = df.append({'hnr':N,'h':1/2**N,'p':order,'ndof':fes.ndof,'error':L2error}, ignore_index=True)
+            df['p'] = df['p'].astype(int)
+            df['hnr'] = df['hnr'].astype(int)
+
+    df.to_csv('./heat.csv',index=False)
