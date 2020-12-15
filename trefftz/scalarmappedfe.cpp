@@ -245,56 +245,157 @@ namespace ngfem
   // throw ExceptionNOSIMD("SIMD - CalcDShape not overloaded");
   //}
 
+  // template<int D>
+  // void ScalarMappedElement<D> :: CalcMappedDDShape (const
+  // BaseMappedIntegrationPoint & bmip, BareSliceMatrix<> hddshape) const
+  //{
+  // auto & mip = static_cast<const MappedIntegrationPoint<D,D> &> (bmip);
+  // int nd = GetNDof();
+  // auto ddshape = hddshape.AddSize(nd, D*D);
+  // double eps = 1e-7;
+  // MatrixFixWidth<(D)> dshape1(nd), dshape2(nd);
+  // const ElementTransformation & eltrans = mip.GetTransformation();
+
+  // for (int i = 0; i < D; i++)
+  //{
+  // IntegrationPoint ip1 = mip.IP();
+  // IntegrationPoint ip2 = mip.IP();
+  // ip1(i) -= eps;
+  // ip2(i) += eps;
+  // MappedIntegrationPoint<D,D> mip1(ip1, eltrans);
+  // MappedIntegrationPoint<D,D> mip2(ip2, eltrans);
+
+  ////cout << bmip.GetPoint() << endl;
+  ////bmip.GetPoint()(i) -= eps;
+  ////cout << bmip.GetPoint() << endl;
+  // CalcMappedDShape (mip1, dshape1);
+  ////bmip.GetPoint()(i) += 2*eps;
+  // CalcMappedDShape (mip2, dshape2);
+  ////bmip.GetPoint()(i) -= eps;
+
+  // ddshape.Cols(D*i,D*(i+1)) = (0.5/eps) * (dshape2-dshape1);
+  //}
+
+  // for (int j = 0; j < D; j++)
+  //{
+  // for (int k = 0; k < nd; k++)
+  // for (int l = 0; l < D; l++)
+  // dshape1(k,l) = ddshape(k, l*D+j);
+
+  // dshape2 = dshape1 * mip.GetJacobianInverse();
+
+  // for (int k = 0; k < nd; k++)
+  // for (int l = 0; l < D; l++)
+  // ddshape(k, l*D+j) = dshape2(k,l);
+  //}
+  //}
+
   template <>
-  void ScalarMappedElement<4>::CalcMappedDDShape (
+  void ScalarMappedElement<1>::CalcMappedDDShape (
       const BaseMappedIntegrationPoint &bmip, BareSliceMatrix<> hddshape) const
   {
     ;
   }
 
-  template <int D>
-  void ScalarMappedElement<D>::CalcMappedDDShape (
+  template <>
+  void ScalarMappedElement<2>::CalcMappedDDShape (
       const BaseMappedIntegrationPoint &bmip, BareSliceMatrix<> hddshape) const
   {
-    auto &mip = static_cast<const MappedIntegrationPoint<D, D> &> (bmip);
-    int nd = GetNDof ();
-    auto ddshape = hddshape.AddSize (nd, D * D);
-    double eps = 1e-7;
-    MatrixFixWidth<(D)> dshape1 (nd), dshape2 (nd);
-    const ElementTransformation &eltrans = mip.GetTransformation ();
+    auto ddshape = hddshape.AddSize (this->ndof, 2 * 2);
 
-    for (int i = 0; i < D; i++)
+    // auto & mip = static_cast<const MappedIntegrationPoint<2,2> &> (bmip);
+    Vec<2> cpoint = bmip.GetPoint ();
+    cpoint -= elcenter;
+    cpoint *= (2.0 / elsize);
+
+    // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+    STACK_ARRAY (double, mem2, 2 * (order + 1) + 1);
+    mem2[0] = 0;
+    double *polxt[2];
+    for (size_t d = 0; d < 2; d++)
       {
-        IntegrationPoint ip1 = mip.IP ();
-        IntegrationPoint ip2 = mip.IP ();
-        ip1 (i) -= eps;
-        ip2 (i) += eps;
-        MappedIntegrationPoint<D, D> mip1 (ip1, eltrans);
-        MappedIntegrationPoint<D, D> mip2 (ip2, eltrans);
-
-        // cout << bmip.GetPoint() << endl;
-        // bmip.GetPoint()(i) -= eps;
-        // cout << bmip.GetPoint() << endl;
-        CalcMappedDShape (mip1, dshape1);
-        // bmip.GetPoint()(i) += 2*eps;
-        CalcMappedDShape (mip2, dshape2);
-        // bmip.GetPoint()(i) -= eps;
-
-        ddshape.Cols (D * i, D * (i + 1)) = (0.5 / eps) * (dshape2 - dshape1);
+        polxt[d] = &mem2[d * (order + 1) + 1];
+        Monomial (order, cpoint[d], polxt[d]);
       }
 
-    for (int j = 0; j < D; j++)
+    for (int d1 = 0; d1 < 2; d1++)
       {
-        for (int k = 0; k < nd; k++)
-          for (int l = 0; l < D; l++)
-            dshape1 (k, l) = ddshape (k, l * D + j);
+        for (int d2 = 0; d2 < 2; d2++)
+          {
+            Vector<double> pol (npoly);
+            for (size_t i = 0, ii = 0; i <= order; i++)
+              for (size_t j = 0; j <= order - i; j++)
+                pol[ii++] = (d1 != d2 ? i * j
+                                      : (d1 == 0 ? i * (i - 1) : j * (j - 1)))
+                            * polxt[0][i - (d1 == 0) - (d2 == 0)]
+                            * polxt[1][j - (d1 == 1) - (d2 == 1)];
 
-        dshape2 = dshape1 * mip.GetJacobianInverse ();
-
-        for (int k = 0; k < nd; k++)
-          for (int l = 0; l < D; l++)
-            ddshape (k, l * D + j) = dshape2 (k, l);
+            for (int i = 0; i < this->ndof; ++i)
+              {
+                ddshape (i, d2 * 2 + d1) = 0.0;
+                for (int j = (localmat)[0][i]; j < (localmat)[0][i + 1]; ++j)
+                  ddshape (i, d2 * 2 + d1) += (localmat)[2][j]
+                                              * pol[(localmat)[1][j]]
+                                              * pow (2.0 / elsize, 2);
+              }
+          }
       }
+  }
+
+  template <>
+  void ScalarMappedElement<3>::CalcMappedDDShape (
+      const BaseMappedIntegrationPoint &bmip, BareSliceMatrix<> hddshape) const
+  {
+    auto ddshape = hddshape.AddSize (this->ndof, 3 * 3);
+    // auto & mip = static_cast<const MappedIntegrationPoint<2,2> &> (bmip);
+    Vec<3> cpoint = bmip.GetPoint ();
+    cpoint -= elcenter;
+    cpoint *= (2.0 / elsize);
+
+    // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+    STACK_ARRAY (double, mem2, 3 * (order + 1) + 1);
+    mem2[0] = 0;
+    double *polxt[3];
+    for (size_t d = 0; d < 3; d++)
+      {
+        polxt[d] = &mem2[d * (order + 1) + 1];
+        Monomial (order, cpoint[d], polxt[d]);
+      }
+
+    for (int d1 = 0; d1 < 3; d1++)
+      {
+        for (int d2 = 0; d2 < 3; d2++)
+          {
+            Vector<double> pol (npoly);
+            for (int i = 0, ii = 0; i <= order; i++)
+              for (int j = 0; j <= order - i; j++)
+                for (int k = 0; k <= order - i - j; k++)
+                  pol[ii++] = (d1 == d2 ? (d1 == 0 ? i * (i - 1)
+                                                   : (d1 == 1 ? j * (j - 1)
+                                                              : k * (k - 1)))
+                                        : (int[3]){ i, j, k }[d1]
+                                              * (int[3]){ i, j, k }[d2])
+                              * polxt[0][i - (d1 == 0) - (d2 == 0)]
+                              * polxt[1][j - (d1 == 1) - (d2 == 1)]
+                              * polxt[2][k - (d1 == 2) - (d2 == 2)];
+
+            for (int i = 0; i < this->ndof; ++i)
+              {
+                ddshape (i, d2 * 3 + d1) = 0.0;
+                for (int j = (localmat)[0][i]; j < (localmat)[0][i + 1]; ++j)
+                  ddshape (i, d2 * 3 + d1) += (localmat)[2][j]
+                                              * pol[(localmat)[1][j]]
+                                              * pow (2.0 / elsize, 2);
+              }
+          }
+      }
+  }
+
+  template <>
+  void ScalarMappedElement<4>::CalcMappedDDShape (
+      const BaseMappedIntegrationPoint &bmip, BareSliceMatrix<> hddshape) const
+  {
+    ;
   }
 
   ////////////////////////////////////////////////////////
