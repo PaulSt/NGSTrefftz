@@ -347,10 +347,13 @@ def DGheateqsysnew(fes,fes2,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alph
     timelike = n_x*n_x # n_t=0
     spacelike = n_t**2 # n_x=0
 
+    # alpha = 1/h
+    # beta = h
+
     Hv = v.Operator("hesse")
     a = BilinearForm(trialspace=fes,testspace=fes2)
-    # a += SymbolicBFI( - u*(dtv - Hv[0,0] ) + sig*(tau-gv) )
-    # a += SymbolicBFI( - u*(dtv + Hv[0,0] ) )
+    if fullsys:
+        a += SymbolicBFI( - u*(dtv + Hv[0,0] ) )
 
     a += SymbolicBFI( ( IfPos(n_t,u,uo)*jump_vt) , VOL, skeleton=True )
 
