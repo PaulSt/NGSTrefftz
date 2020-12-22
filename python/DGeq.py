@@ -428,3 +428,73 @@ def DGsolve(fes,a,f):
     gfu.vec.data = a.mat.Inverse()*f.vec
 
     return [gfu,cond]
+
+def DGnormerror(fes,uh,gradtruesol,c,alpha,beta):
+    D = fes.mesh.dim - 1
+    U = fes.TrialFunction()
+    V = fes.TestFunction()
+    gU = grad(U)
+    gV = grad(V)
+
+    v = gU[D]
+    sig = CoefficientFunction(tuple([-gU[i] for i in  range(D)]))
+    w = gV[D]
+    tau = CoefficientFunction(tuple([-gV[i] for i in  range(D)]))
+
+    vo = gU.Other()[D]
+    sigo = CoefficientFunction(tuple([-gU.Other()[i] for i in  range(D)]))
+    wo = gV.Other()[D]
+    tauo = CoefficientFunction(tuple([-gV.Other()[i] for i in  range(D)]))
+
+    h = specialcf.mesh_size
+    n = specialcf.normal(D+1)
+    n_t = n[D]/Norm(n)
+    n_x = CoefficientFunction( tuple([n[i]/Norm(n) for i in  range(D)]) )
+
+    mean_v = 0.5*(v+vo)
+    mean_w = 0.5*(w+wo)
+    mean_sig = 0.5*(sig+sigo)
+    mean_tau = 0.5*(tau+tauo)
+
+    jump_vx = ( v - vo ) * n_x
+    jump_wx = ( w - wo ) * n_x
+    jump_sigx = (( sig - sigo ) * n_x)
+    jump_taux = (( tau - tauo ) * n_x)
+
+    jump_vt = ( v - vo ) * n_t
+    jump_wt = ( w - wo ) * n_t
+    jump_sigt = ( sig - sigo ) * n_t
+    jump_taut = ( tau - tauo ) * n_t
+
+    jump_Ut = (U - U.Other()) * n_t
+    jump_Vt = (V - V.Other()) * n_t
+
+    timelike = n_x*n_x # n_t=0
+    spacelike = n_t**2 # n_x=0
+
+    a = BilinearForm(fes)
+    # if(fullsys==True):
+        # HV = V.Operator("hesse")
+        # # a += SymbolicBFI(  -v*(-HV[0]+pow(c,-2)*HV[3]) ) #- sig*(-HV[1]+HV[2])  )
+        # a += SymbolicBFI(  -v*(-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
+        # HU = U.Operator("hesse")
+        # a += SymbolicBFI(  mu * pow(c,2)
+                              # * (-sum([HU[i*(D+2)] for i in range(D)]) + pow(c,-2)*HU[(D+1)*(D+1)-1])
+                              # * (-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1])
+                        # )
+    # space like faces, w/o x jump
+    a += SymbolicBFI( spacelike * 0.5 * pow(c,-2)*jump_wt*jump_vt , VOL, skeleton=True)
+    a += SymbolicBFI( spacelike * 0.5 * jump_taut * jump_sigt , VOL, skeleton=True )
+    #time like faces
+    a += SymbolicBFI( timelike * alpha * jump_vx * jump_wx , VOL, skeleton=True )
+    a += SymbolicBFI( timelike * beta * jump_sigx * jump_taux , VOL, skeleton=True )
+    jumppart = uh.vec.CreateVector()
+    a.Apply(uh.vec,jumppart)
+
+    norm = 0
+    norm += uh.vec.InnerProduct(jumppart)
+    norm += 0.5 * Integrate((BoundaryFromVolumeCF(grad(uh)[D]) - gradtruesol[D])**2 / c, fes.mesh, definedon=fes.mesh.Boundaries("outflow|inflow"))
+    norm += 0.5 * Integrate(sum((BoundaryFromVolumeCF(grad(uh)[i]) - gradtruesol[i])**2 for i in range(D)), fes.mesh, definedon=fes.mesh.Boundaries("outflow|inflow"))
+    norm += Integrate(alpha * (BoundaryFromVolumeCF(grad(uh)[D]) - gradtruesol[D])**2 , fes.mesh, definedon=fes.mesh.Boundaries("dirichlet"))
+
+    return sqrt(norm)
