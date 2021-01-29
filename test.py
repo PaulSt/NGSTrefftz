@@ -205,7 +205,8 @@ def Cartsolve2D(fes,c,fullsys=False,inputsol=None):
     # print("DGsys: ", str(time.clock()-start))
 
     start = time.time()
-    [gfu,cond] = DGsolve(fes,a,f)
+    gfu = DGsolve(fes,a,f)
+    cond = 0
     # print("DGsolve: ", str(time.clock()-start))
 
     [L2error, sH1error] = PostProcess(fes,truesol,gfu)
