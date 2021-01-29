@@ -7,6 +7,7 @@
 
 #include "trefftzwavefe.hpp"
 #include "qtrefftzwavefe.hpp"
+#include "trefftzheatfe.hpp"
 #include "trefftzfespace.hpp"
 #include "diffopmapped.hpp"
 
@@ -25,7 +26,9 @@ namespace ngcomp
         D = fullD-1;
 
         this->dgjumps = true;
-        order = int(flags.GetNumFlag ("order", 3));
+        heat = flags.GetNumFlag("heat",0);
+        heattest = flags.GetNumFlag("heattest",0);
+        order = int(flags.GetNumFlag ("order", 3)) * (1+(heat>0));
         c = flags.GetNumFlag ("wavespeed", 1);
         basistype = flags.GetNumFlag ("basistype", 0);
         useshift = flags.GetNumFlag("useshift",1);
@@ -33,7 +36,7 @@ namespace ngcomp
         useqt = flags.GetNumFlag("useqt",0);
 
 
-        local_ndof = (BinCoeff(fullD-1 + order, order) + BinCoeff(fullD-1 + order-1, order-1));
+        local_ndof = BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1) * (!heat);
         nel = ma->GetNE();
         ndof = local_ndof * nel;
 
@@ -51,6 +54,8 @@ namespace ngcomp
                     evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<2>>>();
                     flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<2>>>();
                     TrefftzWaveBasis<1>::getInstance().CreateTB(order, basistype);
+                    if(heat) TrefftzHeatBasis<1>::getInstance().CreateTB(order, basistype);
+                    if(heattest) TrefftzHeatTestBasis<1>::getInstance().CreateTB(order, basistype);
                     break;
                 }
             case 3:
@@ -58,6 +63,8 @@ namespace ngcomp
                     evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<3>>>();
                     flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<3>>>();
                     TrefftzWaveBasis<2>::getInstance().CreateTB(order, basistype);
+                    if(heat) TrefftzHeatBasis<2>::getInstance().CreateTB(order, basistype);
+                    if(heattest) TrefftzHeatTestBasis<2>::getInstance().CreateTB(order, basistype);
                     break;
                 }
         }
@@ -86,8 +93,8 @@ namespace ngcomp
         {
             dnums.Append (j);
         }
-        // cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " local_ndof:" << local_ndof << " ndof: " << ndof << " dnums: \n" << dnums << endl <<
-        // "================================================" << endl ;
+         //cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " local_ndof:" << local_ndof << " ndof: " << ndof << " dnums: \n" << dnums << endl <<
+         //"================================================" << endl ;
     }
 
 
@@ -127,6 +134,14 @@ namespace ngcomp
                             //}
                             return *(new (alloc) QTrefftzWaveFE<1>(this->gamma[ei.Nr()], order,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
                         }
+                        if(heat)
+                        {
+                        if(heattest)
+                        {
+                            return *(new (alloc) TrefftzHeatTestFE<1>(order,1.0,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
+                        }
+                            return *(new (alloc) TrefftzHeatFE<1>(order,1.0,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
+                        }
                         else
                             return *(new (alloc) TrefftzWaveFE<1>(order,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c,ElCenter<1>(ei),Adiam<1>(ei,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c),ma->GetElType(ei)));
                         break;
@@ -157,6 +172,14 @@ static Timer timereval("evalc",2);
                             //}
                         timereval.Stop();
                             return *(new (alloc) QTrefftzWaveFE<2>(this->gamma[ei.Nr()], order,ElCenter<2>(ei),1.0,ma->GetElType(ei)));
+                        }
+                        if(heat)
+                        {
+                        if(heattest)
+                        {
+                            return *(new (alloc) TrefftzHeatTestFE<2>(order,1.0,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
+                        }
+                            return *(new (alloc) TrefftzHeatFE<2>(order,1.0,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
                         }
                         else
                             return *(new (alloc) TrefftzWaveFE<2>(order,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c,ElCenter<2>(ei),Adiam<2>(ei,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c),ma->GetElType(ei)));

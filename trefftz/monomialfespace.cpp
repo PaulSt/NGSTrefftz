@@ -16,18 +16,11 @@ namespace ngcomp
     {
         type="monomialfespace";
 
-        //cout << "======== Constructor of MonomialFESpace =========" << endl;
-        //cout << "Flags:" << endl << flags;
-
         fullD = ma->GetDimension();
         D = fullD-1;
 
         order = int(flags.GetNumFlag ("order", 3));
-        c = flags.GetNumFlag ("wavespeed", 1);
-        basistype = flags.GetNumFlag ("basistype", 0);
         useshift = flags.GetNumFlag("useshift",1);
-        useqt = flags.GetNumFlag("useqt",0);
-
 
         this->local_ndof = BinCoeff(D+1 + order, order);
         this->nel = ma->GetNE();
@@ -35,13 +28,6 @@ namespace ngcomp
 
         switch (fullD)
         {
-            case 1:
-                {
-                    //evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<1>>>();
-                    //flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<1>>>();
-                    //TrefftzWaveBasis<1>::getInstance().CreateTB(order, basistype);
-                    //break;
-                }
             case 2:
                 {
                     evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<2>>>();
@@ -117,7 +103,7 @@ namespace ngcomp
                     {
 
                         LocalHeap lh(1000 * 1000);
-                        const ELEMENT_TYPE eltyp = ET_TRIG ;
+                        const ELEMENT_TYPE eltyp = ET_TET ;
                         const int D=3;
                         IntegrationRule ir (eltyp, 0);
                         MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
@@ -229,20 +215,6 @@ namespace ngcomp
 void ExportMonomialFESpace(py::module m)
 {
     using namespace ngcomp;
-    //using namespace ngfem;
-    //[>
-    //We just export the class here and use the FESpace constructor to create our space.
-    //This has the advantage, that we do not need to specify all the flags to parse (like
-    //dirichlet, definedon,...), but we can still append new functions only for that space.
-    //*/
-    //py::class_<MonomialFESpace, shared_ptr<MonomialFESpace>, FESpace>
-    //(m, "MonomialFESpace", "FESpace with first order and second order trigs on 2d mesh")
-    //.def("GetNDof", &MonomialFESpace::GetNDof)
-    //;
-    //m.def("GetNDof", [](shared_ptr<FESpace> fes) {
-    //cout << typeid(*fes).name() << endl;
-    ////fes->GetNDof();
-    //});
 
     ExportFESpace<MonomialFESpace>(m, "monomialfespace")
         .def("GetDocu", &MonomialFESpace::GetDocu)
