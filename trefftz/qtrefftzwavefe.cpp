@@ -18,7 +18,7 @@ namespace ngfem
         for (int imip = 0; imip < smir.Size(); imip++)
         {
             Vec<2,SIMD<double>> cpoint = smir[imip].GetPoint();
-            cpoint -= elcenter; cpoint *= (2.0/elsize);
+            cpoint -= elcenter; cpoint *= (1.0/elsize);
 
             STACK_ARRAY(SIMD<double>, mem, 2*(ord+1)+2); mem[0]=0;mem[1]=0;
             Vec<2,SIMD<double>*> polxt;
@@ -41,7 +41,7 @@ namespace ngfem
                 dshape(i*2,imip) = 0.0;
                 dshape(i*2+1,imip) = 0.0;
                 for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                    dshape(i*2+1,imip) += (localmat)[2][j]*pol[(localmat)[1][j]] * pow(2.0/elsize,2);
+                    dshape(i*2+1,imip) += (localmat)[2][j]*pol[(localmat)[1][j]] * pow(1.0/elsize,2);
             }
         }
     }
@@ -56,7 +56,7 @@ namespace ngfem
         for (int imip = 0; imip < smir.Size(); imip++)
         {
             Vec<3,SIMD<double>> cpoint = smir[imip].GetPoint();
-            cpoint -= elcenter; cpoint *= (2.0/elsize);
+            cpoint -= elcenter; cpoint *= (1.0/elsize);
 
             STACK_ARRAY(SIMD<double>, mem, 3*(ord+1)+2); mem[0]=0;mem[1]=0;
             Vec<3,SIMD<double>*> polxt;
@@ -82,7 +82,7 @@ namespace ngfem
                 dshape(i*3+1,imip) = 0.0;
                 dshape(i*3+2,imip) = 0.0;
                 for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                    dshape(i*3+2,imip) += (localmat)[2][j]*pol[(localmat)[1][j]] * pow(2.0/elsize,2);
+                    dshape(i*3+2,imip) += (localmat)[2][j]*pol[(localmat)[1][j]] * pow(1.0/elsize,2);
             }
         }
     }
@@ -98,7 +98,7 @@ namespace ngfem
         //auto & mip = static_cast<const MappedIntegrationPoint<2,2> &> (bmip);
         Vec<2> cpoint = bmip.GetPoint();
         cpoint -= elcenter;
-        cpoint *= (2.0/elsize);
+        cpoint *= (1.0/elsize);
 
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY(double, mem2, 2*(ord+1)+1); mem2[0]=0;
@@ -123,7 +123,7 @@ namespace ngfem
                 {
                     ddshape(i,d2*2+d1) = 0.0;
                     for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                        ddshape(i,d2*2+d1) += (localmat)[2][j]*pol[(localmat)[1][j]] * pow(2.0/elsize,2);
+                        ddshape(i,d2*2+d1) += (localmat)[2][j]*pol[(localmat)[1][j]] * pow(1.0/elsize,2);
                 }
             }
         }
@@ -137,7 +137,7 @@ namespace ngfem
         //auto & mip = static_cast<const MappedIntegrationPoint<2,2> &> (bmip);
         Vec<3> cpoint = bmip.GetPoint();
         cpoint -= elcenter;
-        cpoint *= (2.0/elsize);
+        cpoint *= (1.0/elsize);
 
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY(double, mem2, 3*(ord+1)+1); mem2[0]=0;
@@ -163,7 +163,7 @@ namespace ngfem
                 {
                     ddshape(i,d2*3+d1) = 0.0;
                     for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
-                        ddshape(i,d2*3+d1) += (localmat)[2][j]*pol[(localmat)[1][j]] * pow(2.0/elsize,2);
+                        ddshape(i,d2*3+d1) += (localmat)[2][j]*pol[(localmat)[1][j]] * pow(1.0/elsize,2);
                 }
             }
         }
