@@ -402,7 +402,7 @@ def DGsolve(fes,a,f):
     # sol[~(A==0).all(1).A1] = solclean
     # gfu.vec.FV().NumPy()[:] = sol
 
-    cond = np.linalg.cond(A.todense())
+    # cond = np.linalg.cond(A.todense())
     # cond = 0
 
     # print(cond)
@@ -427,7 +427,7 @@ def DGsolve(fes,a,f):
 
     gfu.vec.data = a.mat.Inverse()*f.vec
 
-    return [gfu,cond]
+    return gfu
 
 def DGnormerror(fes,uh,gradtruesol,c,alpha,beta):
     D = fes.mesh.dim - 1

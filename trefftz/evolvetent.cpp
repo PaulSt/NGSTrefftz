@@ -22,7 +22,7 @@ namespace ngcomp
     void WaveTents<D> :: EvolveTents(double dt)
     {
         //int nthreads = (task_manager) ? task_manager->GetNumThreads() : 1;
-        LocalHeap lh(1000 * 1000 * 100, "trefftz tents", 1);
+        LocalHeap lh(1000 * 1000 * 1000, "trefftz tents", 1);
 
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         const int nsimd = SIMD<double>::Size();
@@ -576,7 +576,7 @@ namespace ngcomp
     template<int D>
     Matrix<> WaveTents<D> :: MakeWavefront(shared_ptr<CoefficientFunction> bddatum, double time)
     {
-        LocalHeap lh(1000*1000*100, "make wavefront", 1);
+        LocalHeap lh(1000*1000*1000, "make wavefront", 1);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         SIMD_IntegrationRule sir(eltyp, order*2);
         int nsimd = SIMD<double>::Size();
@@ -607,7 +607,7 @@ namespace ngcomp
     template<int D>
     double WaveTents<D> :: Error(Matrix<> wavefront, Matrix<> wavefront_corr)
     {
-        LocalHeap lh(1000*1000*100, "error", 1);
+        LocalHeap lh(1000*1000*1000, "error", 1);
         double error=0;
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         SIMD_IntegrationRule sir(eltyp, order*2);
@@ -637,7 +637,7 @@ namespace ngcomp
     template<int D>
     double WaveTents<D> :: L2Error(Matrix<> wavefront, Matrix<> wavefront_corr)
     {
-        LocalHeap lh(1000*1000*100, "l2error", 1);
+        LocalHeap lh(1000*1000*1000, "l2error", 1);
         double l2error=0;
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         SIMD_IntegrationRule sir(eltyp, order*2);
@@ -659,7 +659,7 @@ namespace ngcomp
     double WaveTents<D> :: Energy(Matrix<> wavefront)
     {
         double energy=0;
-        LocalHeap lh(1000*1000*100, "energy", 1);
+        LocalHeap lh(1000*1000*1000, "energy", 1);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         SIMD_IntegrationRule sir(eltyp, order*2);
         int nsimd = SIMD<double>::Size();
@@ -693,7 +693,7 @@ namespace ngcomp
     template<int D>
     double WaveTents<D> :: TentAdiam(Tent* tent)
     {
-        LocalHeap lh(1000*1000*100);
+        LocalHeap lh(1000*1000*1000);
         int vnumber = tent->nbv.Size();
 
         //Array<int> verts(vnumber);
@@ -744,7 +744,7 @@ namespace ngcomp
     {
         double h = 0.0;
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);
-        LocalHeap lh(1000 * 1000 * 100);
+        LocalHeap lh(1000 * 1000 * 1000);
         tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(1), lh);
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             Tent* tent = tps.tents[tentnr];
@@ -778,7 +778,7 @@ namespace ngcomp
     template<int D>
     void QTWaveTents<D> :: EvolveTents(double dt)
     {
-        LocalHeap lh(1000 * 1000 * 100, "QT tents", 1);
+        LocalHeap lh(1000 * 1000 * 1000, "QT tents", 1);
 
         shared_ptr<MeshAccess> ma = this->ma;
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
