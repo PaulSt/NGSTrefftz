@@ -18,7 +18,7 @@ namespace ngfem
   {
     this->c = ac;
     this->localmat = TrefftzWaveBasis<D>::getInstance ().TB (ord);
-    this->elsize = aelsize;
+    this->elsize = aelsize / 2.0;
     this->elcenter = aelcenter;
   }
 

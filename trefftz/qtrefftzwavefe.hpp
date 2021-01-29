@@ -51,7 +51,7 @@ namespace ngfem
     {
 
       this->c = 1.0;
-      this->elsize = aelsize;
+      this->elsize = aelsize / 2.0;
       this->elcenter = aelcenter;
 
       static Timer timerbasis ("basis", 2);
