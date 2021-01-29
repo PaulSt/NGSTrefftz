@@ -88,7 +88,7 @@ namespace ngcomp
           wavespeedcf (awavespeedcf)
     {
       wavespeed.SetSize (ama->GetNE ());
-      LocalHeap lh (1000 * 1000 * 100);
+      LocalHeap lh (1000 * 1000 * 1000);
       for (Ngs_Element el : ama->Elements (VOL))
         {
           ElementId ei = ElementId (el);
@@ -128,7 +128,7 @@ namespace ngcomp
 
     int NrTents (double dt)
     {
-      LocalHeap lh (1000 * 1000 * 100);
+      LocalHeap lh (1000 * 1000 * 1000);
       TentPitchedSlab<D> tps = TentPitchedSlab<D> (ma);
       tps.PitchTents (
           dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction> (1),
@@ -163,7 +163,7 @@ namespace ngcomp
                  shared_ptr<CoefficientFunction> abddatum)
         : WaveTents<D> (aorder, ama, awavespeedcf, abddatum)
     {
-      LocalHeap lh (1000 * 1000 * 100);
+      LocalHeap lh (1000 * 1000 * 1000);
       const ELEMENT_TYPE eltyp
           = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
       const int nsimd = SIMD<double>::Size ();
@@ -217,7 +217,7 @@ namespace ngcomp
                  vector<shared_ptr<CoefficientFunction>> taylorcf)
         : WaveTents<D> (aorder, ama, awavespeedcf, abddatum)
     {
-      LocalHeap lh (1000 * 1000 * 100);
+      LocalHeap lh (1000 * 1000 * 1000);
       const ELEMENT_TYPE eltyp
           = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
       const int nsimd = SIMD<double>::Size ();
