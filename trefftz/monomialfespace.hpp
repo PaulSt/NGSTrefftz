@@ -17,7 +17,6 @@ namespace ngcomp
     float c = 1;
     int useshift = 1;
     int useqt = 0;
-    int basistype;
     shared_ptr<CoefficientFunction> wavespeedcf;
 
   public:
@@ -28,7 +27,7 @@ namespace ngcomp
       wavespeedcf = awavespeedcf;
     }
 
-    string GetClassName () const override { return "monomial"; }
+    string GetClassName () const override { return "monomialfespace"; }
 
     void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
 
