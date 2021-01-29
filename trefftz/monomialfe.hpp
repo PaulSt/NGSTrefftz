@@ -51,7 +51,7 @@ namespace ngfem
             {
                 MonomialBasis<D> Basis(aord);
                 this->localmat = Basis.TB();
-                this->elsize = 2.0*aelsize;
+                this->elsize = aelsize;
                 this->elcenter = aelcenter;
                 this->c = 1.0;
             }
