@@ -17,7 +17,7 @@ namespace ngfem
   {
     this->c = ac;
     this->localmat = TrefftzHeatBasis<D>::getInstance ().TB (this->order);
-    this->elsize = 2.0 * aelsize;
+    this->elsize = aelsize;
     this->elcenter = aelcenter;
   }
 
@@ -185,7 +185,7 @@ namespace ngfem
   {
     this->c = ac;
     this->localmat = TrefftzHeatTestBasis<D>::getInstance ().TB (this->order);
-    this->elsize = 2.0 * aelsize;
+    this->elsize = aelsize;
     this->elcenter = aelcenter;
   }
 
