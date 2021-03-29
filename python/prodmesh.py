@@ -32,7 +32,7 @@ def RefSegMesh(n,x0,x1,periodic=False):
     return mesh
 
 
-def PeriodicProdMesh(ngmeshbase,t_steps):
+def PeriodicProdMesh(ngmeshbase,t_steps,bndc="dirichlet"):
     ngmesh = ngm.Mesh()
     ngmesh.dim=3
     pnums = []
@@ -75,7 +75,7 @@ def PeriodicProdMesh(ngmeshbase,t_steps):
                                         ,pnums[2*(el.points[1].nr-1)+1]
                                         ,pnums[2*(el.points[2].nr-1)+1] ]))
     fde = ngm.FaceDescriptor(surfnr=3,domin=1,bc=3)
-    fde.bcname = "dirichlet"
+    fde.bcname = bndc
     fdid = ngmesh.Add(fde)
     for el in El1d:
         ngmesh.Add(ngm.Element2D(fdid, [pnums[2*(el.points[0].nr-1)]
@@ -90,7 +90,7 @@ def PeriodicProdMesh(ngmeshbase,t_steps):
 
     ngmesh.SetBCName(0,"inflow")
     ngmesh.SetBCName(1,"outflow")
-    ngmesh.SetBCName(2,"dirichlet")
+    ngmesh.SetBCName(2,bndc)
     mesh = Mesh(ngmesh)
     return mesh
 
@@ -300,7 +300,7 @@ def RefineAround(center,r,mesh):
     mesh.Refine()
     return mesh
 
-def AddSurfElements2DBC(tpmesh,mesh1,mesh2):
+def AddSurfElements2DBC(tpmesh,mesh1,mesh2,bndc):
     if mesh1.dim==2:
         ngm1 = mesh1.ngmesh;
         ngm2 = mesh2.ngmesh;
@@ -333,7 +333,7 @@ def AddSurfElements2DBC(tpmesh,mesh1,mesh2):
 
     els1 = ngm1.Elements1D()
     fde = ngm.FaceDescriptor(surfnr=3,domin=1,bc=3)
-    fde.bcname = "dirichlet"
+    fde.bcname = bndc
     fdid = tpmesh.Add(fde)
     for elx in els1:
         for ely in els2:
@@ -349,12 +349,12 @@ def AddSurfElements2DBC(tpmesh,mesh1,mesh2):
             tpmesh.Add(ngm.Element2D(fdid,vert_glob))
     tpmesh.SetBCName(0,"outflow")
     tpmesh.SetBCName(1,"inflow")
-    tpmesh.SetBCName(2,"dirichlet")
+    tpmesh.SetBCName(2,bndc)
     return tpmesh
 
 
 import ngsolve.TensorProductTools as TPT
 from ngsolve import Mesh
-def TensorProdMesh(meshx,mesht):
+def TensorProdMesh(meshx,mesht,bndc="dirichlet"):
     tpmesh = TPT.MakeMesh3D(meshx,mesht)
-    return Mesh(AddSurfElements2DBC(tpmesh,meshx,mesht))
+    return Mesh(AddSurfElements2DBC(tpmesh,meshx,mesht,bndc))
