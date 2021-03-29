@@ -418,8 +418,8 @@ def DGsolve(fes,a,f):
     # A = sp.sparse.linalg.LinearOperator( (a.mat.height,a.mat.width), matvec)
     # gfu.vec.FV().NumPy()[:], succ = sp.sparse.linalg.gmres(A, f.vec.FV().NumPy())
 
-    rows,cols,vals = a.mat.COO()
-    A = sp.sparse.csr_matrix((vals,(rows,cols)))
+    # rows,cols,vals = a.mat.COO()
+    # A = sp.sparse.csr_matrix((vals,(rows,cols)))
     # gfu.vec.FV().NumPy()[:] = sp.sparse.linalg.spsolve(A,f.vec.FV())
 
     # A = A.todense()
@@ -501,6 +501,7 @@ def DGnormerror(fes,uh,gradtruesol,c,alpha,beta):
     timelike = n_x*n_x # n_t=0
     spacelike = n_t**2 # n_x=0
 
+    # make use of the fact that on a Cart mesh we have A(w,tau;w,tau)=||(w,tau)||^2_DG
     a = BilinearForm(fes)
     # if(fullsys==True):
         # HV = V.Operator("hesse")
