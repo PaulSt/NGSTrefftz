@@ -528,3 +528,57 @@ def DGnormerror(fes,uh,gradtruesol,c,alpha,beta):
     norm += Integrate(alpha * (BoundaryFromVolumeCF(grad(uh)[D]) - gradtruesol[D])**2 , fes.mesh, definedon=fes.mesh.Boundaries("dirichlet"))
 
     return sqrt(norm)
+
+
+
+def DGnormheat(fes,alpha,beta):
+    fes2=fes
+    D = fes.mesh.dim - 1
+    u = fes.TrialFunction()
+    v = fes2.TestFunction()
+    gradu = grad(u)
+    gradv = grad(v)
+
+    dtu = gradu[D]
+    dtv = gradv[D]
+    gu = CoefficientFunction(tuple([gradu[i] for i in  range(D)]))
+    gv = CoefficientFunction(tuple([gradv[i] for i in  range(D)]))
+
+    uo = u.Other()
+    vo = v.Other()
+    guo = CoefficientFunction(tuple([gradu.Other()[i] for i in  range(D)]))
+    gvo = CoefficientFunction(tuple([gradv.Other()[i] for i in  range(D)]))
+
+    h = specialcf.mesh_size
+    n = specialcf.normal(D+1)
+    n_t = n[D]/Norm(n)
+    n_x = CoefficientFunction( tuple([n[i]/Norm(n) for i in  range(D)]) )
+
+    mean_u = 0.5*(u+uo)
+    mean_v = 0.5*(v+vo)
+    mean_gu = 0.5*(gu+guo)
+    mean_gv = 0.5*(gv+gvo)
+
+    jump_ux = ( u - uo ) * n_x
+    jump_vx = ( v - vo ) * n_x
+    jump_gux = ( gu - guo ) * n_x
+    jump_gvx = ( gv - gvo ) * n_x
+
+    jump_ut = ( u - uo ) * n_t
+    jump_vt = ( v - vo ) * n_t
+
+    timelike = n_x*n_x # n_t=0
+    spacelike = n_t**2 # n_x=0
+
+    # make use of the fact that on a Cart mesh we have A(w,tau;w,tau)=||(w,tau)||^2_DG
+    a = BilinearForm(fes)
+    a += SymbolicBFI( spacelike * 0.5 * jump_ut*jump_vt , VOL, skeleton=True)
+    a += SymbolicBFI( timelike * pow(alpha,0.5) * jump_ux*jump_vx , VOL, skeleton=True )
+    a += SymbolicBFI( timelike * pow(beta,0.5) * jump_gux*jump_gvx , VOL, skeleton=True )
+    a += SymbolicBFI( 0.5 * u*v, BND, definedon=fes.mesh.Boundaries("outflow|inflow"), skeleton=True)
+    a += SymbolicBFI( pow(alpha,0.5) * u*v, BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
+    a.Assemble()
+
+    # normvec = np.array([sqrt(a.mat[i,i]) for i in range(fes.ndof)])
+
+    return a
