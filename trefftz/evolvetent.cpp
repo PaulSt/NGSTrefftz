@@ -20,28 +20,6 @@ namespace ngcomp
       cout << "Lapack error: " << success << endl;
   }
 
-  template <int D>
-  inline void WaveTents<D>::AAt (double *a, double *b, int *m, int *k)
-  {
-    // Matrix<> at(a.Width(),a.Height());
-    // for(int i=0;i<a.Height();i++) at.Col(i) = a.Row(i);
-    // b=a*at;
-    char uplo = 'L';
-    char nottrans = 'N';
-    char trans = 'T';
-    // integer m = a.Height();
-    // integer n = m;
-    // integer k = a.Width();
-    double alpha = 1.0;
-    double beta = 0.0;
-    // integer lda = a.Dist();
-    // integer ldb = b.Dist();
-
-    ////dgemm_(&trans, &nottrans, &m, &n, &k, &alpha , &a(0,0), &k, &a(0,0),
-    ///&k, &beta, &b(0,0), &m);
-    dsyrk_ (&uplo, &trans, m, k, &alpha, a, k, &beta, b, m);
-  }
-
   template <int D> void WaveTents<D>::EvolveTents (double dt)
   {
     // int nthreads = (task_manager) ? task_manager->GetNumThreads() : 1;

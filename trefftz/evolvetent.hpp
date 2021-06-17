@@ -64,8 +64,6 @@ namespace ngcomp
     double TentAdiam (Tent *tent);
 
     inline void LapackSolve (SliceMatrix<double> a, SliceVector<double> b);
-    // inline void AAt(SliceMatrix<double> a, SliceMatrix<double> b);
-    inline void AAt (double *a, double *b, int *m, int *k);
 
     inline int MakeMacroEl (const Array<int> &tentel,
                             std::unordered_map<int, int> &macroel);
