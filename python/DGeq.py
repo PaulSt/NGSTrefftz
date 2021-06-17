@@ -49,52 +49,78 @@ def DGwaveeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alpha=0.5,be
     timelike = n_x*n_x # n_t=0
     spacelike = n_t**2 # n_x=0
 
+    mu=0
+    delta=0.5
+    theta=1
+    gR=0
+
+    a = BilinearForm(fes)
+    if(fullsys==True):
+        HV = V.Operator("hesse")
+        # a += SymbolicBFI(  -v*(-HV[0]+pow(c,-2)*HV[3]) ) #- sig*(-HV[1]+HV[2])  )
+        a += SymbolicBFI(  -v*(-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
+        HU = U.Operator("hesse")
+        a += SymbolicBFI(  mu * pow(c,2)
+                              * (-sum([HU[i*(D+2)] for i in range(D)]) + pow(c,-2)*HU[(D+1)*(D+1)-1])
+                              * (-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1])
+                        )
+    #space like faces, w/o x jump
     if(applyrhs == False):
-        a = BilinearForm(fes)
-        if(fullsys==True):
-            HV = V.Operator("hesse")
-            # a += SymbolicBFI(  -v*(-HV[0]+pow(c,-2)*HV[3]) ) #- sig*(-HV[1]+HV[2])  )
-            a += SymbolicBFI(  -v*(-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
-        #space like faces, w/o x jump
         a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ), VOL, skeleton=True )
-        # a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ), VOL, skeleton=True )
-        #time like faces
-        a += SymbolicBFI( timelike 	* ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ), VOL, skeleton=True )
-        #t=T (or *x)
-        a += SymbolicBFI( ( pow(c,-2)*v*w + sig*tau ), BND, definedon=fes.mesh.Boundaries("outflow"), skeleton=True)
-        #dirichlet boundary 'timelike'
-        a += SymbolicBFI( ( sig*n_x*w + alpha*v*w ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
-        #correction term to recover sol of second order system
+    # a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ), VOL, skeleton=True )
+    #time like faces
+    a += SymbolicBFI( timelike * ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ), VOL, skeleton=True )        #t=T (or *x)
+    a += SymbolicBFI( ( pow(c,-2)*v*w + sig*tau ), BND, definedon=fes.mesh.Boundaries("outflow"), skeleton=True)
+    #dirichlet boundary 'timelike'
+    a += SymbolicBFI( ( sig*n_x*w + alpha*v*w ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
+    #impedence boundary
+    a += SymbolicBFI( (1-delta)*theta/c*v*w+(1-delta)*v*(tau*n_x)+delta*(sig*n_x)*w+delta*c/theta*(sig*n_x)*(tau*n_x) , BND, definedon=fes.mesh.Boundaries("robin"), skeleton=True)
+    #correction term to recover sol of second order system
+    if(applyrhs == False):
         a += SymbolicBFI( spacelike * ( gamma * jump_Ut*jump_Vt ), VOL, skeleton=True )
-        # a += SymbolicBFI( spacelike * ( gamma * (n_t*jump_Ut)*IfPos(n_t,V.Other(),V) ), VOL, skeleton=True )
-        # a += SymbolicBFI( spacelike * ( gamma * (-n_t*jump_Ut)*IfPos(n_t,V.Other(),V) ), VOL, skeleton=True )
-        # a += SymbolicBFI( spacelike * ( gamma * (-jump_Ut)*IfPos(n_t,V.Other(),V) ), VOL, skeleton=True )
-        a += SymbolicBFI( ( gamma * U*V ), BND, definedon=fes.mesh.Boundaries("inflow"), skeleton=True )
-        a.Assemble()
+    # a += SymbolicBFI( spacelike * ( gamma * (n_t*jump_Ut)*IfPos(n_t,V.Other(),V) ), VOL, skeleton=True )
+    # a += SymbolicBFI( spacelike * ( gamma * (-n_t*jump_Ut)*IfPos(n_t,V.Other(),V) ), VOL, skeleton=True )
+    # a += SymbolicBFI( spacelike * ( gamma * (-jump_Ut)*IfPos(n_t,V.Other(),V) ), VOL, skeleton=True )
+    a += SymbolicBFI( ( gamma * U*V ), BND, definedon=fes.mesh.Boundaries("inflow"), skeleton=True )
+    a.Assemble()
+
+    if(applyrhs == False):
 
         f = LinearForm(fes)
         f += SymbolicLFI( ( pow(c,-2)*v0*w + sig0*tau ), BND, definedon=fes.mesh.Boundaries("inflow"), skeleton=True) #t=0 (or *(1-x))
         f += SymbolicLFI( ( gD * (alpha*w - tau*n_x) ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True) #dirichlet boundary 'timelike'
         f += SymbolicLFI( gamma * ( (U0)*V ), BND, definedon=fes.mesh.Boundaries("inflow"),  skeleton=True ) #rhs correction term to recover sol of second order system
+        f += SymbolicLFI( ( gR * ((1-delta)*w-delta*c/theta*tau*n_x) ), BND, definedon=fes.mesh.Boundaries("robin"), skeleton=True) #robin boundary 'timelike'
         f.Assemble()
     else:
-        a = BilinearForm(fes)
-        if(fullsys==True):
-            HV = V.Operator("hesse")
-            a += SymbolicBFI(  -v*(-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
-        a += SymbolicBFI( timelike * ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ), VOL, skeleton=True ) #time like faces
-        a += SymbolicBFI( IfPos(n_t,1,0) * spacelike * ( pow(c,-2)*v*w + sig*tau ), element_boundary=True) #t=T (or *x)
-        a += SymbolicBFI( IfPos(n_t,0,1) * spacelike * ( gamma * U*V ), element_boundary=True ) #BND correction term to recover sol of second order system
-        a += SymbolicBFI( ( sig*n_x*w + alpha*v*w ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True) #dirichlet boundary 'timelike'
-        a.Assemble()
+        # f = GridFunction(fes)
+        # rhs = BilinearForm(fes)
+        # rhs += SymbolicBFI( ( pow(c,-2)*vo*w + sigo*tau ), BND, definedon=fes.mesh.Boundaries("inflow"), skeleton=True) #t=0 (or *(1-x))
+        # rhs += SymbolicBFI( ( gD * (alpha*w - tau*n_x) ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True) #dirichlet boundary 'timelike'
+        # rhs += SymbolicBFI( gamma * ( U.Other()*V ), BND, definedon=fes.mesh.Boundaries("inflow"),  skeleton=True ) #rhs correction term to recover sol of second order system
+        # rhs.Apply(U0.vec,f.vec)
+
+        # a = BilinearForm(fes)
+        # if(fullsys==True):
+            # HV = V.Operator("hesse")
+            # a += SymbolicBFI(  -v*(-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
+        # a += SymbolicBFI( timelike * ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ), VOL, skeleton=True ) #time like faces
+        # a += SymbolicBFI( IfPos(n_t,1,0) * spacelike * ( pow(c,-2)*v*w + sig*tau ), element_boundary=True) #t=T (or *x)
+        # a += SymbolicBFI( IfPos(n_t,0,1) * spacelike * ( gamma * U*V ), element_boundary=True ) #BND correction term to recover sol of second order system
+        # a += SymbolicBFI( ( sig*n_x*w + alpha*v*w ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True) #dirichlet boundary 'timelike'
+        # a += SymbolicBFI( (1-delta)*theta/c*v*w+(1-delta)*v*(tau*n_x)+delta*(sig*n_x)*w+delta*c/theta*(sig*n_x)*(tau*n_x) , BND, definedon=fes.mesh.Boundaries("robin"), skeleton=True)
+        # a.Assemble()
         f = GridFunction(fes)
         rhs = BilinearForm(fes)
         rhs += SymbolicBFI( IfPos(n_t,0,1) * spacelike * ( pow(c,-2)*vo*w + sigo*tau ), element_boundary=True ) #space like faces, w/o x jump
         rhs += SymbolicBFI( IfPos(n_t,0,1) * spacelike * ( U.Other()*V ), element_boundary=True )
         rhs += SymbolicBFI( ( gD * (alpha*w - tau*n_x) ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True) #dirichlet boundary 'timelike'
+        rhs += SymbolicBFI( ( gR * ((1-delta)*w-delta*c/theta*tau*n_x) ), BND, definedon=fes.mesh.Boundaries("robin"), skeleton=True) #robin boundary 'timelike'
         rhs.Apply(U0.vec,f.vec)
 
     return [a,f]
+
+
 
 
 def DG1heateqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alpha=0.5,beta=0.5,gamma=1):
@@ -349,6 +375,7 @@ def DGheateqsysnew(fes,fes2,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alph
 
     # alpha = 1/h
     # beta = h
+    gN=0
 
     Hv = v.Operator("hesse")
     a = BilinearForm(trialspace=fes,testspace=fes2)
@@ -365,12 +392,14 @@ def DGheateqsysnew(fes,fes2,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alph
     # a += SymbolicBFI( ( mean_v*jump_gux ) , VOL, skeleton=True )
 
     a += SymbolicBFI( u*v, BND, definedon=fes.mesh.Boundaries("outflow"), skeleton=True)
-    a += SymbolicBFI( ( (u+beta*n_x*gu)*(n_x*gv) ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
+    a += SymbolicBFI( -gu*n_x*v + alpha*u*v , BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
+    a += SymbolicBFI( ( (u+beta*n_x*gu)*(n_x*gv) ), BND, definedon=fes.mesh.Boundaries("neumann"), skeleton=True)
     a.Assemble()
 
     f = LinearForm(fes2)
     f += SymbolicLFI( ( U0*v ), BND, definedon=fes.mesh.Boundaries("inflow"), skeleton=True) #t=0 (or *(1-x))
-    f += SymbolicLFI( ( gD*v+(beta*gD*n_x*gv) ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
+    f += SymbolicLFI( -gD*n_x*gv + alpha*gD*v , BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
+    f += SymbolicLFI( ( gN*v + beta*gN*n_x*gv ), BND, definedon=fes.mesh.Boundaries("neumann"), skeleton=True)
     f.Assemble()
 
     return [a,f]
@@ -389,8 +418,8 @@ def DGsolve(fes,a,f):
     # A = sp.sparse.linalg.LinearOperator( (a.mat.height,a.mat.width), matvec)
     # gfu.vec.FV().NumPy()[:], succ = sp.sparse.linalg.gmres(A, f.vec.FV().NumPy())
 
-    rows,cols,vals = a.mat.COO()
-    A = sp.sparse.csr_matrix((vals,(rows,cols)))
+    # rows,cols,vals = a.mat.COO()
+    # A = sp.sparse.csr_matrix((vals,(rows,cols)))
     # gfu.vec.FV().NumPy()[:] = sp.sparse.linalg.spsolve(A,f.vec.FV())
 
     # A = A.todense()
@@ -472,6 +501,7 @@ def DGnormerror(fes,uh,gradtruesol,c,alpha,beta):
     timelike = n_x*n_x # n_t=0
     spacelike = n_t**2 # n_x=0
 
+    # make use of the fact that on a Cart mesh we have A(w,tau;w,tau)=||(w,tau)||^2_DG
     a = BilinearForm(fes)
     # if(fullsys==True):
         # HV = V.Operator("hesse")
@@ -498,3 +528,57 @@ def DGnormerror(fes,uh,gradtruesol,c,alpha,beta):
     norm += Integrate(alpha * (BoundaryFromVolumeCF(grad(uh)[D]) - gradtruesol[D])**2 , fes.mesh, definedon=fes.mesh.Boundaries("dirichlet"))
 
     return sqrt(norm)
+
+
+
+def DGnormheat(fes,alpha,beta):
+    fes2=fes
+    D = fes.mesh.dim - 1
+    u = fes.TrialFunction()
+    v = fes2.TestFunction()
+    gradu = grad(u)
+    gradv = grad(v)
+
+    dtu = gradu[D]
+    dtv = gradv[D]
+    gu = CoefficientFunction(tuple([gradu[i] for i in  range(D)]))
+    gv = CoefficientFunction(tuple([gradv[i] for i in  range(D)]))
+
+    uo = u.Other()
+    vo = v.Other()
+    guo = CoefficientFunction(tuple([gradu.Other()[i] for i in  range(D)]))
+    gvo = CoefficientFunction(tuple([gradv.Other()[i] for i in  range(D)]))
+
+    h = specialcf.mesh_size
+    n = specialcf.normal(D+1)
+    n_t = n[D]/Norm(n)
+    n_x = CoefficientFunction( tuple([n[i]/Norm(n) for i in  range(D)]) )
+
+    mean_u = 0.5*(u+uo)
+    mean_v = 0.5*(v+vo)
+    mean_gu = 0.5*(gu+guo)
+    mean_gv = 0.5*(gv+gvo)
+
+    jump_ux = ( u - uo ) * n_x
+    jump_vx = ( v - vo ) * n_x
+    jump_gux = ( gu - guo ) * n_x
+    jump_gvx = ( gv - gvo ) * n_x
+
+    jump_ut = ( u - uo ) * n_t
+    jump_vt = ( v - vo ) * n_t
+
+    timelike = n_x*n_x # n_t=0
+    spacelike = n_t**2 # n_x=0
+
+    # make use of the fact that on a Cart mesh we have A(w,tau;w,tau)=||(w,tau)||^2_DG
+    a = BilinearForm(fes)
+    a += SymbolicBFI( spacelike * 0.5 * jump_ut*jump_vt , VOL, skeleton=True)
+    a += SymbolicBFI( timelike * pow(alpha,0.5) * jump_ux*jump_vx , VOL, skeleton=True )
+    a += SymbolicBFI( timelike * pow(beta,0.5) * jump_gux*jump_gvx , VOL, skeleton=True )
+    a += SymbolicBFI( 0.5 * u*v, BND, definedon=fes.mesh.Boundaries("outflow|inflow"), skeleton=True)
+    a += SymbolicBFI( pow(alpha,0.5) * u*v, BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
+    a.Assemble()
+
+    # normvec = np.array([sqrt(a.mat[i,i]) for i in range(fes.ndof)])
+
+    return a
