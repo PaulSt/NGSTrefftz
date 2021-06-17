@@ -39,7 +39,7 @@ namespace ngcomp
     TentPitchedSlab<D> tps
         = TentPitchedSlab<D> (ma); // collection of tents in timeslab
     tps.PitchTents (
-        dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction> (1),
+        dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction> (5),
         lh); // adt = time slab height, wavespeed
 
     cout << "solving " << tps.tents.Size () << " tents ";
@@ -170,9 +170,9 @@ namespace ngcomp
                                  SliceMatrix<> elmat, SliceVector<> elvec,
                                  SliceMatrix<SIMD<double>> simddshapes)
   {
-    static Timer tint1 ("tent int calcshape", 2);
-    static Timer tint2 ("tent int mat&vec", 2);
-    static Timer tint3 ("tent mat*vec", 2);
+    static Timer tint1 ("tent top calcshape", 2);
+    static Timer tint2 ("tent top AAt", 2);
+    static Timer tint3 ("tent top bilinearform", 2);
 
     HeapReset hr (slh);
     const ELEMENT_TYPE eltyp
@@ -896,7 +896,7 @@ namespace ngcomp
     TentPitchedSlab<D> tps = TentPitchedSlab<D> (ma);
     LocalHeap lh (1000 * 1000 * 1000);
     tps.PitchTents (
-        dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction> (1),
+        dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction> (5),
         lh);
     RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
       Tent *tent = tps.tents[tentnr];
@@ -940,7 +940,7 @@ namespace ngcomp
     TentPitchedSlab<D> tps
         = TentPitchedSlab<D> (this->ma); // collection of tents in timeslab
     tps.PitchTents (
-        dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction> (1),
+        dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction> (5),
         lh);
 
     cout << "solving qt " << tps.tents.Size () << " tents " << endl;
