@@ -33,7 +33,8 @@ namespace ngcomp
             shared_ptr<CoefficientFunction> bddatum;
             double timeshift = 0;
 
-            void CalcTentEl(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel,
+            template<typename TFUNC>
+            void CalcTentEl(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel, TFUNC LocalWavespeed,
                     SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
 
             void CalcTentBndEl(int surfel, Tent* tent, ScalarMappedElement<D+1> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
@@ -210,9 +211,6 @@ namespace ngcomp
 
 
             void EvolveTents(double dt);
-
-            void CalcTentEl(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel,
-                    SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
 
     };
 
