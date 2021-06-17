@@ -34,7 +34,7 @@ namespace ngcomp
         for(double c : wavespeed) max_wavespeed = max(c,max_wavespeed);
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
-        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(1), lh); // adt = time slab height, wavespeed
+        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(5), lh); // adt = time slab height, wavespeed
 
         cout << "solving " << tps.tents.Size() << " tents ";
         static Timer ttent("tent",2);
@@ -140,9 +140,9 @@ namespace ngcomp
     void WaveTents<D> :: CalcTentEl(int elnr, Tent* tent, ScalarMappedElement<D+1> &tel,
                                     SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes)
     {
-        static Timer tint1("tent int calcshape",2);
-        static Timer tint2("tent int mat&vec",2);
-        static Timer tint3("tent mat*vec",2);
+        static Timer tint1("tent top calcshape",2);
+        static Timer tint2("tent top AAt",2);
+        static Timer tint3("tent top bilinearform",2);
 
         HeapReset hr(slh);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
@@ -745,7 +745,7 @@ namespace ngcomp
         double h = 0.0;
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);
         LocalHeap lh(1000 * 1000 * 1000);
-        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(1), lh);
+        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(5), lh);
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             Tent* tent = tps.tents[tentnr];
             h = max(h,TentAdiam(tent));
@@ -787,7 +787,7 @@ namespace ngcomp
         const int snip = sir.Size()*nsimd;
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(this->ma);      // collection of tents in timeslab
-        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(1), lh);
+        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(5), lh);
 
         cout << "solving qt " << tps.tents.Size() << " tents " << endl;
 
