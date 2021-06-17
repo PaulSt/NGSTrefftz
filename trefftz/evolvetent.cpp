@@ -17,6 +17,26 @@ namespace ngcomp
         if(success!=0) cout << "Lapack error: " << success << endl;
     }
 
+    template<int D>
+    inline void  WaveTents<D> :: AAt(double* a, double* b, int* m, int* k)
+    {
+        //Matrix<> at(a.Width(),a.Height());
+        //for(int i=0;i<a.Height();i++) at.Col(i) = a.Row(i);
+        //b=a*at;
+        char uplo = 'L';
+        char nottrans = 'N';
+        char trans = 'T';
+        //integer m = a.Height();
+        //integer n = m;
+        //integer k = a.Width();
+        double alpha = 1.0;
+        double beta = 0.0;
+        //integer lda = a.Dist();
+        //integer ldb = b.Dist();
+
+        ////dgemm_(&trans, &nottrans, &m, &n, &k, &alpha , &a(0,0), &k, &a(0,0), &k, &beta, &b(0,0), &m);
+        dsyrk_(&uplo, &trans, m, k, &alpha , a, k, &beta, b, m);
+    }
 
     template<int D>
     void WaveTents<D> :: EvolveTents(double dt)
@@ -176,8 +196,8 @@ namespace ngcomp
 
         TentDmat(Dmat, vert, -1, wavespeed);
 
-        Vec<D+1> nnn = TentFaceNormal(vert,1);
 
+        Vec<D+1> nnn = TentFaceNormal(vert,1);
         static bool displaytenterror = true; if(L2Norm(nnn.Range(0,D))*(wavespeed)>nnn[D] && displaytenterror){
             cout << endl << "some tents pitched too high" << endl;displaytenterror=false;
         }
@@ -216,19 +236,116 @@ namespace ngcomp
         tel.CalcDShape(smir,simddshapes);
         tint1.Stop();
 
-        TentDmat(Dmat, vert, 1, wavespeed);
-        FlatMatrix<> bdbmat((D+1)*snip,nbasis,slh);
-        bdbmat = 0;
+        //for(int imip=0;imip<sir.Size();imip++)
+            //simddshapes.Col(imip) *= sqrt(TentFaceArea(vert)*sir[imip].Weight());
+
+        //tint2.Start();
+        //FlatMatrix<> bdbmat((D+1)*nbasis,(D+1)*nbasis,slh);
+        //bdbmat = 0;
+        //AddABt(simddshapes,simddshapes,bdbmat);
+        //FlatMatrix<> dshapes((D+1)*nbasis,snip,&simddshapes(0,0)[0]);
+        //int m = (D+1)*nbasis;
+        //AAt(&simddshapes(0,0)[0],&bdbmat(0,0), &m, &snip);
+        //Matrix<> at(snip,(D+1)*nbasis);
+        //for(int i=0;i<(D+1)*nbasis;i++) at.Col(i) = dshapes.Row(i);
+        //bdbmat=dshapes*at;
+        //simddshapes.Reshape(nbasis,snip*(D+1));
+        //FlatMatrix<SIMD<double>> simddshapes2(nbasis,(D+1)*snip,&simddshapes(0,0));
+        //AddABt(simddshapes2,simddshapes2,elmat);
+        //tint2.Stop();
+
+        //tint3.Start();
+        //Vec<D+1> n = TentFaceNormal(vert,1);
+
+        ////for(int i=0;i<nbasis;i++)
+            ////for(int j=0;j<=i;j++)
+            ////{
+                ////auto sm = bdbmat.Rows(i*(D+1),(i+1)*(D+1)).Cols(j*(D+1),(j+1)*(D+1));
+                ////elmat(i,j) += sm(D,D)*n(D)*pow(wavespeed,-2.0);
+                ////for(int d=0;d<D;d++) elmat(i,j) += sm(d,d)*n(D) - 2*sm(D,d)*n(d);
+                ////if(i!=j){
+                    ////elmat(j,i) += sm(D,D)*n(D)*pow(wavespeed,-2.0);
+                    ////for(int d=0;d<D;d++) elmat(j,i) += sm(d,d)*n(D) - 2*sm(D,d)*n(d);
+                ////}
+            ////}
+
+        //for(int imip=0;imip<sir.Size();imip++)
+            //simddshapes.Col(imip) *= sqrt(TentFaceArea(vert)*sir[imip].Weight());
+        //FlatMatrix<> dshapes((D+1)*nbasis,snip,&simddshapes(0,0)[0]);
+        //FlatMatrix<> bdbmat((D+1)*nbasis,(D+1)*nbasis,slh);
+        //for(int i=0;i<nbasis*(D+1);i++)
+            //for(int j=0;j<nbasis*(D+1);j++)
+            //{
+                //bdbmat(i,j)=0;
+                //for(int k=0;k<snip;k++) bdbmat(i,j)=dshapes(i,k)*dshapes(j,k);
+            //}
+
+        //for(int i=0;i<nbasis;i++)
+            //for(int j=0;j<nbasis;j++)
+            //{
+                //auto sm = bdbmat.Cols(i*(D+1),(i+1)*(D+1)).Rows(j*(D+1),(j+1)*(D+1));
+                ////Matrix<> sm(D+1,D+1);
+                ////for(int d1=0;d1<D+1;d1++)
+                ////for(int d2=0;d2<D+1;d2++)
+                ////{
+                    ////sm(d1,d2) = InnerProduct(dshapes.Row(i*(D+1)+d1),dshapes.Row(j*(D+1)+d2));
+                ////}
+                ////cout << sm << endl << endl;
+                //elmat(j,i) += sm(D,D)*n(D)*pow(wavespeed,-2.0);
+                //for(int d=0;d<D;d++) elmat(j,i) += sm(d,d)*n(D) - sm(D,d)*n(d) - sm(d,D)*n(d);
+            //}
+        //tint3.Stop();
+
+        //tel.CalcDShape(smir,simddshapes);
+
         tint2.Start();
-        for(int imip=0;imip<sir.Size();imip++)
-            for(int si=0;si<nsimd;si++)
-                for(int r=0;r<(D+1);r++)
-                    for(int d=0;d<D+1;d++)
-                        bdbmat.Row(r*snip+imip*nsimd+si) += Dmat(r,d) * sir[imip].Weight()[si] * bbmat.Col(d*snip+imip*nsimd+si);
+        Vec<D+1> n = TentFaceNormal(vert,1);
+        FlatMatrix<double> bdbmat((D+1)*snip,nbasis,slh);
+        bdbmat = 0;
+        for(int imip=0;imip<snip;imip++)
+            //for(int si=0;si<nsimd;si++)
+            {
+                double weight = sir[imip/nsimd].Weight()[imip%nsimd] * TentFaceArea(vert);
+                bdbmat.Row(D*snip+imip) += n(D) * pow(wavespeed,-2) * weight * bbmat.Col(D*snip+imip);
+                for(int d=0;d<D;d++)
+                {
+                    //for(int d=0;d<D+1;d++)
+                        //bdbmat.Row(r*snip+imip*nsimd+si) += Dmat(r,d) * sir[imip].Weight()[si] * bbmat.Col(d*snip+imip*nsimd+si);
+                        bdbmat.Row(d*snip+imip) += n(D) * weight * bbmat.Col(d*snip+imip);
+                        bdbmat.Row(d*snip+imip) -= n(d) * weight * bbmat.Col(D*snip+imip);
+                        bdbmat.Row(D*snip+imip) -= n(d) * weight * bbmat.Col(d*snip+imip);
+                }
+            }
         tint2.Stop();
         tint3.Start();
         elmat += bbmat * bdbmat;
         tint3.Stop();
+
+
+        //tint2.Start();
+        //Vec<D+1> n = TentFaceNormal(vert,1);
+        //FlatMatrix<SIMD<double>> sdshapes(nbasis,(D+1)*sir.Size(),&simddshapes(0,0));
+        //FlatMatrix<SIMD<double>> bdbmat(nbasis,(D+1)*sir.Size(),slh);
+        //bdbmat = 0;
+        //for(int imip=0;imip<sir.Size();imip++)
+            ////for(int si=0;si<nsimd;si++)
+            //{
+                //SIMD<double> weight = sir[imip].Weight() * TentFaceArea(vert);
+                //bdbmat.Col(D*sir.Size()+imip) += n(D) * pow(wavespeed,-2) * weight * sdshapes.Col(D*sir.Size()+imip);
+                //for(int d=0;d<D;d++)
+                //{
+                    ////for(int d=0;d<D+1;d++)
+                        ////bdbmat.Row(r*sir.Size()+imip*nsimd+si) += Dmat(r,d) * sir[imip].Weight()[si] * sdshapes.Col(d*sir.Size()+imip*nsimd+si);
+                        //bdbmat.Col(d*sir.Size()+imip) += n(D) * weight * sdshapes.Col(d*sir.Size()+imip);
+                        //bdbmat.Col(d*sir.Size()+imip) -= n(d) * weight * sdshapes.Col(D*sir.Size()+imip);
+                        //bdbmat.Col(D*sir.Size()+imip) -= n(d) * weight * sdshapes.Col(d*sir.Size()+imip);
+                //}
+            //}
+        //tint2.Stop();
+        //tint3.Start();
+        //AddABt(sdshapes,bdbmat,elmat);
+        //tint3.Stop();
+
         tint3.AddFlops(bbmat.Height()*bbmat.Width() *  bdbmat.Width());
         //cout << "height " << bbmat.Height() << " width " << bbmat.Width()  << endl;
     }
@@ -853,7 +970,7 @@ namespace ngcomp
                     shift[D] = (tent->ttop-tent->tbot)/2+tent->tbot;
                     //shift[D] = tent->nbtime[elnr];
                     //shift[D] = part==1 ? tent->nbtime[elnr] : tent->tbot;
-                    Mat<D+1,D+1> map = this->TentFaceVerts(tent, tent->els[elnr], part);
+                    Mat<D+1> map = this->TentFaceVerts(tent, tent->els[elnr], part);
 
                     for(int i=0;i<D+1;i++)
                         map.Col(i) -= shift;
