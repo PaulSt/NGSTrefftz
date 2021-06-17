@@ -10,6 +10,9 @@
 
 namespace ngcomp
 {
+
+  static int addtentslope = 3;
+
   class TrefftzTents
   {
   private:
@@ -131,7 +134,9 @@ namespace ngcomp
       LocalHeap lh (1000 * 1000 * 1000);
       TentPitchedSlab<D> tps = TentPitchedSlab<D> (ma);
       tps.PitchTents (
-          dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction> (1),
+          dt,
+          this->wavespeedcf
+              + make_shared<ConstantCoefficientFunction> (addtentslope),
           lh);
       return tps.tents.Size ();
     }
