@@ -106,7 +106,8 @@ namespace ngcomp
             double MaxAdiam(double dt);
 
             int LocalDofs(){
-                TrefftzWaveFE<D> tel(order,wavespeed[0]);
+                TrefftzWaveBasis<D>::getInstance().CreateTB(order);
+                TrefftzWaveFE<D> tel(order,1);
                 return tel.GetNDof();
             }
 
