@@ -69,6 +69,9 @@ namespace ngcomp
     inline int MakeMacroEl (const Array<int> &tentel,
                             std::unordered_map<int, int> &macroel);
 
+    void GetFacetSurfaceElement (shared_ptr<MeshAccess> ma, int fnr,
+                                 Array<int> &selnums);
+
   public:
     WaveTents () { ; }
 
