@@ -54,7 +54,7 @@ namespace ngcomp
         for(double c : wavespeed) max_wavespeed = max(c,max_wavespeed);
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);      // collection of tents in timeslab
-        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(5), lh); // adt = time slab height, wavespeed
+        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(3), lh); // adt = time slab height, wavespeed
 
         cout << "solving " << tps.tents.Size() << " tents ";
         static Timer ttent("tent",2);
@@ -776,7 +776,7 @@ namespace ngcomp
         double h = 0.0;
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(ma);
         LocalHeap lh(1000 * 1000 * 1000);
-        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(5), lh);
+        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(3), lh);
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             Tent* tent = tps.tents[tentnr];
             h = max(h,TentAdiam(tent));
@@ -818,7 +818,7 @@ namespace ngcomp
         const int snip = sir.Size()*nsimd;
 
         TentPitchedSlab<D> tps = TentPitchedSlab<D>(this->ma);      // collection of tents in timeslab
-        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(5), lh);
+        tps.PitchTents(dt, this->wavespeedcf + make_shared<ConstantCoefficientFunction>(3), lh);
 
         cout << "solving qt " << tps.tents.Size() << " tents " << endl;
 

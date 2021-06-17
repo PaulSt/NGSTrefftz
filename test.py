@@ -5,6 +5,7 @@ from ngsolve.TensorProductTools import *
 from ngsolve import *
 import time
 
+# USE tenthight = wavespeed + 3
 
 def SolveWaveTents(initmesh, order, c, t_step):
     """
@@ -22,14 +23,14 @@ def SolveWaveTents(initmesh, order, c, t_step):
     ...            initmesh.Refine()
     ...        elif initmesh.dim==1:
     ...            initmesh=Mesh(SegMesh(initmesh.ne*2,0,1))
-    0.134...
+    0.164...
     ...e-05
     ...e-06
-    0.009...
+    0.008...
     0.001...
-    0.000...
-    0.146...
-    0.045...
+    ...e-05
+    0.160...
+    0.066...
     0.003...
 
     if i ever feel like checking the times, here is example full output, 2 cores on my laptop:
@@ -105,8 +106,8 @@ def TestAiry(order, initmesh, t_step):
     >>> for h in range(4):
     ...        TestAiry(order,initmesh,t_step) # doctest:+ELLIPSIS
     ...        initmesh.Refine()
-    0.005...
-    0.0007...
+    0.004...
+    0.0005...
     ...e-05
     ...e-06
 
@@ -228,12 +229,12 @@ if __name__ == "__main__":
     for t in Timers():
         if 'tent' in t['name']:
             print(t)
-    # Error 0.0030876606167208904
-    # PYTIME: 63.37328362464905
-    # {'name': 'pitch tents', 'time': 0.015147216699715693, 'counts': 1, 'flops': 0.0, 'Gflop/s': 0.0}
-    # {'name': 'tent top bilinearform', 'time': 14.174640027526006, 'counts': 70529, 'flops': 109235315200.0, 'Gflop/s': 7.706390778733982}
-    # {'name': 'tent top AAt', 'time': 7.5389894919685965, 'counts': 70529, 'flops': 0.0, 'Gflop/s': 0.0}
-    # {'name': 'tent top calcshape', 'time': 7.314603101161189, 'counts': 70529, 'flops': 0.0, 'Gflop/s': 0.0}
+    # Error 0.0029433017038692647
+    # PYTIME: 42.57842946052551
+    # {'name': 'pitch tents', 'time': 0.011452735514933324, 'counts': 1, 'flops': 0.0, 'Gflop/s': 0.0}
+    # {'name': 'tent top bilinearform', 'time': 9.498263475069015, 'counts': 47284, 'flops': 73233459200.0, 'Gflop/s': 7.7101945415836015}
+    # {'name': 'tent top AAt', 'time': 4.70538792283988, 'counts': 47284, 'flops': 0.0, 'Gflop/s': 0.0}
+    # {'name': 'tent top calcshape', 'time': 5.122740580736957, 'counts': 47284, 'flops': 0.0, 'Gflop/s': 0.0}
     input()
 
     import doctest
