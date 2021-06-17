@@ -33,10 +33,11 @@ namespace ngcomp
     shared_ptr<CoefficientFunction> bddatum;
     double timeshift = 0;
 
-    void
-    CalcTentEl (int elnr, Tent *tent, ScalarMappedElement<D + 1> &tel,
-                SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat,
-                SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
+    template <typename TFUNC>
+    void CalcTentEl (int elnr, Tent *tent, ScalarMappedElement<D + 1> &tel,
+                     TFUNC LocalWavespeed, SIMD_IntegrationRule &sir,
+                     LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec,
+                     SliceMatrix<SIMD<double>> simddshapes);
 
     void
     CalcTentBndEl (int surfel, Tent *tent, ScalarMappedElement<D + 1> &tel,
@@ -70,6 +71,9 @@ namespace ngcomp
 
     inline int MakeMacroEl (const Array<int> &tentel,
                             std::unordered_map<int, int> &macroel);
+
+    void GetFacetSurfaceElement (shared_ptr<MeshAccess> ma, int fnr,
+                                 Array<int> &selnums);
 
   public:
     WaveTents () { ; }
@@ -125,7 +129,8 @@ namespace ngcomp
 
     int LocalDofs ()
     {
-      TrefftzWaveFE<D> tel (order, wavespeed[0]);
+      TrefftzWaveBasis<D>::getInstance ().CreateTB (order);
+      TrefftzWaveFE<D> tel (order, 1);
       return tel.GetNDof ();
     }
 
@@ -253,11 +258,6 @@ namespace ngcomp
     }
 
     void EvolveTents (double dt);
-
-    void
-    CalcTentEl (int elnr, Tent *tent, ScalarMappedElement<D + 1> &tel,
-                SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat,
-                SliceVector<> elvec, SliceMatrix<SIMD<double>> simddshapes);
   };
 
 }

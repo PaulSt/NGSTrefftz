@@ -5,6 +5,7 @@ from ngsolve.TensorProductTools import *
 from ngsolve import *
 import time
 
+# USE tenthight = wavespeed + 3
 
 def SolveWaveTents(initmesh, order, c, t_step):
     """
@@ -22,26 +23,26 @@ def SolveWaveTents(initmesh, order, c, t_step):
     ...            initmesh.Refine()
     ...        elif initmesh.dim==1:
     ...            initmesh=Mesh(SegMesh(initmesh.ne*2,0,1))
-    0.134...
+    0.164...
     ...e-05
     ...e-06
-    0.009...
+    0.008...
     0.001...
-    0.000...
-    0.146...
-    0.045...
+    ...e-05
+    0.160...
+    0.066...
     0.003...
 
     if i ever feel like checking the times, here is example full output, 2 cores on my laptop:
-    [0.20661893329359113, 0.0006449222564697266, 1.5707963267948966]
-    [5.466177093375104e-05, 0.0021283626556396484, 0.25]
-    [3.5582731954669597e-06, 0.007055044174194336, 0.125]
-    [0.014848896883671806, 0.021959304809570312, 1.0302183658236426]
-    [0.0017425232736635377, 0.1491250991821289, 0.6291240085324618]
-    [0.00014440246076325523, 1.1876091957092285, 0.38677266732559074]
-    [0.15532255816903992, 0.2532687187194824, 1.8027756377319946]
-    [0.06472569782925318, 3.0337188243865967, 1.469563021303764]
-    [0.0037084177550868944, 47.547746419906616, 0.7499999999996284]
+    [0.13468248473089325, 0.00842595100402832, 1.5707963267948966]
+    [5.967771752748235e-05, 0.002645730972290039, 0.25]
+    [3.5210050809416555e-06, 0.008824586868286133, 0.125]
+    [0.009571898393551857, 0.02259087562561035, 0.8110007526621459]
+    [0.0014215954445181047, 0.14298486709594727, 0.5910562128741351]
+    [0.00011649404601618525, 1.060309886932373, 0.3456664208663123]
+    [0.14634671899774718, 0.16475534439086914, 1.8027756377319946]
+    [0.04598743712339493, 1.8881068229675293, 1.4695630212305046]
+    [0.003463790079473155, 21.49881935119629, 0.7465621651659116]
     """
 
     D = initmesh.dim
@@ -105,8 +106,8 @@ def TestAiry(order, initmesh, t_step):
     >>> for h in range(4):
     ...        TestAiry(order,initmesh,t_step) # doctest:+ELLIPSIS
     ...        initmesh.Refine()
-    0.005...
-    0.0007...
+    0.004...
+    0.0005...
     ...e-05
     ...e-06
 
@@ -217,5 +218,24 @@ def Cartsolve2D(fes,c,fullsys=False,inputsol=None):
 
 
 if __name__ == "__main__":
+    order = 4
+    SetNumThreads(1)
+    c = 1
+    t_step = 2/sqrt(3)
+    initmesh=Mesh(unit_cube.GenerateMesh(maxh = 0.25))
+    start = time.time()
+    print("Error",SolveWaveTents(initmesh, order, c, t_step)) # doctest:+ELLIPSIS
+    print("PYTIME:", time.time()-start)
+    for t in Timers():
+        if 'tent' in t['name']:
+            print(t)
+    # Error 0.0029433017038692647
+    # PYTIME: 42.57842946052551
+    # {'name': 'pitch tents', 'time': 0.011452735514933324, 'counts': 1, 'flops': 0.0, 'Gflop/s': 0.0}
+    # {'name': 'tent top bilinearform', 'time': 9.498263475069015, 'counts': 47284, 'flops': 73233459200.0, 'Gflop/s': 7.7101945415836015}
+    # {'name': 'tent top AAt', 'time': 4.70538792283988, 'counts': 47284, 'flops': 0.0, 'Gflop/s': 0.0}
+    # {'name': 'tent top calcshape', 'time': 5.122740580736957, 'counts': 47284, 'flops': 0.0, 'Gflop/s': 0.0}
+    input()
+
     import doctest
     doctest.testmod()

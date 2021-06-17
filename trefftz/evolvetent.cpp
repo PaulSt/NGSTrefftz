@@ -85,8 +85,10 @@ namespace ngcomp
           SliceMatrix<> subm = elmat.Cols (eli * nbasis, (eli + 1) * nbasis)
                                    .Rows (eli * nbasis, (eli + 1) * nbasis);
           SliceVector<> subv = elvec.Range (eli * nbasis, (eli + 1) * nbasis);
-          CalcTentEl (tent->els[elnr], tent, tel, sir, slh, subm, subv,
-                      topdshapes[elnr]);
+          double bla = wavespeed[tent->els[elnr]];
+          CalcTentEl (
+              tent->els[elnr], tent, tel, [&] (int imip) { return bla; }, sir,
+              slh, subm, subv, topdshapes[elnr]);
         }
 
       for (auto fnr : tent->edges)
@@ -96,31 +98,7 @@ namespace ngcomp
           Array<int> selnums;
           // ma->GetFacetSurfaceElements (fnr, selnums);
           if (elnums.Size () == 1)
-            switch (D)
-              {
-              case 1:
-                selnums = ma->GetVertexSurfaceElements (fnr);
-                break;
-              case 2:
-                ma->GetEdgeSurfaceElements (fnr, selnums);
-                break;
-              case 3:
-                {
-                  for (int i : Range (ma->GetNSE ()))
-                    {
-                      auto sel = ElementId (
-                          BND, i); //<-- ist das Oberflächenelement
-                      auto fnums = ma->GetElFacets (sel);
-                      if (fnr == fnums[0]) //<-- das ist dann die Facet-Nr.,
-                                           //also unter allen Facets im Mesh,
-                                           //kannst du dir wo speichern
-                        {
-                          selnums.Append (i);
-                          break;
-                        }
-                    }
-                }
-              }
+            GetFacetSurfaceElement (ma, fnr, selnums);
 
           // Integrate boundary tent
           if (elnums.Size () == 1 && selnums.Size () == 1)
@@ -166,20 +144,22 @@ namespace ngcomp
   }
 
   template <int D>
+  template <typename TFUNC>
   void WaveTents<D>::CalcTentEl (int elnr, Tent *tent,
                                  ScalarMappedElement<D + 1> &tel,
+                                 TFUNC LocalWavespeed,
                                  SIMD_IntegrationRule &sir, LocalHeap &slh,
                                  SliceMatrix<> elmat, SliceVector<> elvec,
                                  SliceMatrix<SIMD<double>> simddshapes)
   {
-    static Timer tint1 ("tent int calcshape", 2);
-    static Timer tint2 ("tent int mat&vec", 2);
-    static Timer tint3 ("tent mat*vec", 2);
+    static Timer tint1 ("tent top calcshape", 2);
+    static Timer tint2 ("tent top AAt", 2);
+    static Timer tint3 ("tent top bilinearform", 2);
 
     HeapReset hr (slh);
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
-    double wavespeed = tel.GetWavespeed ();
+    // double wavespeed = tel.GetWavespeed();
     int nbasis = tel.GetNDof ();
     int nsimd = SIMD<double>::Size ();
     int snip = sir.Size () * nsimd;
@@ -194,7 +174,6 @@ namespace ngcomp
 
     Mat<D + 1> vert;     // vertices of tent face
     Vec<D + 1> linbasis; // coeffs for linear face fct
-    Mat<D + 1> Dmat;
     FlatVector<SIMD<double>> mirtimes (sir.Size (), slh);
 
     /// Integration over bot of tent
@@ -204,48 +183,38 @@ namespace ngcomp
     for (int imip = 0; imip < sir.Size (); imip++)
       smir[imip].Point () (D) = mirtimes[imip];
 
-    FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
-    tel.CalcShape (smir, simdshapes);
-    tel.CalcDShape (smir, simddshapes);
-    FlatMatrix<> bbmat (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
-
-    TentDmat (Dmat, vert, -1, wavespeed);
-
-    Vec<D + 1> nnn = TentFaceNormal (vert, 1);
-
-    static bool displaytenterror = true;
-    if (L2Norm (nnn.Range (0, D)) * (wavespeed) > nnn[D] && displaytenterror)
-      {
-        cout << endl << "some tents pitched too high" << endl;
-        displaytenterror = false;
-      }
-    // if(TentFaceArea<D>(vert)<smir_fix[0].GetMeasure()[0]&&
-    // tent->nbtime[0]==0)
-    //{
-    // cout << "tent area problem "<<endl<< TentFaceArea<D>(vert)<< " smaller
-    // thamn " <<smir_fix[0].GetMeasure()[0]<< " ratio " <<
-    // smir_fix[0].GetJacobiDet()[0]/TentFaceArea<D>(vert) << " vert " << endl;
-    // for(int iii=0;iii<D+1;iii++) cout<<vert.Row(iii)<<endl;
-    // }
-
+    double area = TentFaceArea (vert);
+    Vec<D + 1> n = TentFaceNormal (vert, -1);
     FlatVector<> bdbvec ((D + 1) * snip, slh);
     bdbvec = 0;
     for (int imip = 0; imip < snip; imip++)
-      for (int r = 0; r < (D + 1); r++)
-        for (int d = 0; d < D + 1; d++)
-          bdbvec (r * snip + imip)
-              += Dmat (r, d) * sir[imip / nsimd].Weight ()[imip % nsimd]
-                 * wavefront (elnr, snip + d * snip + imip);
+      {
+        double weight = sir[imip / nsimd].Weight ()[imip % nsimd] * area;
+        bdbvec (D * snip + imip) += n (D) * pow (LocalWavespeed (imip), -2)
+                                    * weight
+                                    * wavefront (elnr, snip + D * snip + imip);
+        for (int d = 0; d < D; d++)
+          {
+            bdbvec (d * snip + imip)
+                += n (D) * weight * wavefront (elnr, snip + d * snip + imip);
+            bdbvec (d * snip + imip)
+                -= n (d) * weight * wavefront (elnr, snip + D * snip + imip);
+            bdbvec (D * snip + imip)
+                -= n (d) * weight * wavefront (elnr, snip + d * snip + imip);
+          }
+      }
+    tel.CalcDShape (smir, simddshapes);
+    FlatMatrix<> bbmat (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
     elvec -= bbmat * bdbvec;
 
     // stabilization to recover second order solution
+    FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
+    tel.CalcShape (smir, simdshapes);
     for (int imip = 0; imip < sir.Size (); imip++)
-      simdshapes.Col (imip)
-          *= sqrt (TentFaceArea (vert) * sir[imip].Weight ());
+      simdshapes.Col (imip) *= sqrt (area * sir[imip].Weight ());
     AddABt (simdshapes, simdshapes, elmat);
     for (int imip = 0; imip < sir.Size (); imip++)
-      simdshapes.Col (imip)
-          *= sqrt (TentFaceArea (vert) * sir[imip].Weight ());
+      simdshapes.Col (imip) *= sqrt (area * sir[imip].Weight ());
     FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
     elvec += shapes * wavefront.Row (elnr).Range (0, snip);
 
@@ -256,29 +225,53 @@ namespace ngcomp
     for (int imip = 0; imip < sir.Size (); imip++)
       smir[imip].Point () (D) = mirtimes[imip];
 
-    // FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
     tint1.Start ();
     tel.CalcDShape (smir, simddshapes);
     tint1.Stop ();
 
-    TentDmat (Dmat, vert, 1, wavespeed);
-    FlatMatrix<> bdbmat ((D + 1) * snip, nbasis, slh);
-    bdbmat = 0;
     tint2.Start ();
-    for (int imip = 0; imip < sir.Size (); imip++)
-      for (int si = 0; si < nsimd; si++)
-        for (int r = 0; r < (D + 1); r++)
-          for (int d = 0; d < D + 1; d++)
-            bdbmat.Row (r * snip + imip * nsimd + si)
-                += Dmat (r, d) * sir[imip].Weight ()[si]
-                   * bbmat.Col (d * snip + imip * nsimd + si);
+    area = TentFaceArea (vert);
+    n = TentFaceNormal (vert, 1);
+    FlatMatrix<double> bdbmat ((D + 1) * snip, nbasis, slh);
+    bdbmat = 0;
+    for (int imip = 0; imip < snip; imip++)
+      {
+        double weight = sir[imip / nsimd].Weight ()[imip % nsimd] * area;
+        bdbmat.Row (D * snip + imip) += n (D) * pow (LocalWavespeed (imip), -2)
+                                        * weight * bbmat.Col (D * snip + imip);
+        for (int d = 0; d < D; d++)
+          {
+            bdbmat.Row (d * snip + imip)
+                += n (D) * weight * bbmat.Col (d * snip + imip);
+            bdbmat.Row (d * snip + imip)
+                -= n (d) * weight * bbmat.Col (D * snip + imip);
+            bdbmat.Row (D * snip + imip)
+                -= n (d) * weight * bbmat.Col (d * snip + imip);
+          }
+      }
     tint2.Stop ();
     tint3.Start ();
     elmat += bbmat * bdbmat;
     tint3.Stop ();
+
     tint3.AddFlops (bbmat.Height () * bbmat.Width () * bdbmat.Width ());
     // cout << "height " << bbmat.Height() << " width " << bbmat.Width()  <<
     // endl;
+
+    // Vec<D+1> nnn = TentFaceNormal(vert,1);
+    // static bool displaytenterror = true;
+    // if(L2Norm(nnn.Range(0,D))*(wavespeed) > nnn[D] && displaytenterror){
+    // cout << endl << "some tents pitched too high" <<
+    // endl;displaytenterror=false;
+    //}
+    // if(TentFaceArea<D>(vert)<smir_fix[0].GetMeasure()[0]&&
+    // tent->nbtime[0]==0)
+    //{
+    // cout << "tent area problem "<<endl<< TentFaceArea<D>(vert)<< " smaller
+    // thamn " <<smir_fix[0].GetMeasure()[0]<< " ratio " <<
+    // smir_fix[0].GetJacobiDet()[0]/TentFaceArea<D>(vert) << " vert " << endl;
+    // for(int iii=0;iii<D+1;iii++) cout<<vert.Row(iii)<<endl;
+    //}
   }
 
   template <int D>
@@ -928,6 +921,36 @@ namespace ngcomp
     return nrmacroel;
   }
 
+  template <int D>
+  void WaveTents<D>::GetFacetSurfaceElement (shared_ptr<MeshAccess> ma,
+                                             int fnr, Array<int> &selnums)
+  {
+    switch (D)
+      {
+      case 1:
+        selnums = ma->GetVertexSurfaceElements (fnr);
+        break;
+      case 2:
+        ma->GetEdgeSurfaceElements (fnr, selnums);
+        break;
+      case 3:
+        {
+          for (int i : Range (ma->GetNSE ()))
+            {
+              auto sel = ElementId (BND, i); //<-- ist das Oberflächenelement
+              auto fnums = ma->GetElFacets (sel);
+              if (fnr == fnums[0]) //<-- das ist dann die Facet-Nr., also unter
+                                   //allen Facets im Mesh, kannst du dir wo
+                                   //speichern
+                {
+                  selnums.Append (i);
+                  break;
+                }
+            }
+        }
+      }
+  }
+
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   template <int D> void QTWaveTents<D>::EvolveTents (double dt)
@@ -976,8 +999,18 @@ namespace ngcomp
       // Integrate top and bottom space-like tent faces
       for (int elnr = 0; elnr < tent->els.Size (); elnr++)
         {
-          CalcTentEl (tent->els[elnr], tent, tel, sir, slh, elmat, elvec,
-                      topdshapes[elnr]);
+          HeapReset hr (slh);
+          SIMD_MappedIntegrationRule<D, D> smir_fix (
+              sir, ma->GetTrafo (tent->els[elnr], slh), slh);
+          FlatMatrix<SIMD<double>> lwavespeed (1, sir.Size (), slh);
+          (this->wavespeedcf)->Evaluate (smir_fix, lwavespeed);
+
+          this->CalcTentEl (
+              tent->els[elnr], tent, tel,
+              [lwavespeed, nsimd] (int imip) {
+                return lwavespeed (0, imip / nsimd)[imip % nsimd];
+              },
+              sir, slh, elmat, elvec, topdshapes[elnr]);
         }
 
       for (auto fnr : tent->edges)
@@ -987,18 +1020,7 @@ namespace ngcomp
           Array<int> selnums;
           // ma->GetFacetSurfaceElements (fnr, selnums);
           if (elnums.Size () == 1)
-            switch (D)
-              {
-              case 1:
-                selnums = ma->GetVertexSurfaceElements (fnr);
-                break;
-              case 2:
-                ma->GetEdgeSurfaceElements (fnr, selnums);
-                break;
-              case 3:
-                cout << "not impl" << endl;
-                break;
-              }
+            this->GetFacetSurfaceElement (ma, fnr, selnums);
 
           // Integrate boundary tent
           if (elnums.Size () == 1 && selnums.Size () == 1)
@@ -1024,7 +1046,7 @@ namespace ngcomp
               shift[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
               // shift[D] = tent->nbtime[elnr];
               // shift[D] = part==1 ? tent->nbtime[elnr] : tent->tbot;
-              Mat<D + 1, D + 1> map
+              Mat<D + 1> map
                   = this->TentFaceVerts (tent, tent->els[elnr], part);
 
               for (int i = 0; i < D + 1; i++)
@@ -1098,108 +1120,6 @@ namespace ngcomp
     cout << "solved from " << this->timeshift;
     this->timeshift += dt;
     cout << " to " << this->timeshift << endl;
-  }
-
-  template <int D>
-  void QTWaveTents<D>::CalcTentEl (int elnr, Tent *tent,
-                                   ScalarMappedElement<D + 1> &tel,
-                                   SIMD_IntegrationRule &sir, LocalHeap &slh,
-                                   SliceMatrix<> elmat, SliceVector<> elvec,
-                                   SliceMatrix<SIMD<double>> simddshapes)
-  {
-    HeapReset hr (slh);
-    const ELEMENT_TYPE eltyp
-        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
-    int nbasis = tel.GetNDof ();
-    int nsimd = SIMD<double>::Size ();
-    int snip = sir.Size () * nsimd;
-    ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
-
-    shared_ptr<MeshAccess> ma = this->ma;
-    SIMD_MappedIntegrationRule<D, D + 1> smir (sir, ma->GetTrafo (elnr, slh),
-                                               -1, slh);
-    SIMD_MappedIntegrationRule<D, D> smir_fix (sir, ma->GetTrafo (elnr, slh),
-                                               slh);
-    for (int imip = 0; imip < sir.Size (); imip++)
-      smir[imip].Point ().Range (0, D) = smir_fix[imip].Point ().Range (0, D);
-
-    Mat<D + 1> vert;     // vertices of tent face
-    Vec<D + 1> linbasis; // coeffs for linear face fct
-    Mat<D + 1> Dmat;
-    FlatVector<SIMD<double>> mirtimes (sir.Size (), slh);
-
-    /// Integration over bot of tent
-    vert = this->TentFaceVerts (tent, elnr, -1);
-    linbasis = vert.Row (D);
-    faceint.Evaluate (sir, linbasis, mirtimes);
-    for (int imip = 0; imip < sir.Size (); imip++)
-      smir[imip].Point () (D) = mirtimes[imip];
-
-    FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
-    tel.CalcShape (smir, simdshapes);
-    tel.CalcDShape (smir, simddshapes);
-    FlatMatrix<> bbmat (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
-
-    this->TentDmat (Dmat, vert, -1, 1);
-    double DmatDD = Dmat (D, D);
-
-    FlatMatrix<SIMD<double>> wavespeed (1, sir.Size (), slh);
-    auto localwavespeedcf = make_shared<ConstantCoefficientFunction> (1)
-                            / (this->wavespeedcf * this->wavespeedcf);
-    // auto localwavespeedcf = this->wavespeedcf;
-    localwavespeedcf->Evaluate (smir_fix, wavespeed);
-    // for(int s=0;s<smir.Size();s++)
-    // cout << "point " << smir[s].Point() << " speed " << wavespeed(0,s) <<
-    // endl;
-
-    FlatVector<> bdbvec ((D + 1) * snip, slh);
-    bdbvec = 0;
-    for (int imip = 0; imip < snip; imip++)
-      for (int r = 0; r < (D + 1); r++)
-        for (int d = 0; d < D + 1; d++)
-          {
-            Dmat (D, D) = DmatDD * wavespeed (0, imip / nsimd)[imip % nsimd];
-            bdbvec (r * snip + imip)
-                += Dmat (r, d) * sir[imip / nsimd].Weight ()[imip % nsimd]
-                   * this->wavefront (elnr, snip + d * snip + imip);
-          }
-    elvec -= bbmat * bdbvec;
-
-    // stabilization to recover second order solution
-    for (int imip = 0; imip < sir.Size (); imip++)
-      simdshapes.Col (imip)
-          *= sqrt (this->TentFaceArea (vert) * sir[imip].Weight ());
-    AddABt (simdshapes, simdshapes, elmat);
-    for (int imip = 0; imip < sir.Size (); imip++)
-      simdshapes.Col (imip)
-          *= sqrt (this->TentFaceArea (vert) * sir[imip].Weight ());
-    FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
-    elvec += shapes * this->wavefront.Row (elnr).Range (0, snip);
-
-    /// Integration over top of tent
-    vert = this->TentFaceVerts (tent, elnr, 1);
-    linbasis = vert.Row (D);
-    faceint.Evaluate (sir, linbasis, mirtimes);
-    for (int imip = 0; imip < sir.Size (); imip++)
-      smir[imip].Point () (D) = mirtimes[imip];
-
-    tel.CalcDShape (smir, simddshapes);
-
-    this->TentDmat (Dmat, vert, 1, 1);
-    DmatDD = Dmat (D, D);
-    FlatMatrix<> bdbmat ((D + 1) * snip, nbasis, slh);
-    bdbmat = 0;
-    for (int imip = 0; imip < sir.Size (); imip++)
-      for (int si = 0; si < nsimd; si++)
-        for (int r = 0; r < (D + 1); r++)
-          for (int d = 0; d < D + 1; d++)
-            {
-              Dmat (D, D) = DmatDD * wavespeed (0, imip)[si];
-              bdbmat.Row (r * snip + imip * nsimd + si)
-                  += Dmat (r, d) * sir[imip].Weight ()[si]
-                     * bbmat.Col (d * snip + imip * nsimd + si);
-            }
-    elmat += bbmat * bdbmat;
   }
 
 }
