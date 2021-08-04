@@ -22,10 +22,9 @@ namespace ngcomp
         for(auto el : ma->Elements(BND))
             bd_points.Append(ma->GetPoint<1>(el.Vertices()[0])(0));
 
-        TentPitchedSlab<1> tps = TentPitchedSlab<1>(ma);      // collection of tents in timeslab
-        LocalHeap lh(1000 * 1000 * 100);
-        tps.PitchTents(dt, wavespeedcf,lh); // adt = time slab height, wavespeed
-        cout << "numb of tents: " << tps.tents.Size() << endl;
+        TentPitchedSlab tps = TentPitchedSlab(ma,1000*1000*1000);
+        tps.SetMaxWavespeed( wavespeedcf );
+        tps.PitchTents<1>(dt, 1);
 
         auto mesh = make_shared<netgen::Mesh>();
         mesh -> SetDimension(ma->GetDimension() + 1);
@@ -48,8 +47,9 @@ namespace ngcomp
         fdd.SetBCName(new string("dirichlet"));
         int ind_fdd = mesh -> AddFaceDescriptor (fdd);
 
-        for(Tent* tent : tps.tents)
+        for(int i=0;i<tps.GetNTents();i++)
         {
+            const Tent* tent =& tps.GetTent(i);
             // cout << *tent << endl;
             if(tent->ttop < tent->tbot + dt_eps){ continue;  cout << "had to skip degenerate tent" << endl;}
             // Add vertices and 2d Elements to the mesh
