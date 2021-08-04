@@ -34,28 +34,30 @@ namespace ngcomp
     double timeshift = 0;
 
     template <typename TFUNC>
-    void CalcTentEl (int elnr, Tent *tent, ScalarMappedElement<D + 1> &tel,
-                     TFUNC LocalWavespeed, SIMD_IntegrationRule &sir,
-                     LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec,
-                     SliceMatrix<SIMD<double>> simddshapes);
+    void
+    CalcTentEl (int elnr, const Tent *tent, ScalarMappedElement<D + 1> &tel,
+                TFUNC LocalWavespeed, SIMD_IntegrationRule &sir,
+                LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec,
+                SliceMatrix<SIMD<double>> simddshapes);
 
     void
-    CalcTentBndEl (int surfel, Tent *tent, ScalarMappedElement<D + 1> &tel,
-                   SIMD_IntegrationRule &sir, LocalHeap &slh,
-                   SliceMatrix<> elmat, SliceVector<> elvec);
+    CalcTentBndEl (int surfel, const Tent *tent,
+                   ScalarMappedElement<D + 1> &tel, SIMD_IntegrationRule &sir,
+                   LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
 
     void
     CalcTentMacroEl (int fnr, const Array<int> &elnums,
-                     std::unordered_map<int, int> &macroel, Tent *tent,
+                     std::unordered_map<int, int> &macroel, const Tent *tent,
                      TrefftzWaveFE<D> &tel, SIMD_IntegrationRule &sir,
                      LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
 
     void
-    CalcTentElEval (int elnr, Tent *tent, ScalarMappedElement<D + 1> &tel,
-                    SIMD_IntegrationRule &sir, LocalHeap &slh,
-                    SliceVector<> sol, SliceMatrix<SIMD<double>> simddshapes);
+    CalcTentElEval (int elnr, const Tent *tent,
+                    ScalarMappedElement<D + 1> &tel, SIMD_IntegrationRule &sir,
+                    LocalHeap &slh, SliceVector<> sol,
+                    SliceMatrix<SIMD<double>> simddshapes);
 
-    Mat<D + 1, D + 1> TentFaceVerts (Tent *tent, int elnr, int top);
+    Mat<D + 1, D + 1> TentFaceVerts (const Tent *tent, int elnr, int top);
 
     void TentDmat (Mat<D + 1> &Dmat, Mat<D + 1> v, int top, double wavespeed);
 
@@ -65,7 +67,7 @@ namespace ngcomp
 
     template <typename T = double> void SwapIfGreater (T &a, T &b);
 
-    double TentAdiam (Tent *tent);
+    double TentAdiam (const Tent *tent);
 
     inline void LapackSolve (SliceMatrix<double> a, SliceVector<double> b);
 
@@ -136,14 +138,13 @@ namespace ngcomp
 
     int NrTents (double dt)
     {
-      LocalHeap lh (1000 * 1000 * 1000);
-      TentPitchedSlab<D> tps = TentPitchedSlab<D> (ma);
-      tps.PitchTents (
-          dt,
+      TentPitchedSlab tps = TentPitchedSlab (ma, 1000 * 1000 * 1000);
+      tps.SetMaxWavespeed (
           this->wavespeedcf
-              + make_shared<ConstantCoefficientFunction> (addtentslope),
-          lh);
-      return tps.tents.Size ();
+          + make_shared<ConstantCoefficientFunction> (addtentslope));
+      tps.SetPitchingMethod (ngstents::EEdgeGrad);
+      tps.PitchTents<D> (dt, 0);
+      return tps.GetNTents ();
     }
 
     int GetOrder () { return order; }

@@ -1,4 +1,5 @@
 #include "evolvetent.hpp"
+#include "../tents/paralleldepend.hpp"
 
 namespace ngcomp
 {
@@ -36,15 +37,14 @@ namespace ngcomp
     for (double c : wavespeed)
       max_wavespeed = max (c, max_wavespeed);
 
-    TentPitchedSlab<D> tps
-        = TentPitchedSlab<D> (ma); // collection of tents in timeslab
-    tps.PitchTents (
-        dt,
+    TentPitchedSlab tps = TentPitchedSlab (ma, 1000 * 1000 * 1000);
+    tps.SetMaxWavespeed (
         this->wavespeedcf
-            + make_shared<ConstantCoefficientFunction> (addtentslope),
-        lh); // adt = time slab height, wavespeed
+        + make_shared<ConstantCoefficientFunction> (addtentslope));
+    tps.SetPitchingMethod (ngstents::EEdgeGrad);
+    tps.PitchTents<D> (dt, 0);
 
-    cout << "solving " << tps.tents.Size () << " tents ";
+    cout << "solving " << tps.GetNTents () << " tents ";
     static Timer ttent ("tent", 2);
     static Timer ttentel ("tentel", 2);
     static Timer ttentbnd ("tentbnd", 2);
@@ -55,7 +55,7 @@ namespace ngcomp
 
     RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
       LocalHeap slh = lh.Split (); // split to threads
-      Tent *tent = tps.tents[tentnr];
+      const Tent *tent = &tps.GetTent (tentnr);
 
       Vec<D + 1> center;
       center.Range (0, D) = ma->GetPoint<D> (tent->vertex);
@@ -91,7 +91,7 @@ namespace ngcomp
               slh, subm, subv, topdshapes[elnr]);
         }
 
-      for (auto fnr : tent->edges)
+      for (auto fnr : tent->internal_facets)
         {
           Array<int> elnums;
           ma->GetFacetElements (fnr, elnums);
@@ -145,7 +145,7 @@ namespace ngcomp
 
   template <int D>
   template <typename TFUNC>
-  void WaveTents<D>::CalcTentEl (int elnr, Tent *tent,
+  void WaveTents<D>::CalcTentEl (int elnr, const Tent *tent,
                                  ScalarMappedElement<D + 1> &tel,
                                  TFUNC LocalWavespeed,
                                  SIMD_IntegrationRule &sir, LocalHeap &slh,
@@ -275,7 +275,7 @@ namespace ngcomp
   }
 
   template <int D>
-  void WaveTents<D>::CalcTentBndEl (int surfel, Tent *tent,
+  void WaveTents<D>::CalcTentBndEl (int surfel, const Tent *tent,
                                     ScalarMappedElement<D + 1> &tel,
                                     SIMD_IntegrationRule &sir, LocalHeap &slh,
                                     SliceMatrix<> elmat, SliceVector<> elvec)
@@ -388,7 +388,7 @@ namespace ngcomp
   void
   WaveTents<D>::CalcTentMacroEl (int fnr, const Array<int> &elnums,
                                  std::unordered_map<int, int> &macroel,
-                                 Tent *tent, TrefftzWaveFE<D> &tel,
+                                 const Tent *tent, TrefftzWaveFE<D> &tel,
                                  SIMD_IntegrationRule &sir, LocalHeap &slh,
                                  SliceMatrix<> elmat, SliceVector<> elvec)
   {
@@ -496,7 +496,7 @@ namespace ngcomp
   }
 
   template <int D>
-  void WaveTents<D>::CalcTentElEval (int elnr, Tent *tent,
+  void WaveTents<D>::CalcTentElEval (int elnr, const Tent *tent,
                                      ScalarMappedElement<D + 1> &tel,
                                      SIMD_IntegrationRule &sir, LocalHeap &slh,
                                      SliceVector<> sol,
@@ -551,7 +551,8 @@ namespace ngcomp
   // returns matrix where cols correspond to vertex coordinates of the
   // space-time element
   template <int D>
-  Mat<D + 1, D + 1> WaveTents<D>::TentFaceVerts (Tent *tent, int elnr, int top)
+  Mat<D + 1, D + 1>
+  WaveTents<D>::TentFaceVerts (const Tent *tent, int elnr, int top)
   {
     Mat<D + 1, D + 1> v;
     if (top == 0) // boundary element
@@ -829,7 +830,7 @@ namespace ngcomp
       }
   }
 
-  template <int D> double WaveTents<D>::TentAdiam (Tent *tent)
+  template <int D> double WaveTents<D>::TentAdiam (const Tent *tent)
   {
     LocalHeap lh (1000 * 1000 * 1000);
     int vnumber = tent->nbv.Size ();
@@ -888,15 +889,14 @@ namespace ngcomp
   template <int D> double WaveTents<D>::MaxAdiam (double dt)
   {
     double h = 0.0;
-    TentPitchedSlab<D> tps = TentPitchedSlab<D> (ma);
-    LocalHeap lh (1000 * 1000 * 1000);
-    tps.PitchTents (
-        dt,
+    TentPitchedSlab tps = TentPitchedSlab (ma, 1000 * 1000 * 1000);
+    tps.SetMaxWavespeed (
         this->wavespeedcf
-            + make_shared<ConstantCoefficientFunction> (addtentslope),
-        lh);
+        + make_shared<ConstantCoefficientFunction> (addtentslope));
+    tps.SetPitchingMethod (ngstents::EEdgeGrad);
+    tps.PitchTents<D> (dt, 0);
     RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
-      Tent *tent = tps.tents[tentnr];
+      const Tent *tent = &tps.GetTent (tentnr);
       h = max (h, TentAdiam (tent));
     });
     return h;
@@ -964,19 +964,18 @@ namespace ngcomp
     SIMD_IntegrationRule sir (eltyp, this->order * 2);
     const int snip = sir.Size () * nsimd;
 
-    TentPitchedSlab<D> tps
-        = TentPitchedSlab<D> (this->ma); // collection of tents in timeslab
-    tps.PitchTents (
-        dt,
+    TentPitchedSlab tps = TentPitchedSlab (ma, 1000 * 1000 * 1000);
+    tps.SetMaxWavespeed (
         this->wavespeedcf
-            + make_shared<ConstantCoefficientFunction> (addtentslope),
-        lh);
+        + make_shared<ConstantCoefficientFunction> (addtentslope));
+    tps.SetPitchingMethod (ngstents::EEdgeGrad);
+    tps.PitchTents<D> (dt, 0);
 
-    cout << "solving qt " << tps.tents.Size () << " tents " << endl;
+    cout << "solving qt " << tps.GetNTents () << " tents " << endl;
 
     RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
       LocalHeap slh = lh.Split (); // split to threads
-      Tent *tent = tps.tents[tentnr];
+      const Tent *tent = &tps.GetTent (tentnr);
 
       Vec<D + 1> center;
       center.Range (0, D) = ma->GetPoint<D> (tent->vertex);
@@ -1013,7 +1012,7 @@ namespace ngcomp
               sir, slh, elmat, elvec, topdshapes[elnr]);
         }
 
-      for (auto fnr : tent->edges)
+      for (auto fnr : tent->internal_facets)
         {
           Array<int> elnums;
           ma->GetFacetElements (fnr, elnums);
