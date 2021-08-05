@@ -55,7 +55,7 @@ namespace ngfem
                 this->elsize = aelsize/2.0;
                 this->elcenter = aelcenter;
 
-                static Timer timerbasis("basis",2);
+                static Timer timerbasis("quasiTrefftzbasis");
                 timerbasis.Start();
                 for(int i=0;i<aord-1;i++)
                     for(int j=0;j<aord-1;j++)
