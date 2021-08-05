@@ -45,11 +45,11 @@ namespace ngcomp
     tps.PitchTents<D> (dt, 0);
 
     cout << "solving " << tps.GetNTents () << " tents ";
-    static Timer ttent ("tent", 2);
-    static Timer ttentel ("tentel", 2);
-    static Timer ttentbnd ("tentbnd", 2);
-    static Timer ttentmacro ("tentmacro", 2);
-    static Timer ttenteval ("tenteval", 2);
+    static Timer ttent ("tent");
+    static Timer ttentel ("tentel");
+    static Timer ttentbnd ("tentbnd");
+    static Timer ttentmacro ("tentmacro");
+    static Timer ttenteval ("tenteval");
 
     TrefftzWaveBasis<D>::getInstance ().CreateTB (order);
 
@@ -152,9 +152,9 @@ namespace ngcomp
                                  SliceMatrix<> elmat, SliceVector<> elvec,
                                  SliceMatrix<SIMD<double>> simddshapes)
   {
-    static Timer tint1 ("tent top calcshape", 2);
-    static Timer tint2 ("tent top AAt", 2);
-    static Timer tint3 ("tent top bilinearform", 2);
+    static Timer tint1 ("tent top calcshape");
+    static Timer tint2 ("tent top AAt");
+    static Timer tint3 ("tent top bilinearform");
 
     HeapReset hr (slh);
     const ELEMENT_TYPE eltyp
