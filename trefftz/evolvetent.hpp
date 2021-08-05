@@ -59,8 +59,6 @@ namespace ngcomp
 
     Mat<D + 1, D + 1> TentFaceVerts (const Tent *tent, int elnr, int top);
 
-    void TentDmat (Mat<D + 1> &Dmat, Mat<D + 1> v, int top, double wavespeed);
-
     double TentFaceArea (Mat<D + 1, D + 1> v);
 
     Vec<D + 1> TentFaceNormal (Mat<D + 1, D + 1> v, int dir);

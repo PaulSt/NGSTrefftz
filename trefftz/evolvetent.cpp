@@ -311,75 +311,63 @@ namespace ngcomp
     tel.CalcDShape (smir, simddshapes);
     FlatMatrix<double> bbmat (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
 
-    Mat<D + 1> Dmat = 0;
-    Dmat.Row (D).Range (0, D) = -TentFaceArea (vert) * n.Range (0, D);
-    FlatMatrix<double> bdbmat ((D + 1) * snip, nbasis, slh);
-    bdbmat = 0;
-
     for (int imip = 0; imip < smir.Size (); imip++)
       smir[imip].Point ()[D] += timeshift;
     FlatMatrix<SIMD<double>> bdeval ((D + 2), sir.Size (), slh);
-    bdeval = 0;
     bddatum->Evaluate (smir, bdeval);
 
+    double area = TentFaceArea (vert);
+    FlatMatrix<double> bdbmat ((D + 1) * snip, nbasis, slh);
+    bdbmat = 0;
     FlatVector<> bdbvec ((D + 1) * snip, slh);
     bdbvec = 0;
     if (ma->GetMaterial (ElementId (BND, surfel)) == "neumann")
       {
         double beta = 0.5;
-        double A = TentFaceArea (vert);
         for (int imip = 0; imip < snip; imip++)
           for (int r = 0; r < D; r++)
             for (int d = 0; d < (D + 1); d++)
-              bdbmat.Row (r * snip + imip)
-                  += (d < D ? -n (d) * beta : 1.0) * (-n (r))
-                     * sir[imip / nsimd].Weight ()[imip % nsimd] * A
-                     * bbmat.Col (d * snip + imip);
-        elmat += bbmat * bdbmat;
+              {
+                bdbmat.Row (r * snip + imip)
+                    += (d < D ? -n (d) * beta : 1.0) * (-n (r))
+                       * sir[imip / nsimd].Weight ()[imip % nsimd] * area
+                       * bbmat.Col (d * snip + imip);
+                bdbvec (d * snip + imip)
+                    += (d < D ? -n (d) * beta : -1.0) * (-n (r))
+                       * bdeval (r + 1, imip / nsimd)[imip % nsimd]
+                       * sir[imip / nsimd].Weight ()[imip % nsimd] * area;
+              }
 
-        for (int imip = 0; imip < snip; imip++)
-          for (int r = 0; r < D; r++)
-            for (int d = 0; d < D + 1; d++)
-              bdbvec (d * snip + imip)
-                  += (d < D ? -n (d) * beta : -1.0) * (-n (r))
-                     * bdeval (r + 1, imip / nsimd)[imip % nsimd]
-                     * sir[imip / nsimd].Weight ()[imip % nsimd] * A;
+        elmat += bbmat * bdbmat;
         elvec += bbmat * bdbvec;
       }
     else
       { // dirichlet
-        // double alpha = 0.5;
-        // Dmat(D,D) = TentFaceArea(vert)*alpha;
-
         FlatMatrix<SIMD<double>> wavespeed (1, sir.Size (), slh);
         auto localwavespeedcf = make_shared<ConstantCoefficientFunction> (1)
                                 / (this->wavespeedcf);
         localwavespeedcf->Evaluate (smir, wavespeed);
-        double DmatDD = TentFaceArea (vert);
+        // double alpha = 0.5;
 
         for (int imip = 0; imip < snip; imip++)
-          // for(int r=0;r<(D+1);r++) // r=D since only last row non-zero
-          for (int d = 0; d < D + 1; d++)
-            {
-              Dmat (D, D) = DmatDD * wavespeed (0, imip / nsimd)[imip % nsimd];
-              bdbmat.Row (D * snip + imip)
-                  += Dmat (D, d) * sir[imip / nsimd].Weight ()[imip % nsimd]
-                     * bbmat.Col (d * snip + imip);
-            }
+          {
+            double weight = area * sir[imip / nsimd].Weight ()[imip % nsimd];
+            bdbmat.Row (D * snip + imip)
+                += weight * wavespeed (0, imip / nsimd)[imip % nsimd]
+                   * bbmat.Col (D * snip + imip);
+            bdbvec (D * snip + imip)
+                -= weight * wavespeed (0, imip / nsimd)[imip % nsimd]
+                   * bdeval (D + 1, imip / nsimd)[imip % nsimd];
+            for (int d = 0; d < D; d++)
+              {
+                bdbmat.Row (D * snip + imip)
+                    -= n (d) * weight * bbmat.Col (d * snip + imip);
+                bdbvec (d * snip + imip)
+                    -= n (d) * weight
+                       * bdeval (D + 1, imip / nsimd)[imip % nsimd];
+              }
+          }
         elmat += bbmat * bdbmat;
-
-        Dmat (D, D) *= -1.0;
-        for (int imip = 0; imip < snip; imip++)
-          for (int r = 0; r < (D + 1); r++)
-            {
-              Dmat (D, D)
-                  = -DmatDD * wavespeed (0, imip / nsimd)[imip % nsimd];
-              bdbvec (r * snip + imip)
-                  += Dmat (D, r) * sir[imip / nsimd].Weight ()[imip % nsimd]
-                     * bdeval (
-                         D + 1,
-                         imip / nsimd)[imip % nsimd]; // use Dmat transposed
-            }
         elvec -= bbmat * bdbvec;
       }
   }
@@ -461,29 +449,32 @@ namespace ngcomp
     bbmat[1]
         = new FlatMatrix<> (nbasis, (D + 1) * snip, &simddshapes2 (0, 0)[0]);
 
-    Mat<D + 1> Dmat1 = 0;
-    Dmat1.Row (D).Range (0, D)
-        = -0.5 * TentFaceArea (vert) * n.Range (0, D); // 0.5 for DG average
-    Dmat1.Col (D).Range (0, D) = -0.5 * TentFaceArea (vert) * n.Range (0, D);
-
     FlatMatrix<> *bdbmat[4];
     for (int i = 0; i < 4; i++)
       {
         bdbmat[i] = new FlatMatrix<> ((D + 1) * snip, nbasis, slh);
         *bdbmat[i] = 0;
       }
-    // double alpha = 0.5;
+    // double alpha = 0;
+    // double beta = 0;
 
+    double area = TentFaceArea (vert);
     for (int imip = 0; imip < snip; imip++)
-      for (int r = 0; r < (D + 1); r++)
-        for (int d = 0; d < D + 1; d++)
-          for (int el = 0; el < 4; el++)
-            {
-              bdbmat[el]->Row (r * snip + imip)
-                  += pow (-1, el / 2) * Dmat1 (r, d)
-                     * sir[imip / nsimd].Weight ()[imip % nsimd]
-                     * bbmat[el % 2]->Col (d * snip + imip);
-            }
+      {
+        double weight = sir[imip / nsimd].Weight ()[imip % nsimd] * area;
+        for (int el = 0; el < 4; el++)
+          {
+            for (int d = 0; d < D; d++)
+              {
+                bdbmat[el]->Row (d * snip + imip)
+                    -= pow (-1, el / 2) * 0.5 * n (d) * weight
+                       * bbmat[el % 2]->Col (D * snip + imip);
+                bdbmat[el]->Row (D * snip + imip)
+                    -= pow (-1, el / 2) * 0.5 * n (d) * weight
+                       * bbmat[el % 2]->Col (d * snip + imip);
+              }
+          }
+      }
 
     for (int el = 0; el < 4; el++)
       {
@@ -534,18 +525,6 @@ namespace ngcomp
     wavefront.Row (elnr).Range (0, snip) = Trans (shapes.Cols (0, snip)) * sol;
     wavefront.Row (elnr).Range (snip, snip + snip * (D + 1))
         = Trans (dshapes) * sol;
-  }
-
-  template <int D>
-  void WaveTents<D>::TentDmat (Mat<D + 1> &Dmat, Mat<D + 1> v, int top,
-                               double wavespeed)
-  {
-    Vec<D + 1> n = TentFaceNormal (v, top);
-    Dmat = n (D) * Id<D + 1> ();
-    Dmat.Row (D).Range (0, D) = -n.Range (0, D);
-    Dmat.Col (D).Range (0, D) = -n.Range (0, D);
-    Dmat (D, D) *= 1.0 / (wavespeed * wavespeed);
-    Dmat *= TentFaceArea (v);
   }
 
   // returns matrix where cols correspond to vertex coordinates of the

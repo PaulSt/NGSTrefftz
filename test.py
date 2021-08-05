@@ -14,14 +14,13 @@ def SolveWaveTents(initmesh, order, c, t_step):
     >>> SetNumThreads(2)
     >>> c = 1
     >>> t_step = 2/sqrt(3)
-    >>> ms = [0,1,2]
     >>> meshes=[ Mesh(SegMesh(4,0,math.pi)), Mesh(unit_square.GenerateMesh(maxh = 0.4)) , Mesh(unit_cube.GenerateMesh(maxh = 1))]
     >>> for initmesh in meshes:
-    ...    for maxh in ms:
+    ...    for maxh in range(3):
     ...        SolveWaveTents(initmesh, order, c, t_step) # doctest:+ELLIPSIS
-    ...        if maxh != ms[-1] and initmesh.dim!=1:
+    ...        if initmesh.dim!=1:
     ...            initmesh.Refine()
-    ...        elif initmesh.dim==1:
+    ...        else:
     ...            initmesh=Mesh(SegMesh(initmesh.ne*2,0,1))
     0.164...
     ...e-05
@@ -31,6 +30,27 @@ def SolveWaveTents(initmesh, order, c, t_step):
     0.0001...
     0.160...
     0.066...
+    0.003...
+
+    same example with Neumann boundary conditions
+    >>> meshes=[ Mesh(SegMesh(4,0,math.pi)), Mesh(unit_square.GenerateMesh(maxh = 0.4)) , Mesh(unit_cube.GenerateMesh(maxh = 1))]
+    >>> for initmesh in meshes:
+    ...    for i in range(0,len(initmesh.GetBoundaries())):
+    ...        initmesh.ngmesh.SetBCName(i,"neumann")
+    ...    for maxh in range(3):
+    ...        SolveWaveTents(initmesh, order, c, t_step) # doctest:+ELLIPSIS
+    ...        if initmesh.dim!=1:
+    ...            initmesh.Refine()
+    ...        else:
+    ...            initmesh=Mesh(SegMesh(initmesh.ne*2,0,1))
+    0.16...
+    ...e-05
+    ...e-06
+    0.01...
+    0.001...
+    0.0001...
+    0.1...
+    0.057...
     0.003...
 
     if i ever feel like checking the times, here is example full output, 2 cores on my laptop:
@@ -89,9 +109,9 @@ def SolveWaveTents(initmesh, order, c, t_step):
     return error
 
 
-def TestAiry(order, initmesh, t_step):
+def TestAiry(order, initmesh, t_step,qtrefftz=True):
     """
-    Solve using tent pitching
+    Solve using tent pitching and quasi-Trefftz basis functions
     >>> order = 4
     >>> SetNumThreads(2)
     >>> t_step = 1
@@ -111,11 +131,15 @@ def TestAiry(order, initmesh, t_step):
     ...e-05
     ...e-06
 
-    notes for non gppw solution
-    0.0112...
-    0.0027...
-    0.0004...
-    ...e-05
+    Compare to standard Trefftz basis
+    >>> initmesh = Mesh(unit_square.GenerateMesh(maxh = 0.5))
+    >>> for h in range(4):
+    ...        TestAiry(order,initmesh,t_step,False) # doctest:+ELLIPSIS
+    ...        initmesh.Refine()
+    0.013...
+    0.001...
+    0.0005...
+    0.0001...
     """
 
     # for i in range(0,len(initmesh.GetBoundaries())):
@@ -142,7 +166,7 @@ def TestAiry(order, initmesh, t_step):
         wavespeed=CoefficientFunction(1/sqrt(c+x+y))
 
 
-    TT=WaveTents(order,initmesh,wavespeed,bdd,True)
+    TT=WaveTents(order,initmesh,wavespeed,bdd,qtrefftz)
     TT.SetWavefront(bdd,t_start)
 
     start = time.time()
@@ -224,7 +248,7 @@ if __name__ == "__main__":
     t_step = 2/sqrt(3)
     initmesh=Mesh(unit_cube.GenerateMesh(maxh = 0.25))
     start = time.time()
-    print("Error",SolveWaveTents(initmesh, order, c, t_step)) # doctest:+ELLIPSIS
+    print("Error",SolveWaveTents(initmesh, order, c, t_step))
     print("PYTIME:", time.time()-start)
     for t in Timers():
         if 'tent' in t['name']:
@@ -235,7 +259,7 @@ if __name__ == "__main__":
     # {'name': 'tent top bilinearform', 'time': 9.498263475069015, 'counts': 47284, 'flops': 73233459200.0, 'Gflop/s': 7.7101945415836015}
     # {'name': 'tent top AAt', 'time': 4.70538792283988, 'counts': 47284, 'flops': 0.0, 'Gflop/s': 0.0}
     # {'name': 'tent top calcshape', 'time': 5.122740580736957, 'counts': 47284, 'flops': 0.0, 'Gflop/s': 0.0}
-    # on new dell 
+    # on new dell
     # Error 0.0032559029714194806
     # PYTIME: 22.690917253494263
     # {'name': 'tent top bilinearform', 'time': 3.264730902699223, 'counts': 43518, 'flops': 67400678400.0, 'Gflop/s': 20.64509462151208}
