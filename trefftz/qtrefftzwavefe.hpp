@@ -1,3 +1,9 @@
+//////////////////////////////////////////
+// Quasi-Trefftz space for the equation
+//    div(B grad(u)) - G d_tt(u)= 0
+// where B=B(x) and G=G(x) are smooth
+//////////////////////////////////////////
+
 #ifndef FILE_QTREFFTZWAVEELEMENT_HPP
 #define FILE_QTREFFTZWAVEELEMENT_HPP
 
@@ -18,7 +24,7 @@ namespace ngfem
                 return ginstance;
             }
 
-            CSR TB(int ord, FlatMatrix<double> gamma, int basistype = 0);
+            CSR TB(int ord, FlatMatrix<double> GG, FlatMatrix<double> BB, int basistype = 0);
 
         private:
             QTrefftzWaveBasis()= default;
@@ -39,16 +45,18 @@ namespace ngfem
             const int npoly;
             ELEMENT_TYPE eltype;
             int basistype;
-            Matrix<double> gamma;
+            Matrix<double> GG;
+            Matrix<double> BB;
 
         public:
-            QTrefftzWaveFE(Matrix<double> agamma, int aord = 1, Vec<D+1> aelcenter = 0, double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0)
+            QTrefftzWaveFE(Matrix<double> aGG, Matrix<double> aBB, int aord = 1, Vec<D+1> aelcenter = 0, double aelsize = 1, ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0)
                 : ScalarMappedElement<D+1>(BinCoeff(D + aord, aord) + BinCoeff(D + aord-1, aord-1), aord),
                 ord(aord),
                 npoly(BinCoeff(D+1 + ord, ord)),
                 eltype(aeltype),
                 basistype(abasistype),
-                gamma(agamma)
+                GG(aGG),
+                BB(aBB)
             {
 
                 this->c = 1.0;
@@ -59,13 +67,15 @@ namespace ngfem
                 timerbasis.Start();
                 for(int i=0;i<aord-1;i++)
                     for(int j=0;j<aord-1;j++)
-                        gamma(i,j) *= pow(aelsize/2.0,i+j);
-                this->localmat = QTrefftzWaveBasis<D>::getInstance().TB(ord,gamma);
+                    {
+                        GG(i,j) *= pow(aelsize/2.0,i+j);
+                        BB(i,j) *= pow(aelsize/2.0,i+j);
+                    }
+                this->localmat = QTrefftzWaveBasis<D>::getInstance().TB(ord,GG,BB);
                 timerbasis.Stop();
             }
 
-            double GetWavespeed() const { return gamma(0); }
-            //void SetWavespeed(double wavespeed) {gamma(0) = wavespeed;}
+            double GetWavespeed() const { return 0; }
 
             virtual ELEMENT_TYPE ElementType() const { return eltype; }
 

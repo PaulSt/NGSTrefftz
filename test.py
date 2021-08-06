@@ -52,17 +52,6 @@ def SolveWaveTents(initmesh, order, c, t_step):
     0.1...
     0.057...
     0.003...
-
-    if i ever feel like checking the times, here is example full output, 2 cores on my laptop:
-    [0.13468248473089325, 0.00842595100402832, 1.5707963267948966]
-    [5.967771752748235e-05, 0.002645730972290039, 0.25]
-    [3.5210050809416555e-06, 0.008824586868286133, 0.125]
-    [0.009571898393551857, 0.02259087562561035, 0.8110007526621459]
-    [0.0014215954445181047, 0.14298486709594727, 0.5910562128741351]
-    [0.00011649404601618525, 1.060309886932373, 0.3456664208663123]
-    [0.14634671899774718, 0.16475534439086914, 1.8027756377319946]
-    [0.04598743712339493, 1.8881068229675293, 1.4695630212305046]
-    [0.003463790079473155, 21.49881935119629, 0.7465621651659116]
     """
 
     D = initmesh.dim
@@ -109,7 +98,47 @@ def SolveWaveTents(initmesh, order, c, t_step):
     return error
 
 
-def TestAiry(order, initmesh, t_step,qtrefftz=True):
+def TestAiry(order, mesh, t_step,qtrefftz=1):
+    """
+    Solve with quasi-Trefftz basis functions
+    >>> order = 4
+    >>> SetNumThreads(1)
+    >>> t_step = 1
+    >>> for h in [4,8,16,32]:
+    ...        mesh = CartSquare(h,h)
+    ...        TestAiry(order,mesh,t_step) # doctest:+ELLIPSIS
+    5...e-05
+    ...e-06
+    ...e-07
+    ...e-08
+    """
+    c=1
+    bdd = CoefficientFunction((
+        airy(-x-c)*cos(y),
+        -airyp(-x-c)*cos(y),
+        -airy(-x-c)*sin(y)
+        ))
+    wavespeed=CoefficientFunction(1/sqrt(c+x))
+
+    U0=bdd[0]
+    gD=bdd[2]
+    v0=bdd[2]
+    sig0=-bdd[1]
+
+    fes = trefftzfespace(mesh, order=order, dgjumps=True, basistype=0, useshift=True, useqt=True)
+    fes.SetWavespeed(wavespeed)
+    [a,f] = DGwaveeqsys(fes,U0,v0,sig0,wavespeed,gD,True,False,alpha=0.5,beta=0.5,gamma=1,mu=0.5)
+    gfu = DGsolve(fes,a,f)
+    gradsol = CoefficientFunction((
+        -airyp(-x-c)*cos(y),
+        -airy(-x-c)*sin(y)
+        ))
+    dgerror = DGnormerror(fes,gfu,gradsol,wavespeed,alpha=0.5,beta=0.5)
+
+    return dgerror
+
+
+def TestAiryTent(order, initmesh, t_step,qtrefftz=1):
     """
     Solve using tent pitching and quasi-Trefftz basis functions
     >>> order = 4
@@ -117,14 +146,14 @@ def TestAiry(order, initmesh, t_step,qtrefftz=True):
     >>> t_step = 1
     >>> for h in [4,8,16,32]:
     ...        initmesh = Mesh(SegMesh(h,0,math.pi))
-    ...        TestAiry(order,initmesh,t_step) # doctest:+ELLIPSIS
+    ...        TestAiryTent(order,initmesh,t_step) # doctest:+ELLIPSIS
     0.013...
     0.0007...
     ...e-05
     ...e-06
     >>> initmesh = Mesh(unit_square.GenerateMesh(maxh = 0.5))
     >>> for h in range(4):
-    ...        TestAiry(order,initmesh,t_step) # doctest:+ELLIPSIS
+    ...        TestAiryTent(order,initmesh,t_step) # doctest:+ELLIPSIS
     ...        initmesh.Refine()
     0.004...
     0.0005...
@@ -134,7 +163,7 @@ def TestAiry(order, initmesh, t_step,qtrefftz=True):
     Compare to standard Trefftz basis
     >>> initmesh = Mesh(unit_square.GenerateMesh(maxh = 0.5))
     >>> for h in range(4):
-    ...        TestAiry(order,initmesh,t_step,False) # doctest:+ELLIPSIS
+    ...        TestAiryTent(order,initmesh,t_step,None) # doctest:+ELLIPSIS
     ...        initmesh.Refine()
     0.013...
     0.001...
@@ -181,6 +210,48 @@ def TestAiry(order, initmesh, t_step,qtrefftz=True):
         # print(t)
     # return [error, timing, adiam]
     return error
+
+
+def TestBessel(order, initmesh, t_step):
+    """
+    Solve using tent pitching and quasi-Trefftz basis functions
+    >>> order = 4
+    >>> SetNumThreads(2)
+    >>> t_step = 1
+    >>> for h in [4,8,16,32]:
+    ...        initmesh = Mesh(SegMesh(h,3,4)) # need x>2
+    ...        TestBessel(order,initmesh,t_step) # doctest:+ELLIPSIS
+
+    0.013...
+    0.0007...
+    ...e-05
+    ...e-06
+    """
+
+    D = initmesh.dim
+    t = CoordCF(D)
+    t_start = 0
+
+    c=1
+    if D is 1:
+        bdd = CoefficientFunction((
+            (sin(x)-x*cos(x))/x**2 * cos(t),
+            (-2*x**(-3)*sin(x)+2*x**(-2)*cos(x)+x**(-1)*sin(x)) * cos(t),
+            -(sin(x)-x*cos(x))/x**2 * sin(t)
+            ))
+        wavespeed=x**2-2
+        BB = x**2
+
+    TT=WaveTents(order,initmesh,wavespeed,bdd,)
+    TT.SetWavefront(bdd,t_start)
+
+    start = time.time()
+    with TaskManager():
+        TT.EvolveTents(t_step)
+    timing = (time.time()-start)
+
+    error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
+    adiam = TT.MaxAdiam(t_step)
 
 
 def TestSolution2D(fes,c,timeoffset=0):
@@ -242,17 +313,18 @@ def Cartsolve2D(fes,c,fullsys=False,inputsol=None):
 
 
 if __name__ == "__main__":
-    order = 4
-    SetNumThreads(1)
-    c = 1
-    t_step = 2/sqrt(3)
-    initmesh=Mesh(unit_cube.GenerateMesh(maxh = 0.25))
-    start = time.time()
-    print("Error",SolveWaveTents(initmesh, order, c, t_step))
-    print("PYTIME:", time.time()-start)
-    for t in Timers():
-        if 'tent' in t['name']:
-            print(t)
+    # order = 4
+    # SetNumThreads(1)
+    # c = 1
+    # t_step = 2/sqrt(3)
+    # initmesh=Mesh(unit_cube.GenerateMesh(maxh = 0.25))
+    # start = time.time()
+    # print("Error",SolveWaveTents(initmesh, order, c, t_step))
+    # print("PYTIME:", time.time()-start)
+    # for t in Timers():
+        # if 'tent' in t['name']:
+            # print(t)
+    # input()
     # Error 0.0029433017038692647
     # PYTIME: 42.57842946052551
     # {'name': 'pitch tents', 'time': 0.011452735514933324, 'counts': 1, 'flops': 0.0, 'Gflop/s': 0.0}
@@ -265,7 +337,6 @@ if __name__ == "__main__":
     # {'name': 'tent top bilinearform', 'time': 3.264730902699223, 'counts': 43518, 'flops': 67400678400.0, 'Gflop/s': 20.64509462151208}
     # {'name': 'tent top AAt', 'time': 3.556020358299543, 'counts': 43518, 'flops': 0.0, 'Gflop/s': 0.0}
     # {'name': 'tent top calcshape', 'time': 3.095868819707971, 'counts': 43518, 'flops': 0.0, 'Gflop/s': 0.0}
-    input()
 
     import doctest
     doctest.testmod()

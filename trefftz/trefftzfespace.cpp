@@ -30,6 +30,7 @@ namespace ngcomp
         heattest = flags.GetNumFlag("heattest",0);
         order = int(flags.GetNumFlag ("order", 3)) * (1+(heat>0));
         c = flags.GetNumFlag ("wavespeed", 1);
+        wavespeedcf = make_shared<ConstantCoefficientFunction>(c);
         basistype = flags.GetNumFlag ("basistype", 0);
         useshift = flags.GetNumFlag("useshift",1);
         usescale = flags.GetNumFlag("usescale",1);
@@ -93,8 +94,8 @@ namespace ngcomp
         {
             dnums.Append (j);
         }
-         //cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " local_ndof:" << local_ndof << " ndof: " << ndof << " dnums: \n" << dnums << endl <<
-         //"================================================" << endl ;
+        //cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " local_ndof:" << local_ndof << " ndof: " << ndof << " dnums: \n" << dnums << endl <<
+        //"================================================" << endl ;
     }
 
 
@@ -124,26 +125,18 @@ namespace ngcomp
                         IntegrationRule ir (eltyp, 0);
                         MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
                         mip.Point() = ElCenter<1>(ei).Range(0,1);
-                        if(useqt)
+                        if(BB.Size()!=0 || useqt)
+                            return *(new (alloc) QTrefftzWaveFE<1>(this->GG[ei.Nr()], this->BB[ei.Nr()], order,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
+                        else if(heat)
                         {
-                            //Matrix<> gamma(this->order,this->order);
-                            //for(int nx=0;nx<this->order-1;nx++)
-                            //{
-                                //int ny = 0;
-                                //gamma(nx,ny) = wavespeedmatrix(nx,ny)->Evaluate(mip)/(factorial(nx)*factorial(ny));
-                            //}
-                            return *(new (alloc) QTrefftzWaveFE<1>(this->gamma[ei.Nr()], order,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
-                        }
-                        if(heat)
-                        {
-                        if(heattest)
-                        {
-                            return *(new (alloc) TrefftzHeatTestFE<1>(order,1.0,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
-                        }
+                            if(heattest)
+                            {
+                                return *(new (alloc) TrefftzHeatTestFE<1>(order,1.0,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
+                            }
                             return *(new (alloc) TrefftzHeatFE<1>(order,1.0,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
                         }
                         else
-                            return *(new (alloc) TrefftzWaveFE<1>(order,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c,ElCenter<1>(ei),Adiam<1>(ei,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c),ma->GetElType(ei)));
+                            return *(new (alloc) TrefftzWaveFE<1>(order,!wavespeedcf?wavespeedcf->Evaluate(mip):c,ElCenter<1>(ei),Adiam<1>(ei,!wavespeedcf?wavespeedcf->Evaluate(mip):c),ma->GetElType(ei)));
                         break;
                     }
                 case ET_HEX:
@@ -158,48 +151,33 @@ namespace ngcomp
                         MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
                         mip.Point() = ElCenter<2>(ei).Range(0,2);
 
-                        if(useqt)
+                        if(BB.Size()!=0 || useqt)
+                            return *(new (alloc) QTrefftzWaveFE<2>(this->GG[ei.Nr()], this->BB[ei.Nr()], order,ElCenter<2>(ei),1.0,ma->GetElType(ei)));
+                        else if(heat)
                         {
-static Timer timereval("evalc",2);
-                        timereval.Start();
-                            //Matrix<> gamma(this->order-1);
-                            //for(int nx=0;nx<this->order-1;nx++)
-                            //{
-                                //for(int ny=0;ny<this->order-1;ny++)
-                                //{
-                                    //gamma(nx,ny) = wavespeedmatrix(nx,ny)->Evaluate(mip)/(factorial(nx)*factorial(ny));
-                                //}
-                            //}
-                        timereval.Stop();
-                            return *(new (alloc) QTrefftzWaveFE<2>(this->gamma[ei.Nr()], order,ElCenter<2>(ei),1.0,ma->GetElType(ei)));
-                        }
-                        if(heat)
-                        {
-                        if(heattest)
-                        {
-                            return *(new (alloc) TrefftzHeatTestFE<2>(order,1.0,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
-                        }
+                            if(heattest)
+                            {
+                                return *(new (alloc) TrefftzHeatTestFE<2>(order,1.0,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
+                            }
                             return *(new (alloc) TrefftzHeatFE<2>(order,1.0,ElCenter<1>(ei),1.0,ma->GetElType(ei)));
                         }
                         else
-                            return *(new (alloc) TrefftzWaveFE<2>(order,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c,ElCenter<2>(ei),Adiam<2>(ei,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c),ma->GetElType(ei)));
+                            return *(new (alloc) TrefftzWaveFE<2>(order,!wavespeedcf?wavespeedcf->Evaluate(mip):c,ElCenter<2>(ei),Adiam<2>(ei,!wavespeedcf?wavespeedcf->Evaluate(mip):c),ma->GetElType(ei)));
                     }
                     break;
             }
         }
-        else
+        //else
+        try
         {
-            try
-            {
-                return SwitchET<ET_POINT,ET_SEGM,ET_TRIG,ET_QUAD>
-                    (eltype,
-                     [&alloc] (auto et) -> FiniteElement&
-                     { return * new (alloc) DummyFE<et.ElementType()>; });
-            }
-            catch (Exception e)
-            {
-                throw Exception("illegal element type in Trefftz::GetSurfaceFE");
-            }
+            return SwitchET<ET_POINT,ET_SEGM,ET_TRIG,ET_QUAD>
+                (eltype,
+                 [&alloc] (auto et) -> FiniteElement&
+                 { return * new (alloc) DummyFE<et.ElementType()>; });
+        }
+        catch (Exception e)
+        {
+            throw Exception("illegal element type in Trefftz::GetSurfaceFE");
         }
     }
 
@@ -305,7 +283,7 @@ void ExportTrefftzFESpace(py::module m)
     ExportFESpace<TrefftzFESpace>(m, "trefftzfespace")
         .def("GetDocu", &TrefftzFESpace::GetDocu)
         .def("GetNDof", &TrefftzFESpace::GetNDof)
-        .def("SetWavespeed", &TrefftzFESpace::SetWavespeed)
+        .def("SetWavespeed", &TrefftzFESpace::SetWavespeed, py::arg("Wavespeed"), py::arg("BBcf")=nullptr)
         ;
 }
 #endif // NGS_PYTHON

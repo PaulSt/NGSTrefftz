@@ -6,6 +6,12 @@
 namespace ngcomp
 {
 
+struct GenericSqrt {
+  template <typename T> T operator() (T x) const { return sqrt(x); }
+  static string Name() { return "sqrt"; }
+  void DoArchive(Archive& ar) {}
+};
+
     class TrefftzFESpace : public FESpace
     {
         int D;
@@ -18,60 +24,76 @@ namespace ngcomp
         float c=1;
         int useshift=1;
         int usescale=1;
-        int useqt=0;
+        int useqt = 0;
         int heat=0;
         int heattest=0;
         int basistype;
-        shared_ptr<CoefficientFunction> wavespeedcf;
-        Matrix<shared_ptr<CoefficientFunction>> wavespeedmatrix;
-            Array<Matrix<double>> gamma;
+        shared_ptr<CoefficientFunction> wavespeedcf=nullptr;
+        Array<Matrix<double>> GG;
+        Array<Matrix<double>> BB;
 
         public:
 
 
         TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags);
 
-        void SetWavespeed(shared_ptr<CoefficientFunction> awavespeedcf) {
+        void SetWavespeed(shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> aBBcf = nullptr) {
             wavespeedcf=awavespeedcf;
-            if(useqt)
+            this->BB.SetSize(0);
+            if(aBBcf || useqt)
             {
+                //wavespeedcf = UnaryOpCF(aBBcf/awavespeedcf,GenericSqrt());
                 cout << "started auto diff.... ";
-                shared_ptr<CoefficientFunction> localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(wavespeedcf*wavespeedcf);
-                shared_ptr<CoefficientFunction> localwavespeedcfx = make_shared<ConstantCoefficientFunction>(1)/(wavespeedcf*wavespeedcf);
-                //wavespeedmatrix.SetSize(this->order-1);
-                //for(int ny=0;ny<=(this->order-2)*(D==2);ny++)
-                //{
-                //for(int nx=0;nx<this->order-1;nx++)
-                //{
-                //wavespeedmatrix(nx,ny) = localwavespeedcfx;
-                //localwavespeedcfx = localwavespeedcfx->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
-                //}
-                //localwavespeedcf = localwavespeedcf->Diff(MakeCoordinateCoefficientFunction(1).get(), make_shared<ConstantCoefficientFunction>(1) );
-                //localwavespeedcfx = localwavespeedcf;
-                //}
-
+                //shared_ptr<CoefficientFunction> GGcf = awavespeedcf;
+                //shared_ptr<CoefficientFunction> GGcfx = awavespeedcf;
+                shared_ptr<CoefficientFunction> GGcf = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
+                shared_ptr<CoefficientFunction> GGcfx = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
 
                 LocalHeap lh(1000 * 1000);
                 IntegrationRule ir (D==2?ET_TET:ET_TRIG, 0);
                 MappedIntegrationPoint<3,3> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
 
-                this->gamma.SetSize(0);
-                for(int i=0;i<ma->GetNE();i++) this->gamma.Append(Matrix<>(this->order-1));
+                static Timer timereval("CalcWavespeedDerivatives");
+                timereval.Start();
+                this->GG.SetSize(0);
+                for(int i=0;i<ma->GetNE();i++) this->GG.Append(Matrix<>(this->order-1));
                 for(int ny=0;ny<=(this->order-2)*(D==2);ny++)
                 {
-                    for(int nx=0;nx<this->order-1;nx++)
+                    for(int nx=0;nx<=this->order-2;nx++)
                     {
                         double fac = (factorial(nx)*factorial(ny));
                         for(int ne=0;ne<ma->GetNE();ne++)
                         {
                             mip.Point() = ElCenter<2>(ElementId(ne));
-                            this->gamma[ne](nx,ny) = localwavespeedcfx->Evaluate(mip)/fac;
+                            this->GG[ne](nx,ny) = GGcfx->Evaluate(mip)/fac;
                         }
-                        localwavespeedcfx = localwavespeedcfx->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
+                        GGcfx = GGcfx->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
                     }
-                    localwavespeedcf = localwavespeedcf->Diff(MakeCoordinateCoefficientFunction(1).get(), make_shared<ConstantCoefficientFunction>(1) );
-                    localwavespeedcfx = localwavespeedcf;
+                    GGcf = GGcf->Diff(MakeCoordinateCoefficientFunction(1).get(), make_shared<ConstantCoefficientFunction>(1) );
+                    GGcfx = GGcf;
                 }
+                if(!aBBcf){
+                    aBBcf = make_shared<ConstantCoefficientFunction>(1);
+                }
+                shared_ptr<CoefficientFunction> BBcf = aBBcf;
+                shared_ptr<CoefficientFunction> BBcfx = aBBcf;
+                for(int i=0;i<ma->GetNE();i++) this->BB.Append(Matrix<>(this->order));
+                for(int ny=0;ny<=(this->order-1)*(D==2);ny++)
+                {
+                    for(int nx=0;nx<=this->order-1;nx++)
+                    {
+                        double fac = (factorial(nx)*factorial(ny));
+                        for(int ne=0;ne<ma->GetNE();ne++)
+                        {
+                            mip.Point() = ElCenter<2>(ElementId(ne));
+                            this->BB[ne](nx,ny) = BBcfx->Evaluate(mip)/fac;
+                        }
+                        BBcfx = BBcfx->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
+                    }
+                    BBcf = BBcf->Diff(MakeCoordinateCoefficientFunction(1).get(), make_shared<ConstantCoefficientFunction>(1) );
+                    BBcfx = BBcf;
+                }
+                timereval.Stop();
                 cout << "finish" << endl;
             }
         }
