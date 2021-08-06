@@ -961,8 +961,8 @@ namespace ngcomp
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
       double tentsize = TentAdiam (tent);
 
-      QTrefftzWaveFE<D> tel (this->gamma[tent->vertex], this->order, center,
-                             tentsize);
+      QTrefftzWaveFE<D> tel (this->GG[tent->vertex], this->BB[tent->vertex],
+                             this->order, center, tentsize);
       int nbasis = tel.GetNDof ();
 
       FlatMatrix<> elmat (nbasis, slh);
@@ -1175,12 +1175,12 @@ void ExportEvolveTent (py::module m)
       [] (int order, shared_ptr<MeshAccess> ma,
           shared_ptr<CoefficientFunction> wavespeedcf,
           shared_ptr<CoefficientFunction> bddatum,
-          bool QT) -> shared_ptr<TrefftzTents> {
+          shared_ptr<CoefficientFunction> BBcf) -> shared_ptr<TrefftzTents> {
         // TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
         shared_ptr<TrefftzTents> tr;
         int D = ma->GetDimension ();
         // return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
-        if (!QT)
+        if (!BBcf)
           {
             if (D == 1)
               tr = make_shared<WaveTents<1>> (order, ma, wavespeedcf, bddatum);
@@ -1192,10 +1192,10 @@ void ExportEvolveTent (py::module m)
         else
           {
             if (D == 1)
-              tr = make_shared<QTWaveTents<1>> (order, ma, wavespeedcf,
+              tr = make_shared<QTWaveTents<1>> (order, ma, wavespeedcf, BBcf,
                                                 bddatum);
             else if (D == 2)
-              tr = make_shared<QTWaveTents<2>> (order, ma, wavespeedcf,
+              tr = make_shared<QTWaveTents<2>> (order, ma, wavespeedcf, BBcf,
                                                 bddatum);
           }
         return tr;
@@ -1203,28 +1203,27 @@ void ExportEvolveTent (py::module m)
         // wavespeed, bddatum));
       },
       "Create Wavetent object", py::arg ("order"), py::arg ("ma"),
-      py::arg ("wavespeedcf"), py::arg ("bddatum"), py::arg ("QT") = false);
+      py::arg ("wavespeedcf"), py::arg ("bddatum"),
+      py::arg ("BBcf") = nullptr);
 
-  m.def ("WaveTents",
-         [] (int order, shared_ptr<MeshAccess> ma,
-             shared_ptr<CoefficientFunction> wavespeedcf,
-             shared_ptr<CoefficientFunction> bddatum,
-             vector<shared_ptr<CoefficientFunction>> taylorcf)
-             -> shared_ptr<TrefftzTents> {
-           // TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed,
-           // bddatum);
-           shared_ptr<TrefftzTents> tr;
-           int D = ma->GetDimension ();
-           // return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
-           if (D == 1)
-             tr = make_shared<QTWaveTents<1>> (order, ma, wavespeedcf, bddatum,
-                                               taylorcf);
-           else if (D == 2)
-             tr = make_shared<QTWaveTents<2>> (order, ma, wavespeedcf, bddatum,
-                                               taylorcf);
-           return tr;
-           // return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma,
-           // wavespeed, bddatum));
-         });
+  // m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma,
+  // shared_ptr<CoefficientFunction> wavespeedcf,
+  // shared_ptr<CoefficientFunction> bddatum,
+  // vector<shared_ptr<CoefficientFunction>> taylorcf) ->
+  // shared_ptr<TrefftzTents>
+  //{
+  ////TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
+  // shared_ptr<TrefftzTents> tr;
+  // int D = ma->GetDimension();
+  ////return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
+  // if(D==1)
+  // tr = make_shared<QTWaveTents<1>>(order,ma,wavespeedcf,bddatum,taylorcf);
+  // else if(D==2)
+  // tr = make_shared<QTWaveTents<2>>(order,ma,wavespeedcf,bddatum,taylorcf);
+  // return tr;
+  ////return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma, wavespeed,
+  ///bddatum));
+  //}
+  //);
 }
 #endif // NGS_PYTHON

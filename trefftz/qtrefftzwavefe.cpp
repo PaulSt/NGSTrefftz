@@ -202,13 +202,13 @@ namespace ngfem
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   template <int D>
-  CSR QTrefftzWaveBasis<D>::TB (int ord, FlatMatrix<double> gamma,
-                                int basistype)
+  CSR QTrefftzWaveBasis<D>::TB (int ord, FlatMatrix<double> GG,
+                                FlatMatrix<double> BB, int basistype)
   {
     lock_guard<mutex> lock (gentrefftzbasis);
     string encode = to_string (ord);
     for (int i = 0; i < ord * ord; i++)
-      encode += to_string (gamma (i));
+      encode += to_string (GG (i));
 
     if (gtbstore[encode][0].Size () == 0)
       {
@@ -247,27 +247,52 @@ namespace ngfem
                         double *newcoeff = &qbasis (
                             basisn,
                             TrefftzWaveBasis<D>::IndexMap2 (index, ord));
-                        index[1] = y;
-                        index[0] = x + 2;
-                        index[D] = t;
-                        int getcoeffx
-                            = TrefftzWaveBasis<D>::IndexMap2 (index, ord);
-                        index[1] = y + 2;
-                        index[0] = x;
-                        index[D] = t;
-                        int getcoeffy
-                            = TrefftzWaveBasis<D>::IndexMap2 (index, ord);
+                        *newcoeff = 0;
 
-                        *newcoeff = (x + 2) * (x + 1)
-                                        / ((t + 2) * (t + 1) * gamma (0))
-                                        * qbasis (basisn, getcoeffx)
-                                    + (y + 2) * (y + 1)
-                                          / ((t + 2) * (t + 1) * gamma (0))
-                                          * qbasis (basisn, getcoeffy)
-                                          * (D == 2);
                         for (int betax = 0; betax <= x; betax++)
-                          for (int betay = 0; betay <= y; betay++)
+                          for (int betay = (D == 2) ? 0 : y; betay <= y;
+                               betay++)
                             {
+                              index[1] = betay;
+                              index[0] = betax + 1;
+                              index[D] = t;
+                              int getcoeffx = TrefftzWaveBasis<D>::IndexMap2 (
+                                  index, ord);
+                              index[1] = betay + 1;
+                              index[0] = betax;
+                              index[D] = t;
+                              int getcoeffy = TrefftzWaveBasis<D>::IndexMap2 (
+                                  index, ord);
+                              index[1] = betay;
+                              index[0] = betax + 2;
+                              index[D] = t;
+                              int getcoeffxx = TrefftzWaveBasis<D>::IndexMap2 (
+                                  index, ord);
+                              index[1] = betay + 2;
+                              index[0] = betax;
+                              index[D] = t;
+                              int getcoeffyy = TrefftzWaveBasis<D>::IndexMap2 (
+                                  index, ord);
+
+                              *newcoeff
+                                  += (betax + 2) * (betax + 1)
+                                         / ((t + 2) * (t + 1) * GG (0))
+                                         * BB (x - betax, y - betay)
+                                         * qbasis (basisn, getcoeffxx)
+                                     + (x - betax + 1) * (betax + 1)
+                                           / ((t + 2) * (t + 1) * GG (0))
+                                           * BB (x - betax + 1, y - betay)
+                                           * qbasis (basisn, getcoeffx);
+                              if (D == 2)
+                                *newcoeff
+                                    += (betay + 2) * (betay + 1)
+                                           / ((t + 2) * (t + 1) * GG (0))
+                                           * BB (x - betax, y - betay)
+                                           * qbasis (basisn, getcoeffyy)
+                                       + (y - betay + 1) * (betay + 1)
+                                             / ((t + 2) * (t + 1) * GG (0))
+                                             * BB (x - betax, y - betay + 1)
+                                             * qbasis (basisn, getcoeffy);
                               if (betax + betay == x + y)
                                 continue;
                               index[1] = betay;
@@ -276,9 +301,9 @@ namespace ngfem
                               int getcoeff = TrefftzWaveBasis<D>::IndexMap2 (
                                   index, ord);
 
-                              *newcoeff -= gamma (x - betax, y - betay)
+                              *newcoeff -= GG (x - betax, y - betay)
                                            * qbasis (basisn, getcoeff)
-                                           / gamma (0);
+                                           / GG (0);
                             }
                       }
                   }
