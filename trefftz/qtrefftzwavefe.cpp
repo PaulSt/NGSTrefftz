@@ -181,8 +181,8 @@ namespace ngfem
     {
         lock_guard<mutex> lock(gentrefftzbasis);
         string encode = to_string(ord);
-        for(int i=0;i<ord*ord;i++)
-            encode += to_string(GG(i));
+        for(int i=0;i<(ord-1)*pow(ord-1,D==2);i++)
+            encode += to_string(GG(i)) + to_string(BB(i));
 
         if ( gtbstore[encode][0].Size() == 0)
         {
@@ -238,7 +238,7 @@ namespace ngfem
                                     if(D==2)
                                     *newcoeff +=
                                         (betay+2)*(betay+1)/((t+2)*(t+1)*GG(0)) * BB(x-betax,y-betay)
-                                        * qbasis( basisn, getcoeffyy) 
+                                        * qbasis( basisn, getcoeffyy)
                                         + (y-betay+1)*(betay+1)/((t+2)*(t+1)*GG(0)) * BB(x-betax,y-betay+1)
                                         * qbasis( basisn, getcoeffy);
                                     if(betax+betay == x+y) continue;
@@ -254,7 +254,6 @@ namespace ngfem
                     }
                 }
             }
-
 
             MatToCSR(qbasis,gtbstore[encode]);
         }

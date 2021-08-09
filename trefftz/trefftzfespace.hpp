@@ -56,7 +56,7 @@ struct GenericSqrt {
                 static Timer timereval("CalcWavespeedDerivatives");
                 timereval.Start();
                 this->GG.SetSize(0);
-                for(int i=0;i<ma->GetNE();i++) this->GG.Append(Matrix<>(this->order-1));
+                for(int i=0;i<ma->GetNE();i++) this->GG.Append(Matrix<>(this->order-1,(this->order-2)*(D==2)+1));
                 for(int ny=0;ny<=(this->order-2)*(D==2);ny++)
                 {
                     for(int nx=0;nx<=this->order-2;nx++)
@@ -74,10 +74,11 @@ struct GenericSqrt {
                 }
                 if(!aBBcf){
                     aBBcf = make_shared<ConstantCoefficientFunction>(1);
+                    cout << "SETTING BB TO 1" << endl;
                 }
                 shared_ptr<CoefficientFunction> BBcf = aBBcf;
                 shared_ptr<CoefficientFunction> BBcfx = aBBcf;
-                for(int i=0;i<ma->GetNE();i++) this->BB.Append(Matrix<>(this->order));
+                for(int i=0;i<ma->GetNE();i++) this->BB.Append(Matrix<>(this->order,(this->order-1)*(D==2)+1));
                 for(int ny=0;ny<=(this->order-1)*(D==2);ny++)
                 {
                     for(int nx=0;nx<=this->order-1;nx++)

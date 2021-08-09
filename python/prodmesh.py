@@ -149,14 +149,14 @@ def ProdMesh(ngmeshbase,t_steps):
 	return mesh
 
 
-def CartSquare(N,t_steps):
+def CartSquare(N,t_steps,xshift=0):
 	ngmesh = ngm.Mesh()
 	ngmesh.SetGeometry(unit_square)
 	ngmesh.dim = 2
 	pnums = []
 	for j in range(t_steps + 1):
 		for i in range(N + 1):
-			pnums.append(ngmesh.Add(ngm.MeshPoint(ngm.Pnt(i / N, j / t_steps, 0))))
+			pnums.append(ngmesh.Add(ngm.MeshPoint(ngm.Pnt(i / N + xshift, j / t_steps, 0))))
 
 	foo = ngm.FaceDescriptor(surfnr=1,domin=1,bc=1)
 	ngmesh.Add (foo)

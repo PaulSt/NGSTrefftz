@@ -66,11 +66,11 @@ namespace ngfem
                 static Timer timerbasis("quasiTrefftzbasis");
                 timerbasis.Start();
                 for(int i=0;i<aord-1;i++)
-                    for(int j=0;j<aord-1;j++)
-                    {
+                    for(int j=0;j<=(aord-2)*(D==2);j++)
                         GG(i,j) *= pow(aelsize/2.0,i+j);
+                for(int i=0;i<aord;i++)
+                    for(int j=0;j<=(aord-1)*(D==2);j++)
                         BB(i,j) *= pow(aelsize/2.0,i+j);
-                    }
                 this->localmat = QTrefftzWaveBasis<D>::getInstance().TB(ord,GG,BB);
                 timerbasis.Stop();
             }
