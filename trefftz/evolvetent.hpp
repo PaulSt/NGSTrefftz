@@ -192,7 +192,8 @@ namespace ngcomp
 
       this->GG.SetSize (0);
       for (int i = 0; i < ama->GetNV (); i++)
-        this->GG.Append (Matrix<> (this->order - 1));
+        this->GG.Append (
+            Matrix<> (this->order - 1, (this->order - 2) * (D == 2) + 1));
       for (int ny = 0; ny <= (this->order - 2) * (D == 2); ny++)
         {
           for (int nx = 0; nx <= this->order - 2; nx++)
@@ -216,7 +217,8 @@ namespace ngcomp
       shared_ptr<CoefficientFunction> BBcfx = aBBcf;
       this->BB.SetSize (0);
       for (int i = 0; i < ama->GetNV (); i++)
-        this->BB.Append (Matrix<> (this->order));
+        this->BB.Append (
+            Matrix<> (this->order, (this->order - 1) * (D == 2) + 1));
       for (int ny = 0; ny <= (this->order - 1) * (D == 2); ny++)
         {
           for (int nx = 0; nx <= this->order - 1; nx++)

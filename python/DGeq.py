@@ -6,22 +6,23 @@ import scipy.sparse.linalg
 import scipy.linalg
 
 
-def DGwaveeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alpha=0.5,beta=0.5,gamma=1,mu=0):
+def DGwaveeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alpha=0.5,beta=0.5,gamma=1,mu=0,BB=1):
     D = fes.mesh.dim - 1
+    # if not isinstance(BB,(int,float)): BB.spacedim = D
     U = fes.TrialFunction()
     V = fes.TestFunction()
     gU = grad(U)
     gV = grad(V)
 
     v = gU[D]
-    sig = CoefficientFunction(tuple([-gU[i] for i in  range(D)]))
+    sig = CoefficientFunction(tuple([-gU[i] for i in  range(D)]))*BB
     w = gV[D]
-    tau = CoefficientFunction(tuple([-gV[i] for i in  range(D)]))
+    tau = CoefficientFunction(tuple([-gV[i] for i in  range(D)]))*BB
 
     vo = gU.Other()[D]
-    sigo = CoefficientFunction(tuple([-gU.Other()[i] for i in  range(D)]))
+    sigo = CoefficientFunction(tuple([-gU.Other()[i] for i in  range(D)]))*BB
     wo = gV.Other()[D]
-    tauo = CoefficientFunction(tuple([-gV.Other()[i] for i in  range(D)]))
+    tauo = CoefficientFunction(tuple([-gV.Other()[i] for i in  range(D)]))*BB
 
     h = specialcf.mesh_size
     n = specialcf.normal(D+1)
@@ -56,20 +57,22 @@ def DGwaveeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alpha=0.5,be
     a = BilinearForm(fes)
     if(fullsys==True):
         HV = V.Operator("hesse")
-        # a += SymbolicBFI(  -v*(-HV[0]+pow(c,-2)*HV[3]) ) #- sig*(-HV[1]+HV[2])  )
-        a += SymbolicBFI(  -v*(-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
+        a += SymbolicBFI( - v * (BB*sum([-HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
+        if not isinstance(BB,(int,float)):
+            a += SymbolicBFI( - v * (BB.Diff(x)*(-gV[0]) + BB.Diff(y)*(-gV[1])) ) 
+        # a += SymbolicBFI(  sig*(CoefficientFunction([-HV[i,D] for i in range(D)]) + CoefficientFunction([HV[D,i] for i in range(D)])) )
         HU = U.Operator("hesse")
         a += SymbolicBFI(  mu * pow(c,2)
                               * (-sum([HU[i*(D+2)] for i in range(D)]) + pow(c,-2)*HU[(D+1)*(D+1)-1])
                               * (-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1])
                         )
-    #space like faces, w/o x jump
+    #space like faces, w/o x jump ASSUME TENSOR MESH
     if(applyrhs == False):
-        a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt) + IfPos(n_t,sig,sigo)*(jump_taut) ), VOL, skeleton=True )
+        a += SymbolicBFI( spacelike * ( pow(c,-2)*IfPos(n_t,v,vo)*jump_wt + IfPos(n_t,sig,sigo)*jump_taut/BB ), VOL, skeleton=True )
     # a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ), VOL, skeleton=True )
     #time like faces
     a += SymbolicBFI( timelike * ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ), VOL, skeleton=True )        #t=T (or *x)
-    a += SymbolicBFI( ( pow(c,-2)*v*w + sig*tau ), BND, definedon=fes.mesh.Boundaries("outflow"), skeleton=True)
+    a += SymbolicBFI( ( pow(c,-2)*v*w + sig*tau/BB ), BND, definedon=fes.mesh.Boundaries("outflow"), skeleton=True)
     #dirichlet boundary 'timelike'
     a += SymbolicBFI( ( sig*n_x*w + alpha*v*w ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
     #impedence boundary

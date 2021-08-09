@@ -207,8 +207,8 @@ namespace ngfem
   {
     lock_guard<mutex> lock (gentrefftzbasis);
     string encode = to_string (ord);
-    for (int i = 0; i < ord * ord; i++)
-      encode += to_string (GG (i));
+    for (int i = 0; i < (ord - 1) * pow (ord - 1, D == 2); i++)
+      encode += to_string (GG (i)) + to_string (BB (i));
 
     if (gtbstore[encode][0].Size () == 0)
       {
