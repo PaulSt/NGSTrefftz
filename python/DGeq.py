@@ -59,7 +59,7 @@ def DGwaveeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alpha=0.5,be
         HV = V.Operator("hesse")
         a += SymbolicBFI( - v * (BB*sum([-HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
         if not isinstance(BB,(int,float)):
-            a += SymbolicBFI( - v * (BB.Diff(x)*(-gV[0]) + BB.Diff(y)*(-gV[1])) ) 
+            a += SymbolicBFI( - v * (BB.Diff(x)*(-gV[0]) + BB.Diff(y)*(-gV[1])) )
         # a += SymbolicBFI(  sig*(CoefficientFunction([-HV[i,D] for i in range(D)]) + CoefficientFunction([HV[D,i] for i in range(D)])) )
         HU = U.Operator("hesse")
         a += SymbolicBFI(  mu * pow(c,2)
@@ -464,7 +464,7 @@ def DGsolve(fes,a,f):
 
     return gfu
 
-def DGnormerror(fes,uh,gradtruesol,c,alpha,beta):
+def DGnormerror(fes,uh,gradtruesol,c,alpha,beta,BB=1):
     D = fes.mesh.dim - 1
     U = fes.TrialFunction()
     V = fes.TestFunction()
@@ -520,17 +520,17 @@ def DGnormerror(fes,uh,gradtruesol,c,alpha,beta):
                         # )
     # space like faces, w/o x jump
     a += SymbolicBFI( spacelike * 0.5 * pow(c,-2)*jump_wt*jump_vt , VOL, skeleton=True)
-    a += SymbolicBFI( spacelike * 0.5 * jump_taut * jump_sigt , VOL, skeleton=True )
-    #time like faces
+    a += SymbolicBFI( spacelike * 0.5 * 1/BB*jump_taut * jump_sigt , VOL, skeleton=True )
+    # time like faces
     a += SymbolicBFI( timelike * alpha * jump_vx * jump_wx , VOL, skeleton=True )
     a += SymbolicBFI( timelike * beta * jump_sigx * jump_taux , VOL, skeleton=True )
     jumppart = uh.vec.CreateVector()
     a.Apply(uh.vec,jumppart)
-
+    # smooth solution vanishes on jumppart
     norm = 0
     norm += uh.vec.InnerProduct(jumppart)
     norm += 0.5 * Integrate((BoundaryFromVolumeCF(grad(uh)[D]) - gradtruesol[D])**2 / c, fes.mesh, definedon=fes.mesh.Boundaries("outflow|inflow"))
-    norm += 0.5 * Integrate(sum((BoundaryFromVolumeCF(grad(uh)[i]) - gradtruesol[i])**2 for i in range(D)), fes.mesh, definedon=fes.mesh.Boundaries("outflow|inflow"))
+    norm += 0.5 * Integrate(sum((BoundaryFromVolumeCF(grad(uh)[i]) - gradtruesol[i])**2 / sqrt(BB) for i in range(D)), fes.mesh, definedon=fes.mesh.Boundaries("outflow|inflow"))
     norm += Integrate(alpha * (BoundaryFromVolumeCF(grad(uh)[D]) - gradtruesol[D])**2 , fes.mesh, definedon=fes.mesh.Boundaries("dirichlet"))
 
     return sqrt(norm)
