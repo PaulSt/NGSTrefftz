@@ -126,7 +126,7 @@ namespace ngcomp
                         MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
                         mip.Point() = ElCenter<1>(ei).Range(0,1);
                         if(BB.Size()!=0 || useqt)
-                            return *(new (alloc) QTrefftzWaveFE<1>(this->GG[ei.Nr()], this->BB[ei.Nr()], order,ElCenter<1>(ei),Adiam<1>(ei,wavespeedcf)));
+                            return *(new (alloc) QTrefftzWaveFE<1>(this->GG[ei.Nr()], this->BB[ei.Nr()], order,ElCenter<1>(ei),Adiam<1>(ei,wavespeedcf),ma->GetElType(ei)));
                         else if(heat)
                         {
                             if(heattest)
@@ -152,7 +152,7 @@ namespace ngcomp
                         mip.Point() = ElCenter<2>(ei).Range(0,2);
 
                         if(BB.Size()!=0 || useqt)
-                            return *(new (alloc) QTrefftzWaveFE<2>(this->GG[ei.Nr()], this->BB[ei.Nr()], order,ElCenter<2>(ei),1.0,ma->GetElType(ei)));
+                            return *(new (alloc) QTrefftzWaveFE<2>(this->GG[ei.Nr()], this->BB[ei.Nr()], order,ElCenter<2>(ei),Adiam<2>(ei,wavespeedcf),ma->GetElType(ei)));
                         else if(heat)
                         {
                             if(heattest)
