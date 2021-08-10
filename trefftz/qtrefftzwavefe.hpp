@@ -24,7 +24,9 @@ namespace ngfem
       return ginstance;
     }
 
-    CSR TB (int ord, FlatMatrix<double> GG, FlatMatrix<double> BB,
+    CSR TB (int ord, Vec<D + 1> ElCenter,
+            Matrix<shared_ptr<CoefficientFunction>> GGder,
+            Matrix<shared_ptr<CoefficientFunction>> BBder, double elsize = 1.0,
             int basistype = 0);
 
   private:
@@ -34,7 +36,7 @@ namespace ngfem
     QTrefftzWaveBasis &operator= (const QTrefftzWaveBasis &) = delete;
 
     mutex gentrefftzbasis;
-    std::map<std::string, CSR> gtbstore;
+    std::map<string, CSR> gtbstore;
   };
 
   template <int D> class QTrefftzWaveFE : public ScalarMappedElement<D + 1>
@@ -44,18 +46,17 @@ namespace ngfem
     const int npoly;
     ELEMENT_TYPE eltype;
     int basistype;
-    Matrix<double> GG;
-    Matrix<double> BB;
 
   public:
-    QTrefftzWaveFE (Matrix<double> aGG, Matrix<double> aBB, int aord = 1,
-                    Vec<D + 1> aelcenter = 0, double aelsize = 1,
+    QTrefftzWaveFE (Matrix<shared_ptr<CoefficientFunction>> aGGder,
+                    Matrix<shared_ptr<CoefficientFunction>> aBBder,
+                    int aord = 1, Vec<D + 1> aelcenter = 0, double aelsize = 1,
                     ELEMENT_TYPE aeltype = ET_TRIG, int abasistype = 0)
         : ScalarMappedElement<D + 1> (BinCoeff (D + aord, aord)
                                           + BinCoeff (D + aord - 1, aord - 1),
                                       aord),
           ord (aord), npoly (BinCoeff (D + 1 + ord, ord)), eltype (aeltype),
-          basistype (abasistype), GG (aGG), BB (aBB)
+          basistype (abasistype)
     {
 
       this->c = 1.0;
@@ -64,13 +65,8 @@ namespace ngfem
 
       static Timer timerbasis ("quasiTrefftzbasis");
       timerbasis.Start ();
-      for (int i = 0; i < aord - 1; i++)
-        for (int j = 0; j <= (aord - 2) * (D == 2); j++)
-          GG (i, j) *= pow (aelsize / 2.0, i + j);
-      for (int i = 0; i < aord; i++)
-        for (int j = 0; j <= (aord - 1) * (D == 2); j++)
-          BB (i, j) *= pow (aelsize / 2.0, i + j);
-      this->localmat = QTrefftzWaveBasis<D>::getInstance ().TB (ord, GG, BB);
+      this->localmat = QTrefftzWaveBasis<D>::getInstance ().TB (
+          ord, aelcenter, aGGder, aBBder, aelsize / 2.0);
       timerbasis.Stop ();
     }
 

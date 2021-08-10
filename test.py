@@ -357,5 +357,26 @@ if __name__ == "__main__":
     # {'name': 'tent top AAt', 'time': 3.556020358299543, 'counts': 43518, 'flops': 0.0, 'Gflop/s': 0.0}
     # {'name': 'tent top calcshape', 'time': 3.095868819707971, 'counts': 43518, 'flops': 0.0, 'Gflop/s': 0.0}
 
+    order = 7
+    SetNumThreads(1)
+    t_step = 1
+    h=32
+    mesh = CartSquare(h,h,xshift=3)
+    start = time.time()
+    print("error ",TestBessel(order,mesh,t_step)) # doctest:+ELLIPSIS
+    # e-13
+    print("time to solve",time.time()-start)
+    # 13s
+    for t in Timers():
+        if 'QTrefftz' in t['name']:
+            print(t)
+
+    start = time.time()
+    testspeed=1/sqrt(x**2-2)
+    for p in range(order):
+        testspeed=testspeed.Diff(x)
+    print(time.time()-start)
+    input()
+
     import doctest
     doctest.testmod()

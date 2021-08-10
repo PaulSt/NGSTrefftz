@@ -950,7 +950,8 @@ namespace ngcomp
     tps.SetPitchingMethod (ngstents::EEdgeGrad);
     tps.PitchTents<D> (dt, 0);
 
-    cout << "solving qt " << tps.GetNTents () << " tents " << endl;
+    cout << "solving qt " << tps.GetNTents () << " tents in " << D
+         << "+1 dimensions..." << endl;
 
     RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
       LocalHeap slh = lh.Split (); // split to threads
@@ -961,8 +962,7 @@ namespace ngcomp
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
       double tentsize = TentAdiam (tent);
 
-      QTrefftzWaveFE<D> tel (this->GG[tent->vertex], this->BB[tent->vertex],
-                             this->order, center, tentsize);
+      QTrefftzWaveFE<D> tel (GGder, BBder, this->order, center, tentsize);
       int nbasis = tel.GetNDof ();
 
       FlatMatrix<> elmat (nbasis, slh);

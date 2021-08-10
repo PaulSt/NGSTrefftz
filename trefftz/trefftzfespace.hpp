@@ -29,8 +29,8 @@ namespace ngcomp
     int heattest = 0;
     int basistype;
     shared_ptr<CoefficientFunction> wavespeedcf = nullptr;
-    Array<Matrix<double>> GG;
-    Array<Matrix<double>> BB;
+    Matrix<shared_ptr<CoefficientFunction>> GGder;
+    Matrix<shared_ptr<CoefficientFunction>> BBder;
 
   public:
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
@@ -39,7 +39,6 @@ namespace ngcomp
                        shared_ptr<CoefficientFunction> aBBcf = nullptr)
     {
       wavespeedcf = awavespeedcf;
-      this->BB.SetSize (0);
       if (aBBcf || useqt)
         {
           // wavespeedcf = UnaryOpCF(aBBcf/awavespeedcf,GenericSqrt());
@@ -53,27 +52,15 @@ namespace ngcomp
               = make_shared<ConstantCoefficientFunction> (1)
                 / (awavespeedcf * awavespeedcf);
 
-          LocalHeap lh (1000 * 1000);
-          IntegrationRule ir (D == 2 ? ET_TET : ET_TRIG, 0);
-          MappedIntegrationPoint<3, 3> mip (ir[0],
-                                            ma->GetTrafo (ElementId (0), lh));
-
-          static Timer timereval ("CalcWavespeedDerivatives");
-          timereval.Start ();
-          this->GG.SetSize (0);
-          for (int i = 0; i < ma->GetNE (); i++)
-            this->GG.Append (
-                Matrix<> (this->order - 1, (this->order - 2) * (D == 2) + 1));
+          static Timer timerder ("QTrefftzDerivatives");
+          static Timer timereval ("QTrefftzDerEval");
+          timerder.Start ();
+          GGder.SetSize (this->order - 1, (this->order - 2) * (D == 2) + 1);
           for (int ny = 0; ny <= (this->order - 2) * (D == 2); ny++)
             {
               for (int nx = 0; nx <= this->order - 2; nx++)
                 {
-                  double fac = (factorial (nx) * factorial (ny));
-                  for (int ne = 0; ne < ma->GetNE (); ne++)
-                    {
-                      mip.Point () = ElCenter<2> (ElementId (ne));
-                      this->GG[ne](nx, ny) = GGcfx->Evaluate (mip) / fac;
-                    }
+                  GGder (nx, ny) = GGcfx;
                   GGcfx = GGcfx->Diff (
                       MakeCoordinateCoefficientFunction (0).get (),
                       make_shared<ConstantCoefficientFunction> (1));
@@ -82,26 +69,23 @@ namespace ngcomp
                                  make_shared<ConstantCoefficientFunction> (1));
               GGcfx = GGcf;
             }
+          timerder.Stop ();
+
           if (!aBBcf)
             {
               aBBcf = make_shared<ConstantCoefficientFunction> (1);
               cout << "SETTING BB TO 1" << endl;
             }
+          static Timer timerbb ("QTrefftzBB");
+          timerbb.Start ();
           shared_ptr<CoefficientFunction> BBcf = aBBcf;
           shared_ptr<CoefficientFunction> BBcfx = aBBcf;
-          for (int i = 0; i < ma->GetNE (); i++)
-            this->BB.Append (
-                Matrix<> (this->order, (this->order - 1) * (D == 2) + 1));
+          BBder.SetSize (this->order, (this->order - 1) * (D == 2) + 1);
           for (int ny = 0; ny <= (this->order - 1) * (D == 2); ny++)
             {
               for (int nx = 0; nx <= this->order - 1; nx++)
                 {
-                  double fac = (factorial (nx) * factorial (ny));
-                  for (int ne = 0; ne < ma->GetNE (); ne++)
-                    {
-                      mip.Point () = ElCenter<2> (ElementId (ne));
-                      this->BB[ne](nx, ny) = BBcfx->Evaluate (mip) / fac;
-                    }
+                  BBder (nx, ny) = BBcfx;
                   BBcfx = BBcfx->Diff (
                       MakeCoordinateCoefficientFunction (0).get (),
                       make_shared<ConstantCoefficientFunction> (1));
@@ -110,7 +94,7 @@ namespace ngcomp
                                  make_shared<ConstantCoefficientFunction> (1));
               BBcfx = BBcf;
             }
-          timereval.Stop ();
+          timerbb.Stop ();
           cout << "finish" << endl;
         }
     }
