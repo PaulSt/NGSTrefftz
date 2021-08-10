@@ -115,10 +115,10 @@ def TestBessel(order, mesh, t_step):
     >>> for h in [4,8,16,32]:
     ...        mesh = CartSquare(h,h,xshift=3)
     ...        TestBessel(order,mesh,t_step) # doctest:+ELLIPSIS
-    1...e-07
+    9...e-06
+    ...e-07
+    ...e-08
     ...e-09
-    ...e-10
-    ...e-11
     """
 
     D = mesh.dim
@@ -157,11 +157,11 @@ def TestBessel(order, mesh, t_step):
     fes.SetWavespeed(wavespeed,BB)
     [a,f] = DGwaveeqsys(fes,U0,v0,sig0,wavespeed,gD,True,False,alpha=0,beta=0,gamma=1,mu=0,BB=BB)
     gfu = DGsolve(fes,a,f)
-    # dgerror = DGnormerror(fes,gfu,gradsol,wavespeed,alpha=0.5,beta=0.5)
+    dgerror = DGnormerror(fes,gfu,bdd[1:3],wavespeed,alpha=0,beta=0,BB=BB)
     # [L2error, sH1error] = PostProcess(fes,U0,gfu)
-    L2error = sqrt(Integrate((U0 - gfu)*(U0 - gfu), mesh))
+    # L2error = sqrt(Integrate((U0 - gfu)*(U0 - gfu), mesh))
 
-    return L2error
+    return dgerror
 
 
 
