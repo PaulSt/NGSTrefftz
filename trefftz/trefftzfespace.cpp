@@ -150,7 +150,8 @@ namespace ngcomp
               if (BB.Size () != 0 || useqt)
                 return *(new (alloc) QTrefftzWaveFE<1> (
                     this->GG[ei.Nr ()], this->BB[ei.Nr ()], order,
-                    ElCenter<1> (ei), Adiam<1> (ei, wavespeedcf)));
+                    ElCenter<1> (ei), Adiam<1> (ei, wavespeedcf),
+                    ma->GetElType (ei)));
               else if (heat)
                 {
                   if (heattest)
@@ -187,7 +188,8 @@ namespace ngcomp
               if (BB.Size () != 0 || useqt)
                 return *(new (alloc) QTrefftzWaveFE<2> (
                     this->GG[ei.Nr ()], this->BB[ei.Nr ()], order,
-                    ElCenter<2> (ei), 1.0, ma->GetElType (ei)));
+                    ElCenter<2> (ei), Adiam<2> (ei, wavespeedcf),
+                    ma->GetElType (ei)));
               else if (heat)
                 {
                   if (heattest)
