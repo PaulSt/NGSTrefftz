@@ -332,18 +332,18 @@ def TestAiryTent(order, initmesh, t_step,qtrefftz=1):
 
 
 if __name__ == "__main__":
-    # order = 4
-    # SetNumThreads(1)
-    # c = 1
-    # t_step = 2/sqrt(3)
-    # initmesh=Mesh(unit_cube.GenerateMesh(maxh = 0.25))
-    # start = time.time()
-    # print("Error",SolveWaveTents(initmesh, order, c, t_step))
-    # print("PYTIME:", time.time()-start)
-    # for t in Timers():
-        # if 'tent' in t['name']:
-            # print(t)
-    # input()
+    order = 4
+    SetNumThreads(1)
+    c = 1
+    t_step = 2/sqrt(3)
+    initmesh=Mesh(unit_cube.GenerateMesh(maxh = 0.25))
+    start = time.time()
+    print("Error",SolveWaveTents(initmesh, order, c, t_step))
+    print("PYTIME:", time.time()-start)
+    for t in Timers():
+        if 'tent' in t['name']:
+            print(t)
+    input()
     # Error 0.0029433017038692647
     # PYTIME: 42.57842946052551
     # {'name': 'pitch tents', 'time': 0.011452735514933324, 'counts': 1, 'flops': 0.0, 'Gflop/s': 0.0}
