@@ -192,7 +192,6 @@ namespace ngfem
             MappedIntegrationPoint<D,D> mip(ir[0],et,0);
             for(int i=0;i<D;i++)
                 mip.Point()[i] = ElCenter[i];
-            cout << mip.Point() << endl;
 
             Matrix<> BB(ord,(ord-1)*(D==2)+1);
             Matrix<> GG(ord-1,(ord-2)*(D==2)+1);
@@ -206,8 +205,6 @@ namespace ngfem
                     GG(nx,ny) = GGder(nx,ny)->Evaluate(mip)/fac * pow(elsize,nx+ny);
                 }
             }
-            cout << BB << endl;
-            cout << GG << endl;
 
             const int nbasis = (BinCoeff(D + ord, ord) + BinCoeff(D + ord-1, ord-1));
             const int npoly = BinCoeff(D+1 + ord, ord);
