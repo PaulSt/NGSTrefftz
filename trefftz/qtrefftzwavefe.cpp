@@ -177,15 +177,35 @@ namespace ngfem
 
 
     template<int D>
-    CSR QTrefftzWaveBasis<D> :: TB(int ord, FlatMatrix<double> GG, FlatMatrix<double> BB, int basistype)
+    CSR QTrefftzWaveBasis<D> :: TB(int ord, Vec<D+1> ElCenter, Matrix<shared_ptr<CoefficientFunction>> GGder, Matrix<shared_ptr<CoefficientFunction>> BBder, double elsize, int basistype)
     {
         lock_guard<mutex> lock(gentrefftzbasis);
-        string encode = to_string(ord);
-        for(int i=0;i<(ord-1)*pow(ord-1,D==2);i++)
-            encode += to_string(GG(i)) + to_string(BB(i));
+        string encode = to_string(ord) + to_string(elsize);
+        for(int i=0;i<D;i++)
+            encode += to_string(ElCenter[i]);
 
         if ( gtbstore[encode][0].Size() == 0)
         {
+            IntegrationRule ir (D==3?ET_TET:D==2?ET_TRIG:ET_SEGM, 0);
+            Mat<D,D> dummy;
+            FE_ElementTransformation<D,D> et(D==3?ET_TET:D==2?ET_TRIG:ET_SEGM,dummy);
+            MappedIntegrationPoint<D,D> mip(ir[0],et,0);
+            for(int i=0;i<D;i++)
+                mip.Point()[i] = ElCenter[i];
+
+            Matrix<> BB(ord,(ord-1)*(D==2)+1);
+            Matrix<> GG(ord-1,(ord-2)*(D==2)+1);
+            for(int ny=0;ny<=(ord-1)*(D==2);ny++)
+            {
+                for(int nx=0;nx<=ord-1;nx++)
+                {
+                    double fac = (factorial(nx)*factorial(ny));
+                    BB(nx,ny) = BBder(nx,ny)->Evaluate(mip)/fac * pow(elsize,nx+ny);
+                    if(nx<ord-1 && ny<ord-1)
+                    GG(nx,ny) = GGder(nx,ny)->Evaluate(mip)/fac * pow(elsize,nx+ny);
+                }
+            }
+
             const int nbasis = (BinCoeff(D + ord, ord) + BinCoeff(D + ord-1, ord-1));
             const int npoly = BinCoeff(D+1 + ord, ord);
             Matrix<> qbasis(nbasis,npoly);
