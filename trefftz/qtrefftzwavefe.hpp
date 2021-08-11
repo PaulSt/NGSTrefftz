@@ -29,6 +29,12 @@ namespace ngfem
             Matrix<shared_ptr<CoefficientFunction>> BBder, double elsize = 1.0,
             int basistype = 0);
 
+    void Clear ()
+    {
+      gtbstore.clear ();
+      cout << "CLEAR BASIS!" << endl;
+    }
+
   private:
     QTrefftzWaveBasis () = default;
     ~QTrefftzWaveBasis () = default;

@@ -208,7 +208,7 @@ namespace ngfem
                                 double elsize, int basistype)
   {
     lock_guard<mutex> lock (gentrefftzbasis);
-    string encode = to_string (ord);
+    string encode = to_string (ord) + to_string (elsize);
     for (int i = 0; i < D; i++)
       encode += to_string (ElCenter[i]);
 
