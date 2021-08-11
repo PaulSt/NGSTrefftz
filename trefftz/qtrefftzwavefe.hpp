@@ -26,6 +26,8 @@ namespace ngfem
 
             CSR TB(int ord, Vec<D+1> ElCenter, Matrix<shared_ptr<CoefficientFunction>> GGder, Matrix<shared_ptr<CoefficientFunction>> BBder, double elsize = 1.0, int basistype=0);
 
+            void Clear(){gtbstore.clear(); cout << "CLEAR BASIS!" << endl;}
+
         private:
             QTrefftzWaveBasis()= default;
             ~QTrefftzWaveBasis()= default;

@@ -180,7 +180,7 @@ namespace ngfem
     CSR QTrefftzWaveBasis<D> :: TB(int ord, Vec<D+1> ElCenter, Matrix<shared_ptr<CoefficientFunction>> GGder, Matrix<shared_ptr<CoefficientFunction>> BBder, double elsize, int basistype)
     {
         lock_guard<mutex> lock(gentrefftzbasis);
-        string encode = to_string(ord);
+        string encode = to_string(ord) + to_string(elsize);
         for(int i=0;i<D;i++)
             encode += to_string(ElCenter[i]);
 

@@ -37,57 +37,7 @@ struct GenericSqrt {
 
         TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags);
 
-        void SetWavespeed(shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> aBBcf = nullptr) {
-            wavespeedcf=awavespeedcf;
-            if(aBBcf || useqt)
-            {
-                //wavespeedcf = UnaryOpCF(aBBcf/awavespeedcf,GenericSqrt());
-                cout << "started auto diff.... ";
-                //shared_ptr<CoefficientFunction> GGcf = awavespeedcf;
-                //shared_ptr<CoefficientFunction> GGcfx = awavespeedcf;
-                shared_ptr<CoefficientFunction> GGcf = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
-                shared_ptr<CoefficientFunction> GGcfx = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
-
-                static Timer timerder("QTrefftzDerivatives");
-                static Timer timereval("QTrefftzDerEval");
-                timerder.Start();
-                GGder.SetSize(this->order-1,(this->order-2)*(D==2)+1);
-                for(int ny=0;ny<=(this->order-2)*(D==2);ny++)
-                {
-                    for(int nx=0;nx<=this->order-2;nx++)
-                    {
-                        GGder(nx,ny) = GGcfx;
-                        GGcfx = GGcfx->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
-                    }
-                    GGcf = GGcf->Diff(MakeCoordinateCoefficientFunction(1).get(), make_shared<ConstantCoefficientFunction>(1) );
-                    GGcfx = GGcf;
-                }
-                timerder.Stop();
-
-
-                if(!aBBcf){
-                    aBBcf = make_shared<ConstantCoefficientFunction>(1);
-                    cout << "SETTING BB TO 1" << endl;
-                }
-                static Timer timerbb("QTrefftzBB");
-                timerbb.Start();
-                shared_ptr<CoefficientFunction> BBcf = aBBcf;
-                shared_ptr<CoefficientFunction> BBcfx = aBBcf;
-                BBder.SetSize(this->order,(this->order-1)*(D==2)+1);
-                for(int ny=0;ny<=(this->order-1)*(D==2);ny++)
-                {
-                    for(int nx=0;nx<=this->order-1;nx++)
-                    {
-                        BBder(nx,ny) = BBcfx;
-                        BBcfx = BBcfx->Diff(MakeCoordinateCoefficientFunction(0).get(), make_shared<ConstantCoefficientFunction>(1) );
-                    }
-                    BBcf = BBcf->Diff(MakeCoordinateCoefficientFunction(1).get(), make_shared<ConstantCoefficientFunction>(1) );
-                    BBcfx = BBcf;
-                }
-                timerbb.Stop();
-                cout << "finish" << endl;
-            }
-        }
+        void SetWavespeed(shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> aBBcf = nullptr);
 
         string GetClassName () const override { return "trefftz"; }
 
