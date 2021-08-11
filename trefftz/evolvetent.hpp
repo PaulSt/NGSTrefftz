@@ -160,8 +160,8 @@ namespace ngcomp
     // Matrix<> wavefront;
     // shared_ptr<CoefficientFunction> bddatum;
     // double timeshift = 0;
-    Array<Matrix<double>> GG;
-    Array<Matrix<double>> BB;
+    Matrix<shared_ptr<CoefficientFunction>> GGder;
+    Matrix<shared_ptr<CoefficientFunction>> BBder;
 
     using WaveTents<D>::TentAdiam;
     using WaveTents<D>::LapackSolve;
@@ -174,36 +174,23 @@ namespace ngcomp
                  shared_ptr<CoefficientFunction> abddatum)
         : WaveTents<D> (aorder, ama, awavespeedcf, abddatum)
     {
-      LocalHeap lh (1000 * 1000 * 1000);
-      const ELEMENT_TYPE eltyp
-          = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
-      const int nsimd = SIMD<double>::Size ();
-      SIMD_IntegrationRule sir (eltyp, this->order * 2);
-
-      IntegrationRule ir (eltyp, 0);
-      MappedIntegrationPoint<D, D> mip (ir[0],
-                                        ama->GetTrafo (ElementId (0), lh));
+      // LocalHeap lh(1000 * 1000 * 1000);
+      // const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG :
+      // ET_SEGM); const int nsimd = SIMD<double>::Size(); SIMD_IntegrationRule
+      // sir(eltyp, this->order*2);
+      QTrefftzWaveBasis<D>::getInstance ().Clear ();
       shared_ptr<CoefficientFunction> GGcf
           = make_shared<ConstantCoefficientFunction> (1)
             / (awavespeedcf * awavespeedcf);
       shared_ptr<CoefficientFunction> GGcfx
           = make_shared<ConstantCoefficientFunction> (1)
             / (awavespeedcf * awavespeedcf);
-
-      this->GG.SetSize (0);
-      for (int i = 0; i < ama->GetNV (); i++)
-        this->GG.Append (
-            Matrix<> (this->order - 1, (this->order - 2) * (D == 2) + 1));
+      GGder.SetSize (this->order - 1, (this->order - 2) * (D == 2) + 1);
       for (int ny = 0; ny <= (this->order - 2) * (D == 2); ny++)
         {
           for (int nx = 0; nx <= this->order - 2; nx++)
             {
-              double fac = (factorial (nx) * factorial (ny));
-              for (int nv = 0; nv < ama->GetNV (); nv++)
-                {
-                  mip.Point () = ama->GetPoint<D> (nv);
-                  this->GG[nv](nx, ny) = GGcfx->Evaluate (mip) / fac;
-                }
+              GGder (nx, ny) = GGcfx;
               GGcfx
                   = GGcfx->Diff (MakeCoordinateCoefficientFunction (0).get (),
                                  make_shared<ConstantCoefficientFunction> (1));
@@ -213,22 +200,21 @@ namespace ngcomp
           GGcfx = GGcf;
         }
 
+      if (!aBBcf)
+        {
+          aBBcf = make_shared<ConstantCoefficientFunction> (1);
+          cout << "SETTING BB TO 1" << endl;
+        }
+      static Timer timerbb ("QTrefftzBB");
+      timerbb.Start ();
       shared_ptr<CoefficientFunction> BBcf = aBBcf;
       shared_ptr<CoefficientFunction> BBcfx = aBBcf;
-      this->BB.SetSize (0);
-      for (int i = 0; i < ama->GetNV (); i++)
-        this->BB.Append (
-            Matrix<> (this->order, (this->order - 1) * (D == 2) + 1));
+      BBder.SetSize (this->order, (this->order - 1) * (D == 2) + 1);
       for (int ny = 0; ny <= (this->order - 1) * (D == 2); ny++)
         {
           for (int nx = 0; nx <= this->order - 1; nx++)
             {
-              double fac = (factorial (nx) * factorial (ny));
-              for (int nv = 0; nv < ama->GetNV (); nv++)
-                {
-                  mip.Point () = ama->GetPoint<D> (nv);
-                  this->BB[nv](nx, ny) = BBcfx->Evaluate (mip) / fac;
-                }
+              BBder (nx, ny) = BBcfx;
               BBcfx
                   = BBcfx->Diff (MakeCoordinateCoefficientFunction (0).get (),
                                  make_shared<ConstantCoefficientFunction> (1));

@@ -99,6 +99,75 @@ namespace ngcomp
       }
   }
 
+  void
+  TrefftzFESpace ::SetWavespeed (shared_ptr<CoefficientFunction> awavespeedcf,
+                                 shared_ptr<CoefficientFunction> aBBcf)
+  {
+    wavespeedcf = awavespeedcf;
+    if (aBBcf || useqt)
+      {
+        if (D == 1)
+          QTrefftzWaveBasis<1>::getInstance ().Clear ();
+        if (D == 2)
+          QTrefftzWaveBasis<2>::getInstance ().Clear ();
+        // wavespeedcf = UnaryOpCF(aBBcf/awavespeedcf,GenericSqrt());
+        cout << "started auto diff.... ";
+        // shared_ptr<CoefficientFunction> GGcf = awavespeedcf;
+        // shared_ptr<CoefficientFunction> GGcfx = awavespeedcf;
+        shared_ptr<CoefficientFunction> GGcf
+            = make_shared<ConstantCoefficientFunction> (1)
+              / (awavespeedcf * awavespeedcf);
+        shared_ptr<CoefficientFunction> GGcfx
+            = make_shared<ConstantCoefficientFunction> (1)
+              / (awavespeedcf * awavespeedcf);
+
+        static Timer timerder ("QTrefftzDerivatives");
+        static Timer timereval ("QTrefftzDerEval");
+        timerder.Start ();
+        GGder.SetSize (this->order - 1, (this->order - 2) * (D == 2) + 1);
+        for (int ny = 0; ny <= (this->order - 2) * (D == 2); ny++)
+          {
+            for (int nx = 0; nx <= this->order - 2; nx++)
+              {
+                GGder (nx, ny) = GGcfx;
+                GGcfx = GGcfx->Diff (
+                    MakeCoordinateCoefficientFunction (0).get (),
+                    make_shared<ConstantCoefficientFunction> (1));
+              }
+            GGcf = GGcf->Diff (MakeCoordinateCoefficientFunction (1).get (),
+                               make_shared<ConstantCoefficientFunction> (1));
+            GGcfx = GGcf;
+          }
+        timerder.Stop ();
+
+        if (!aBBcf)
+          {
+            aBBcf = make_shared<ConstantCoefficientFunction> (1);
+            cout << "SETTING BB TO 1" << endl;
+          }
+        static Timer timerbb ("QTrefftzBB");
+        timerbb.Start ();
+        shared_ptr<CoefficientFunction> BBcf = aBBcf;
+        shared_ptr<CoefficientFunction> BBcfx = aBBcf;
+        BBder.SetSize (this->order, (this->order - 1) * (D == 2) + 1);
+        for (int ny = 0; ny <= (this->order - 1) * (D == 2); ny++)
+          {
+            for (int nx = 0; nx <= this->order - 1; nx++)
+              {
+                BBder (nx, ny) = BBcfx;
+                BBcfx = BBcfx->Diff (
+                    MakeCoordinateCoefficientFunction (0).get (),
+                    make_shared<ConstantCoefficientFunction> (1));
+              }
+            BBcf = BBcf->Diff (MakeCoordinateCoefficientFunction (1).get (),
+                               make_shared<ConstantCoefficientFunction> (1));
+            BBcfx = BBcf;
+          }
+        timerbb.Stop ();
+        cout << "finish" << endl;
+      }
+  }
+
   void TrefftzFESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
   {
     dnums.SetSize (0);
@@ -147,11 +216,10 @@ namespace ngcomp
               MappedIntegrationPoint<D, D> mip (
                   ir[0], ma->GetTrafo (ElementId (0), lh));
               mip.Point () = ElCenter<1> (ei).Range (0, 1);
-              if (BB.Size () != 0 || useqt)
+              if (BBder.Height () != 0 || useqt)
                 return *(new (alloc) QTrefftzWaveFE<1> (
-                    this->GG[ei.Nr ()], this->BB[ei.Nr ()], order,
-                    ElCenter<1> (ei), Adiam<1> (ei, wavespeedcf),
-                    ma->GetElType (ei)));
+                    GGder, BBder, order, ElCenter<1> (ei),
+                    Adiam<1> (ei, wavespeedcf), ma->GetElType (ei)));
               else if (heat)
                 {
                   if (heattest)
@@ -185,11 +253,10 @@ namespace ngcomp
                   ir[0], ma->GetTrafo (ElementId (0), lh));
               mip.Point () = ElCenter<2> (ei).Range (0, 2);
 
-              if (BB.Size () != 0 || useqt)
+              if (BBder.Height () != 0 || useqt)
                 return *(new (alloc) QTrefftzWaveFE<2> (
-                    this->GG[ei.Nr ()], this->BB[ei.Nr ()], order,
-                    ElCenter<2> (ei), Adiam<2> (ei, wavespeedcf),
-                    ma->GetElType (ei)));
+                    GGder, BBder, order, ElCenter<2> (ei),
+                    Adiam<2> (ei, wavespeedcf), ma->GetElType (ei)));
               else if (heat)
                 {
                   if (heattest)
