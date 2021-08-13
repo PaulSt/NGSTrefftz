@@ -104,18 +104,33 @@ namespace ngfem
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  typedef Vec<3, Array<double>>
+      CSR; // CSR sparse matrix in (row,col,val) format
+
+  void MatToCSR (Matrix<> mat, CSR &sparsemat);
+
   template <int D> class ScalarMappedElement : public BaseScalarMappedElement
   {
 
   protected:
     CSR localmat;
+    ELEMENT_TYPE eltype;
     Vec<D> elcenter;
     double elsize;
-    float c;
+    float c = 1.0;
     const int npoly = BinCoeff (D + order, order);
 
   public:
     using BaseScalarMappedElement::BaseScalarMappedElement;
+
+    ScalarMappedElement (int andof, int aord, CSR alocalmat,
+                         ELEMENT_TYPE aeltype, Vec<D + 1> aelcenter = 0,
+                         double aelsize = 1)
+        : BaseScalarMappedElement (andof, aord), localmat (alocalmat),
+          elcenter (aelcenter), elsize (aelsize), eltype (aeltype)
+    {
+      ;
+    }
 
     // the name
     NGS_DLL_HEADER virtual string ClassName () const;
@@ -129,6 +144,8 @@ namespace ngfem
       CalcDShape (mip, dshape);
       return dshape;
     }
+
+    virtual ELEMENT_TYPE ElementType () const { return eltype; }
 
     using BaseScalarMappedElement::CalcDShape;
     using BaseScalarMappedElement::CalcMappedDShape;
@@ -192,9 +209,25 @@ namespace ngfem
       return 0;
     } // ugly parent hack for trefftzwave
 
-    NGS_DLL_HEADER virtual void
-    CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
-                       BareSliceMatrix<> hddshape) const;
+    // NGS_DLL_HEADER virtual void CalcMappedDDShape (const
+    // BaseMappedIntegrationPoint & bmip, BareSliceMatrix<> hddshape) const;
+    // using ScalarMappedElement<D+1>::CalcMappedDDShape;
+    void CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
+                            BareSliceMatrix<> hddshape) const;
+    void CalcDDWaveOperator (const SIMD_BaseMappedIntegrationRule &smir,
+                             BareSliceMatrix<SIMD<double>> dshape,
+                             BareSliceMatrix<SIMD<double>> wavespeed,
+                             BareSliceMatrix<SIMD<double>> mu) const;
+
+    void CalcDDWaveOperator (const SIMD_BaseMappedIntegrationRule &smir,
+                             BareSliceMatrix<SIMD<double>> dshape,
+                             BareSliceMatrix<SIMD<double>> wavespeed) const
+    {
+      Matrix<SIMD<double>> mu (1, wavespeed.Dist ());
+      SIMD<double> a = 1.0;
+      mu = a;
+      CalcDDWaveOperator (smir, dshape, wavespeed, mu);
+    }
 
     void CalcMappedDShape (const BaseMappedIntegrationPoint &bmip,
                            BareSliceMatrix<> dshape) const

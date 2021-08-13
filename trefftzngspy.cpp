@@ -18,7 +18,6 @@ PYBIND11_PLUGIN (trefftzngs)
 {
   // import ngsolve such that python base classes are defined
   py::module::import ("ngsolve");
-
   py::module m ("trefftzngs", "trefftzngs doc-string");
 
   // ExportMappedElement(m);

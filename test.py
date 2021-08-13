@@ -246,6 +246,10 @@ def SolveWaveTents(initmesh, order, c, t_step):
     timing = (time.time()-start)
 
     error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
+    # print("COMPARE ERRORS")
+    # print("L2 Error ", TT.L2Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step)))
+    # print("L2 proj Error ", sqrt(Integrate((bdd[0] - TT.GetWave())**2, initmesh)) )
+    # input()
     adiam = TT.MaxAdiam(t_step)
 
     # return [error, timing, adiam]
@@ -340,18 +344,18 @@ if __name__ == "__main__":
         # if 'tent' in t['name']:
             # print(t)
     # input()
-    # Error 0.0029433017038692647
-    # PYTIME: 42.57842946052551
-    # {'name': 'pitch tents', 'time': 0.011452735514933324, 'counts': 1, 'flops': 0.0, 'Gflop/s': 0.0}
-    # {'name': 'tent top bilinearform', 'time': 9.498263475069015, 'counts': 47284, 'flops': 73233459200.0, 'Gflop/s': 7.7101945415836015}
-    # {'name': 'tent top AAt', 'time': 4.70538792283988, 'counts': 47284, 'flops': 0.0, 'Gflop/s': 0.0}
-    # {'name': 'tent top calcshape', 'time': 5.122740580736957, 'counts': 47284, 'flops': 0.0, 'Gflop/s': 0.0}
-    # on new dell
-    # Error 0.0032559029714194806
-    # PYTIME: 22.690917253494263
-    # {'name': 'tent top bilinearform', 'time': 3.264730902699223, 'counts': 43518, 'flops': 67400678400.0, 'Gflop/s': 20.64509462151208}
-    # {'name': 'tent top AAt', 'time': 3.556020358299543, 'counts': 43518, 'flops': 0.0, 'Gflop/s': 0.0}
-    # {'name': 'tent top calcshape', 'time': 3.095868819707971, 'counts': 43518, 'flops': 0.0, 'Gflop/s': 0.0}
+    # # Error 0.0029433017038692647
+    # # PYTIME: 42.57842946052551
+    # # {'name': 'pitch tents', 'time': 0.011452735514933324, 'counts': 1, 'flops': 0.0, 'Gflop/s': 0.0}
+    # # {'name': 'tent top bilinearform', 'time': 9.498263475069015, 'counts': 47284, 'flops': 73233459200.0, 'Gflop/s': 7.7101945415836015}
+    # # {'name': 'tent top AAt', 'time': 4.70538792283988, 'counts': 47284, 'flops': 0.0, 'Gflop/s': 0.0}
+    # # {'name': 'tent top calcshape', 'time': 5.122740580736957, 'counts': 47284, 'flops': 0.0, 'Gflop/s': 0.0}
+    # # on new dell
+    # # Error 0.0032559029714194806
+    # # PYTIME: 22.690917253494263
+    # # {'name': 'tent top bilinearform', 'time': 3.264730902699223, 'counts': 43518, 'flops': 67400678400.0, 'Gflop/s': 20.64509462151208}
+    # # {'name': 'tent top AAt', 'time': 3.556020358299543, 'counts': 43518, 'flops': 0.0, 'Gflop/s': 0.0}
+    # # {'name': 'tent top calcshape', 'time': 3.095868819707971, 'counts': 43518, 'flops': 0.0, 'Gflop/s': 0.0}
 
     # order = 7
     # SetNumThreads(1)
@@ -362,10 +366,11 @@ if __name__ == "__main__":
     # print("error ",TestBessel(order,mesh,t_step)) # doctest:+ELLIPSIS
     # # e-13
     # print("time to solve",time.time()-start)
-    # # 13s
+    # # 3.04s
     # for t in Timers():
         # if 'QTrefftz' in t['name']:
             # print(t)
+    # input()
 
     # order = 4
     # initmesh = Mesh(unit_square.GenerateMesh(maxh = 0.1))

@@ -4,6 +4,36 @@
 
 namespace ngfem
 {
+  class Monomial : public RecursivePolynomial<Monomial>
+  {
+  public:
+    Monomial () { ; }
+
+    template <class S, class T> inline Monomial (int n, S x, T &&values)
+    {
+      Eval (n, x, values);
+    }
+
+    template <class S> static INLINE double P0 (S x) { return 1.0; }
+    template <class S> static INLINE S P1 (S x) { return x; }
+    template <class S, class Sy> static INLINE S P1 (S x, Sy y)
+    {
+      return P1 (x);
+    }
+
+    static INLINE double A (int i) { return 1.0; }
+    static INLINE double B (int i) { return 0; }
+    static INLINE double C (int i) { return 0; }
+
+    static INLINE double CalcA (int i) { return 1.0; }
+    static INLINE double CalcB (int i) { return 0; }
+    static INLINE double CalcC (int i) { return 0; }
+
+    enum
+    {
+      ZERO_B = 1
+    };
+  };
 
   void
   BaseScalarMappedElement ::CalcShape (const BaseMappedIntegrationPoint &mip,
@@ -150,6 +180,30 @@ namespace ngfem
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  void MatToCSR (Matrix<> mat, CSR &sparsemat)
+  {
+    int spsize = 0;
+    sparsemat[0].SetSize (0);
+    sparsemat[1].SetSize (0);
+    sparsemat[2].SetSize (0);
+    for (int i = 0; i < mat.Height (); i++)
+      {
+        // guarantee sparsemat[0].Size() to be nbasis,
+        // could be shorter but easier for mat*vec
+        sparsemat[0].Append (spsize);
+        for (int j = 0; j < mat.Width (); j++)
+          {
+            if (mat (i, j))
+              {
+                spsize++;
+                sparsemat[1].Append (j);
+                sparsemat[2].Append (mat (i, j));
+              }
+          }
+      }
+    sparsemat[0].Append (spsize);
+  };
 
   template <int D> string ScalarMappedElement<D>::ClassName () const
   {
@@ -904,6 +958,116 @@ namespace ngfem
       }
     // dshape *= (2.0/elsize); //inner derivative
     // dshape.Col(3) *= c; //inner derivative
+  }
+
+  template <>
+  void ScalarMappedElement<1>::CalcDDWaveOperator (
+      const SIMD_BaseMappedIntegrationRule &smir,
+      BareSliceMatrix<SIMD<double>> dshape,
+      BareSliceMatrix<SIMD<double>> wavespeed,
+      BareSliceMatrix<SIMD<double>> mu) const
+  {
+    ;
+  }
+  template <>
+  void ScalarMappedElement<4>::CalcDDWaveOperator (
+      const SIMD_BaseMappedIntegrationRule &smir,
+      BareSliceMatrix<SIMD<double>> dshape,
+      BareSliceMatrix<SIMD<double>> wavespeed,
+      BareSliceMatrix<SIMD<double>> mu) const
+  {
+    ;
+  }
+
+  template <>
+  void ScalarMappedElement<2>::CalcDDWaveOperator (
+      const SIMD_BaseMappedIntegrationRule &smir,
+      BareSliceMatrix<SIMD<double>> dshape,
+      BareSliceMatrix<SIMD<double>> wavespeed,
+      BareSliceMatrix<SIMD<double>> mu) const
+  {
+    for (int imip = 0; imip < smir.Size (); imip++)
+      {
+        Vec<2, SIMD<double>> cpoint = smir[imip].GetPoint ();
+        cpoint -= elcenter;
+        cpoint *= (1.0 / elsize);
+
+        STACK_ARRAY (SIMD<double>, mem, 2 * (order + 1) + 2);
+        mem[0] = 0;
+        mem[1] = 0;
+        Vec<2, SIMD<double> *> polxt;
+        for (size_t d = 0; d < 2; d++)
+          {
+            polxt[d] = &mem[d * (order + 1) + 2];
+            Monomial (order, cpoint[d], polxt[d]);
+          }
+
+        Vector<SIMD<double>> pol (npoly);
+        for (size_t i = 0, ii = 0; i <= order; i++)
+          for (size_t j = 0; j <= order - i; j++)
+            pol[ii++] = (i * (i - 1) * polxt[0][i - 2] * polxt[1][j]
+                         - j * (j - 1) * polxt[0][i] * polxt[1][j - 2]
+                               * wavespeed (0, imip))
+                        * mu (0, imip);
+
+        for (int i = 0; i < this->ndof; ++i)
+          {
+            dshape (i * 2, imip) = 0.0;
+            dshape (i * 2 + 1, imip) = 0.0;
+            for (int j = (localmat)[0][i]; j < (localmat)[0][i + 1]; ++j)
+              dshape (i * 2 + 1, imip) += (localmat)[2][j]
+                                          * pol[(localmat)[1][j]]
+                                          * pow (1.0 / elsize, 2);
+          }
+      }
+  }
+
+  template <>
+  void ScalarMappedElement<3>::CalcDDWaveOperator (
+      const SIMD_BaseMappedIntegrationRule &smir,
+      BareSliceMatrix<SIMD<double>> dshape,
+      BareSliceMatrix<SIMD<double>> wavespeed,
+      BareSliceMatrix<SIMD<double>> mu) const
+  {
+    for (int imip = 0; imip < smir.Size (); imip++)
+      {
+        Vec<3, SIMD<double>> cpoint = smir[imip].GetPoint ();
+        cpoint -= elcenter;
+        cpoint *= (1.0 / elsize);
+
+        STACK_ARRAY (SIMD<double>, mem, 3 * (order + 1) + 2);
+        mem[0] = 0;
+        mem[1] = 0;
+        Vec<3, SIMD<double> *> polxt;
+        for (size_t d = 0; d < 3; d++)
+          {
+            polxt[d] = &mem[d * (order + 1) + 2];
+            Monomial (order, cpoint[d], polxt[d]);
+          }
+
+        Vector<SIMD<double>> pol (npoly);
+        for (size_t i = 0, ii = 0; i <= order; i++)
+          for (size_t j = 0; j <= order - i; j++)
+            for (size_t k = 0; k <= order - i - j; k++)
+              pol[ii++]
+                  = (i * (i - 1) * polxt[0][i - 2] * polxt[1][j] * polxt[2][k]
+                     + j * (j - 1) * polxt[0][i] * polxt[1][j - 2]
+                           * polxt[2][k]
+                     - k * (k - 1) * polxt[0][i] * polxt[1][j]
+                           * polxt[2][k - 2] * wavespeed (0, imip))
+                    * mu (0, imip);
+
+        for (int i = 0; i < this->ndof; ++i)
+          {
+            dshape (i * 3, imip) = 0.0;
+            dshape (i * 3 + 1, imip) = 0.0;
+            dshape (i * 3 + 2, imip) = 0.0;
+            for (int j = (localmat)[0][i]; j < (localmat)[0][i + 1]; ++j)
+              dshape (i * 3 + 2, imip) += (localmat)[2][j]
+                                          * pol[(localmat)[1][j]]
+                                          * pow (1.0 / elsize, 2);
+          }
+      }
   }
 
   template class ScalarMappedElement<1>;

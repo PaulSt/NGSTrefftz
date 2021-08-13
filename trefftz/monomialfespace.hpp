@@ -1,6 +1,7 @@
 #ifndef FILE_MONOMIALFESPACE_HPP
 #define FILE_MONOMIALFESPACE_HPP
-#include "monomialfe.hpp"
+
+#include "scalarmappedfe.hpp"
 
 namespace ngcomp
 {
@@ -8,16 +9,14 @@ namespace ngcomp
   class MonomialFESpace : public FESpace
   {
     int D;
-    int fullD;
     int order;
     size_t ndof;
     int nel;
-    int nvert;
     int local_ndof;
-    float c = 1;
     int useshift = 1;
     int useqt = 0;
     shared_ptr<CoefficientFunction> wavespeedcf;
+    CSR basismat;
 
   public:
     MonomialFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
@@ -38,10 +37,9 @@ namespace ngcomp
     static DocInfo GetDocu ();
 
   protected:
-    template <int D> double Adiam (ElementId ei, double c) const;
+    template <int D> CSR MonomialBasis (int ord) const;
 
-    template <int D>
-    double Adiam (ElementId ei, shared_ptr<CoefficientFunction> c) const;
+    template <int D> double Adiam (ElementId ei) const;
 
     template <int D> Vec<D + 1> ElCenter (ElementId ei) const;
   };
