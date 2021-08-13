@@ -1,14 +1,32 @@
 #include "meshtentslab.hpp"
+#include "../tents/tents.hpp"
 
 
 namespace ngcomp
 {
+    typedef map<netgen::Point3d, netgen::PointIndex> Point2IndexMap;
 
-    shared_ptr<MeshAccess> NgsTPmesh(shared_ptr<MeshAccess> ma, double wavespeed, double dt)
+    netgen::PointIndex Point2Index(Point2IndexMap *pim, netgen::Point3d p)
     {
-            auto wavespeedcf = make_shared<ConstantCoefficientFunction>(wavespeed);
-            return NgsTPmesh(ma, wavespeedcf, dt);
+        Point2IndexMap::iterator lb = pim->find(p);
 
+        if(lb != pim->end() && !(pim->key_comp()(p, lb->first)))
+            return lb->second;
+        else
+        {
+            // the key does not exist in the map add it to the map
+            netgen::PointIndex newpind(pim->size()+1);
+            pim->insert(lb, Point2IndexMap::value_type(p, newpind)); // Use lb as a hint to insert,
+            return newpind;
+        }
+    }
+
+    netgen::PointIndex AddPointUnique(shared_ptr<netgen::Mesh> ngma, Point2IndexMap *pim, netgen::Point3d p)
+    {
+        netgen::PointIndex pi = Point2Index(pim,p);
+        if(pi == pim->size())
+            ngma -> AddPoint(p);
+        return pi;
     }
 
     shared_ptr<MeshAccess> NgsTPmesh(shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> wavespeedcf, double dt)
@@ -132,29 +150,6 @@ namespace ngcomp
         return tpmesh;
     }
 
-    netgen::PointIndex Point2Index(Point2IndexMap *pim, netgen::Point3d p)
-    {
-        Point2IndexMap::iterator lb = pim->find(p);
-
-        if(lb != pim->end() && !(pim->key_comp()(p, lb->first)))
-            return lb->second;
-        else
-        {
-            // the key does not exist in the map add it to the map
-            netgen::PointIndex newpind(pim->size()+1);
-            pim->insert(lb, Point2IndexMap::value_type(p, newpind)); // Use lb as a hint to insert,
-            return newpind;
-        }
-    }
-
-    netgen::PointIndex AddPointUnique(shared_ptr<netgen::Mesh> ngma, Point2IndexMap *pim, netgen::Point3d p)
-    {
-        netgen::PointIndex pi = Point2Index(pim,p);
-        if(pi == pim->size())
-            ngma -> AddPoint(p);
-        return pi;
-    }
-
 }
 
 
@@ -166,11 +161,6 @@ void ExportMeshTentSlab(py::module m)
     m.def("NgsTPmesh", [](shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> wavespeedcf, double dt) -> shared_ptr<MeshAccess>
           {
               return NgsTPmesh(ma,wavespeedcf,dt);
-          }//, py::call_guard<py::gil_scoped_release>()
-         );
-    m.def("NgsTPmesh", [](shared_ptr<MeshAccess> ma, double wavespeed, double dt) -> shared_ptr<MeshAccess>
-          {
-              return NgsTPmesh(ma,wavespeed,dt);
           }//, py::call_guard<py::gil_scoped_release>()
          );
 }
