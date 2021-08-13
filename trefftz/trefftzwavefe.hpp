@@ -27,7 +27,7 @@ namespace ngfem
             //TrefftzWaveFE<D> * SetElSize(double aelsize) {elsize = aelsize; return this;}
             // TrefftzWaveFE<D> * SetWavespeed(float ac) {c = ac; return this;}
             //
-            virtual ELEMENT_TYPE ElementType() const { return eltype; }
+            ELEMENT_TYPE ElementType() const { return eltype; }
 
             using ScalarMappedElement<D+1>::CalcShape;
             using ScalarMappedElement<D+1>::CalcDShape;

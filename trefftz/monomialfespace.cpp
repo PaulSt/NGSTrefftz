@@ -10,14 +10,12 @@
 
 namespace ngcomp
 {
-
     MonomialFESpace :: MonomialFESpace (shared_ptr<MeshAccess> ama, const Flags & flags)
         : FESpace (ama, flags)
     {
         type="monomialfespace";
 
-        fullD = ma->GetDimension();
-        D = fullD-1;
+        D = ma->GetDimension() - 1;
 
         order = int(flags.GetNumFlag ("order", 3));
         useshift = flags.GetNumFlag("useshift",1);
@@ -26,34 +24,25 @@ namespace ngcomp
         this->nel = ma->GetNE();
         this->ndof = local_ndof * nel;
 
-        switch (fullD)
+        switch (D)
         {
-            case 2:
-                {
-                    evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<2>>>();
-                    flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<2>>>();
-                    break;
-                }
-            case 3:
-                {
-                    evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<3>>>();
-                    flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<3>>>();
-                    break;
-                }
-        }
-
-        switch (fullD)
-        {
-            case 2:
+            case 1:
+            {
+                evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<2>>>();
+                flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<2>>>();
                 additional_evaluators.Set ("hesse", make_shared<T_DifferentialOperator<DiffOpMappedHesse<2>>> ());
+                basismat = MonomialBasis<1>(order);
                 break;
-            case 3:
+            }
+            case 2:
+            {
+                evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMapped<3>>>();
+                flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradient<3>>>();
                 additional_evaluators.Set ("hesse", make_shared<T_DifferentialOperator<DiffOpMappedHesse<3>>> ());
+                basismat = MonomialBasis<2>(order);
                 break;
-            default:
-                ;
+            }
         }
-
     }
 
 
@@ -61,14 +50,24 @@ namespace ngcomp
     {
         dnums.SetSize(0);
         if (!DefinedOn (ei) || ei.VB() != VOL) return;
-        // int n_vert = ma->GetNV();		int n_edge = ma->GetNEdges();		int n_cell = ma->GetNE(); Ngs_Element ngel = ma->GetElement (ei);
         for (int j = ei.Nr()*local_ndof; j<local_ndof*(ei.Nr()+1); j++)
-        {
             dnums.Append (j);
-        }
-        // cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " local_ndof:" << local_ndof << " ndof: " << ndof << " dnums: \n" << dnums << endl <<
-        // "================================================" << endl ;
     }
+
+    template<int D>
+    CSR MonomialFESpace :: MonomialBasis(int ord) const
+    {
+        CSR tb;
+        const int npoly = BinCoeff(D+1 + ord, ord);
+        Matrix<> basis(npoly,npoly);
+        basis = 0.0;
+        for(int i = 0;i<npoly;i++)
+            basis(i,i)=1.0;
+
+        MatToCSR(basis,tb);
+        return tb;
+    }
+
 
     FiniteElement & MonomialFESpace :: GetFE (ElementId ei, Allocator & alloc) const
     {
@@ -79,77 +78,42 @@ namespace ngcomp
         {
             switch (ma->GetElType(ei)) {
                 case ET_SEGM:
-                    {
-                        throw Exception("illegal element type in Trefftz::GetSurfaceFE");
-                        break;
-                    }
+                {
+                    throw Exception("illegal dim for space-time element");
+                    break;
+                }
                 case ET_QUAD:
                 case ET_TRIG:
-                    {
-
-                        LocalHeap lh(1000 * 1000);
-                        const ELEMENT_TYPE eltyp = ET_TRIG ;
-                        const int D=2;
-                        IntegrationRule ir (eltyp, 0);
-                        MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
-                        mip.Point() = ElCenter<1>(ei).Range(0,1);
-                    return *(new (alloc) MonomialFE<1>(order,ElCenter<1>(ei),Adiam<1>(ei,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c),ma->GetElType(ei)));
+                {
+                    return *(new (alloc) ScalarMappedElement<1>(local_ndof,order,basismat,eltype,ElCenter<1>(ei),Adiam<1>(ei)));
                     break;
-                    }
+                }
                 case ET_HEX:
                 case ET_PRISM:
                 case ET_PYRAMID:
                 case ET_TET:
-                    {
-
-                        LocalHeap lh(1000 * 1000);
-                        const ELEMENT_TYPE eltyp = ET_TET ;
-                        const int D=3;
-                        IntegrationRule ir (eltyp, 0);
-                        MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
-                        mip.Point() = ElCenter<2>(ei).Range(0,2);
-                    return *(new (alloc) MonomialFE<2>(order,ElCenter<2>(ei),Adiam<2>(ei,wavespeedcf!=NULL?wavespeedcf->Evaluate(mip):c),ma->GetElType(ei)));
+                {
+                    return *(new (alloc) ScalarMappedElement<2>(local_ndof,order,basismat,eltype,ElCenter<2>(ei),Adiam<2>(ei)));
                     break;
-                    }
+                }
             }
         }
-        else
+        try
         {
-            try
-            {
-                return SwitchET<ET_POINT,ET_SEGM,ET_TRIG,ET_QUAD>
-                    (eltype,
-                     [&alloc] (auto et) -> FiniteElement&
-                     { return * new (alloc) DummyFE<et.ElementType()>; });
-            }
-            catch (Exception e)
-            {
-                throw Exception("illegal element type in Trefftz::GetSurfaceFE");
-            }
+            return SwitchET<ET_POINT,ET_SEGM,ET_TRIG,ET_QUAD>
+                (eltype,
+                 [&alloc] (auto et) -> FiniteElement&
+                 { return * new (alloc) DummyFE<et.ElementType()>; });
+        }
+        catch (Exception e)
+        {
+            throw Exception("illegal element type in Trefftz::GetSurfaceFE");
         }
     }
 
 
     template<int D>
-    double MonomialFESpace :: Adiam(ElementId ei, double c) const
-    {
-        double anisotropicdiam = 0.0;
-        auto vertices_index = ma->GetElVertices(ei);
-        for(auto vertex1 : vertices_index)
-        {
-            for(auto vertex2 : vertices_index)
-            {
-                Vec<D+1> v1 = ma->GetPoint<D+1>(vertex1);
-                Vec<D+1> v2 = ma->GetPoint<D+1>(vertex2);
-                //cout << "v1: " << v1 << " v1 part: " << v1(1,D-1) << "norm " << L2Norm(v1) << endl ;
-                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1.Range(0,D) - v2.Range(0,D)) + pow(c*(v1(D)-v2(D)),2) ) );
-            }
-        }
-        return anisotropicdiam * useshift + (useshift==0);
-    }
-
-    template<int D>
-    double MonomialFESpace :: Adiam(ElementId ei, shared_ptr<CoefficientFunction> c) const
+    double MonomialFESpace :: Adiam(ElementId ei) const
     {
         LocalHeap lh(1000 * 1000);
         double anisotropicdiam = 0.0;
@@ -161,7 +125,6 @@ namespace ngcomp
             {
                 Vec<D+1> v1 = ma->GetPoint<D+1>(vertex1);
                 Vec<D+1> v2 = ma->GetPoint<D+1>(vertex2);
-                //cout << "v1: " << v1 << " v1 part: " << v1.Range(0,D) << " el type: " << ma->GetElType(ei) << " norm " << L2Norm(v1) << endl ;
                 IntegrationRule ir (ma->GetElType(ei), 0);
                 ElementTransformation & trafo = ma->GetTrafo (ei, lh);
                 MappedIntegrationPoint<D+1,D+1> mip(ir[0], trafo);

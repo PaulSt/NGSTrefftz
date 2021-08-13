@@ -3,6 +3,11 @@
 
 namespace ngcomp
 {
+    template <typename T>
+    int sgn_nozero(T val) {
+        return (T(0) <= val) - (val < T(0));
+    }
+
     template<int D>
     inline void  WaveTents<D> :: LapackSolve(SliceMatrix<double> a, SliceVector<double> b)
     {
@@ -875,7 +880,7 @@ namespace ngcomp
                     localwavespeedcf->Evaluate(vsmir,wavespeed);
 
                     FlatMatrix<SIMD<double>> simdddshapes((D+1)*nbasis,vsir.Size(),slh);
-                    tel.CalcDDSpecialShape(vsmir,simdddshapes,wavespeed);
+                    tel.CalcDDWaveOperator(vsmir,simdddshapes,wavespeed);
                     for(int imip=0;imip<vsir.Size();imip++)
                         simdddshapes.Col(imip) *= vol*vsir[imip].Weight();
                     FlatMatrix<SIMD<double>> simdddshapes2(nbasis,(D+1)*vsir.Size(),&simdddshapes(0,0));
@@ -895,7 +900,7 @@ namespace ngcomp
                     localwavespeedcf = make_shared<ConstantCoefficientFunction>(tentsize/cmax)*this->wavespeedcf*this->wavespeedcf;
                     localwavespeedcf->Evaluate(vsmir,mu);
                     FlatMatrix<SIMD<double>> simdddshapescor((D+1)*nbasis,vsir.Size(),slh);
-                    tel.CalcDDSpecialShape(vsmir,simdddshapescor,wavespeed,mu);
+                    tel.CalcDDWaveOperator(vsmir,simdddshapescor,wavespeed,mu);
                     AddABt( FlatMatrix<SIMD<double>>(nbasis,(D+1)*vsir.Size(),&simdddshapescor(0,0)),simdddshapes2,elmat);
                 }
             }

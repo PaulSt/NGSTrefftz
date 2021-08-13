@@ -16,7 +16,7 @@ def GetWave(self):
     irsize = len(intrule.points)
 
 
-    fes = H1(initmesh, order=order)
+    fes = L2(initmesh, order=order)
     u,v = fes.TnT()
     a = BilinearForm(fes)
     a += SymbolicBFI(u*v)

@@ -105,16 +105,16 @@ namespace ngfem
                             }
                             //i += ndof-1;	//jump to time = 2 if i=0
                             break;
-                        case 1:
-                            if((k == 0 && basis < BinCoeff(D + ord, ord)) || (k == 1 && basis >= BinCoeff(D + ord, ord))){
-                                trefftzbasis( basis,indexmap ) = 1;
-                                for(int exponent :  coeffnum.Range(0,D)) trefftzbasis( basis,indexmap ) *= LegCoeffMonBasis(basis,exponent);}
-                            break;
-                        case 2:
-                            if((k == 0 && basis < BinCoeff(D + ord, ord)) || (k == 1 && basis >= BinCoeff(D + ord, ord))){
-                                trefftzbasis( basis,indexmap ) = 1;
-                                for(int exponent :  coeffnum.Range(0,D)) trefftzbasis( basis,indexmap ) *= ChebCoeffMonBasis(basis,exponent);}
-                            break;
+                        //case 1:
+                            //if((k == 0 && basis < BinCoeff(D + ord, ord)) || (k == 1 && basis >= BinCoeff(D + ord, ord))){
+                                //trefftzbasis( basis,indexmap ) = 1;
+                                //for(int exponent :  coeffnum.Range(0,D)) trefftzbasis( basis,indexmap ) *= LegCoeffMonBasis(basis,exponent);}
+                            //break;
+                        //case 2:
+                            //if((k == 0 && basis < BinCoeff(D + ord, ord)) || (k == 1 && basis >= BinCoeff(D + ord, ord))){
+                                //trefftzbasis( basis,indexmap ) = 1;
+                                //for(int exponent :  coeffnum.Range(0,D)) trefftzbasis( basis,indexmap ) *= ChebCoeffMonBasis(basis,exponent);}
+                            //break;
                     }
                 }
                 else if(coeffnum(D)>0 && coeffnum(D)<basis)
@@ -259,16 +259,16 @@ namespace ngfem
                             }
                             //i += ndof-1;	//jump to time = 2 if i=0
                             break;
-                        case 1:
-                            if((k == 0 && basis < BinCoeff(D + ord, ord)) || (k == 1 && basis >= BinCoeff(D + ord, ord))){
-                                trefftzbasis( basis,indexmap ) = 1;
-                                for(int exponent :  coeffnum.Range(0,D)) trefftzbasis( basis,indexmap ) *= LegCoeffMonBasis(basis,exponent);}
-                            break;
-                        case 2:
-                            if((k == 0 && basis < BinCoeff(D + ord, ord)) || (k == 1 && basis >= BinCoeff(D + ord, ord))){
-                                trefftzbasis( basis,indexmap ) = 1;
-                                for(int exponent :  coeffnum.Range(0,D)) trefftzbasis( basis,indexmap ) *= ChebCoeffMonBasis(basis,exponent);}
-                            break;
+                        //case 1:
+                            //if((k == 0 && basis < BinCoeff(D + ord, ord)) || (k == 1 && basis >= BinCoeff(D + ord, ord))){
+                                //trefftzbasis( basis,indexmap ) = 1;
+                                //for(int exponent :  coeffnum.Range(0,D)) trefftzbasis( basis,indexmap ) *= LegCoeffMonBasis(basis,exponent);}
+                            //break;
+                        //case 2:
+                            //if((k == 0 && basis < BinCoeff(D + ord, ord)) || (k == 1 && basis >= BinCoeff(D + ord, ord))){
+                                //trefftzbasis( basis,indexmap ) = 1;
+                                //for(int exponent :  coeffnum.Range(0,D)) trefftzbasis( basis,indexmap ) *= ChebCoeffMonBasis(basis,exponent);}
+                            //break;
                     }
                 }
                 else if(coeffnum(D)>0 && coeffnum(D)<basis)
