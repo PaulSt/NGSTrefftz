@@ -2,7 +2,6 @@
 #define FILE_TREFFTZHEATELEMENT_HPP
 
 #include <fem.hpp>
-#include "helpers.hpp"
 #include "scalarmappedfe.hpp"
 
 namespace ngfem

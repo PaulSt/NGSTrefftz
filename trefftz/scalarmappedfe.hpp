@@ -2,7 +2,6 @@
 #define FILE_SCALARMAPPEDELEMENT_HPP
 
 #include <fem.hpp>
-#include "helpers.hpp"
 
 namespace ngfem
 {
@@ -84,6 +83,16 @@ namespace ngfem
     typedef Vec<3,Array<double>> CSR; // CSR sparse matrix in (row,col,val) format
 
     void MatToCSR(Matrix<> mat, CSR &sparsemat);
+
+	inline constexpr long BinCoeff(int n,int k)
+	{
+		return round( tgamma(n+1) / (tgamma(k+1)*tgamma(n-k+1)) );
+	}
+
+	constexpr long ipow(int base, int expo, int result = 1)
+	{
+		return expo < 1 ? result : ipow(base*base, expo/2, (expo % 2) ? result*base : result);
+	}
 
     template<int D>
     class ScalarMappedElement : public BaseScalarMappedElement

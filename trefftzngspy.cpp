@@ -8,7 +8,6 @@ using namespace ngsolve;
 #include "trefftz/monomialfespace.hpp"
 #include "trefftz/diffopmapped.hpp"
 #include "trefftz/specialcoefficientfunction.hpp"
-#include "trefftz/helpers.hpp"
 //#include "trefftz/mappedelement.hpp"
 #include "tents/tents.hpp"
 #include "trefftz/evolvetent.hpp"

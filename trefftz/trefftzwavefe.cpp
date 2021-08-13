@@ -1,7 +1,6 @@
 #include "trefftzwavefe.hpp"
 #include "h1lofe.hpp"
 #include "l2hofe.hpp"
-#include "helpers.hpp"
 
 #include <ctime>
 
