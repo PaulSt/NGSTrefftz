@@ -960,7 +960,7 @@ namespace ngcomp
       Vec<D + 1> center;
       center.Range (0, D) = ma->GetPoint<D> (tent->vertex);
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
-      double tentsize = TentAdiam (tent);
+      double tentsize = TentXdiam (tent);
 
       QTrefftzWaveFE<D> tel (GGder, BBder, this->order, center, tentsize);
       int nbasis = tel.GetNDof ();
@@ -1098,6 +1098,27 @@ namespace ngcomp
     cout << "solved from " << this->timeshift;
     this->timeshift += dt;
     cout << " to " << this->timeshift << endl;
+  }
+
+  template <int D> double QTWaveTents<D>::TentXdiam (const Tent *tent)
+  {
+    int vnumber = tent->nbv.Size ();
+    double diam = 0;
+
+    shared_ptr<MeshAccess> ma = this->ma;
+    for (int k = 0; k < vnumber; k++)
+      {
+        Vec<D> v1 = ma->GetPoint<D> (tent->nbv[k]);
+        Vec<D> v2 = ma->GetPoint<D> (tent->vertex);
+        diam = max (diam, sqrt (L2Norm2 (v1 - v2)));
+        for (int j = k; j < vnumber; j++)
+          {
+            v2 = ma->GetPoint<D> (tent->nbv[j]);
+            diam = max (diam, sqrt (L2Norm2 (v1 - v2)));
+          }
+      }
+
+    return diam;
   }
 
 }

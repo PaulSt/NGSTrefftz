@@ -367,12 +367,14 @@ if __name__ == "__main__":
         # if 'QTrefftz' in t['name']:
             # print(t)
 
-    # start = time.time()
-    # testspeed=1/sqrt(x**2-2)
-    # for p in range(order):
-        # testspeed=testspeed.Diff(x)
-    # print(time.time()-start)
-    # input()
+    # order = 4
+    # initmesh = Mesh(unit_square.GenerateMesh(maxh = 0.1))
+    # for i in range(3):
+        # SetNumThreads(2**i)
+        # start = time.time()
+        # print(TestAiryTent(order,initmesh,1)) # doctest:+ELLIPSIS
+        # print("time to solve on ",2**i," threads ",time.time()-start)
+        # input()
 
     import doctest
     doctest.testmod()
