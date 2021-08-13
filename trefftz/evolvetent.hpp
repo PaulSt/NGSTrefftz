@@ -141,7 +141,7 @@ namespace ngcomp
         Matrix<shared_ptr<CoefficientFunction>> GGder;
         Matrix<shared_ptr<CoefficientFunction>> BBder;
 
-            using WaveTents<D>::TentAdiam;
+            double TentXdiam(const Tent* tent);
             using WaveTents<D>::LapackSolve;
             using WaveTents<D>::TentFaceVerts;
 
