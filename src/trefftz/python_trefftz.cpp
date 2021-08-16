@@ -3,13 +3,13 @@
 #include <fem.hpp>
 using namespace ngsolve;
 #include "python_fem.hpp"
-#include "trefftz/trefftzfespace.hpp"
-#include "trefftz/monomialfespace.hpp"
-#include "trefftz/diffopmapped.hpp"
-#include "trefftz/specialcoefficientfunction.hpp"
-#include "tents/tents.hpp"
-#include "trefftz/evolvetent.hpp"
-#include "trefftz/meshtentslab.hpp"
+#include "trefftzfespace.hpp"
+#include "monomialfespace.hpp"
+#include "diffopmapped.hpp"
+#include "specialcoefficientfunction.hpp"
+#include "../tents.hpp"
+#include "../meshtentslab.hpp"
+#include "evolvetent.hpp"
 
 PYBIND11_PLUGIN (trefftzngs)
 {

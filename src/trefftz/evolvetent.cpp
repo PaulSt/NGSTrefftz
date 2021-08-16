@@ -1,5 +1,5 @@
 #include "evolvetent.hpp"
-#include "../tents/paralleldepend.hpp"
+#include "../paralleldepend.hpp"
 #include "trefftzfespace.hpp"
 
 namespace ngcomp
