@@ -93,7 +93,7 @@ namespace ngcomp
           case ET_QUAD:
           case ET_TRIG:
             {
-              return *(new (alloc) ScalarMappedElement<1> (
+              return *(new (alloc) ScalarMappedElement<2> (
                   local_ndof, order, basismat, eltype, ElCenter<1> (ei),
                   Adiam<1> (ei)));
               break;
@@ -103,7 +103,7 @@ namespace ngcomp
           case ET_PYRAMID:
           case ET_TET:
             {
-              return *(new (alloc) ScalarMappedElement<2> (
+              return *(new (alloc) ScalarMappedElement<3> (
                   local_ndof, order, basismat, eltype, ElCenter<2> (ei),
                   Adiam<2> (ei)));
               break;

@@ -22,8 +22,6 @@ install (FILES
 add_ngsolve_python_module(trefftzngs trefftzngspy.cpp
     trefftz/diffopmapped.hpp
     trefftz/scalarmappedfe.cpp
-    trefftz/trefftzwavefe.cpp
-    trefftz/qtrefftzwavefe.cpp
     trefftz/trefftzheatfe.cpp
     trefftz/trefftzfespace.cpp
     trefftz/monomialfespace.cpp

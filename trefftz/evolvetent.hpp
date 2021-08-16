@@ -5,8 +5,7 @@
 #include <h1lofe.hpp>
 #include <fem.hpp>
 #include "../tents/tents.hpp"
-#include "trefftzwavefe.hpp"
-#include "qtrefftzwavefe.hpp"
+#include "scalarmappedfe.hpp"
 
 namespace ngcomp
 {
@@ -32,6 +31,7 @@ namespace ngcomp
     Matrix<> wavefront;
     shared_ptr<CoefficientFunction> bddatum;
     double timeshift = 0;
+    int nbasis;
 
     template <typename TFUNC>
     void
@@ -45,11 +45,11 @@ namespace ngcomp
                    ScalarMappedElement<D + 1> &tel, SIMD_IntegrationRule &sir,
                    LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
 
-    void
-    CalcTentMacroEl (int fnr, const Array<int> &elnums,
-                     std::unordered_map<int, int> &macroel, const Tent *tent,
-                     TrefftzWaveFE<D> &tel, SIMD_IntegrationRule &sir,
-                     LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
+    void CalcTentMacroEl (int fnr, const Array<int> &elnums,
+                          std::unordered_map<int, int> &macroel,
+                          const Tent *tent, ScalarMappedElement<D + 1> &tel,
+                          SIMD_IntegrationRule &sir, LocalHeap &slh,
+                          SliceMatrix<> elmat, SliceVector<> elvec);
 
     void
     CalcTentElEval (int elnr, const Tent *tent,
@@ -82,6 +82,8 @@ namespace ngcomp
                shared_ptr<CoefficientFunction> abddatum)
         : order (aorder), ma (ama), bddatum (abddatum)
     {
+      nbasis
+          = BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1);
       wavespeed.SetSize (1);
       wavespeed[0] = awavespeed;
       this->wavespeedcf
@@ -94,6 +96,8 @@ namespace ngcomp
         : order (aorder), ma (ama), bddatum (abddatum),
           wavespeedcf (awavespeedcf)
     {
+      nbasis
+          = BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1);
       wavespeed.SetSize (ama->GetNE ());
       LocalHeap lh (1000 * 1000 * 1000);
       for (Ngs_Element el : ama->Elements (VOL))
@@ -127,12 +131,7 @@ namespace ngcomp
 
     double MaxAdiam (double dt);
 
-    int LocalDofs ()
-    {
-      TrefftzWaveBasis<D>::getInstance ().CreateTB (order);
-      TrefftzWaveFE<D> tel (order, 1);
-      return tel.GetNDof ();
-    }
+    int LocalDofs () { return nbasis; }
 
     int NrTents (double dt)
     {
@@ -174,11 +173,12 @@ namespace ngcomp
                  shared_ptr<CoefficientFunction> abddatum)
         : WaveTents<D> (aorder, ama, awavespeedcf, abddatum)
     {
+      this->nbasis = BinCoeff (D + this->order, this->order)
+                     + BinCoeff (D + this->order - 1, this->order - 1);
       // LocalHeap lh(1000 * 1000 * 1000);
       // const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG :
       // ET_SEGM); const int nsimd = SIMD<double>::Size(); SIMD_IntegrationRule
       // sir(eltyp, this->order*2);
-      QTrefftzWaveBasis<D>::getInstance ().Clear ();
       shared_ptr<CoefficientFunction> GGcf
           = make_shared<ConstantCoefficientFunction> (1)
             / (awavespeedcf * awavespeedcf);

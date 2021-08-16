@@ -3,12 +3,10 @@
 #include <fem.hpp>
 using namespace ngsolve;
 #include "python_fem.hpp"
-//#include "trefftz/trefftzwavefe.hpp"
 #include "trefftz/trefftzfespace.hpp"
 #include "trefftz/monomialfespace.hpp"
 #include "trefftz/diffopmapped.hpp"
 #include "trefftz/specialcoefficientfunction.hpp"
-//#include "trefftz/mappedelement.hpp"
 #include "tents/tents.hpp"
 #include "trefftz/evolvetent.hpp"
 #include "trefftz/meshtentslab.hpp"
@@ -30,5 +28,3 @@ PYBIND11_PLUGIN (trefftzngs)
 
   return m.ptr ();
 }
-
-// static RegisterNumProc<NumProcPyDemo> npinit1("demopy");

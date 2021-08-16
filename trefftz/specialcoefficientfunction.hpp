@@ -6,7 +6,6 @@
 #include <multigrid.hpp>
 #include <h1lofe.hpp>
 #include <regex>
-#include "trefftzwavefe.hpp"
 
 using namespace ngcomp;
 namespace ngfem
@@ -108,32 +107,31 @@ namespace ngfem
     vector<vector<double>> values;
   };
 
-  class TrefftzCoefficientFunction : public CoefficientFunction
-  {
-    int basisfunction;
-    TrefftzWaveFE<3> treff = TrefftzWaveFE<3> (4, 1, ET_TRIG, 0);
+  // class TrefftzCoefficientFunction : public CoefficientFunction
+  //{
+  // int basisfunction;
+  // TrefftzWaveFE<3> treff = TrefftzWaveFE<3>(4,1,ET_TRIG,0);
 
-  public:
-    TrefftzCoefficientFunction () : CoefficientFunction (1) { ; }
+  // public:
+  // TrefftzCoefficientFunction()
+  //: CoefficientFunction(1) { ; }
 
-    TrefftzCoefficientFunction (int basis) : CoefficientFunction (1)
-    {
-      basisfunction = basis;
-    }
+  // TrefftzCoefficientFunction(int basis)
+  //: CoefficientFunction(1) { basisfunction = basis; }
 
-    virtual double
-    Evaluate (const BaseMappedIntegrationPoint &mip) const override
-    {
-      FlatVector<double> point = mip.GetPoint ();
+  // virtual double Evaluate(const BaseMappedIntegrationPoint& mip) const
+  // override
+  //{
+  // FlatVector<double> point = mip.GetPoint();
 
-      int ndof = treff.GetNDof ();
-      cout << "nr: " << basisfunction << " / " << ndof << endl;
-      Vector<double> shape (ndof);
-      // Matrix<double> shape(ndof,2);
-      treff.CalcShape (mip, shape);
-      return shape[basisfunction];
-    }
-  };
+  // int ndof = treff.GetNDof();
+  // cout  << "nr: " << basisfunction << " / " << ndof << endl;
+  // Vector<double> shape(ndof);
+  ////Matrix<double> shape(ndof,2);
+  // treff.CalcShape(mip,shape);
+  // return shape[basisfunction];
+  //}
+  //};
 
   class WeightedRadiusFunction : public CoefficientFunction
   {

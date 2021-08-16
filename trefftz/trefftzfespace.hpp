@@ -1,6 +1,8 @@
 #ifndef FILE_TREFFTZFESPACE_HPP
 #define FILE_TREFFTZFESPACE_HPP
-#include "trefftzwavefe.hpp"
+
+#include "scalarmappedfe.hpp"
+#include <boost/math/special_functions/airy.hpp>
 
 namespace ngcomp
 {
@@ -12,10 +14,34 @@ namespace ngcomp
     void DoArchive (Archive &ar) {}
   };
 
+  template <int D> class TWaveBasis
+  {
+    static void TB_inner (int ord, Matrix<> &trefftzbasis,
+                          Vec<D + 1, int> coeffnum, int basis, int dim,
+                          int &tracker, int basistype, double wavespeed = 1.0);
+
+  public:
+    TWaveBasis () { ; }
+    static CSR Basis (int ord, int basistype = 0);
+    static int IndexMap2 (Vec<D + 1, int> index, int ord);
+  };
+
+  template <int D> class QTWaveBasis
+  {
+    mutex gentrefftzbasis;
+    std::map<string, CSR> gtbstore;
+
+  public:
+    QTWaveBasis () { ; }
+    CSR Basis (int ord, Vec<D + 1> ElCenter,
+               Matrix<shared_ptr<CoefficientFunction>> GGder,
+               Matrix<shared_ptr<CoefficientFunction>> BBder,
+               double elsize = 1.0, int basistype = 0);
+  };
+
   class TrefftzFESpace : public FESpace
   {
     int D;
-    int fullD;
     int order;
     size_t ndof;
     int nel;
@@ -31,6 +57,9 @@ namespace ngcomp
     shared_ptr<CoefficientFunction> wavespeedcf = nullptr;
     Matrix<shared_ptr<CoefficientFunction>> GGder;
     Matrix<shared_ptr<CoefficientFunction>> BBder;
+    CSR basismat;
+    mutable QTWaveBasis<1> basis1;
+    mutable QTWaveBasis<2> basis2;
 
   public:
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
@@ -56,6 +85,62 @@ namespace ngcomp
 
     template <int D> Vec<D + 1> ElCenter (ElementId ei) const;
   };
+
+  struct GenericAiry
+  {
+    double operator() (double x) const { return boost::math::airy_ai (x); }
+    SIMD<double> operator() (SIMD<double> x) const
+    {
+      return SIMD<double> (
+          [&] (int i) -> double { return boost::math::airy_ai (x[i]); });
+    }
+    template <typename T> T operator() (T x) const
+    {
+      throw Exception (string ("airy not available for type ")
+                       + typeid (T).name ());
+    }
+    template <typename T> AutoDiff<1, T> operator() (AutoDiff<1, T> x) const
+    {
+      throw Exception ("airy(..) is not complex differentiable");
+    }
+    template <typename T>
+    AutoDiffDiff<1, T> operator() (AutoDiffDiff<1, T> x) const
+    {
+      throw Exception ("airy(..) is not complex differentiable");
+    }
+    static string Name () { return "airy"; }
+    void DoArchive (Archive &ar) {}
+  };
+
+  struct GenericAiryP
+  {
+    double operator() (double x) const
+    {
+      return boost::math::airy_ai_prime (x);
+    }
+    SIMD<double> operator() (SIMD<double> x) const
+    {
+      return SIMD<double> (
+          [&] (int i) -> double { return boost::math::airy_ai_prime (x[i]); });
+    }
+    template <typename T> T operator() (T x) const
+    {
+      throw Exception (string ("airy prime not available for type ")
+                       + typeid (T).name ());
+    }
+    template <typename T> AutoDiff<1, T> operator() (AutoDiff<1, T> x) const
+    {
+      throw Exception ("airyp(..) is not complex differentiable");
+    }
+    template <typename T>
+    AutoDiffDiff<1, T> operator() (AutoDiffDiff<1, T> x) const
+    {
+      throw Exception ("airyp(..) is not complex differentiable");
+    }
+    static string Name () { return "airyp"; }
+    void DoArchive (Archive &ar) {}
+  };
+
 }
 
 #ifdef NGS_PYTHON

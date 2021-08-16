@@ -1,8 +1,6 @@
 #ifndef FILE_DIFFOPMAPPED
 #define FILE_DIFFOPMAPPED
 
-#include "trefftzwavefe.hpp"
-
 namespace ngfem
 {
 
