@@ -1,5 +1,6 @@
 #include "evolvetent.hpp"
 #include "../tents/paralleldepend.hpp"
+#include "trefftzfespace.hpp"
 
 namespace ngcomp
 {
@@ -50,7 +51,8 @@ namespace ngcomp
         static Timer ttentmacro("tentmacro");
         static Timer ttenteval("tenteval");
 
-        TrefftzWaveBasis<D>::getInstance().CreateTB(order);
+        //TrefftzWaveBasis<D>::getInstance().CreateTB(order);
+        CSR basismat = TWaveBasis<D>::Basis(order, 0);
 
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
             LocalHeap slh = lh.Split();  // split to threads
@@ -59,8 +61,9 @@ namespace ngcomp
             Vec<D+1> center;
             center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
             center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
-            TrefftzWaveFE<D> tel(order,max_wavespeed,center,TentAdiam(tent)); //TODO: fix scaling with correct wavespeed
-            int nbasis = tel.GetNDof();
+            //TrefftzWaveFE<D> tel(order,max_wavespeed,center,TentAdiam(tent)); //TODO: fix scaling with correct wavespeed
+            ScalarMappedElement<D+1> tel(nbasis,order,basismat,ET_TET,center,TentAdiam(tent),1);
+            //int nbasis = tel.GetNDof();
 
             std::unordered_map<int,int> macroel;
             int ndomains = MakeMacroEl(tent->els, macroel);
@@ -141,7 +144,7 @@ namespace ngcomp
         HeapReset hr(slh);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         //double wavespeed = tel.GetWavespeed();
-        int nbasis = tel.GetNDof();
+        //int nbasis = tel.GetNDof();
         int nsimd = SIMD<double>::Size();
         int snip = sir.Size()*nsimd;
         ScalarFE<eltyp,1> faceint; //linear basis for tent faces
@@ -243,7 +246,7 @@ namespace ngcomp
     {
         HeapReset hr(slh);
         double wavespeed = tel.GetWavespeed();
-        int nbasis = tel.GetNDof();
+        //int nbasis = tel.GetNDof();
         int nsimd = SIMD<double>::Size();
         int snip = sir.Size()*nsimd;
 
@@ -317,9 +320,9 @@ namespace ngcomp
 
 
     template<int D>
-    void WaveTents<D> :: CalcTentMacroEl(int fnr, const Array<int> &elnums, std::unordered_map<int,int> &macroel, const Tent* tent, TrefftzWaveFE<D> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
+    void WaveTents<D> :: CalcTentMacroEl(int fnr, const Array<int> &elnums, std::unordered_map<int,int> &macroel, const Tent* tent, ScalarMappedElement<D+1> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
     {
-        int nbasis = tel.GetNDof();
+        //int nbasis = tel.GetNDof();
         int nsimd = SIMD<double>::Size();
         int snip = sir.Size()*nsimd;
 
@@ -410,7 +413,7 @@ namespace ngcomp
     {
         HeapReset hr(slh);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
-        int nbasis = tel.GetNDof();
+        //int nbasis = tel.GetNDof();
         int nsimd = SIMD<double>::Size();
         int snip = sir.Size()*nsimd;
         ScalarFE<eltyp,1> faceint; //linear basis for tent faces
@@ -798,6 +801,8 @@ namespace ngcomp
         tps.SetPitchingMethod(ngstents::EEdgeGrad);
         tps.PitchTents<D>(dt, 0);
 
+        QTWaveBasis<D> basis;
+
         cout << "solving qt " << tps.GetNTents() << " tents in " << D << "+1 dimensions..." << endl;
 
         RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
@@ -809,8 +814,10 @@ namespace ngcomp
             center[D]=(tent->ttop-tent->tbot)/2+tent->tbot;
             double tentsize = TentXdiam(tent);
 
-            QTrefftzWaveFE<D> tel(GGder, BBder, this->order, center, tentsize);
-            int nbasis = tel.GetNDof();
+            //QTWaveFE<D> tel(GGder, BBder, this->order, center, tentsize);
+            CSR basismat = basis.Basis(this->order, center, GGder, BBder, tentsize);
+            int nbasis = this->nbasis;
+            ScalarMappedElement<D+1> tel(nbasis,this->order,basismat,ET_TET,center,tentsize,1);
 
             FlatMatrix<> elmat(nbasis,slh);
             FlatVector<> elvec(nbasis,slh);
@@ -856,7 +863,7 @@ namespace ngcomp
                     HeapReset hr(slh);
                     const ELEMENT_TYPE eltyp = (D==2) ? ET_TET : ET_TRIG;
                     SIMD_IntegrationRule vsir(eltyp, this->order*2);
-                    int nbasis = tel.GetNDof();
+                    //int nbasis = tel.GetNDof();
 
                     Vec<D+1> shift;
                     shift.Range(0,D) = ma->GetPoint<D>(tent->vertex);

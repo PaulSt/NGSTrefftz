@@ -109,10 +109,12 @@ namespace ngfem
         public:
             using BaseScalarMappedElement::BaseScalarMappedElement;
 
-            ScalarMappedElement(int andof, int aord, CSR alocalmat, ELEMENT_TYPE aeltype, Vec<D+1> aelcenter = 0, double aelsize = 1)
-            : BaseScalarMappedElement( andof, aord), localmat(alocalmat), elcenter(aelcenter), elsize(aelsize), eltype(aeltype)
+            ScalarMappedElement(int andof, int aord, CSR alocalmat, ELEMENT_TYPE aeltype, Vec<D> aelcenter = 0, double aelsize = 1, double ac = 1.0)
+            : BaseScalarMappedElement( andof, aord), localmat(alocalmat), elcenter(aelcenter), elsize(aelsize), eltype(aeltype), c(ac)
             {;}
 
+            double GetWavespeed() const { return this->c; }
+            void SetWavespeed(double wavespeed) {this->c = wavespeed;}
 
             //the name
             NGS_DLL_HEADER virtual string ClassName() const;
@@ -164,9 +166,6 @@ namespace ngfem
 
             //public:
             //	NGS_DLL_HEADER virtual std::list<std::tuple<std::string,double>> Timing () const;
-            virtual double GetWavespeed() const {return 0;} //ugly parent hack for trefftzwave
-
-
 
 
             //NGS_DLL_HEADER virtual void CalcMappedDDShape (const BaseMappedIntegrationPoint & bmip, BareSliceMatrix<> hddshape) const;

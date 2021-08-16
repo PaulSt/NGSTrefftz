@@ -72,10 +72,10 @@ void ExportSpecialCoefficientFunction(py::module m)
                  }, py::arg("mesh"), py::arg("CoefficientFunction"));
 
 
-    py::class_<TrefftzCoefficientFunction, shared_ptr<TrefftzCoefficientFunction>, CoefficientFunction>
-        (m, "TrefftzCoefficient", "")
-        .def(py::init<>())
-        .def(py::init<int>())
-        ;
+    //py::class_<TrefftzCoefficientFunction, shared_ptr<TrefftzCoefficientFunction>, CoefficientFunction>
+        //(m, "TrefftzCoefficient", "")
+        //.def(py::init<>())
+        //.def(py::init<int>())
+        //;
 }
 #endif // NGS_PYTHON
