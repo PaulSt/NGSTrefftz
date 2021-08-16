@@ -51,6 +51,7 @@ namespace ngcomp
               "hesse",
               make_shared<T_DifferentialOperator<DiffOpMappedHesse<2>>> ());
           basismat = TWaveBasis<1>::Basis (order, basistype);
+          basis = new QTWaveBasis<1>;
           break;
         }
       case 2:
@@ -63,6 +64,7 @@ namespace ngcomp
               "hesse",
               make_shared<T_DifferentialOperator<DiffOpMappedHesse<3>>> ());
           basismat = TWaveBasis<2>::Basis (order, basistype);
+          basis = new QTWaveBasis<2>;
           break;
         }
       }
@@ -180,8 +182,8 @@ namespace ngcomp
               mip.Point () = ElCenter<1> (ei).Range (0, 1);
               if (BBder.Height () != 0 || useqt)
                 {
-                  CSR basismat
-                      = basis1.Basis (order, ElCenter<1> (ei), GGder, BBder);
+                  CSR basismat = static_cast<QTWaveBasis<1> *> (basis)->Basis (
+                      order, ElCenter<1> (ei), GGder, BBder);
                   return *(new (alloc) ScalarMappedElement<2> (
                       local_ndof, order, basismat, eltype, ElCenter<1> (ei),
                       1.0));
@@ -207,8 +209,8 @@ namespace ngcomp
 
               if (BBder.Height () != 0 || useqt)
                 {
-                  CSR basismat
-                      = basis2.Basis (order, ElCenter<1> (ei), GGder, BBder);
+                  CSR basismat = static_cast<QTWaveBasis<2> *> (basis)->Basis (
+                      order, ElCenter<1> (ei), GGder, BBder);
                   return *(new (alloc) ScalarMappedElement<3> (
                       local_ndof, order, basismat, eltype, ElCenter<2> (ei),
                       1.0));
