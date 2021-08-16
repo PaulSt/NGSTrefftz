@@ -1,5 +1,5 @@
 #include "meshtentslab.hpp"
-#include "../tents/tents.hpp"
+#include "tents.hpp"
 
 
 namespace ngcomp

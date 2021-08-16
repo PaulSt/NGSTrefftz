@@ -12,3 +12,4 @@ python_test/ng.opt
 python_test/results
 python_test/notebooks/results/
 TAGS
+*.vol
