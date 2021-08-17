@@ -75,8 +75,8 @@ namespace ngcomp
 
   public:
     TWaveTents (int aorder, shared_ptr<TentPitchedSlab> atps,
-                double awavespeed, shared_ptr<CoefficientFunction> abddatum)
-        : order (aorder), tps (atps), bddatum (abddatum)
+                double awavespeed)
+        : order (aorder), tps (atps)
     {
       ma = atps->ma;
       nbasis
@@ -88,10 +88,8 @@ namespace ngcomp
     }
 
     TWaveTents (int aorder, shared_ptr<TentPitchedSlab> atps,
-                shared_ptr<CoefficientFunction> awavespeedcf,
-                shared_ptr<CoefficientFunction> abddatum)
-        : order (aorder), tps (atps), bddatum (abddatum),
-          wavespeedcf (awavespeedcf)
+                shared_ptr<CoefficientFunction> awavespeedcf)
+        : order (aorder), tps (atps), wavespeedcf (awavespeedcf)
     {
       ma = atps->ma;
       nbasis
@@ -112,12 +110,16 @@ namespace ngcomp
     void Propagate ();
 
     Matrix<>
-    MakeWavefront (shared_ptr<CoefficientFunction> bddatum, double time = 0);
+    MakeWavefront (shared_ptr<CoefficientFunction> cf, double time = 0);
 
     Matrix<> GetWavefront () { return wavefront; }
-    void SetWavefront (shared_ptr<CoefficientFunction> bddatum)
+    void SetInitial (shared_ptr<CoefficientFunction> init)
     {
-      wavefront = MakeWavefront (bddatum);
+      wavefront = MakeWavefront (init);
+    }
+    void SetBoundaryCF (shared_ptr<CoefficientFunction> abddatum)
+    {
+      bddatum = abddatum;
     }
 
     double Error (Matrix<> wavefront, Matrix<> wavefront_corr);
@@ -147,9 +149,8 @@ namespace ngcomp
   public:
     QTWaveTents (int aorder, shared_ptr<TentPitchedSlab> atps,
                  shared_ptr<CoefficientFunction> awavespeedcf,
-                 shared_ptr<CoefficientFunction> aBBcf,
-                 shared_ptr<CoefficientFunction> abddatum)
-        : TWaveTents<D> (aorder, atps, awavespeedcf, abddatum)
+                 shared_ptr<CoefficientFunction> aBBcf)
+        : TWaveTents<D> (aorder, atps, awavespeedcf)
     {
       this->nbasis = BinCoeff (D + this->order, this->order)
                      + BinCoeff (D + this->order - 1, this->order - 1);
