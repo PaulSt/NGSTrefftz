@@ -130,21 +130,7 @@ def TestBessel(order, mesh, t_step):
         ))
     wavespeed=1/sqrt((x+c)**2-2)
     BB = (x+c)**2
-    # bdd = CoefficientFunction((
-        # (sin(x+c)/(x+c)) * cos(t),
-        # (-(x+c)**(-2)*sin(x+2)+cos(x+c)/(x+c)) * cos(t),
-        # -(sin(x+c)/(x+c)) * sin(t)
-        # ))
-    # wavespeed=1/sqrt((x+c)**2)
-    # BB = (x+c)**2
 
-    # ...        initmesh = Mesh(SegMesh(h,3,4)) # need x>2
-    # TT=WaveTents(order,initmesh,wavespeed,bdd,)
-    # TT.SetWavefront(bdd,t_start)
-    # with TaskManager():
-        # TT.EvolveTents(t_step)
-    # error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
-    # adiam = TT.MaxAdiam(t_step)
     U0=bdd[0]
     gD=bdd[2]
     v0=bdd[2]
@@ -155,8 +141,6 @@ def TestBessel(order, mesh, t_step):
     [a,f] = DGwaveeqsys(fes,U0,v0,sig0,wavespeed,gD,True,False,alpha=0,beta=0,gamma=1,mu=0,BB=BB)
     gfu = DGsolve(fes,a,f)
     dgerror = DGnormerror(fes,gfu,bdd[1:3],wavespeed,alpha=0,beta=0,BB=BB)
-    # [L2error, sH1error] = PostProcess(fes,U0,gfu)
-    # L2error = sqrt(Integrate((U0 - gfu)*(U0 - gfu), mesh))
 
     return dgerror
 
@@ -243,8 +227,11 @@ def SolveWaveTents(initmesh, order, c, t_step):
     ts = TentSlab(initmesh, method="edge", heapsize=10*1000*1000)
     ts.SetMaxWavespeed(c)
     ts.PitchTents(dt=t_step, local_ct=local_ctau, global_ct=global_ctau)
-    TT=TWaveTents(order,ts,CoefficientFunction(c),bdd)
-    TT.SetWavefront(bdd)
+    TT=TWave(order,ts,CoefficientFunction(c))
+    TT.SetInitial(bdd)
+    TT.SetBoundaryCF(bdd[D+1])
+    if initmesh.ngmesh.GetBCName(0) == "neumann": TT.SetBoundaryCF(bdd[1:D+1])
+    # print('HELLO',initmesh.ngmesh.GetBCName(0))
 
     start = time.time()
     with TaskManager():
@@ -325,8 +312,9 @@ def TestAiryTent(order, initmesh, t_step,qtrefftz=1):
     ts = TentSlab(initmesh, method="edge", heapsize=10*1000*1000)
     ts.SetMaxWavespeed(c)
     ts.PitchTents(dt=t_step, local_ct=local_ctau, global_ct=global_ctau)
-    TT=TWaveTents(order,ts,wavespeed,bdd,qtrefftz)
-    TT.SetWavefront(bdd)
+    TT=TWave(order,ts,wavespeed,qtrefftz)
+    TT.SetInitial(bdd)
+    TT.SetBoundaryCF(bdd[D+1])
 
     start = time.time()
     with TaskManager():

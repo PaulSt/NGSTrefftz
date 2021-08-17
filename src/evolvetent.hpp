@@ -60,8 +60,8 @@ namespace ngcomp
             void GetFacetSurfaceElement(shared_ptr<MeshAccess> ma, int fnr, Array<int> &selnums);
 
         public:
-            TWaveTents( int aorder, shared_ptr<TentPitchedSlab> atps, double awavespeed, shared_ptr<CoefficientFunction> abddatum)
-                : order(aorder), tps(atps), bddatum(abddatum)
+            TWaveTents( int aorder, shared_ptr<TentPitchedSlab> atps, double awavespeed)
+                : order(aorder), tps(atps)
             {
                 ma = atps->ma;
                 nbasis = BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1);
@@ -70,8 +70,8 @@ namespace ngcomp
                 this->wavespeedcf = make_shared<ConstantCoefficientFunction>(awavespeed);
             }
 
-            TWaveTents( int aorder, shared_ptr<TentPitchedSlab> atps, shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> abddatum)
-                : order(aorder), tps(atps), bddatum(abddatum), wavespeedcf(awavespeedcf)
+            TWaveTents( int aorder, shared_ptr<TentPitchedSlab> atps, shared_ptr<CoefficientFunction> awavespeedcf)
+                : order(aorder), tps(atps), wavespeedcf(awavespeedcf)
             {
                 ma = atps->ma;
                 nbasis = BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1);
@@ -90,10 +90,11 @@ namespace ngcomp
 
             void Propagate();
 
-            Matrix<> MakeWavefront( shared_ptr<CoefficientFunction> bddatum, double time = 0);
+            Matrix<> MakeWavefront( shared_ptr<CoefficientFunction> cf, double time = 0);
 
             Matrix<> GetWavefront() {return wavefront;}
-            void SetWavefront(shared_ptr<CoefficientFunction> bddatum) { wavefront = MakeWavefront(bddatum); }
+            void SetInitial(shared_ptr<CoefficientFunction> init) { wavefront = MakeWavefront(init); }
+            void SetBoundaryCF(shared_ptr<CoefficientFunction> abddatum) { bddatum = abddatum;}
 
             double Error(Matrix<> wavefront, Matrix<> wavefront_corr);
 
@@ -122,8 +123,8 @@ namespace ngcomp
             using TWaveTents<D>::TentFaceVerts;
 
         public:
-            QTWaveTents( int aorder, shared_ptr<TentPitchedSlab> atps, shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> aBBcf, shared_ptr<CoefficientFunction> abddatum)
-                : TWaveTents<D>(aorder,atps,awavespeedcf,abddatum)
+            QTWaveTents( int aorder, shared_ptr<TentPitchedSlab> atps, shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> aBBcf)
+                : TWaveTents<D>(aorder,atps,awavespeedcf)
             {
                 this->nbasis = BinCoeff(D + this->order, this->order) + BinCoeff(D + this->order-1, this->order-1);
                 shared_ptr<CoefficientFunction> GGcf = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);

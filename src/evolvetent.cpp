@@ -266,9 +266,6 @@ namespace ngcomp
 
         for(int imip=0;imip<smir.Size();imip++)
             smir[imip].Point()[D] += timeshift;
-        FlatMatrix<SIMD<double>> bdeval((D+2),sir.Size(),slh);
-        bddatum->Evaluate(smir,bdeval);
-
         double area = TentFaceArea(vert);
         FlatMatrix<double> bdbmat((D+1)*snip,nbasis,slh);
         bdbmat = 0;
@@ -276,18 +273,22 @@ namespace ngcomp
         bdbvec = 0;
         if(ma->GetMaterial(ElementId(BND,surfel)) == "neumann")
         {
+            FlatMatrix<SIMD<double>> bdeval(D,sir.Size(),slh);
+            bddatum->Evaluate(smir,bdeval);
             double beta = 0.5;
             for(int imip=0;imip<snip;imip++)
                 for(int r=0;r<D;r++)
                     for(int d=0;d<(D+1);d++)
                     {
                         bdbmat.Row(r*snip+imip) += (d<D?-n(d)*beta:1.0) * (-n(r)) * sir[imip/nsimd].Weight()[imip%nsimd]*area * bbmat.Col(d*snip+imip);
-                        bdbvec(d*snip+imip) += (d<D?-n(d)*beta:-1.0) * (-n(r)) * bdeval(r+1,imip/nsimd)[imip%nsimd] * sir[imip/nsimd].Weight()[imip%nsimd]*area;
+                        bdbvec(d*snip+imip) += (d<D?-n(d)*beta:-1.0) * (-n(r)) * bdeval(r,imip/nsimd)[imip%nsimd] * sir[imip/nsimd].Weight()[imip%nsimd]*area;
                     }
 
             elmat += bbmat * bdbmat;
             elvec += bbmat * bdbvec;
         } else { // dirichlet
+            FlatMatrix<SIMD<double>> bdeval(1,sir.Size(),slh);
+            bddatum->Evaluate(smir,bdeval);
             FlatMatrix<SIMD<double>> wavespeed(1,sir.Size(),slh);
             auto localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(this->wavespeedcf);
             localwavespeedcf->Evaluate(smir,wavespeed);
@@ -297,11 +298,11 @@ namespace ngcomp
             {
                 double weight = area * sir[imip/nsimd].Weight()[imip%nsimd];
                 bdbmat.Row(D*snip+imip) += weight * wavespeed(0,imip/nsimd)[imip%nsimd] * bbmat.Col(D*snip+imip);
-                bdbvec(D*snip+imip) -= weight * wavespeed(0,imip/nsimd)[imip%nsimd] * bdeval(D+1,imip/nsimd)[imip%nsimd];
+                bdbvec(D*snip+imip) -= weight * wavespeed(0,imip/nsimd)[imip%nsimd] * bdeval(0,imip/nsimd)[imip%nsimd];
                 for(int d=0;d<D;d++)
                 {
                     bdbmat.Row(D*snip+imip) -= n(d) * weight * bbmat.Col(d*snip+imip);
-                    bdbvec(d*snip+imip) -= n(d) * weight * bdeval(D+1,imip/nsimd)[imip%nsimd];
+                    bdbvec(d*snip+imip) -= n(d) * weight * bdeval(0,imip/nsimd)[imip%nsimd];
                 }
             }
             elmat += bbmat * bdbmat;
@@ -554,7 +555,7 @@ namespace ngcomp
 
 
     template<int D>
-    Matrix<> TWaveTents<D> :: MakeWavefront(shared_ptr<CoefficientFunction> bddatum, double time)
+    Matrix<> TWaveTents<D> :: MakeWavefront(shared_ptr<CoefficientFunction> cf, double time)
     {
         LocalHeap lh(1000*1000*1000, "make wavefront", 1);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
@@ -573,7 +574,7 @@ namespace ngcomp
             }
             FlatMatrix<SIMD<double>> bdeval(D+2,smir.Size(),lh);
             bdeval = 0;
-            bddatum->Evaluate(smir,bdeval);
+            cf->Evaluate(smir,bdeval);
             for(int imip=0;imip<snip;imip++)
             {
                 wf(elnr,imip) = bdeval(0,imip/nsimd)[imip%nsimd];
@@ -945,7 +946,8 @@ template class QTWaveTents<2>;
         //.def(py::init<>())
         .def("Propagate", &PyETclass::Propagate)
         .def("MakeWavefront", &PyETclass::MakeWavefront)
-        .def("SetWavefront", &PyETclass::SetWavefront)
+        .def("SetInitial", &PyETclass::SetInitial)
+        .def("SetBoundaryCF", &PyETclass::SetBoundaryCF)
         .def("GetWavefront", &PyETclass::GetWavefront)
         .def("Error", &PyETclass::Error)
         .def("L2Error", &PyETclass::L2Error)
@@ -967,27 +969,27 @@ void ExportEvolveTent(py::module m)
     DeclareETClass<QTWaveTents<1>, 1>(m, "QTWaveTents1");
     DeclareETClass<QTWaveTents<2>, 2>(m, "QTWaveTents2");
 
-    m.def("TWaveTents", [](int order, shared_ptr<TentPitchedSlab> tps, shared_ptr<CoefficientFunction> wavespeedcf, shared_ptr<CoefficientFunction> bddatum, shared_ptr<CoefficientFunction> BBcf) -> shared_ptr<TrefftzTents>
+    m.def("TWave", [](int order, shared_ptr<TentPitchedSlab> tps, shared_ptr<CoefficientFunction> wavespeedcf, shared_ptr<CoefficientFunction> BBcf) -> shared_ptr<TrefftzTents>
           {
               shared_ptr<TrefftzTents> tr;
               int D = (tps->ma)->GetDimension();
               if(!BBcf)
               {
                   if(D==1)
-                      tr = make_shared<TWaveTents<1>>(order,tps,wavespeedcf,bddatum);
+                      tr = make_shared<TWaveTents<1>>(order,tps,wavespeedcf);
                   else if(D==2)
-                      tr = make_shared<TWaveTents<2>>(order,tps,wavespeedcf,bddatum);
+                      tr = make_shared<TWaveTents<2>>(order,tps,wavespeedcf);
                   else if(D==3)
-                      tr = make_shared<TWaveTents<3>>(order,tps,wavespeedcf,bddatum);
+                      tr = make_shared<TWaveTents<3>>(order,tps,wavespeedcf);
               } else {
                   if(D==1)
-                      tr = make_shared<QTWaveTents<1>>(order,tps,wavespeedcf,BBcf,bddatum);
+                      tr = make_shared<QTWaveTents<1>>(order,tps,wavespeedcf,BBcf);
                   else if(D==2)
-                      tr = make_shared<QTWaveTents<2>>(order,tps,wavespeedcf,BBcf,bddatum);
+                      tr = make_shared<QTWaveTents<2>>(order,tps,wavespeedcf,BBcf);
               }
               return tr;
           }, "Create Wavetent object",
-        py::arg("order"), py::arg("tps"), py::arg("wavespeedcf"), py::arg("bddatum"), py::arg("BBcf")=nullptr
+        py::arg("order"), py::arg("tps"), py::arg("wavespeedcf"), py::arg("BBcf")=nullptr
             );
 
 }
