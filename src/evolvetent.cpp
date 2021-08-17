@@ -1,5 +1,5 @@
 #include "evolvetent.hpp"
-#include "../paralleldepend.hpp"
+#include <paralleldepend.hpp>
 #include "trefftzfespace.hpp"
 
 namespace ngcomp
@@ -26,7 +26,7 @@ namespace ngcomp
     }
 
     template<int D>
-    void TWaveTents<D> :: EvolveTents(double dt)
+    void TWaveTents<D> :: Propagate()
     {
         //int nthreads = (task_manager) ? task_manager->GetNumThreads() : 1;
         LocalHeap lh(1000 * 1000 * 1000, "trefftz tents", 1);
@@ -40,12 +40,7 @@ namespace ngcomp
         double max_wavespeed = wavespeed[0];
         for(double c : wavespeed) max_wavespeed = max(c,max_wavespeed);
 
-        TentPitchedSlab tps = TentPitchedSlab(ma,1000*1000*1000);
-        tps.SetMaxWavespeed( this->wavespeedcf + make_shared<ConstantCoefficientFunction>(addtentslope) );
-        tps.SetPitchingMethod(ngstents::EEdgeGrad);
-        tps.PitchTents<D>(dt, 0);
-
-        cout << "solving " << tps.GetNTents() << " tents ";
+        cout << "solving " << tps->GetNTents() << " tents ";
         static Timer ttent("tent");
         static Timer ttentel("tentel");
         static Timer ttentbnd("tentbnd");
@@ -54,9 +49,9 @@ namespace ngcomp
 
         CSR basismat = TWaveBasis<D>::Basis(order, 0);
 
-        RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
+        RunParallelDependency (tps->tent_dependency, [&] (int tentnr) {
             LocalHeap slh = lh.Split();  // split to threads
-            const Tent* tent =& tps.GetTent(tentnr);
+            const Tent* tent =& tps->GetTent(tentnr);
 
             Vec<D+1> center;
             center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
@@ -124,7 +119,7 @@ namespace ngcomp
             }
         }); // end loop over tents
         cout<<"solved from " << timeshift;
-        timeshift += dt;
+        timeshift += tps->GetSlabHeight();
         cout<<" to " << timeshift<<endl;
     }
 
@@ -714,15 +709,11 @@ namespace ngcomp
 
 
     template<int D>
-    double TWaveTents<D> :: MaxAdiam(double dt)
+    double TWaveTents<D> :: MaxAdiam()
     {
         double h = 0.0;
-        TentPitchedSlab tps = TentPitchedSlab(ma,1000*1000*1000);
-        tps.SetMaxWavespeed( this->wavespeedcf + make_shared<ConstantCoefficientFunction>(addtentslope) );
-        tps.SetPitchingMethod(ngstents::EEdgeGrad);
-        tps.PitchTents<D>(dt, 0);
-        RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
-            const Tent* tent =& tps.GetTent(tentnr);
+        RunParallelDependency (tps->tent_dependency, [&] (int tentnr) {
+            const Tent* tent =& tps->GetTent(tentnr);
             h = max(h,TentAdiam(tent));
         });
         return h;
@@ -771,7 +762,7 @@ namespace ngcomp
 
 
     template<int D>
-    void QTWaveTents<D> :: EvolveTents(double dt)
+    void QTWaveTents<D> :: Propagate()
     {
         LocalHeap lh(1000 * 1000 * 1000, "QT tents", 1);
 
@@ -781,18 +772,13 @@ namespace ngcomp
         SIMD_IntegrationRule sir(eltyp, this->order*2);
         const int snip = sir.Size()*nsimd;
 
-        TentPitchedSlab tps = TentPitchedSlab(ma,1000*1000*1000);
-        tps.SetMaxWavespeed( this->wavespeedcf + make_shared<ConstantCoefficientFunction>(addtentslope) );
-        tps.SetPitchingMethod(ngstents::EEdgeGrad);
-        tps.PitchTents<D>(dt, 0);
-
         QTWaveBasis<D> basis;
 
-        cout << "solving qt " << tps.GetNTents() << " tents in " << D << "+1 dimensions..." << endl;
+        cout << "solving qt " << (this->tps)->GetNTents() << " tents in " << D << "+1 dimensions..." << endl;
 
-        RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
+        RunParallelDependency ((this->tps)->tent_dependency, [&] (int tentnr) {
             LocalHeap slh = lh.Split();  // split to threads
-            const Tent* tent =& tps.GetTent(tentnr);
+            const Tent* tent =& (this->tps)->GetTent(tentnr);
 
             Vec<D+1> center;
             center.Range(0,D)=ma->GetPoint<D>(tent->vertex);
@@ -907,7 +893,7 @@ namespace ngcomp
             }
         }); // end loop over tents
         cout<<"solved from " << this->timeshift;
-        this->timeshift += dt;
+        this->timeshift += (this->tps)->GetSlabHeight();
         cout<<" to " << this->timeshift<<endl;
     }
 
@@ -957,7 +943,7 @@ template class QTWaveTents<2>;
     std::string pyclass_name = typestr;
     py::class_<PyETclass, shared_ptr<PyETclass>, TrefftzTents>(m, pyclass_name.c_str())
         //.def(py::init<>())
-        .def("EvolveTents", &PyETclass::EvolveTents)
+        .def("Propagate", &PyETclass::Propagate)
         .def("MakeWavefront", &PyETclass::MakeWavefront)
         .def("SetWavefront", &PyETclass::SetWavefront)
         .def("GetWavefront", &PyETclass::GetWavefront)
@@ -966,7 +952,6 @@ template class QTWaveTents<2>;
         .def("Energy", &PyETclass::Energy)
         .def("MaxAdiam", &PyETclass::MaxAdiam)
         .def("LocalDofs", &PyETclass::LocalDofs)
-        .def("NrTents", &PyETclass::NrTents)
         .def("GetOrder", &PyETclass::GetOrder)
         .def("GetSpaceDim",&PyETclass::GetSpaceDim)
         .def("GetInitmesh",&PyETclass::GetInitmesh);
@@ -982,27 +967,27 @@ void ExportEvolveTent(py::module m)
     DeclareETClass<QTWaveTents<1>, 1>(m, "QTWaveTents1");
     DeclareETClass<QTWaveTents<2>, 2>(m, "QTWaveTents2");
 
-    m.def("TWaveTents", [](int order, shared_ptr<MeshAccess> ma, shared_ptr<CoefficientFunction> wavespeedcf, shared_ptr<CoefficientFunction> bddatum, shared_ptr<CoefficientFunction> BBcf) -> shared_ptr<TrefftzTents>
+    m.def("TWaveTents", [](int order, shared_ptr<TentPitchedSlab> tps, shared_ptr<CoefficientFunction> wavespeedcf, shared_ptr<CoefficientFunction> bddatum, shared_ptr<CoefficientFunction> BBcf) -> shared_ptr<TrefftzTents>
           {
               shared_ptr<TrefftzTents> tr;
-              int D = ma->GetDimension();
+              int D = (tps->ma)->GetDimension();
               if(!BBcf)
               {
                   if(D==1)
-                      tr = make_shared<TWaveTents<1>>(order,ma,wavespeedcf,bddatum);
+                      tr = make_shared<TWaveTents<1>>(order,tps,wavespeedcf,bddatum);
                   else if(D==2)
-                      tr = make_shared<TWaveTents<2>>(order,ma,wavespeedcf,bddatum);
+                      tr = make_shared<TWaveTents<2>>(order,tps,wavespeedcf,bddatum);
                   else if(D==3)
-                      tr = make_shared<TWaveTents<3>>(order,ma,wavespeedcf,bddatum);
+                      tr = make_shared<TWaveTents<3>>(order,tps,wavespeedcf,bddatum);
               } else {
                   if(D==1)
-                      tr = make_shared<QTWaveTents<1>>(order,ma,wavespeedcf,BBcf,bddatum);
+                      tr = make_shared<QTWaveTents<1>>(order,tps,wavespeedcf,BBcf,bddatum);
                   else if(D==2)
-                      tr = make_shared<QTWaveTents<2>>(order,ma,wavespeedcf,BBcf,bddatum);
+                      tr = make_shared<QTWaveTents<2>>(order,tps,wavespeedcf,BBcf,bddatum);
               }
               return tr;
           }, "Create Wavetent object",
-        py::arg("order"), py::arg("ma"), py::arg("wavespeedcf"), py::arg("bddatum"), py::arg("BBcf")=nullptr
+        py::arg("order"), py::arg("tps"), py::arg("wavespeedcf"), py::arg("bddatum"), py::arg("BBcf")=nullptr
             );
 
 }

@@ -2,6 +2,8 @@ project(trefftzngs)
 
 cmake_minimum_required(VERSION 3.1)
 
+include_directories(~/projects/ngstents/src)
+
 find_package(NGSolve CONFIG REQUIRED
     HINTS $ENV{NETGENDIR}/.. /opt/netgen/ /Applications/Netgen.app/Contents/Resources/CMake C:/netgen
     )
@@ -27,9 +29,9 @@ add_ngsolve_python_module(trefftzngs
     trefftzfespace.cpp
     monomialfespace.cpp
     specialcoefficientfunction.cpp
-    ../tents.cpp
+    ../../ngstents/src/tents.cpp
     evolvetent.cpp
-    ../meshtentslab.cpp
+    meshtentslab.cpp
     )
 
 #add_compile_options(PRIVATE -Wall -Wextra -pedantic)
