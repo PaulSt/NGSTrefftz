@@ -3,7 +3,7 @@
 #include <solve.hpp>
 #include <h1lofe.hpp>
 #include <fem.hpp>
-#include "../tents.hpp"
+#include <tents.hpp>
 #include "scalarmappedfe.hpp"
 
 namespace ngcomp
@@ -13,7 +13,6 @@ namespace ngcomp
 
   class TrefftzTents
   {
-  private:
   public:
     TrefftzTents () { ; }
     virtual int dimensio () { return 0; }
@@ -30,6 +29,7 @@ namespace ngcomp
     shared_ptr<CoefficientFunction> bddatum;
     double timeshift = 0;
     int nbasis;
+    shared_ptr<TentPitchedSlab> tps;
 
     template <typename TFUNC>
     void
@@ -74,12 +74,11 @@ namespace ngcomp
                                  Array<int> &selnums);
 
   public:
-    TWaveTents () { ; }
-
-    TWaveTents (int aorder, shared_ptr<MeshAccess> ama, double awavespeed,
-                shared_ptr<CoefficientFunction> abddatum)
-        : order (aorder), ma (ama), bddatum (abddatum)
+    TWaveTents (int aorder, shared_ptr<TentPitchedSlab> atps,
+                double awavespeed, shared_ptr<CoefficientFunction> abddatum)
+        : order (aorder), tps (atps), bddatum (abddatum)
     {
+      ma = atps->ma;
       nbasis
           = BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1);
       wavespeed.SetSize (1);
@@ -88,28 +87,29 @@ namespace ngcomp
           = make_shared<ConstantCoefficientFunction> (awavespeed);
     }
 
-    TWaveTents (int aorder, shared_ptr<MeshAccess> ama,
+    TWaveTents (int aorder, shared_ptr<TentPitchedSlab> atps,
                 shared_ptr<CoefficientFunction> awavespeedcf,
                 shared_ptr<CoefficientFunction> abddatum)
-        : order (aorder), ma (ama), bddatum (abddatum),
+        : order (aorder), tps (atps), bddatum (abddatum),
           wavespeedcf (awavespeedcf)
     {
+      ma = atps->ma;
       nbasis
           = BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1);
-      wavespeed.SetSize (ama->GetNE ());
+      wavespeed.SetSize (ma->GetNE ());
       LocalHeap lh (1000 * 1000 * 1000);
-      for (Ngs_Element el : ama->Elements (VOL))
+      for (Ngs_Element el : ma->Elements (VOL))
         {
           ElementId ei = ElementId (el);
-          ELEMENT_TYPE eltype = ama->GetElType (ei);
+          ELEMENT_TYPE eltype = ma->GetElType (ei);
           IntegrationRule ir (eltype, 0);
-          ElementTransformation &trafo = ama->GetTrafo (ei, lh);
+          ElementTransformation &trafo = ma->GetTrafo (ei, lh);
           MappedIntegrationPoint<D, D> mip (ir[0], trafo);
           wavespeed[el.Nr ()] = awavespeedcf->Evaluate (mip);
         }
     }
 
-    void EvolveTents (double dt);
+    void Propagate ();
 
     Matrix<>
     MakeWavefront (shared_ptr<CoefficientFunction> bddatum, double time = 0);
@@ -126,20 +126,9 @@ namespace ngcomp
 
     double Energy (Matrix<> wavefront);
 
-    double MaxAdiam (double dt);
+    double MaxAdiam ();
 
     int LocalDofs () { return nbasis; }
-
-    int NrTents (double dt)
-    {
-      TentPitchedSlab tps = TentPitchedSlab (ma, 1000 * 1000 * 1000);
-      tps.SetMaxWavespeed (
-          this->wavespeedcf
-          + make_shared<ConstantCoefficientFunction> (addtentslope));
-      tps.SetPitchingMethod (ngstents::EEdgeGrad);
-      tps.PitchTents<D> (dt, 0);
-      return tps.GetNTents ();
-    }
 
     int GetOrder () { return order; }
     int GetSpaceDim () { return D; }
@@ -156,11 +145,11 @@ namespace ngcomp
     using TWaveTents<D>::TentFaceVerts;
 
   public:
-    QTWaveTents (int aorder, shared_ptr<MeshAccess> ama,
+    QTWaveTents (int aorder, shared_ptr<TentPitchedSlab> atps,
                  shared_ptr<CoefficientFunction> awavespeedcf,
                  shared_ptr<CoefficientFunction> aBBcf,
                  shared_ptr<CoefficientFunction> abddatum)
-        : TWaveTents<D> (aorder, ama, awavespeedcf, abddatum)
+        : TWaveTents<D> (aorder, atps, awavespeedcf, abddatum)
     {
       this->nbasis = BinCoeff (D + this->order, this->order)
                      + BinCoeff (D + this->order - 1, this->order - 1);
@@ -205,7 +194,7 @@ namespace ngcomp
         }
     }
 
-    void EvolveTents (double dt);
+    void Propagate ();
   };
 
 }

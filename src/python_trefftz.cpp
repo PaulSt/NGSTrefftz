@@ -7,13 +7,14 @@ using namespace ngsolve;
 #include "monomialfespace.hpp"
 #include "diffopmapped.hpp"
 #include "specialcoefficientfunction.hpp"
-#include "../tents.hpp"
-#include "../meshtentslab.hpp"
+#include <tents.hpp>
+#include "meshtentslab.hpp"
 #include "evolvetent.hpp"
 
 PYBIND11_MODULE (trefftzngs, m)
 {
   py::module::import ("ngsolve");
+  // py::module::import("ngstents");
   // m.attr("__name__") = "trefftzngs"
   m.attr ("__package__") = "trefftzngs";
 

@@ -1,4 +1,5 @@
 from trefftzngs import *
+from ngstents import TentSlab
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from ngsolve.TensorProductTools import *
@@ -176,14 +177,14 @@ def SolveWaveTents(initmesh, order, c, t_step):
     ...            initmesh.Refine()
     ...        else:
     ...            initmesh=Mesh(SegMesh(initmesh.ne*2,0,1))
-    0.164...
+    0.13...
     ...e-05
     ...e-06
-    0.01...
+    0.009...
     0.001...
     0.0001...
-    0.160...
-    0.066...
+    0.15...
+    0.06...
     0.003...
 
     same example with Neumann boundary conditions
@@ -197,14 +198,14 @@ def SolveWaveTents(initmesh, order, c, t_step):
     ...            initmesh.Refine()
     ...        else:
     ...            initmesh=Mesh(SegMesh(initmesh.ne*2,0,1))
-    0.16...
+    0.14...
     ...e-05
     ...e-06
     0.01...
     0.001...
     0.0001...
     0.1...
-    0.057...
+    0.05...
     0.003...
     """
 
@@ -237,12 +238,17 @@ def SolveWaveTents(initmesh, order, c, t_step):
             sin(math.pi*x)*cos(math.pi*t*c*sq)*c
             ))
 
-    TT=TWaveTents(order,initmesh,CoefficientFunction(c),bdd)
+    local_ctau = True
+    global_ctau = 2/3
+    ts = TentSlab(initmesh, method="edge", heapsize=10*1000*1000)
+    ts.SetMaxWavespeed(c)
+    ts.PitchTents(dt=t_step, local_ct=local_ctau, global_ct=global_ctau)
+    TT=TWaveTents(order,ts,CoefficientFunction(c),bdd)
     TT.SetWavefront(bdd)
 
     start = time.time()
     with TaskManager():
-        TT.EvolveTents(t_step)
+        TT.Propagate()
     timing = (time.time()-start)
 
     error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
@@ -250,7 +256,7 @@ def SolveWaveTents(initmesh, order, c, t_step):
     # print("L2 Error ", TT.L2Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step)))
     # print("L2 proj Error ", sqrt(Integrate((bdd[0] - TT.GetWave())**2, initmesh)) )
     # input()
-    adiam = TT.MaxAdiam(t_step)
+    # adiam = TT.MaxAdiam()
 
     # return [error, timing, adiam]
     return error
@@ -266,7 +272,7 @@ def TestAiryTent(order, initmesh, t_step,qtrefftz=1):
     >>> for h in [4,8,16,32]:
     ...        initmesh = Mesh(SegMesh(h,0,math.pi))
     ...        TestAiryTent(order,initmesh,t_step) # doctest:+ELLIPSIS
-    0.013...
+    0.01...
     0.0007...
     ...e-05
     ...e-06
@@ -275,7 +281,7 @@ def TestAiryTent(order, initmesh, t_step,qtrefftz=1):
     ...        TestAiryTent(order,initmesh,t_step) # doctest:+ELLIPSIS
     ...        initmesh.Refine()
     0.004...
-    0.0005...
+    0.0007...
     ...e-05
     ...e-06
 
@@ -284,7 +290,7 @@ def TestAiryTent(order, initmesh, t_step,qtrefftz=1):
     >>> for h in range(4):
     ...        TestAiryTent(order,initmesh,t_step,None) # doctest:+ELLIPSIS
     ...        initmesh.Refine()
-    0.013...
+    0.01...
     0.001...
     0.0005...
     0.0001...
@@ -314,16 +320,21 @@ def TestAiryTent(order, initmesh, t_step,qtrefftz=1):
         wavespeed=CoefficientFunction(1/sqrt(c+x+y))
 
 
-    TT=TWaveTents(order,initmesh,wavespeed,bdd,qtrefftz)
+    local_ctau = True
+    global_ctau = 2/3
+    ts = TentSlab(initmesh, method="edge", heapsize=10*1000*1000)
+    ts.SetMaxWavespeed(c)
+    ts.PitchTents(dt=t_step, local_ct=local_ctau, global_ct=global_ctau)
+    TT=TWaveTents(order,ts,wavespeed,bdd,qtrefftz)
     TT.SetWavefront(bdd)
 
     start = time.time()
     with TaskManager():
-        TT.EvolveTents(t_step)
+        TT.Propagate()
     timing = (time.time()-start)
 
     error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
-    adiam = TT.MaxAdiam(t_step)
+    # adiam = TT.MaxAdiam()
 
     # for t in Timers():
         # print(t)
