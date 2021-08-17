@@ -4,6 +4,7 @@
 
 namespace ngcomp
 {
+
   template <typename T> int sgn_nozero (T val)
   {
     return (T (0) <= val) - (val < T (0));
@@ -11,7 +12,7 @@ namespace ngcomp
 
   template <int D>
   inline void
-  WaveTents<D>::LapackSolve (SliceMatrix<double> a, SliceVector<double> b)
+  TWaveTents<D>::LapackSolve (SliceMatrix<double> a, SliceVector<double> b)
   {
     integer n = a.Width ();
     integer lda = a.Dist ();
@@ -27,7 +28,7 @@ namespace ngcomp
       cout << "Lapack error: " << success << endl;
   }
 
-  template <int D> void WaveTents<D>::EvolveTents (double dt)
+  template <int D> void TWaveTents<D>::EvolveTents (double dt)
   {
     // int nthreads = (task_manager) ? task_manager->GetNumThreads() : 1;
     LocalHeap lh (1000 * 1000 * 1000, "trefftz tents", 1);
@@ -57,7 +58,6 @@ namespace ngcomp
     static Timer ttentmacro ("tentmacro");
     static Timer ttenteval ("tenteval");
 
-    // TrefftzWaveBasis<D>::getInstance().CreateTB(order);
     CSR basismat = TWaveBasis<D>::Basis (order, 0);
 
     RunParallelDependency (tps.tent_dependency, [&] (int tentnr) {
@@ -67,11 +67,8 @@ namespace ngcomp
       Vec<D + 1> center;
       center.Range (0, D) = ma->GetPoint<D> (tent->vertex);
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
-      // TrefftzWaveFE<D> tel(order,max_wavespeed,center,TentAdiam(tent));
-      // //TODO: fix scaling with correct wavespeed
       ScalarMappedElement<D + 1> tel (nbasis, order, basismat, ET_TET, center,
                                       TentAdiam (tent), 1);
-      // int nbasis = tel.GetNDof();
 
       std::unordered_map<int, int> macroel;
       int ndomains = MakeMacroEl (tent->els, macroel);
@@ -148,17 +145,16 @@ namespace ngcomp
     cout << "solved from " << timeshift;
     timeshift += dt;
     cout << " to " << timeshift << endl;
-    // return wavefront;
   }
 
   template <int D>
   template <typename TFUNC>
-  void WaveTents<D>::CalcTentEl (int elnr, const Tent *tent,
-                                 ScalarMappedElement<D + 1> &tel,
-                                 TFUNC LocalWavespeed,
-                                 SIMD_IntegrationRule &sir, LocalHeap &slh,
-                                 SliceMatrix<> elmat, SliceVector<> elvec,
-                                 SliceMatrix<SIMD<double>> simddshapes)
+  void TWaveTents<D>::CalcTentEl (int elnr, const Tent *tent,
+                                  ScalarMappedElement<D + 1> &tel,
+                                  TFUNC LocalWavespeed,
+                                  SIMD_IntegrationRule &sir, LocalHeap &slh,
+                                  SliceMatrix<> elmat, SliceVector<> elvec,
+                                  SliceMatrix<SIMD<double>> simddshapes)
   {
     static Timer tint1 ("tent top calcshape");
     static Timer tint2 ("tent top AAt");
@@ -168,7 +164,6 @@ namespace ngcomp
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     // double wavespeed = tel.GetWavespeed();
-    // int nbasis = tel.GetNDof();
     int nsimd = SIMD<double>::Size ();
     int snip = sir.Size () * nsimd;
     ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
@@ -283,10 +278,10 @@ namespace ngcomp
   }
 
   template <int D>
-  void WaveTents<D>::CalcTentBndEl (int surfel, const Tent *tent,
-                                    ScalarMappedElement<D + 1> &tel,
-                                    SIMD_IntegrationRule &sir, LocalHeap &slh,
-                                    SliceMatrix<> elmat, SliceVector<> elvec)
+  void TWaveTents<D>::CalcTentBndEl (int surfel, const Tent *tent,
+                                     ScalarMappedElement<D + 1> &tel,
+                                     SIMD_IntegrationRule &sir, LocalHeap &slh,
+                                     SliceMatrix<> elmat, SliceVector<> elvec)
   {
     HeapReset hr (slh);
     double wavespeed = tel.GetWavespeed ();
@@ -382,12 +377,12 @@ namespace ngcomp
 
   template <int D>
   void
-  WaveTents<D>::CalcTentMacroEl (int fnr, const Array<int> &elnums,
-                                 std::unordered_map<int, int> &macroel,
-                                 const Tent *tent,
-                                 ScalarMappedElement<D + 1> &tel,
-                                 SIMD_IntegrationRule &sir, LocalHeap &slh,
-                                 SliceMatrix<> elmat, SliceVector<> elvec)
+  TWaveTents<D>::CalcTentMacroEl (int fnr, const Array<int> &elnums,
+                                  std::unordered_map<int, int> &macroel,
+                                  const Tent *tent,
+                                  ScalarMappedElement<D + 1> &tel,
+                                  SIMD_IntegrationRule &sir, LocalHeap &slh,
+                                  SliceMatrix<> elmat, SliceVector<> elvec)
   {
     // int nbasis = tel.GetNDof();
     int nsimd = SIMD<double>::Size ();
@@ -496,11 +491,11 @@ namespace ngcomp
   }
 
   template <int D>
-  void WaveTents<D>::CalcTentElEval (int elnr, const Tent *tent,
-                                     ScalarMappedElement<D + 1> &tel,
-                                     SIMD_IntegrationRule &sir, LocalHeap &slh,
-                                     SliceVector<> sol,
-                                     SliceMatrix<SIMD<double>> simddshapes)
+  void TWaveTents<D>::CalcTentElEval (int elnr, const Tent *tent,
+                                      ScalarMappedElement<D + 1> &tel,
+                                      SIMD_IntegrationRule &sir,
+                                      LocalHeap &slh, SliceVector<> sol,
+                                      SliceMatrix<SIMD<double>> simddshapes)
   {
     HeapReset hr (slh);
     const ELEMENT_TYPE eltyp
@@ -540,7 +535,7 @@ namespace ngcomp
   // space-time element
   template <int D>
   Mat<D + 1, D + 1>
-  WaveTents<D>::TentFaceVerts (const Tent *tent, int elnr, int top)
+  TWaveTents<D>::TentFaceVerts (const Tent *tent, int elnr, int top)
   {
     Mat<D + 1, D + 1> v;
     if (top == 0) // boundary element
@@ -574,7 +569,7 @@ namespace ngcomp
     return v;
   }
 
-  template <int D> double WaveTents<D>::TentFaceArea (Mat<D + 1, D + 1> ve)
+  template <int D> double TWaveTents<D>::TentFaceArea (Mat<D + 1, D + 1> ve)
   {
     switch (D)
       {
@@ -622,7 +617,7 @@ namespace ngcomp
   }
 
   template <int D>
-  Vec<D + 1> WaveTents<D>::TentFaceNormal (Mat<D + 1, D + 1> v, int top)
+  Vec<D + 1> TWaveTents<D>::TentFaceNormal (Mat<D + 1, D + 1> v, int top)
   {
     Vec<D + 1> normv;
     switch (D)
@@ -677,8 +672,8 @@ namespace ngcomp
 
   template <int D>
   Matrix<>
-  WaveTents<D>::MakeWavefront (shared_ptr<CoefficientFunction> bddatum,
-                               double time)
+  TWaveTents<D>::MakeWavefront (shared_ptr<CoefficientFunction> bddatum,
+                                double time)
   {
     LocalHeap lh (1000 * 1000 * 1000, "make wavefront", 1);
     const ELEMENT_TYPE eltyp
@@ -715,7 +710,7 @@ namespace ngcomp
   }
 
   template <int D>
-  double WaveTents<D>::Error (Matrix<> wavefront, Matrix<> wavefront_corr)
+  double TWaveTents<D>::Error (Matrix<> wavefront, Matrix<> wavefront_corr)
   {
     LocalHeap lh (1000 * 1000 * 1000, "error", 1);
     double error = 0;
@@ -754,7 +749,7 @@ namespace ngcomp
   }
 
   template <int D>
-  double WaveTents<D>::L2Error (Matrix<> wavefront, Matrix<> wavefront_corr)
+  double TWaveTents<D>::L2Error (Matrix<> wavefront, Matrix<> wavefront_corr)
   {
     LocalHeap lh (1000 * 1000 * 1000, "l2error", 1);
     double l2error = 0;
@@ -778,7 +773,7 @@ namespace ngcomp
     return sqrt (l2error);
   }
 
-  template <int D> double WaveTents<D>::Energy (Matrix<> wavefront)
+  template <int D> double TWaveTents<D>::Energy (Matrix<> wavefront)
   {
     double energy = 0;
     LocalHeap lh (1000 * 1000 * 1000, "energy", 1);
@@ -808,7 +803,7 @@ namespace ngcomp
 
   template <int D>
   template <typename T>
-  void WaveTents<D>::SwapIfGreater (T &a, T &b)
+  void TWaveTents<D>::SwapIfGreater (T &a, T &b)
   {
     if (a < b)
       {
@@ -818,21 +813,10 @@ namespace ngcomp
       }
   }
 
-  template <int D> double WaveTents<D>::TentAdiam (const Tent *tent)
+  template <int D> double TWaveTents<D>::TentAdiam (const Tent *tent)
   {
     LocalHeap lh (1000 * 1000 * 1000);
     int vnumber = tent->nbv.Size ();
-
-    // Array<int> verts(vnumber);
-    // verts.Range(2,vnumber) = tent->nbv;
-    // verts[0] = tent->vertex;
-    // verts[1] = tent->vertex;
-
-    // Array<int> vtime(vnumber);
-    // vtime.Range(2,vnumber) = tent->nbtime;
-    // vtime[0] = tent->tbot;
-    // vtime[1] = tent->ttop;
-
     double c = wavespeed[tent->els[0]];
     // for(auto el : tent->els) c = max(c,wavespeed[el]);
     IntegrationRule ir (ma->GetElType (ElementId (VOL, 0)), 0);
@@ -874,7 +858,7 @@ namespace ngcomp
     return anisotropicdiam;
   }
 
-  template <int D> double WaveTents<D>::MaxAdiam (double dt)
+  template <int D> double TWaveTents<D>::MaxAdiam (double dt)
   {
     double h = 0.0;
     TentPitchedSlab tps = TentPitchedSlab (ma, 1000 * 1000 * 1000);
@@ -891,8 +875,8 @@ namespace ngcomp
   }
 
   template <int D>
-  inline int WaveTents<D>::MakeMacroEl (const Array<int> &tentel,
-                                        std::unordered_map<int, int> &macroel)
+  inline int TWaveTents<D>::MakeMacroEl (const Array<int> &tentel,
+                                         std::unordered_map<int, int> &macroel)
   {
     // TODO fix if macro elements do not share faces
     int nrmacroel = 0;
@@ -910,8 +894,8 @@ namespace ngcomp
   }
 
   template <int D>
-  void WaveTents<D>::GetFacetSurfaceElement (shared_ptr<MeshAccess> ma,
-                                             int fnr, Array<int> &selnums)
+  void TWaveTents<D>::GetFacetSurfaceElement (shared_ptr<MeshAccess> ma,
+                                              int fnr, Array<int> &selnums)
   {
     switch (D)
       {
@@ -1010,7 +994,6 @@ namespace ngcomp
           Array<int> elnums;
           ma->GetFacetElements (fnr, elnums);
           Array<int> selnums;
-          // ma->GetFacetSurfaceElements (fnr, selnums);
           if (elnums.Size () == 1)
             this->GetFacetSurfaceElement (ma, fnr, selnums);
 
@@ -1137,9 +1120,9 @@ namespace ngcomp
 
 }
 
-template class WaveTents<1>;
-template class WaveTents<2>;
-template class WaveTents<3>;
+template class TWaveTents<1>;
+template class TWaveTents<2>;
+template class TWaveTents<3>;
 
 template class QTWaveTents<1>;
 template class QTWaveTents<2>;
@@ -1154,10 +1137,9 @@ void DeclareETClass (py::module &m, std::string typestr)
 {
   using PyETclass = T;
   std::string pyclass_name = typestr;
-  // py::class_<PyETclass,shared_ptr<PyETclass> >(m, "EvolveTent")
   py::class_<PyETclass, shared_ptr<PyETclass>, TrefftzTents> (
-      m, pyclass_name.c_str ()) //, py::buffer_protocol(), py::dynamic_attr())
-                                //.def(py::init<>())
+      m, pyclass_name.c_str ())
+      //.def(py::init<>())
       .def ("EvolveTents", &PyETclass::EvolveTents)
       .def ("MakeWavefront", &PyETclass::MakeWavefront)
       .def ("SetWavefront", &PyETclass::SetWavefront)
@@ -1175,54 +1157,33 @@ void DeclareETClass (py::module &m, std::string typestr)
 
 void ExportEvolveTent (py::module m)
 {
-  py::class_<TrefftzTents, shared_ptr<TrefftzTents>> (
-      m, "TrefftzTents"); //, py::buffer_protocol(), py::dynamic_attr())
+  py::class_<TrefftzTents, shared_ptr<TrefftzTents>> (m, "TrefftzTents");
 
-  DeclareETClass<WaveTents<1>, 1> (m, "WaveTents1");
-  DeclareETClass<WaveTents<2>, 2> (m, "WaveTents2");
-  DeclareETClass<WaveTents<3>, 3> (m, "WaveTents3");
-
+  DeclareETClass<TWaveTents<1>, 1> (m, "TWaveTents1");
+  DeclareETClass<TWaveTents<2>, 2> (m, "TWaveTents2");
+  DeclareETClass<TWaveTents<3>, 3> (m, "TWaveTents3");
   DeclareETClass<QTWaveTents<1>, 1> (m, "QTWaveTents1");
   DeclareETClass<QTWaveTents<2>, 2> (m, "QTWaveTents2");
 
-  // m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma, double
-  // wavespeed, shared_ptr<CoefficientFunction> bddatum) ->
-  // shared_ptr<TrefftzTents>
-  //{
-  ////TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
-  // shared_ptr<TrefftzTents> tr;
-  // int D = ma->GetDimension();
-  ////return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
-  // if(D==1)
-  // tr = make_shared<WaveTents<1>>(order,ma,wavespeed,bddatum);
-  // else if(D==2)
-  // tr = make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
-  // else if(D==3)
-  // tr = make_shared<WaveTents<3>>(order,ma,wavespeed,bddatum);
-  // return tr;
-  ////return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma, wavespeed,
-  ///bddatum));
-
-  //});
-
   m.def (
-      "WaveTents",
+      "TWaveTents",
       [] (int order, shared_ptr<MeshAccess> ma,
           shared_ptr<CoefficientFunction> wavespeedcf,
           shared_ptr<CoefficientFunction> bddatum,
           shared_ptr<CoefficientFunction> BBcf) -> shared_ptr<TrefftzTents> {
-        // TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
         shared_ptr<TrefftzTents> tr;
         int D = ma->GetDimension ();
-        // return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
         if (!BBcf)
           {
             if (D == 1)
-              tr = make_shared<WaveTents<1>> (order, ma, wavespeedcf, bddatum);
+              tr = make_shared<TWaveTents<1>> (order, ma, wavespeedcf,
+                                               bddatum);
             else if (D == 2)
-              tr = make_shared<WaveTents<2>> (order, ma, wavespeedcf, bddatum);
+              tr = make_shared<TWaveTents<2>> (order, ma, wavespeedcf,
+                                               bddatum);
             else if (D == 3)
-              tr = make_shared<WaveTents<3>> (order, ma, wavespeedcf, bddatum);
+              tr = make_shared<TWaveTents<3>> (order, ma, wavespeedcf,
+                                               bddatum);
           }
         else
           {
@@ -1234,31 +1195,9 @@ void ExportEvolveTent (py::module m)
                                                 bddatum);
           }
         return tr;
-        // return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma,
-        // wavespeed, bddatum));
       },
       "Create Wavetent object", py::arg ("order"), py::arg ("ma"),
       py::arg ("wavespeedcf"), py::arg ("bddatum"),
       py::arg ("BBcf") = nullptr);
-
-  // m.def("WaveTents", [](int order, shared_ptr<MeshAccess> ma,
-  // shared_ptr<CoefficientFunction> wavespeedcf,
-  // shared_ptr<CoefficientFunction> bddatum,
-  // vector<shared_ptr<CoefficientFunction>> taylorcf) ->
-  // shared_ptr<TrefftzTents>
-  //{
-  ////TrefftzTents* nla = new WaveTents<2>(order, ma, wavespeed, bddatum);
-  // shared_ptr<TrefftzTents> tr;
-  // int D = ma->GetDimension();
-  ////return make_shared<WaveTents<2>>(order,ma,wavespeed,bddatum);
-  // if(D==1)
-  // tr = make_shared<QTWaveTents<1>>(order,ma,wavespeedcf,bddatum,taylorcf);
-  // else if(D==2)
-  // tr = make_shared<QTWaveTents<2>>(order,ma,wavespeedcf,bddatum,taylorcf);
-  // return tr;
-  ////return shared_ptr<TrefftzTents>(new WaveTents<2>(order, ma, wavespeed,
-  ///bddatum));
-  //}
-  //);
 }
 #endif // NGS_PYTHON

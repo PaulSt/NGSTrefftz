@@ -7,7 +7,6 @@
 
 #include "trefftzfespace.hpp"
 #include "diffopmapped.hpp"
-#include "trefftzheatfe.hpp"
 
 namespace ngcomp
 {
@@ -18,15 +17,10 @@ namespace ngcomp
   {
     type = "trefftzfespace";
 
-    // cout << "======== Constructor of TrefftzFESpace =========" << endl;
-    // cout << "Flags:" << endl << flags;
-
     D = ma->GetDimension () - 1;
 
     this->dgjumps = true;
-    heat = flags.GetNumFlag ("heat", 0);
-    heattest = flags.GetNumFlag ("heattest", 0);
-    order = int (flags.GetNumFlag ("order", 3)) * (1 + (heat > 0));
+    order = int (flags.GetNumFlag ("order", 3));
     c = flags.GetNumFlag ("wavespeed", 1);
     wavespeedcf = make_shared<ConstantCoefficientFunction> (c);
     basistype = flags.GetNumFlag ("basistype", 0);
@@ -34,8 +28,8 @@ namespace ngcomp
     usescale = flags.GetNumFlag ("usescale", 1);
     useqt = flags.GetNumFlag ("useqt", 0);
 
-    local_ndof = BinCoeff (D + order, order)
-                 + BinCoeff (D + order - 1, order - 1) * (!heat);
+    local_ndof
+        = BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1);
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
 
@@ -140,26 +134,12 @@ namespace ngcomp
     dnums.SetSize (0);
     if (!DefinedOn (ei) || ei.VB () != VOL)
       return;
-    // int n_vert = ma->GetNV();		int n_edge = ma->GetNEdges();		int n_cell =
-    // ma->GetNE(); Ngs_Element ngel = ma->GetElement (ei);
     for (int j = ei.Nr () * local_ndof; j < local_ndof * (ei.Nr () + 1); j++)
-      {
-        dnums.Append (j);
-      }
-    // cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " local_ndof:" <<
-    // local_ndof << " ndof: " << ndof << " dnums: \n" << dnums << endl <<
-    //"================================================" << endl ;
+      dnums.Append (j);
   }
 
   FiniteElement &TrefftzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
   {
-
-    // auto vertices_index = ma->GetElVertices(ei);
-    // cout << "element vectice coord: \n"  <<
-    // ma->GetPoint<3>(vertices_index[0]) << endl<<
-    // ma->GetPoint<3>(vertices_index[1])
-    // <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
-
     Ngs_Element ngel = ma->GetElement (ei);
     ELEMENT_TYPE eltype = ngel.GetType ();
 
@@ -173,13 +153,6 @@ namespace ngcomp
           case ET_QUAD:
           case ET_TRIG:
             {
-              LocalHeap lh (1000 * 1000);
-              const ELEMENT_TYPE eltyp = ET_TRIG;
-              const int D = 2;
-              IntegrationRule ir (eltyp, 0);
-              MappedIntegrationPoint<D, D> mip (
-                  ir[0], ma->GetTrafo (ElementId (0), lh));
-              mip.Point () = ElCenter<1> (ei).Range (0, 1);
               if (BBder.Height () != 0 || useqt)
                 {
                   CSR basismat = static_cast<QTWaveBasis<1> *> (basis)->Basis (
@@ -199,14 +172,6 @@ namespace ngcomp
           case ET_PYRAMID:
           case ET_TET:
             {
-              LocalHeap lh (1000 * 1000);
-              const ELEMENT_TYPE eltyp = ET_TRIG;
-              const int D = 3;
-              IntegrationRule ir (eltyp, 0);
-              MappedIntegrationPoint<D, D> mip (
-                  ir[0], ma->GetTrafo (ElementId (0), lh));
-              mip.Point () = ElCenter<2> (ei).Range (0, 2);
-
               if (BBder.Height () != 0 || useqt)
                 {
                   CSR basismat = static_cast<QTWaveBasis<2> *> (basis)->Basis (
@@ -247,8 +212,6 @@ namespace ngcomp
           {
             Vec<D + 1> v1 = ma->GetPoint<D + 1> (vertex1);
             Vec<D + 1> v2 = ma->GetPoint<D + 1> (vertex2);
-            // cout << "v1: " << v1 << " v1 part: " << v1(1,D-1) << "norm " <<
-            // L2Norm(v1) << endl ;
             anisotropicdiam
                 = max (anisotropicdiam,
                        sqrt (L2Norm2 (v1.Range (0, D) - v2.Range (0, D))
@@ -262,7 +225,6 @@ namespace ngcomp
   double TrefftzFESpace ::Adiam (ElementId ei,
                                  shared_ptr<CoefficientFunction> c) const
   {
-    LocalHeap lh (1000 * 1000);
     double anisotropicdiam = 0.0;
     auto vertices_index = ma->GetElVertices (ei);
 
@@ -272,11 +234,13 @@ namespace ngcomp
           {
             Vec<D + 1> v1 = ma->GetPoint<D + 1> (vertex1);
             Vec<D + 1> v2 = ma->GetPoint<D + 1> (vertex2);
-            // cout << "v1: " << v1 << " v1 part: " << v1.Range(0,D) << " el
-            // type: " << ma->GetElType(ei) << " norm " << L2Norm(v1) << endl ;
-            IntegrationRule ir (ma->GetElType (ei), 0);
-            ElementTransformation &trafo = ma->GetTrafo (ei, lh);
-            MappedIntegrationPoint<D + 1, D + 1> mip (ir[0], trafo);
+            IntegrationPoint ip (v1, 0);
+            Mat<D + 1, D + 1> dummy;
+            FE_ElementTransformation<D + 1, D + 1> et (D == 3   ? ET_TET
+                                                       : D == 2 ? ET_TRIG
+                                                                : ET_SEGM,
+                                                       dummy);
+            MappedIntegrationPoint<D + 1, D + 1> mip (ip, et, 0);
             mip.Point () = v1;
             double c1 = wavespeedcf->Evaluate (mip);
             mip.Point () = v2;
@@ -316,11 +280,6 @@ namespace ngcomp
     return docu;
   }
 
-  /*
-     register fe-spaces
-     Object of type TrefftzFESpace can be defined in the pde-file via
-     "define fespace v -type=trefftzfespace"
-     */
   static RegisterFESpace<TrefftzFESpace> initi_trefftz ("trefftzfespace");
 
   // k-th coeff of Legendre polynomial of degree n in monomial basis
@@ -487,13 +446,13 @@ namespace ngcomp
 
     if (gtbstore[encode][0].Size () == 0)
       {
-        IntegrationRule ir (D == 3 ? ET_TET : D == 2 ? ET_TRIG : ET_SEGM, 0);
+        IntegrationPoint ip (ElCenter, 0);
         Mat<D, D> dummy;
         FE_ElementTransformation<D, D> et (D == 3   ? ET_TET
                                            : D == 2 ? ET_TRIG
                                                     : ET_SEGM,
                                            dummy);
-        MappedIntegrationPoint<D, D> mip (ir[0], et, 0);
+        MappedIntegrationPoint<D, D> mip (ip, et, 0);
         for (int i = 0; i < D; i++)
           mip.Point ()[i] = ElCenter[i];
 

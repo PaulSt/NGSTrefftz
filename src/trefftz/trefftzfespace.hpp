@@ -55,8 +55,6 @@ namespace ngcomp
     int useshift = 1;
     int usescale = 1;
     int useqt = 0;
-    int heat = 0;
-    int heattest = 0;
     int basistype;
     shared_ptr<CoefficientFunction> wavespeedcf = nullptr;
     Matrix<shared_ptr<CoefficientFunction>> GGder;
