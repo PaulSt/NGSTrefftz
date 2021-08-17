@@ -11,12 +11,11 @@ using namespace ngsolve;
 #include "../meshtentslab.hpp"
 #include "evolvetent.hpp"
 
-PYBIND11_PLUGIN(trefftzngs) {
-    // import ngsolve such that python base classes are defined
+PYBIND11_MODULE(trefftzngs,m) {
     py::module::import("ngsolve");
-    py::module m("trefftzngs", "trefftzngs doc-string");
+    //m.attr("__name__") = "trefftzngs"
+    m.attr("__package__") = "trefftzngs";
 
-    //ExportMappedElement(m);
     ExportTrefftzFESpace(m);
     ExportMonomialFESpace(m);
     ExportSpecialCoefficientFunction(m);
@@ -24,7 +23,5 @@ PYBIND11_PLUGIN(trefftzngs) {
     ExportMeshTentSlab(m);
     ExportStdMathFunction<GenericAiry>(m, "airy", "airy function");
     ExportStdMathFunction<GenericAiryP>(m, "airyp", "airyp function");
-
-    return m.ptr();
 }
 

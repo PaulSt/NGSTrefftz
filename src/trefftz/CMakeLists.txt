@@ -19,7 +19,8 @@ install (FILES
         COMPONENT trefftzngs
         )
 
-add_ngsolve_python_module(trefftzngs python_trefftz.cpp
+add_ngsolve_python_module(trefftzngs 
+    python_trefftz.cpp
     diffopmapped.hpp
     scalarmappedfe.cpp
     trefftzheatfe.cpp

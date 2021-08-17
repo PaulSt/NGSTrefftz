@@ -31,9 +31,9 @@ def GetWave(self):
     gfu.vec.data = a.mat.Inverse() * f.vec
     return gfu
 
-setattr(WaveTents1, 'GetWave', GetWave)
-setattr(WaveTents2, 'GetWave', GetWave)
-setattr(WaveTents3, 'GetWave', GetWave)
+setattr(TWaveTents1, 'GetWave', GetWave)
+setattr(TWaveTents2, 'GetWave', GetWave)
+setattr(TWaveTents3, 'GetWave', GetWave)
 setattr(QTWaveTents1, 'GetWave', GetWave)
 setattr(QTWaveTents2, 'GetWave', GetWave)
 # = MethodType(GetWave, None, TrefftzTent)

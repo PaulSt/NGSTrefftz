@@ -237,8 +237,8 @@ def SolveWaveTents(initmesh, order, c, t_step):
             sin(math.pi*x)*cos(math.pi*t*c*sq)*c
             ))
 
-    TT=WaveTents(order,initmesh,CoefficientFunction(c),bdd)
-    TT.SetWavefront(bdd,t_start)
+    TT=TWaveTents(order,initmesh,CoefficientFunction(c),bdd)
+    TT.SetWavefront(bdd)
 
     start = time.time()
     with TaskManager():
@@ -314,8 +314,8 @@ def TestAiryTent(order, initmesh, t_step,qtrefftz=1):
         wavespeed=CoefficientFunction(1/sqrt(c+x+y))
 
 
-    TT=WaveTents(order,initmesh,wavespeed,bdd,qtrefftz)
-    TT.SetWavefront(bdd,t_start)
+    TT=TWaveTents(order,initmesh,wavespeed,bdd,qtrefftz)
+    TT.SetWavefront(bdd)
 
     start = time.time()
     with TaskManager():
