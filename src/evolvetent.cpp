@@ -624,11 +624,9 @@ namespace ngcomp
         }
       case 2:
         {
-          Vec<D + 1> a = v.Col (0) - v.Col (1);
-          Vec<D + 1> b = v.Col (0) - v.Col (2);
-          normv (0) = a (1) * b (2) - a (2) * b (1);
-          normv (1) = a (2) * b (0) - a (0) * b (2);
-          normv (2) = a (0) * b (1) - a (1) * b (0);
+          Vec<3> ba = v.Col (0) - v.Col (1);
+          Vec<3> baa = v.Col (0) - v.Col (2);
+          normv = Cross (ba, baa);
           break;
         }
       case 3:
