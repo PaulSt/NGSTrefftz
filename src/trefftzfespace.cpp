@@ -1,9 +1,5 @@
 #include <comp.hpp>    // provides FESpace, ...
-#include <h1lofe.hpp>
-#include <regex>
 #include <python_comp.hpp>
-#include <fem.hpp>
-#include <multigrid.hpp>
 
 #include "trefftzfespace.hpp"
 #include "diffopmapped.hpp"

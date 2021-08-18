@@ -1,4 +1,5 @@
-#include "evolvetent.hpp"
+#include "twavetents.hpp"
+#include <h1lofe.hpp>
 #include <paralleldepend.hpp>
 #include "trefftzfespace.hpp"
 
@@ -65,21 +66,6 @@ namespace ngcomp
             FlatVector<> elvec(ndomains*nbasis,slh);
             elmat = 0; elvec = 0;
 
-            Array<FlatMatrix<SIMD<double>>> topdshapes(tent->els.Size());
-            for(auto& tds : topdshapes)
-                tds.AssignMemory((D+1)*nbasis, sir.Size(), slh);
-
-            // Integrate top and bottom space-like tent faces
-            for(int elnr=0;elnr<tent->els.Size();elnr++)
-            {
-                tel.SetWavespeed(wavespeed[tent->els[elnr]]);
-                int eli = ndomains>1 ? macroel[tent->els[elnr]] : 0;
-                SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
-                SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
-                double bla = wavespeed[tent->els[elnr]];
-                CalcTentEl(tent->els[elnr],tent,tel,[&](int imip){return bla;},sir,slh,subm,subv,topdshapes[elnr]);
-            }
-
             for(auto fnr : tent->internal_facets)
             {
                 Array<int> elnums;
@@ -104,6 +90,20 @@ namespace ngcomp
                 {
                     CalcTentMacroEl(fnr, elnums, macroel, tent, tel, sir, slh, elmat, elvec);
                 }
+            }
+
+            Array<FlatMatrix<SIMD<double>>> topdshapes(tent->els.Size());
+            for(auto& tds : topdshapes)
+                tds.AssignMemory((D+1)*nbasis, sir.Size(), slh);
+            // Integrate top and bottom space-like tent faces
+            for(int elnr=0;elnr<tent->els.Size();elnr++)
+            {
+                tel.SetWavespeed(wavespeed[tent->els[elnr]]);
+                int eli = ndomains>1 ? macroel[tent->els[elnr]] : 0;
+                SliceMatrix<> subm = elmat.Cols(eli*nbasis,(eli+1)*nbasis).Rows(eli*nbasis,(eli+1)*nbasis);
+                SliceVector<> subv = elvec.Range(eli*nbasis,(eli+1)*nbasis);
+                double bla = wavespeed[tent->els[elnr]];
+                CalcTentEl(tent->els[elnr],tent,tel,[&](int imip){return bla;},sir,slh,subm,subv,topdshapes[elnr]);
             }
 
             // solve
@@ -953,7 +953,7 @@ template class QTWaveTents<2>;
         .def("GetInitmesh",&PyETclass::GetInitmesh);
 }
 
-void ExportEvolveTent(py::module m)
+void ExportTWaveTents(py::module m)
 {
     py::class_<TrefftzTents, shared_ptr<TrefftzTents>>(m, "TrefftzTents");
 
