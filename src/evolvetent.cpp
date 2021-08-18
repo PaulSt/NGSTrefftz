@@ -337,6 +337,8 @@ namespace ngcomp
                        * bdeval (r, imip / nsimd)[imip % nsimd]
                        * sir[imip / nsimd].Weight ()[imip % nsimd] * area;
               }
+        elmat += bbmat * bdbmat;
+        elvec += bbmat * bdbvec;
       }
     else
       { // dirichlet
@@ -347,6 +349,7 @@ namespace ngcomp
                                 / (this->wavespeedcf);
         localwavespeedcf->Evaluate (smir, wavespeed);
         // double alpha = 0.5;
+
         for (int imip = 0; imip < snip; imip++)
           {
             double weight = area * sir[imip / nsimd].Weight ()[imip % nsimd];
@@ -364,9 +367,9 @@ namespace ngcomp
                     -= n (d) * weight * bdeval (0, imip / nsimd)[imip % nsimd];
               }
           }
+        elmat += bbmat * bdbmat;
+        elvec -= bbmat * bdbvec;
       }
-    elmat += bbmat * bdbmat;
-    elvec -= bbmat * bdbvec;
   }
 
   template <int D>
