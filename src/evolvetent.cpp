@@ -285,15 +285,16 @@ namespace ngcomp
                         bdbmat.Row(r*snip+imip) += (d<D?-n(d)*beta:1.0) * (-n(r)) * sir[imip/nsimd].Weight()[imip%nsimd]*area * bbmat.Col(d*snip+imip);
                         bdbvec(d*snip+imip) += (d<D?-n(d)*beta:-1.0) * (-n(r)) * bdeval(r,imip/nsimd)[imip%nsimd] * sir[imip/nsimd].Weight()[imip%nsimd]*area;
                     }
-        } 
-        else 
-        { // dirichlet
+            elmat += bbmat * bdbmat;
+            elvec += bbmat * bdbvec;
+        } else { // dirichlet
             FlatMatrix<SIMD<double>> bdeval(1,sir.Size(),slh);
             bddatum->Evaluate(smir,bdeval);
             FlatMatrix<SIMD<double>> wavespeed(1,sir.Size(),slh);
             auto localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(this->wavespeedcf);
             localwavespeedcf->Evaluate(smir,wavespeed);
             //double alpha = 0.5;
+
             for(int imip=0;imip<snip;imip++)
             {
                 double weight = area * sir[imip/nsimd].Weight()[imip%nsimd];
@@ -305,9 +306,9 @@ namespace ngcomp
                     bdbvec(d*snip+imip) -= n(d) * weight * bdeval(0,imip/nsimd)[imip%nsimd];
                 }
             }
+            elmat += bbmat * bdbmat;
+            elvec -= bbmat * bdbvec;
         }
-        elmat += bbmat * bdbmat;
-        elvec -= bbmat * bdbvec;
     }
 
 
