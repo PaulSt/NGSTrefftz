@@ -263,7 +263,7 @@ namespace ngcomp
 	}
 
     template<int D>
-    CSR TWaveBasis<D> :: Basis(int ord, int basistype)
+    CSR TWaveBasis<D> :: Basis(int ord, int basistype, int fosystem)
     {
         CSR tb;
         const int ndof = (BinCoeff(D + ord, ord) + BinCoeff(D + ord-1, ord-1));
@@ -277,7 +277,7 @@ namespace ngcomp
             int tracker = 0;
             TB_inner(ord, trefftzbasis, coeff, b, D+1, tracker, basistype);
         }
-        MatToCSR(trefftzbasis,tb);
+        MatToCSR(trefftzbasis.Rows(fosystem,ndof),tb);
         return tb;
     }
 

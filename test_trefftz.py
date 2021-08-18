@@ -330,6 +330,55 @@ def TestAiryTent(order, initmesh, t_step,qtrefftz=1):
     return error
 
 
+def SolveWaveTentsFO(initmesh, order, c, t_step):
+    """
+    Solve using tent pitching first order system
+    >>> order = 4
+    >>> SetNumThreads(2)
+    >>> c = 1
+    >>> t_step = 2/sqrt(3)
+    >>> initmesh = Mesh(unit_square.GenerateMesh(maxh = 0.4))
+    >>> for maxh in range(3):
+    ...     SolveWaveTentsFO(initmesh, order, c, t_step) # doctest:+ELLIPSIS
+    ...     initmesh.Refine()
+    0.009...
+    0.001...
+    0.0001...
+    """
+
+    D = initmesh.dim
+    t = CoordCF(D)
+    t_start = 0
+
+    sq = sqrt(2.0);
+    bdd = CoefficientFunction((
+        cos(math.pi*x)*sin(math.pi*y)*sin(math.pi*t*c*sq)/sq,
+        sin(math.pi*x)*cos(math.pi*y)*sin(math.pi*t*c*sq)/sq,
+        sin(math.pi*x)*sin(math.pi*y)*cos(math.pi*t*c*sq)*c
+        ))
+
+    local_ctau = True
+    global_ctau = 2/3
+    ts = TentSlab(initmesh, method="edge", heapsize=10*1000*1000)
+    ts.SetMaxWavespeed(c)
+    ts.PitchTents(dt=t_step, local_ct=local_ctau, global_ct=global_ctau)
+    TT=TWave(order,ts,CoefficientFunction(c))
+    TT.SetInitial(bdd)
+    TT.SetBoundaryCF(bdd[D])
+
+    start = time.time()
+    with TaskManager():
+        TT.Propagate()
+    timing = (time.time()-start)
+
+    error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
+    # V = L2(initmesh, order=order, dim=initmesh.dim+1)
+    # u = GridFunction(V,"u")
+    # TT.GetWave()
+
+    return error
+
+
 if __name__ == "__main__":
     # order = 4
     # SetNumThreads(1)

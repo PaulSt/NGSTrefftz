@@ -28,6 +28,7 @@ namespace ngcomp
             shared_ptr<CoefficientFunction> wavespeedcf;
             Matrix<> wavefront;
             shared_ptr<CoefficientFunction> bddatum;
+            int fosystem = 0;
             double timeshift = 0;
             int nbasis;
             shared_ptr<TentPitchedSlab> tps;
@@ -93,7 +94,15 @@ namespace ngcomp
             Matrix<> MakeWavefront( shared_ptr<CoefficientFunction> cf, double time = 0);
 
             Matrix<> GetWavefront() {return wavefront;}
-            void SetInitial(shared_ptr<CoefficientFunction> init) { wavefront = MakeWavefront(init); }
+
+            void SetInitial(shared_ptr<CoefficientFunction> init) {
+                wavefront = MakeWavefront(init);
+                if(init->Dimension()==D+1){
+                    fosystem=1;
+                    nbasis = BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1) - 1;
+                }
+            }
+
             void SetBoundaryCF(shared_ptr<CoefficientFunction> abddatum) { bddatum = abddatum;}
 
             double Error(Matrix<> wavefront, Matrix<> wavefront_corr);
