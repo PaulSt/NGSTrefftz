@@ -26,7 +26,7 @@ namespace ngcomp
 
   public:
     TWaveBasis () { ; }
-    static CSR Basis (int ord, int basistype = 0);
+    static CSR Basis (int ord, int basistype = 0, int fosystem = 0);
     static int IndexMap2 (Vec<D + 1, int> index, int ord);
   };
 

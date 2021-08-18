@@ -51,7 +51,7 @@ namespace ngcomp
     static Timer ttentmacro ("tentmacro");
     static Timer ttenteval ("tenteval");
 
-    CSR basismat = TWaveBasis<D>::Basis (order, 0);
+    CSR basismat = TWaveBasis<D>::Basis (order, 0, fosystem);
 
     RunParallelDependency (tps->tent_dependency, [&] (int tentnr) {
       LocalHeap slh = lh.Split (); // split to threads
@@ -186,17 +186,20 @@ namespace ngcomp
     for (int imip = 0; imip < snip; imip++)
       {
         double weight = sir[imip / nsimd].Weight ()[imip % nsimd] * area;
-        bdbvec (D * snip + imip) += n (D) * pow (LocalWavespeed (imip), -2)
-                                    * weight
-                                    * wavefront (elnr, snip + D * snip + imip);
+        bdbvec (D * snip + imip)
+            += n (D) * pow (LocalWavespeed (imip), -2) * weight
+               * wavefront (elnr, ((!fosystem) + D) * snip + imip);
         for (int d = 0; d < D; d++)
           {
             bdbvec (d * snip + imip)
-                += n (D) * weight * wavefront (elnr, snip + d * snip + imip);
+                += n (D) * weight
+                   * wavefront (elnr, ((!fosystem) + d) * snip + imip);
             bdbvec (d * snip + imip)
-                -= n (d) * weight * wavefront (elnr, snip + D * snip + imip);
+                -= n (d) * weight
+                   * wavefront (elnr, ((!fosystem) + D) * snip + imip);
             bdbvec (D * snip + imip)
-                -= n (d) * weight * wavefront (elnr, snip + d * snip + imip);
+                -= n (d) * weight
+                   * wavefront (elnr, ((!fosystem) + d) * snip + imip);
           }
       }
     tel.CalcDShape (smir, simddshapes);
@@ -204,15 +207,18 @@ namespace ngcomp
     elvec -= bbmat * bdbvec;
 
     // stabilization to recover second order solution
-    FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
-    tel.CalcShape (smir, simdshapes);
-    for (int imip = 0; imip < sir.Size (); imip++)
-      simdshapes.Col (imip) *= sqrt (area * sir[imip].Weight ());
-    AddABt (simdshapes, simdshapes, elmat);
-    for (int imip = 0; imip < sir.Size (); imip++)
-      simdshapes.Col (imip) *= sqrt (area * sir[imip].Weight ());
-    FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
-    elvec += shapes * wavefront.Row (elnr).Range (0, snip);
+    if (!fosystem)
+      {
+        FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
+        tel.CalcShape (smir, simdshapes);
+        for (int imip = 0; imip < sir.Size (); imip++)
+          simdshapes.Col (imip) *= sqrt (area * sir[imip].Weight ());
+        AddABt (simdshapes, simdshapes, elmat);
+        for (int imip = 0; imip < sir.Size (); imip++)
+          simdshapes.Col (imip) *= sqrt (area * sir[imip].Weight ());
+        FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
+        elvec += shapes * wavefront.Row (elnr).Range (0, snip);
+      }
 
     /// Integration over top of tent
     vert = TentFaceVerts (tent, elnr, 1);
@@ -278,7 +284,6 @@ namespace ngcomp
   {
     HeapReset hr (slh);
     double wavespeed = tel.GetWavespeed ();
-    // int nbasis = tel.GetNDof();
     int nsimd = SIMD<double>::Size ();
     int snip = sir.Size () * nsimd;
 
@@ -332,9 +337,6 @@ namespace ngcomp
                        * bdeval (r, imip / nsimd)[imip % nsimd]
                        * sir[imip / nsimd].Weight ()[imip % nsimd] * area;
               }
-
-        elmat += bbmat * bdbmat;
-        elvec += bbmat * bdbvec;
       }
     else
       { // dirichlet
@@ -345,7 +347,6 @@ namespace ngcomp
                                 / (this->wavespeedcf);
         localwavespeedcf->Evaluate (smir, wavespeed);
         // double alpha = 0.5;
-
         for (int imip = 0; imip < snip; imip++)
           {
             double weight = area * sir[imip / nsimd].Weight ()[imip % nsimd];
@@ -363,9 +364,9 @@ namespace ngcomp
                     -= n (d) * weight * bdeval (0, imip / nsimd)[imip % nsimd];
               }
           }
-        elmat += bbmat * bdbmat;
-        elvec -= bbmat * bdbvec;
       }
+    elmat += bbmat * bdbmat;
+    elvec -= bbmat * bdbvec;
   }
 
   template <int D>
@@ -377,7 +378,6 @@ namespace ngcomp
                                   SIMD_IntegrationRule &sir, LocalHeap &slh,
                                   SliceMatrix<> elmat, SliceVector<> elvec)
   {
-    // int nbasis = tel.GetNDof();
     int nsimd = SIMD<double>::Size ();
     int snip = sir.Size () * nsimd;
 
@@ -493,7 +493,6 @@ namespace ngcomp
     HeapReset hr (slh);
     const ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
-    // int nbasis = tel.GetNDof();
     int nsimd = SIMD<double>::Size ();
     int snip = sir.Size () * nsimd;
     ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
@@ -514,13 +513,15 @@ namespace ngcomp
 
     FlatMatrix<SIMD<double>> simdshapes (nbasis, sir.Size (), slh);
     // FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
-    tel.CalcShape (smir, simdshapes);
+    if (!fosystem)
+      tel.CalcShape (smir, simdshapes);
     // tel.CalcDShape(smir,simddshapes);
     FlatMatrix<> dshapes (nbasis, (D + 1) * snip, &simddshapes (0, 0)[0]);
     FlatMatrix<> shapes (nbasis, snip, &simdshapes (0, 0)[0]);
-
-    wavefront.Row (elnr).Range (0, snip) = Trans (shapes.Cols (0, snip)) * sol;
-    wavefront.Row (elnr).Range (snip, snip + snip * (D + 1))
+    if (!fosystem)
+      wavefront.Row (elnr).Range (0, snip) = Trans (shapes) * sol;
+    wavefront.Row (elnr).Range (snip * (!fosystem),
+                                snip * (!fosystem) + snip * (D + 1))
         = Trans (dshapes) * sol;
   }
 
@@ -673,7 +674,7 @@ namespace ngcomp
     SIMD_IntegrationRule sir (eltyp, order * 2);
     int nsimd = SIMD<double>::Size ();
     int snip = sir.Size () * nsimd;
-    Matrix<> wf (ma->GetNE (), snip * (D + 2));
+    Matrix<> wf (ma->GetNE (), snip * cf->Dimension ());
     for (int elnr = 0; elnr < ma->GetNE (); elnr++)
       {
         HeapReset hr (lh);
@@ -687,16 +688,13 @@ namespace ngcomp
                 = smir_fix[imip].Point ().Range (0, D);
             smir[imip].Point ()[D] = time;
           }
-        FlatMatrix<SIMD<double>> bdeval (D + 2, smir.Size (), lh);
+        FlatMatrix<SIMD<double>> bdeval (cf->Dimension (), smir.Size (), lh);
         bdeval = 0;
         cf->Evaluate (smir, bdeval);
         for (int imip = 0; imip < snip; imip++)
-          {
-            wf (elnr, imip) = bdeval (0, imip / nsimd)[imip % nsimd];
-            for (int d = 0; d < D + 1; d++)
-              wf (elnr, snip + d * snip + imip)
-                  = bdeval (d + 1, imip / nsimd)[imip % nsimd];
-          }
+          for (int d = 0; d < cf->Dimension (); d++)
+            wf (elnr, d * snip + imip)
+                = bdeval (d, imip / nsimd)[imip % nsimd];
       }
     return wf;
   }
@@ -727,10 +725,10 @@ namespace ngcomp
             // mip.Point()[D] = timeshift;
             for (int d = 0; d < D + 1; d++)
               error += pow (wavespeedcf->Evaluate (mip), -2 * (d == D))
-                       * pow (
-                           wavefront (elnr, snip + d * snip + imip)
-                               - wavefront_corr (elnr, snip + d * snip + imip),
-                           2)
+                       * pow (wavefront (elnr, ((!fosystem) + d) * snip + imip)
+                                  - wavefront_corr (
+                                      elnr, ((!fosystem) + d) * snip + imip),
+                              2)
                        * smir[imip / nsimd].GetWeight ()[imip % nsimd];
             // error +=
             // (pow(wavefront(elnr,snip+d*snip+imip)-wavefront_corr(elnr,snip+d*snip+imip),2)*
@@ -993,7 +991,6 @@ namespace ngcomp
               HeapReset hr (slh);
               const ELEMENT_TYPE eltyp = (D == 2) ? ET_TET : ET_TRIG;
               SIMD_IntegrationRule vsir (eltyp, this->order * 2);
-              // int nbasis = tel.GetNDof();
 
               Vec<D + 1> shift;
               shift.Range (0, D) = ma->GetPoint<D> (tent->vertex);
