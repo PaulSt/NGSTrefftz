@@ -1,8 +1,5 @@
 #ifndef FILE_TESTPYTHON_HPP
 #define FILE_TESTPYTHON_HPP
-#include <solve.hpp>
-#include <h1lofe.hpp>
-#include <fem.hpp>
 #include <tents.hpp>
 #include "scalarmappedfe.hpp"
 
@@ -211,7 +208,7 @@ namespace ngcomp
 
 #ifdef NGS_PYTHON
 #include <python_ngstd.hpp>
-void ExportEvolveTent (py::module m);
+void ExportTWaveTents (py::module m);
 #endif // NGS_PYTHON
 
 #endif

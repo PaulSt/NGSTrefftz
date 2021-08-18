@@ -1,4 +1,4 @@
-project(trefftzngs)
+project(ngstrefftz)
 
 cmake_minimum_required(VERSION 3.1)
 
@@ -14,14 +14,14 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 install (FILES
-        __init__.py 
-        DGeq.py 
-        prodmesh.py 
-        DESTINATION trefftzngs
-        COMPONENT trefftzngs
+        ../py/__init__.py 
+        ../py/DGeq.py 
+        ../py/prodmesh.py 
+        DESTINATION ngstrefftz
+        COMPONENT ngstrefftz
         )
 
-add_ngsolve_python_module(trefftzngs 
+add_ngsolve_python_module(ngstrefftz 
     python_trefftz.cpp
     diffopmapped.hpp
     scalarmappedfe.cpp
@@ -30,7 +30,7 @@ add_ngsolve_python_module(trefftzngs
     monomialfespace.cpp
     specialcoefficientfunction.cpp
     ../../ngstents/src/tents.cpp
-    evolvetent.cpp
+    twavetents.cpp
     meshtentslab.cpp
     )
 
@@ -38,4 +38,4 @@ add_ngsolve_python_module(trefftzngs
 #add_compile_options(-g -O0)
 
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
-install(TARGETS trefftzngs DESTINATION trefftzngs)
+install(TARGETS ngstrefftz DESTINATION ngstrefftz)
