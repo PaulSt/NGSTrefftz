@@ -67,7 +67,8 @@ namespace ngcomp
   public:
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
     void SetWavespeed (shared_ptr<CoefficientFunction> awavespeedcf,
-                       shared_ptr<CoefficientFunction> aBBcf = nullptr);
+                       shared_ptr<CoefficientFunction> aBBcf = nullptr,
+                       shared_ptr<CoefficientFunction> aGGcf = nullptr);
     string GetClassName () const override { return "trefftz"; }
     void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
     FiniteElement &GetFE (ElementId ei, Allocator &alloc) const override;
