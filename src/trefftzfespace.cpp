@@ -50,17 +50,20 @@ namespace ngcomp
         }
     }
 
-    void TrefftzFESpace :: SetWavespeed(shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> aBBcf)
+    void TrefftzFESpace :: SetWavespeed(shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> aBBcf, shared_ptr<CoefficientFunction> aGGcf)
     {
         wavespeedcf=awavespeedcf;
         if(aBBcf || useqt)
         {
             //wavespeedcf = UnaryOpCF(aBBcf/awavespeedcf,GenericSqrt());
             cout << "started auto diff.... ";
-            //shared_ptr<CoefficientFunction> GGcf = awavespeedcf;
-            //shared_ptr<CoefficientFunction> GGcfx = awavespeedcf;
             shared_ptr<CoefficientFunction> GGcf = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
             shared_ptr<CoefficientFunction> GGcfx = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
+            if(aGGcf || useqt)
+            {
+                GGcf = aGGcf;
+                GGcfx = aGGcf;
+            }
 
             static Timer timerder("QTrefftzDerivatives");
             static Timer timereval("QTrefftzDerEval");
@@ -498,7 +501,7 @@ void ExportTrefftzFESpace(py::module m)
     ExportFESpace<TrefftzFESpace>(m, "trefftzfespace")
         .def("GetDocu", &TrefftzFESpace::GetDocu)
         .def("GetNDof", &TrefftzFESpace::GetNDof)
-        .def("SetWavespeed", &TrefftzFESpace::SetWavespeed, py::arg("Wavespeed"), py::arg("BBcf")=nullptr)
+        .def("SetWavespeed", &TrefftzFESpace::SetWavespeed, py::arg("Wavespeed"), py::arg("BBcf")=nullptr, py::arg("GGcf")=nullptr)
         ;
 }
 #endif // NGS_PYTHON
