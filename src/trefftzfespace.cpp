@@ -59,7 +59,7 @@ namespace ngcomp
             cout << "started auto diff.... ";
             shared_ptr<CoefficientFunction> GGcf = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
             shared_ptr<CoefficientFunction> GGcfx = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
-            if(aGGcf || useqt)
+            if(aGGcf)
             {
                 GGcf = aGGcf;
                 GGcfx = aGGcf;
