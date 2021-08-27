@@ -48,7 +48,6 @@ namespace ngcomp
     int order;
     size_t ndof;
     int nel;
-    int nvert;
     int local_ndof;
     float c = 1;
     int useshift = 1;

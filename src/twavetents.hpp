@@ -5,20 +5,19 @@
 
 namespace ngcomp
 {
-
-  static int addtentslope = 3;
-
   class TrefftzTents
   {
   public:
     TrefftzTents () { ; }
     virtual int dimensio () { return 0; }
+    virtual ~TrefftzTents () = 0;
   };
 
   template <int D> class TWaveTents : public TrefftzTents
   {
   protected:
     int order;
+    shared_ptr<TentPitchedSlab> tps;
     shared_ptr<MeshAccess> ma;
     Vector<> wavespeed;
     shared_ptr<CoefficientFunction> wavespeedcf;
@@ -27,7 +26,6 @@ namespace ngcomp
     int fosystem = 0;
     double timeshift = 0;
     int nbasis;
-    shared_ptr<TentPitchedSlab> tps;
 
     template <typename TFUNC>
     void

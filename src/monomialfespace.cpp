@@ -59,7 +59,8 @@ namespace ngcomp
     dnums.SetSize (0);
     if (!DefinedOn (ei) || ei.VB () != VOL)
       return;
-    for (int j = ei.Nr () * local_ndof; j < local_ndof * (ei.Nr () + 1); j++)
+    for (size_t j = ei.Nr () * local_ndof; j < local_ndof * (ei.Nr () + 1);
+         j++)
       dnums.Append (j);
   }
 
@@ -85,6 +86,7 @@ namespace ngcomp
       {
         switch (ma->GetElType (ei))
           {
+          case ET_POINT:
           case ET_SEGM:
             {
               throw Exception ("illegal dim for space-time element");
@@ -117,7 +119,7 @@ namespace ngcomp
               return *new (alloc) DummyFE<et.ElementType ()>;
             });
       }
-    catch (Exception e)
+    catch (Exception &e)
       {
         throw Exception ("illegal element type in Trefftz::GetSurfaceFE");
       }

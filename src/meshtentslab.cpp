@@ -55,7 +55,8 @@ namespace ngcomp
     mesh->SetMaterial (1, "mat");
 
     netgen::FaceDescriptor fd (1, 1, 0, 1);
-    int ind_fd = mesh->AddFaceDescriptor (fd);
+    // int ind_fd =
+    mesh->AddFaceDescriptor (fd);
 
     netgen::FaceDescriptor fdi (1, 1, 0, 1);
     fdi.SetBCName (new string ("inflow"));
@@ -87,7 +88,7 @@ namespace ngcomp
             mesh, pim, netgen::Point3d (pointc, tent->tbot, 0));
         vertices[itop] = AddPointUnique (
             mesh, pim, netgen::Point3d (pointc, tent->ttop, 0));
-        for (int k = 0; k < tent->nbv.Size (); k++)
+        for (size_t k = 0; k < tent->nbv.Size (); k++)
           {
             vertices[2 * k + 1] = AddPointUnique (
                 mesh, pim,
@@ -111,7 +112,7 @@ namespace ngcomp
           }
         mesh->AddSurfaceElement (*newel);
 
-        for (int k = 0; k < tent->nbv.Size (); k++)
+        for (size_t k = 0; k < tent->nbv.Size (); k++)
           {
             // Add 1d Elements - inflow
             if (tent->tbot < dt_eps && tent->nbtime[k] < dt_eps)
