@@ -1095,14 +1095,14 @@ namespace ngcomp
     return diam;
   }
 
+  template class TWaveTents<1>;
+  template class TWaveTents<2>;
+  template class TWaveTents<3>;
+
+  template class QTWaveTents<1>;
+  template class QTWaveTents<2>;
+
 }
-
-template class TWaveTents<1>;
-template class TWaveTents<2>;
-template class TWaveTents<3>;
-
-template class QTWaveTents<1>;
-template class QTWaveTents<2>;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
