@@ -76,7 +76,7 @@ namespace ngcomp
         shared_ptr<CoefficientFunction> GGcfx
             = make_shared<ConstantCoefficientFunction> (1)
               / (awavespeedcf * awavespeedcf);
-        if (aGGcf || useqt)
+        if (aGGcf)
           {
             GGcf = aGGcf;
             GGcfx = aGGcf;
