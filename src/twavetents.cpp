@@ -11,6 +11,8 @@ namespace ngcomp
         return (T(0) <= val) - (val < T(0));
     }
 
+    TrefftzTents::~TrefftzTents() {};
+
     template<int D>
     inline void  TWaveTents<D> :: LapackSolve(SliceMatrix<double> a, SliceVector<double> b)
     {
@@ -33,11 +35,8 @@ namespace ngcomp
         LocalHeap lh(1000 * 1000 * 1000, "trefftz tents", 1);
 
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
-        const int nsimd = SIMD<double>::Size();
         SIMD_IntegrationRule sir(eltyp, order*2);
-        const int snip = sir.Size()*nsimd;
-
-        const int ndomains = ma->GetNDomains();
+        //const int ndomains = ma->GetNDomains();
         double max_wavespeed = wavespeed[0];
         for(double c : wavespeed) max_wavespeed = max(c,max_wavespeed);
 
@@ -96,7 +95,7 @@ namespace ngcomp
             for(auto& tds : topdshapes)
                 tds.AssignMemory((D+1)*nbasis, sir.Size(), slh);
             // Integrate top and bottom space-like tent faces
-            for(int elnr=0;elnr<tent->els.Size();elnr++)
+            for(size_t elnr=0;elnr<tent->els.Size();elnr++)
             {
                 tel.SetWavespeed(wavespeed[tent->els[elnr]]);
                 int eli = ndomains>1 ? macroel[tent->els[elnr]] : 0;
@@ -111,7 +110,7 @@ namespace ngcomp
             FlatVector<> sol(ndomains*nbasis, &elvec(0));
 
             // eval solution on top of tent
-            for(int elnr=0;elnr<tent->els.Size();elnr++)
+            for(size_t elnr=0;elnr<tent->els.Size();elnr++)
             {
                 tel.SetWavespeed(wavespeed[tent->els[elnr]]);
                 int eli = ndomains>1 ? macroel[tent->els[elnr]] : 0;
@@ -137,12 +136,12 @@ namespace ngcomp
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         //double wavespeed = tel.GetWavespeed();
         int nsimd = SIMD<double>::Size();
-        int snip = sir.Size()*nsimd;
+        size_t snip = sir.Size()*nsimd;
         ScalarFE<eltyp,1> faceint; //linear basis for tent faces
 
         SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,slh),-1,slh);
         SIMD_MappedIntegrationRule<D,D> smir_fix(sir,ma->GetTrafo(elnr,slh),slh);
-        for(int imip=0;imip<sir.Size();imip++)
+        for(size_t imip=0;imip<sir.Size();imip++)
             smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
 
         Mat<D+1> vert; //vertices of tent face
@@ -153,14 +152,14 @@ namespace ngcomp
         vert = TentFaceVerts(tent, elnr, -1);
         linbasis = vert.Row(D);
         faceint.Evaluate(sir, linbasis, mirtimes);
-        for(int imip=0;imip<sir.Size();imip++)
+        for(size_t imip=0;imip<sir.Size();imip++)
             smir[imip].Point()(D) = mirtimes[imip];
 
         double area = TentFaceArea(vert);
         Vec<D+1> n = TentFaceNormal(vert,-1);
         FlatVector<> bdbvec((D+1)*snip, slh );
         bdbvec = 0;
-        for(int imip=0;imip<snip;imip++)
+        for(size_t imip=0;imip<snip;imip++)
             {
                 double weight = sir[imip/nsimd].Weight()[imip%nsimd] * area;
                 bdbvec(D*snip+imip) += n(D) * pow(LocalWavespeed(imip),-2) * weight * wavefront(elnr,((!fosystem)+D)*snip+imip);
@@ -180,10 +179,10 @@ namespace ngcomp
         {
             FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
             tel.CalcShape(smir,simdshapes);
-            for(int imip=0;imip<sir.Size();imip++)
+            for(size_t imip=0;imip<sir.Size();imip++)
                 simdshapes.Col(imip) *= sqrt(area*sir[imip].Weight());
             AddABt(simdshapes,simdshapes,elmat);
-            for(int imip=0;imip<sir.Size();imip++)
+            for(size_t imip=0;imip<sir.Size();imip++)
                 simdshapes.Col(imip) *= sqrt(area*sir[imip].Weight());
             FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
             elvec += shapes*wavefront.Row(elnr).Range(0,snip);
@@ -193,7 +192,7 @@ namespace ngcomp
         vert = TentFaceVerts(tent, elnr, 1);
         linbasis = vert.Row(D);
         faceint.Evaluate(sir, linbasis, mirtimes);
-        for(int imip=0;imip<sir.Size();imip++)
+        for(size_t imip=0;imip<sir.Size();imip++)
             smir[imip].Point()(D) = mirtimes[imip];
 
         tint1.Start();
@@ -205,7 +204,7 @@ namespace ngcomp
         n = TentFaceNormal(vert,1);
         FlatMatrix<double> bdbmat((D+1)*snip,nbasis,slh);
         bdbmat = 0;
-        for(int imip=0;imip<snip;imip++)
+        for(size_t imip=0;imip<snip;imip++)
             {
                 double weight = sir[imip/nsimd].Weight()[imip%nsimd] * area;
                 bdbmat.Row(D*snip+imip) += n(D) * pow(LocalWavespeed(imip),-2) * weight * bbmat.Col(D*snip+imip);
@@ -239,9 +238,8 @@ namespace ngcomp
     void TWaveTents<D> :: CalcTentBndEl(int surfel, const Tent* tent, ScalarMappedElement<D+1> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
     {
         HeapReset hr(slh);
-        double wavespeed = tel.GetWavespeed();
         int nsimd = SIMD<double>::Size();
-        int snip = sir.Size()*nsimd;
+        size_t snip = sir.Size()*nsimd;
 
         // get vertices of tent face
         Mat<D+1> vert = TentFaceVerts(tent, surfel, 0);
@@ -250,7 +248,9 @@ namespace ngcomp
         n = -TentFaceNormal(vert,0);
 
         if(D==1) //D=1 special case
+        {
             n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n[D]=0;
+        }
         // build mapping to physical boundary simplex
         Mat<D+1,D> map;
         for(int i=0;i<D;i++)
@@ -258,7 +258,7 @@ namespace ngcomp
         Vec<D+1> shift = vert.Col(0);
 
         SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(0,slh),-1,slh);
-        for(int imip=0;imip<sir.Size();imip++)
+        for(size_t imip=0;imip<sir.Size();imip++)
             smir[imip].Point() = map * sir[imip].operator Vec<D,SIMD<double>>() + shift;
 
         FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
@@ -266,7 +266,7 @@ namespace ngcomp
         FlatMatrix<double> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
 
 
-        for(int imip=0;imip<smir.Size();imip++)
+        for(size_t imip=0;imip<smir.Size();imip++)
             smir[imip].Point()[D] += timeshift;
         double area = TentFaceArea(vert);
         FlatMatrix<double> bdbmat((D+1)*snip,nbasis,slh);
@@ -278,7 +278,7 @@ namespace ngcomp
             FlatMatrix<SIMD<double>> bdeval(D,sir.Size(),slh);
             bddatum->Evaluate(smir,bdeval);
             double beta = 0.5;
-            for(int imip=0;imip<snip;imip++)
+            for(size_t imip=0;imip<snip;imip++)
                 for(int r=0;r<D;r++)
                     for(int d=0;d<(D+1);d++)
                     {
@@ -295,7 +295,7 @@ namespace ngcomp
             localwavespeedcf->Evaluate(smir,wavespeed);
             //double alpha = 0.5;
 
-            for(int imip=0;imip<snip;imip++)
+            for(size_t imip=0;imip<snip;imip++)
             {
                 double weight = area * sir[imip/nsimd].Weight()[imip%nsimd];
                 bdbmat.Row(D*snip+imip) += weight * wavespeed(0,imip/nsimd)[imip%nsimd] * bbmat.Col(D*snip+imip);
@@ -316,7 +316,7 @@ namespace ngcomp
     void TWaveTents<D> :: CalcTentMacroEl(int fnr, const Array<int> &elnums, std::unordered_map<int,int> &macroel, const Tent* tent, ScalarMappedElement<D+1> &tel, SIMD_IntegrationRule &sir, LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec)
     {
         int nsimd = SIMD<double>::Size();
-        int snip = sir.Size()*nsimd;
+        size_t snip = sir.Size()*nsimd;
 
         Array<int> fnums;
         Array<int> orient;
@@ -345,8 +345,9 @@ namespace ngcomp
         Vec<D+1> n;
         n = -orient[fnums.Pos(fnr)]*TentFaceNormal(vert,0);
         if(D==1) //D=1 special case
+        {
             n[0] = sgn_nozero<int>(tent->vertex - tent->nbv[0]); n[D] = 0; // time-like faces only
-
+        }
         // build mapping to physical boundary simplex
         Mat<D+1,D> map;
         for(int i=0;i<D;i++)
@@ -354,7 +355,7 @@ namespace ngcomp
         Vec<D+1> shift = vert.Col(0);
 
         SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(0,slh),-1,slh);
-        for(int imip=0;imip<snip;imip++)
+        for(size_t imip=0;imip<snip;imip++)
             smir[imip].Point() = map * sir[imip].operator Vec<D,SIMD<double>>() + shift;
 
         FlatMatrix<>* bbmat[2];
@@ -379,7 +380,7 @@ namespace ngcomp
         //double beta = 0;
 
         double area = TentFaceArea(vert);
-        for(int imip=0;imip<snip;imip++)
+        for(size_t imip=0;imip<snip;imip++)
         {
             double weight = sir[imip/nsimd].Weight()[imip%nsimd] * area;
             for(int el=0;el<4;el++)
@@ -406,19 +407,19 @@ namespace ngcomp
         HeapReset hr(slh);
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         int nsimd = SIMD<double>::Size();
-        int snip = sir.Size()*nsimd;
+        size_t snip = sir.Size()*nsimd;
         ScalarFE<eltyp,1> faceint; //linear basis for tent faces
 
         SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,slh),-1,slh);
         SIMD_MappedIntegrationRule<D,D> smir_fix(sir,ma->GetTrafo(elnr,slh),slh);
-        for(int imip=0;imip<sir.Size();imip++)
+        for(size_t imip=0;imip<sir.Size();imip++)
             smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
 
         Mat<D+1> v = TentFaceVerts(tent, elnr, 1);
         Vec<D+1> bs = v.Row(D);
         FlatVector<SIMD<double>> mirtimes(sir.Size(),slh);
         faceint.Evaluate(sir, bs, mirtimes);
-        for(int imip=0;imip<sir.Size();imip++)
+        for(size_t imip=0;imip<sir.Size();imip++)
             smir[imip].Point()(D) = mirtimes[imip];
 
         FlatMatrix<SIMD<double>> simdshapes(nbasis,sir.Size(),slh);
@@ -453,11 +454,11 @@ namespace ngcomp
         {
             INT<D+1> vnr = ma->GetElVertices(ElementId(VOL,elnr));
             // determine linear basis function coeffs to use for tent face
-            for(int ivert = 0;ivert<vnr.Size();ivert++)
+            for(size_t ivert = 0;ivert<vnr.Size();ivert++)
             {
                 v.Col(ivert).Range(0,D) = ma->GetPoint<D>(vnr[ivert]);
                 if(vnr[ivert] == tent->vertex) v(D,ivert) =  top==1 ? tent->ttop : tent->tbot;
-                else for (int k = 0; k < tent->nbv.Size(); k++)
+                else for(size_t k = 0; k < tent->nbv.Size(); k++)
                     if(vnr[ivert] == tent->nbv[k]) v(D,ivert) = tent->nbtime[k];
             }
         }
@@ -526,10 +527,10 @@ namespace ngcomp
                         for(int d=1;d<D+1;d++)
                             v.Col(d) = v.Col(0) - v.Col(d);
 
-                        for (unsigned int i = 0; i < D+1; i++)
+                        for(int i = 0; i < D+1; i++)
                         {
                             Mat<D,D> pS;
-                            for (unsigned int k = 0, c = 0; k < D+1; k++)
+                            for(int k = 0, c = 0; k < D+1; k++)
                             {
                                 if (k == i)
                                     continue;
@@ -559,13 +560,13 @@ namespace ngcomp
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         SIMD_IntegrationRule sir(eltyp, order*2);
         int nsimd = SIMD<double>::Size();
-        int snip = sir.Size()*nsimd;
+        size_t snip = sir.Size()*nsimd;
         Matrix<> wf(ma->GetNE(),snip * cf->Dimension());
-        for(int elnr=0;elnr<ma->GetNE();elnr++){
+        for(size_t elnr=0;elnr<ma->GetNE();elnr++){
             HeapReset hr(lh);
             SIMD_MappedIntegrationRule<D,D+1> smir(sir,ma->GetTrafo(elnr,lh),-1,lh);
             SIMD_MappedIntegrationRule<D,D> smir_fix(sir,ma->GetTrafo(elnr,lh),lh);
-            for(int imip=0;imip<sir.Size();imip++)
+            for(size_t imip=0;imip<sir.Size();imip++)
             {
                 smir[imip].Point().Range(0,D) = smir_fix[imip].Point().Range(0,D);
                 smir[imip].Point()[D] = time;
@@ -573,7 +574,7 @@ namespace ngcomp
             FlatMatrix<SIMD<double>> bdeval(cf->Dimension(),smir.Size(),lh);
             bdeval = 0;
             cf->Evaluate(smir,bdeval);
-            for(int imip=0;imip<snip;imip++)
+            for(size_t imip=0;imip<snip;imip++)
                 for(int d=0;d<cf->Dimension();d++)
                     wf(elnr,d*snip+imip) = bdeval(d,imip/nsimd)[imip%nsimd];
         }
@@ -588,13 +589,13 @@ namespace ngcomp
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         SIMD_IntegrationRule sir(eltyp, order*2);
         int nsimd = SIMD<double>::Size();
-        int snip = sir.Size()*nsimd;
-        for(int elnr=0;elnr<ma->GetNE();elnr++)
+        size_t snip = sir.Size()*nsimd;
+        for(size_t elnr=0;elnr<ma->GetNE();elnr++)
         {
             HeapReset hr(lh);
             SIMD_MappedIntegrationRule<D,D> smir(sir,ma->GetTrafo(elnr,lh),lh);
 
-            for(int imip=0;imip<snip;imip++)
+            for(size_t imip=0;imip<snip;imip++)
             {
                 IntegrationRule ir (eltyp, 0);
                 MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
@@ -618,12 +619,12 @@ namespace ngcomp
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         SIMD_IntegrationRule sir(eltyp, order*2);
         int nsimd = SIMD<double>::Size();
-        int snip = sir.Size()*nsimd;
-        for(int elnr=0;elnr<ma->GetNE();elnr++)
+        size_t snip = sir.Size()*nsimd;
+        for(size_t elnr=0;elnr<ma->GetNE();elnr++)
         {
             HeapReset hr(lh);
             SIMD_MappedIntegrationRule<D,D> smir(sir,ma->GetTrafo(elnr,lh),lh);
-            for(int imip=0;imip<snip;imip++)
+            for(size_t imip=0;imip<snip;imip++)
             {
                 l2error += (wavefront(elnr,imip)-wavefront_corr(elnr,imip))*(wavefront(elnr,imip)-wavefront_corr(elnr,imip))*smir[imip/nsimd].GetWeight()[imip%nsimd];
             }
@@ -639,14 +640,14 @@ namespace ngcomp
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM );
         SIMD_IntegrationRule sir(eltyp, order*2);
         int nsimd = SIMD<double>::Size();
-        int snip = sir.Size()*nsimd;
-        for(int elnr=0;elnr<ma->GetNE();elnr++)
+        size_t snip = sir.Size()*nsimd;
+        for(size_t elnr=0;elnr<ma->GetNE();elnr++)
         {
             HeapReset hr(lh);
             SIMD_MappedIntegrationRule<D,D> smir(sir,ma->GetTrafo(elnr,lh),lh);
             FlatMatrix<SIMD<double>> wavespeed(1,smir.Size(),lh);
             wavespeedcf->Evaluate(smir,wavespeed);
-            for(int imip=0;imip<snip;imip++)
+            for(size_t imip=0;imip<snip;imip++)
                 for(int d=0;d<D+1;d++)
                     energy += 0.5*( pow(wavespeed(0,imip/nsimd)[imip%nsimd],-2*(d==D))*pow(wavefront(elnr,snip+d*snip+imip),2)*smir[imip/nsimd].GetWeight()[imip%nsimd] );
         }
@@ -671,16 +672,16 @@ namespace ngcomp
     {
         LocalHeap lh(1000*1000*1000);
         int vnumber = tent->nbv.Size();
-        double c = wavespeed[tent->els[0]];
+        //double c = wavespeed[tent->els[0]];
         //for(auto el : tent->els) c = max(c,wavespeed[el]);
         IntegrationRule ir (ma->GetElType(ElementId(VOL,0)), 0);
         ElementTransformation & trafo = ma->GetTrafo (0, lh);
         MappedIntegrationPoint<D,D> mip(ir[0], trafo);
-        Vec<D> v1 = ma->GetPoint<D>(tent->vertex);
+        //Vec<D> v1 = ma->GetPoint<D>(tent->vertex);
         double c1 = wavespeedcf->Evaluate(mip);
         double anisotropicdiam = c1*tent->ttop - c1*tent->tbot;
 
-        for (int k = 0; k < vnumber; k++)
+        for(int k = 0; k < vnumber; k++)
         {
             Vec<D> v1 = ma->GetPoint<D>(tent->vertex);
             Vec<D> v2 = ma->GetPoint<D>(tent->nbv[k]);
@@ -691,7 +692,7 @@ namespace ngcomp
 
             anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(c1*tent->ttop - c2*tent->nbtime[k],2) ) );
             anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1 - v2) + pow(c1*tent->tbot - c2*tent->nbtime[k],2) ) );
-            for (int j = 0; j < vnumber; j++)
+            for(int j = 0; j < vnumber; j++)
             {
                 v1 = ma->GetPoint<D>(tent->nbv[j]);
                 mip.Point() = v1;
@@ -721,9 +722,9 @@ namespace ngcomp
     {
         // TODO fix if macro elements do not share faces
         int nrmacroel = 0;
-        for(int i=0;i<tentel.Size();i++)
+        for(size_t i=0;i<tentel.Size();i++)
         {
-            int j=0;
+            size_t j=0;
             while(wavespeed[tentel[i]]!=wavespeed[tentel[j]]) j++;
             if(j==i)
                 macroel[tentel[i]] = nrmacroel++;
@@ -742,7 +743,7 @@ namespace ngcomp
             case 2: ma->GetEdgeSurfaceElements (fnr, selnums); break;
             case 3:
                     {
-                            for(int i : Range(ma->GetNSE()))
+                            for(size_t i : Range(ma->GetNSE()))
                             {
                                 auto sel = ElementId(BND,i); //<-- ist das Oberflächenelement
                                 auto fnums = ma->GetElFacets(sel);
@@ -766,7 +767,6 @@ namespace ngcomp
         const ELEMENT_TYPE eltyp = (D==3) ? ET_TET : ((D==2) ? ET_TRIG : ET_SEGM);
         const int nsimd = SIMD<double>::Size();
         SIMD_IntegrationRule sir(eltyp, this->order*2);
-        const int snip = sir.Size()*nsimd;
 
         QTWaveBasis<D> basis;
 
@@ -795,7 +795,7 @@ namespace ngcomp
                 tds.AssignMemory((D+1)*nbasis, sir.Size(), slh);
 
             // Integrate top and bottom space-like tent faces
-            for(int elnr=0;elnr<tent->els.Size();elnr++)
+            for(size_t elnr=0;elnr<tent->els.Size();elnr++)
             {
                 HeapReset hr(slh);
                 SIMD_MappedIntegrationRule<D,D> smir_fix(sir,ma->GetTrafo(tent->els[elnr],slh),slh);
@@ -803,7 +803,7 @@ namespace ngcomp
                 (this->wavespeedcf)->Evaluate(smir_fix,lwavespeed);
 
                 this->CalcTentEl(tent->els[elnr],tent,tel,
-                                 [lwavespeed, nsimd](int imip){return lwavespeed(0,imip/nsimd)[imip%nsimd];},
+                                 [lwavespeed](int imip){return lwavespeed(0,imip/nsimd)[imip%nsimd];},
                                  sir,slh,elmat,elvec,topdshapes[elnr]);
             }
 
@@ -820,7 +820,7 @@ namespace ngcomp
             }
 
             //integrate volume of tent here
-            for(int elnr=0;elnr<tent->els.Size();elnr++)
+            for(size_t elnr=0;elnr<tent->els.Size();elnr++)
             {
                 /// Integration over bot and top volume of tent element
                 for(int part=-1;part<=1;part+=2)
@@ -843,7 +843,7 @@ namespace ngcomp
                     if(vol<10e-16) continue;
 
                     SIMD_MappedIntegrationRule<D+1,D+1> vsmir(vsir,ma->GetTrafo(tent->els[elnr],slh),-1,slh);
-                    for(int imip=0;imip<vsir.Size();imip++)
+                    for(size_t imip=0;imip<vsir.Size();imip++)
                         vsmir[imip].Point() = map * vsir[imip].operator Vec<D+1,SIMD<double>>() + shift;
 
                     FlatMatrix<SIMD<double>> wavespeed(1,vsir.Size(),slh);
@@ -853,7 +853,7 @@ namespace ngcomp
 
                     FlatMatrix<SIMD<double>> simdddshapes((D+1)*nbasis,vsir.Size(),slh);
                     tel.CalcDDWaveOperator(vsmir,simdddshapes,wavespeed);
-                    for(int imip=0;imip<vsir.Size();imip++)
+                    for(size_t imip=0;imip<vsir.Size();imip++)
                         simdddshapes.Col(imip) *= vol*vsir[imip].Weight();
                     FlatMatrix<SIMD<double>> simdddshapes2(nbasis,(D+1)*vsir.Size(),&simdddshapes(0,0));
 
@@ -865,8 +865,8 @@ namespace ngcomp
 
                     // volume correction term
                     double cmax = abs(wavespeed(0,0)[0]);
-                    for(int j=0;j<vsir.Size();j++)//auto ws : wavespeed.AsVector())
-                        for(int i=0;i<nsimd;i++)
+                    for(size_t j=0;j<vsir.Size();j++)//auto ws : wavespeed.AsVector())
+                        for(size_t i=0;i<nsimd;i++)
                             cmax = max(cmax,abs(wavespeed(0,j)[i]));
                     FlatMatrix<SIMD<double>> mu(1,vsir.Size(),slh);
                     localwavespeedcf = make_shared<ConstantCoefficientFunction>(tentsize/cmax)*this->wavespeedcf*this->wavespeedcf;
@@ -882,7 +882,7 @@ namespace ngcomp
             FlatVector<> sol(nbasis, &elvec(0));
 
             // eval solution on top of tent
-            for(int elnr=0;elnr<tent->els.Size();elnr++)
+            for(size_t elnr=0;elnr<tent->els.Size();elnr++)
             {
                 this->CalcTentElEval(tent->els[elnr], tent, tel, sir, slh, sol, topdshapes[elnr]);
             }
@@ -899,12 +899,12 @@ namespace ngcomp
         double diam = 0;
 
         shared_ptr<MeshAccess> ma = this->ma;
-        for (int k = 0; k < vnumber; k++)
+        for(int k = 0; k < vnumber; k++)
         {
             Vec<D> v1 = ma->GetPoint<D>(tent->nbv[k]);
             Vec<D> v2 = ma->GetPoint<D>(tent->vertex);
             diam = max( diam, sqrt( L2Norm2(v1 - v2) ) );
-            for (int j = k; j < vnumber; j++)
+            for(int j = k; j < vnumber; j++)
             {
                 v2 = ma->GetPoint<D>(tent->nbv[j]);
                 diam = max( diam, sqrt( L2Norm2(v1 - v2) ) );

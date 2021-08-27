@@ -110,7 +110,7 @@ namespace ngfem
             using BaseScalarMappedElement::BaseScalarMappedElement;
 
             ScalarMappedElement(int andof, int aord, CSR alocalmat, ELEMENT_TYPE aeltype, Vec<D> aelcenter = 0, double aelsize = 1, double ac = 1.0)
-            : BaseScalarMappedElement( andof, aord), localmat(alocalmat), elcenter(aelcenter), elsize(aelsize), eltype(aeltype), c(ac)
+            : BaseScalarMappedElement( andof, aord), localmat(alocalmat), eltype(aeltype), elcenter(aelcenter), elsize(aelsize), c(ac)
             {;}
 
             double GetWavespeed() const { return this->c; }

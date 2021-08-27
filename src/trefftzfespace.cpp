@@ -111,7 +111,7 @@ namespace ngcomp
     {
         dnums.SetSize(0);
         if (!DefinedOn (ei) || ei.VB() != VOL) return;
-        for (int j = ei.Nr()*local_ndof; j<local_ndof*(ei.Nr()+1); j++)
+        for(size_t j = ei.Nr()*local_ndof; j<local_ndof*(ei.Nr()+1); j++)
             dnums.Append (j);
     }
 
@@ -124,8 +124,11 @@ namespace ngcomp
         if (ei.IsVolume())
         {
             switch (ma->GetElType(ei)) {
+                case ET_POINT:
                 case ET_SEGM:
                     {
+                        throw Exception("illegal dim for space-time element");
+                        break;
                     }
                 case ET_QUAD:
                 case ET_TRIG:
@@ -163,7 +166,7 @@ namespace ngcomp
                  [&alloc] (auto et) -> FiniteElement&
                  { return * new (alloc) DummyFE<et.ElementType()>; });
         }
-        catch (Exception e)
+        catch (Exception &e)
         {
             throw Exception("illegal element type in Trefftz::GetSurfaceFE");
         }
@@ -270,7 +273,6 @@ namespace ngcomp
         Matrix<> trefftzbasis(ndof,npoly);
         trefftzbasis = 0;
         Vec<D+1, int>  coeff = 0;
-        int count = 0;
         for(int b=0;b<ndof;b++)
         {
             int tracker = 0;

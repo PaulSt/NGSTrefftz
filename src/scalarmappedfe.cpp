@@ -45,7 +45,7 @@ namespace ngfem
     CalcShape (const BaseMappedIntegrationRule & mir,
                SliceMatrix<> shape) const
     {
-        for (int i = 0; i < mir.Size(); i++)
+        for (size_t i = 0; i < mir.Size(); i++)
             CalcShape (mir[i], shape.Col(i));
     }
 
@@ -102,7 +102,7 @@ namespace ngfem
     {
         VectorMem<20, double> shape(ndof);
         coefs.Range(0,ndof) = 0.0;
-        for (int i = 0; i < mir.Size(); i++) //GetNIP()
+        for (size_t i = 0; i < mir.Size(); i++) //GetNIP()
         {
             CalcShape (mir[i], shape);
             coefs.Range(0,ndof) += vals(i) * shape;
@@ -119,7 +119,7 @@ namespace ngfem
     void BaseScalarMappedElement ::
     AddTrans (const SIMD_BaseMappedIntegrationRule & mir, BareSliceMatrix<SIMD<double>> values, SliceMatrix<> coefs) const
     {
-        for (int i = 0; i < coefs.Width(); i++)
+        for (size_t i = 0; i < coefs.Width(); i++)
             AddTrans (mir, values.Row(i), coefs.Col(i));
     }
 
@@ -162,12 +162,12 @@ namespace ngfem
         sparsemat[0].SetSize(0);
         sparsemat[1].SetSize(0);
         sparsemat[2].SetSize(0);
-        for(int i=0;i<mat.Height();i++)
+        for(size_t i=0;i<mat.Height();i++)
         {
             // guarantee sparsemat[0].Size() to be nbasis,
             // could be shorter but easier for mat*vec
             sparsemat[0].Append(spsize);
-            for(int j=0;j<mat.Width();j++)
+            for(size_t j=0;j<mat.Width();j++)
             {
                 if(mat(i,j))
                 {
@@ -191,7 +191,7 @@ namespace ngfem
     void ScalarMappedElement<D> :: CalcDShape (const BaseMappedIntegrationRule & mir,
                                                BareSliceMatrix<> dshapes) const
     {
-        for (int i = 0; i < mir.Size(); i++)
+        for (size_t i = 0; i < mir.Size(); i++)
             CalcDShape (mir[i], dshapes.Cols(i*D,(i+1)*D));
     }
 
@@ -210,7 +210,7 @@ namespace ngfem
     CalcMappedDShape (const BaseMappedIntegrationRule & mir,
                       SliceMatrix<> dshapes) const
     {
-        for (int i = 0; i < mir.Size(); i++)
+        for (size_t i = 0; i < mir.Size(); i++)
             CalcMappedDShape (mir[i], dshapes.Cols(i*D,(i+1)*D));
     }
 
@@ -243,7 +243,7 @@ namespace ngfem
     {
         MatrixFixWidth<D> dshape(ndof);
         coefs.Range(0,ndof) = 0.0;
-        for (int i = 0; i < ir.Size(); i++)
+        for (size_t i = 0; i < ir.Size(); i++)
         {
             CalcDShape (ir[i], dshape);
             coefs.Range(0,ndof) += dshape * vals.Row(i);
@@ -345,7 +345,7 @@ namespace ngfem
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY(double, mem2, 2*(order+1)+1); mem2[0]=0;
         double* polxt[2];
-        for(size_t d=0;d<2;d++)
+        for(int d=0;d<2;d++)
         {
             polxt[d] = &mem2[d*(order+1)+1];
             Monomial (order, cpoint[d], polxt[d]);
@@ -356,8 +356,8 @@ namespace ngfem
             for(int d2=0;d2<2;d2++)
             {
                 Vector<double> pol(npoly);
-                for (size_t i = 0, ii = 0; i <=order; i++)
-                    for (size_t j = 0; j <= order-i; j++)
+                for (int i = 0, ii = 0; i <=order; i++)
+                    for (int j = 0; j <= order-i; j++)
                         pol[ii++] = (d1!=d2?i*j:(d1==0?i*(i-1):j*(j-1)))
                             * polxt[0][i-(d1==0)-(d2==0)] * polxt[1][j-(d1==1)-(d2==1)];
 
@@ -384,7 +384,7 @@ namespace ngfem
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY(double, mem2, 3*(order+1)+1); mem2[0]=0;
         double* polxt[3];
-        for(size_t d=0;d<3;d++)
+        for(int d=0;d<3;d++)
         {
             polxt[d] = &mem2[d*(order+1)+1];
             Monomial (order, cpoint[d], polxt[d]);
@@ -432,22 +432,22 @@ namespace ngfem
     void ScalarMappedElement<2> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
                                         BareSliceMatrix<SIMD<double>> shape) const
     {
-        for (int imip = 0; imip < smir.Size(); imip++)
+        for (size_t imip = 0; imip < smir.Size(); imip++)
         {
             Vec<2,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (1.0/elsize); cpoint[1] *= c;
             // calc 1 dimensional monomial basis
             STACK_ARRAY(SIMD<double>, mem, 2*(order+1));
             Vec<2,SIMD<double>*> polxt;
-            for(size_t d=0;d<2;d++)
+            for(int d=0;d<2;d++)
             {
                 polxt[d] = &mem[d*(order+1)];
                 Monomial (order, cpoint[d], polxt[d]);
             }
             // calc D+1 dimenional monomial basis
             Vector<SIMD<double>> pol(npoly);
-            for (size_t i = 0, ii = 0; i <= order; i++)
-                for (size_t j = 0; j <= order-i; j++)
+            for (int i = 0, ii = 0; i <= order; i++)
+                for (int j = 0; j <= order-i; j++)
                     pol[ii++] = polxt[0][i] * polxt[1][j];
             // TB*monomials for trefftz shape fcts
             for (int i=0; i<this->ndof; ++i)
@@ -463,23 +463,23 @@ namespace ngfem
     void ScalarMappedElement<3> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
                                         BareSliceMatrix<SIMD<double>> shape) const
     {
-        for (int imip = 0; imip < smir.Size(); imip++)
+        for (size_t imip = 0; imip < smir.Size(); imip++)
         {
             Vec<3,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (1.0/elsize); cpoint[2] *= c;
             // calc 1 dimensional monomial basis
             STACK_ARRAY(SIMD<double>, mem, 3*(order+1));
             Vec<3,SIMD<double>*> polxt;
-            for(size_t d=0;d<3;d++)
+            for(int d=0;d<3;d++)
             {
                 polxt[d] = &mem[d*(order+1)];
                 Monomial (order, cpoint[d], polxt[d]);
             }
             // calc D+1 dimenional monomial basis
             Vector<SIMD<double>> pol(npoly);
-            for (size_t i = 0, ii = 0; i <= order; i++)
-                for (size_t j = 0; j <= order-i; j++)
-                    for (size_t k = 0; k <= order-i-j; k++)
+            for (int i = 0, ii = 0; i <= order; i++)
+                for (int j = 0; j <= order-i; j++)
+                    for (int k = 0; k <= order-i-j; k++)
                         pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
             // TB*monomials for trefftz shape fcts
             for (int i=0; i<this->ndof; ++i)
@@ -496,24 +496,24 @@ namespace ngfem
                                         BareSliceMatrix<SIMD<double>> shape) const
     {
         //auto & smir = static_cast<const SIMD_MappedIntegrationRule<D-1,D>&> (mir);
-        for (int imip = 0; imip < smir.Size(); imip++)
+        for (size_t imip = 0; imip < smir.Size(); imip++)
         {
             Vec<4,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (1.0/elsize); cpoint[3] *= c;
             // calc 1 dimensional monomial basis
             STACK_ARRAY(SIMD<double>, mem, 4*(order+1));
             Vec<4,SIMD<double>*> polxt;
-            for(size_t d=0;d<4;d++)
+            for(int d=0;d<4;d++)
             {
                 polxt[d] = &mem[d*(order+1)];
                 Monomial (order, cpoint[d], polxt[d]);
             }
             // calc D+1 dimenional monomial basis
             Vector<SIMD<double>> pol(npoly);
-            for (size_t i = 0, ii = 0; i <= order; i++)
-                for (size_t j = 0; j <= order-i; j++)
-                    for (size_t k = 0; k <= order-i-j; k++)
-                        for (size_t l = 0; l <= order-i-j-k; l++)
+            for (int i = 0, ii = 0; i <= order; i++)
+                for (int j = 0; j <= order-i; j++)
+                    for (int k = 0; k <= order-i-j; k++)
+                        for (int l = 0; l <= order-i-j-k; l++)
                             pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
             // TB*monomials for trefftz shape fcts
             for (int i=0; i<this->ndof; ++i)
@@ -534,7 +534,7 @@ namespace ngfem
     void ScalarMappedElement<2> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
                                          BareSliceMatrix<SIMD<double>> dshape) const
     {
-        for (int imip = 0; imip < smir.Size(); imip++)
+        for (size_t imip = 0; imip < smir.Size(); imip++)
         {
             Vec<2,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (1.0/elsize); cpoint[1] *= c;
@@ -542,7 +542,7 @@ namespace ngfem
             // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
             STACK_ARRAY(SIMD<double>, mem, 2*(order+1)+1); mem[0]=0;
             Vec<2,SIMD<double>*> polxt;
-            for(size_t d=0;d<2;d++)
+            for(int d=0;d<2;d++)
             {
                 polxt[d] = &mem[d*(order+1)+1];
                 Monomial (order, cpoint[d], polxt[d]);
@@ -551,8 +551,8 @@ namespace ngfem
             for(int d=0;d<2;d++)
             {
                 Vector<SIMD<double>> pol(npoly);
-                for (size_t i = 0, ii = 0; i <=order; i++)
-                    for (size_t j = 0; j <= order-i; j++)
+                for (int i = 0, ii = 0; i <=order; i++)
+                    for (int j = 0; j <= order-i; j++)
                         pol[ii++] = (d==0?i:(d==1?j:0))
                             * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
 
@@ -571,7 +571,7 @@ namespace ngfem
     void ScalarMappedElement<3> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
                                          BareSliceMatrix<SIMD<double>> dshape) const
     {
-        for (int imip = 0; imip < smir.Size(); imip++)
+        for (size_t imip = 0; imip < smir.Size(); imip++)
         {
             Vec<3,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (1.0/elsize); cpoint[2] *= c;
@@ -579,7 +579,7 @@ namespace ngfem
             // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
             STACK_ARRAY(SIMD<double>, mem, 3*(order+1)+1); mem[0]=0;
             Vec<3,SIMD<double>*> polxt;
-            for(size_t d=0;d<3;d++)
+            for(int d=0;d<3;d++)
             {
                 polxt[d] = &mem[d*(order+1)+1];
                 Monomial (order, cpoint[d], polxt[d]);
@@ -588,9 +588,9 @@ namespace ngfem
             for(int d=0;d<3;d++)
             {
                 Vector<SIMD<double>> pol(npoly);
-                for (size_t i = 0, ii = 0; i <=order; i++)
-                    for (size_t j = 0; j <= order-i; j++)
-                        for (size_t k = 0; k <= order-i-j; k++)
+                for (int i = 0, ii = 0; i <=order; i++)
+                    for (int j = 0; j <= order-i; j++)
+                        for (int k = 0; k <= order-i-j; k++)
                             pol[ii++] = (d==0?i:(d==1?j:(d==2?k:0)))
                                 * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)];
 
@@ -609,7 +609,7 @@ namespace ngfem
     void ScalarMappedElement<4> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
                                          BareSliceMatrix<SIMD<double>> dshape) const
     {
-        for (int imip = 0; imip < smir.Size(); imip++)
+        for (size_t imip = 0; imip < smir.Size(); imip++)
         {
             Vec<4,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (1.0/elsize); cpoint[3] *= c;
@@ -617,7 +617,7 @@ namespace ngfem
             // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
             STACK_ARRAY(SIMD<double>, mem, 4*(order+1)+1); mem[0]=0;
             Vec<4,SIMD<double>*> polxt;
-            for(size_t d=0;d<4;d++)
+            for(int d=0;d<4;d++)
             {
                 polxt[d] = &mem[d*(order+1)+1];
                 Monomial (order, cpoint[d], polxt[d]);
@@ -626,10 +626,10 @@ namespace ngfem
             for(int d=0;d<4;d++)
             {
                 Vector<SIMD<double>> pol(npoly);
-                for (size_t i = 0, ii = 0; i <=order; i++)
-                    for (size_t j = 0; j <= order-i; j++)
-                        for (size_t k = 0; k <= order-i-j; k++)
-                            for (size_t l = 0; l <= order-i-j-k; l++)
+                for (int i = 0, ii = 0; i <=order; i++)
+                    for (int j = 0; j <= order-i; j++)
+                        for (int k = 0; k <= order-i-j; k++)
+                            for (int l = 0; l <= order-i-j-k; l++)
                                 pol[ii++] = (d==0?i:(d==1?j:(d==2?k:(d==3?l:0))))
                                     * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * polxt[3][l-(d==3)];
 
@@ -664,15 +664,15 @@ namespace ngfem
         // calc 1 dimensional monomial basis
         STACK_ARRAY(double, mem, 2*(order+1));
         double* polxt[2];
-        for(size_t d=0;d<2;d++)
+        for(int d=0;d<2;d++)
         {
             polxt[d] = &mem[d*(order+1)];
             Monomial (order, cpoint[d], polxt[d]);
         }
         // calc D+1 dimenional monomial basis
         Vector<double> pol(npoly);
-        for (size_t i = 0, ii = 0; i <= order; i++)
-            for (size_t j = 0; j <= order-i; j++)
+        for (int i = 0, ii = 0; i <= order; i++)
+            for (int j = 0; j <= order-i; j++)
                 pol[ii++] = polxt[0][i] * polxt[1][j];
         // TB*monomials for trefftz shape fcts
         for (int i=0; i<this->ndof; ++i)
@@ -693,16 +693,16 @@ namespace ngfem
         STACK_ARRAY(double, mem, 3*(order+1));
         //double* polxt[3];
         Vec<3,double*> polxt;
-        for(size_t d=0;d<3;d++)
+        for(int d=0;d<3;d++)
         {
             polxt[d] = &mem[d*(order+1)];
             Monomial (order, cpoint[d], polxt[d]);
         }
         // calc D+1 dimenional monomial basis
         Vector<double> pol(npoly);
-        for (size_t i = 0, ii = 0; i <= order; i++)
-            for (size_t j = 0; j <= order-i; j++)
-                for (size_t k = 0; k <= order-i-j; k++)
+        for (int i = 0, ii = 0; i <= order; i++)
+            for (int j = 0; j <= order-i; j++)
+                for (int k = 0; k <= order-i-j; k++)
                     pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
         // TB*monomials for trefftz shape fcts
         for (int i=0; i<this->ndof; ++i)
@@ -722,17 +722,17 @@ namespace ngfem
         // calc 1 dimensional monomial basis
         STACK_ARRAY(double, mem, 4*(order+1));
         double* polxt[4];
-        for(size_t d=0;d<4;d++)
+        for(int d=0;d<4;d++)
         {
             polxt[d] = &mem[d*(order+1)];
             Monomial (order, cpoint[d], polxt[d]);
         }
         // calc D+1 dimenional monomial basis
         Vector<double> pol(npoly);
-        for (size_t i = 0, ii = 0; i <= order; i++)
-            for (size_t j = 0; j <= order-i; j++)
-                for (size_t k = 0; k <= order-i-j; k++)
-                    for (size_t l = 0; l <= order-i-j-k; l++)
+        for (int i = 0, ii = 0; i <= order; i++)
+            for (int j = 0; j <= order-i; j++)
+                for (int k = 0; k <= order-i-j; k++)
+                    for (int l = 0; l <= order-i-j-k; l++)
                         pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
         // TB*monomials for trefftz shape fcts
         for (int i=0; i<this->ndof; ++i)
@@ -759,7 +759,7 @@ namespace ngfem
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY(double, mem, 2*(order+1)+1); mem[0]=0;
         double* polxt[2];
-        for(size_t d=0;d<2;d++)
+        for(int d=0;d<2;d++)
         {
             polxt[d] = &mem[d*(order+1)+1];
             Monomial (order, cpoint[d], polxt[d]);
@@ -768,8 +768,8 @@ namespace ngfem
         for(int d=0;d<2;d++)
         {
             Vector<double> pol(npoly);
-            for (size_t i = 0, ii = 0; i <=order; i++)
-                for (size_t j = 0; j <= order-i; j++)
+            for (int i = 0, ii = 0; i <=order; i++)
+                for (int j = 0; j <= order-i; j++)
                     pol[ii++] = (d==0?i:(d==1?j:0))
                         * polxt[0][i-(d==0)] * polxt[1][j-(d==1)];
 
@@ -794,7 +794,7 @@ namespace ngfem
         STACK_ARRAY(double, mem, 3*(order+1)+1); mem[0]=0;
         //double* polxt[4];
         Vec<3,double*> polxt;
-        for(size_t d=0;d<3;d++)
+        for(int d=0;d<3;d++)
         {
             polxt[d] = &mem[d*(order+1)+1];
             Monomial (order, cpoint[d], polxt[d]);
@@ -803,9 +803,9 @@ namespace ngfem
         for(int d=0;d<3;d++)
         {
             Vector<double> pol(npoly);
-            for (size_t i = 0, ii = 0; i <=order; i++)
-                for (size_t j = 0; j <= order-i; j++)
-                    for (size_t k = 0; k <= order-i-j; k++)
+            for (int i = 0, ii = 0; i <=order; i++)
+                for (int j = 0; j <= order-i; j++)
+                    for (int k = 0; k <= order-i-j; k++)
                         pol[ii++] = (d==0?i:(d==1?j:(d==2?k:0)))
                             * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)];
 
@@ -829,7 +829,7 @@ namespace ngfem
         // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
         STACK_ARRAY(double, mem, 4*(order+1)+1); mem[0]=0;
         double* polxt[4];
-        for(size_t d=0;d<4;d++)
+        for(int d=0;d<4;d++)
         {
             polxt[d] = &mem[d*(order+1)+1];
             Monomial (order, cpoint[d], polxt[d]);
@@ -838,10 +838,10 @@ namespace ngfem
         for(int d=0;d<4;d++)
         {
             Vector<double> pol(npoly);
-            for (size_t i = 0, ii = 0; i <=order; i++)
-                for (size_t j = 0; j <= order-i; j++)
-                    for (size_t k = 0; k <= order-i-j; k++)
-                        for (size_t l = 0; l <= order-i-j-k; l++)
+            for (int i = 0, ii = 0; i <=order; i++)
+                for (int j = 0; j <= order-i; j++)
+                    for (int k = 0; k <= order-i-j; k++)
+                        for (int l = 0; l <= order-i-j-k; l++)
                             pol[ii++] = (d==0?i:(d==1?j:(d==2?k:(d==3?l:0))))
                                 * polxt[0][i-(d==0)] * polxt[1][j-(d==1)] * polxt[2][k-(d==2)] * polxt[3][l-(d==3)];
 
@@ -876,22 +876,22 @@ namespace ngfem
                                          BareSliceMatrix<SIMD<double>> wavespeed,
                                          BareSliceMatrix<SIMD<double>> mu) const
     {
-        for (int imip = 0; imip < smir.Size(); imip++)
+        for (size_t imip = 0; imip < smir.Size(); imip++)
         {
             Vec<2,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (1.0/elsize);
 
             STACK_ARRAY(SIMD<double>, mem, 2*(order+1)+2); mem[0]=0;mem[1]=0;
             Vec<2,SIMD<double>*> polxt;
-            for(size_t d=0;d<2;d++)
+            for(int d=0;d<2;d++)
             {
                 polxt[d] = &mem[d*(order+1)+2];
                 Monomial (order, cpoint[d], polxt[d]);
             }
 
             Vector<SIMD<double>> pol(npoly);
-            for (size_t i = 0, ii = 0; i <=order; i++)
-                for (size_t j = 0; j <= order-i; j++)
+            for (int i = 0, ii = 0; i <=order; i++)
+                for (int j = 0; j <= order-i; j++)
                     pol[ii++] =
                           ( i*(i-1) * polxt[0][i-2] * polxt[1][j]
                           - j*(j-1) * polxt[0][i] * polxt[1][j-2]
@@ -914,23 +914,23 @@ namespace ngfem
                                          BareSliceMatrix<SIMD<double>> wavespeed,
                                          BareSliceMatrix<SIMD<double>> mu) const
     {
-        for (int imip = 0; imip < smir.Size(); imip++)
+        for (size_t imip = 0; imip < smir.Size(); imip++)
         {
             Vec<3,SIMD<double>> cpoint = smir[imip].GetPoint();
             cpoint -= elcenter; cpoint *= (1.0/elsize);
 
             STACK_ARRAY(SIMD<double>, mem, 3*(order+1)+2); mem[0]=0;mem[1]=0;
             Vec<3,SIMD<double>*> polxt;
-            for(size_t d=0;d<3;d++)
+            for(int d=0;d<3;d++)
             {
                 polxt[d] = &mem[d*(order+1)+2];
                 Monomial (order, cpoint[d], polxt[d]);
             }
 
             Vector<SIMD<double>> pol(npoly);
-            for (size_t i = 0, ii = 0; i <=order; i++)
-                for (size_t j = 0; j <= order-i; j++)
-                    for (size_t k = 0; k <= order-i-j; k++)
+            for (int i = 0, ii = 0; i <=order; i++)
+                for (int j = 0; j <= order-i; j++)
+                    for (int k = 0; k <= order-i-j; k++)
                         pol[ii++] =
                               ( i*(i-1) * polxt[0][i-2] * polxt[1][j] * polxt[2][k]
                               + j*(j-1) * polxt[0][i] * polxt[1][j-2] * polxt[2][k]
