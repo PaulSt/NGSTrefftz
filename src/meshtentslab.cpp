@@ -37,7 +37,6 @@ namespace ngcomp
     Point2IndexMap *pim = new Point2IndexMap (); // Your map type may vary,
                                                  // just change the typedef
     int index = 1;
-    int basedim = ma->GetDimension ();
     double dt_eps = 0.00001;
     // get boundaries of the init mesh
     Array<double> bd_points (0);
