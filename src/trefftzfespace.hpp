@@ -72,10 +72,33 @@ namespace ngcomp
     static DocInfo GetDocu ();
 
   protected:
-    template <int D> double Adiam (ElementId ei, double c) const;
-    template <int D>
-    double Adiam (ElementId ei, shared_ptr<CoefficientFunction> c) const;
-    template <int D> Vec<D + 1> ElCenter (ElementId ei) const;
+    template <int D> double Adiam (ElementId ei, double c) const
+    {
+      double anisotropicdiam = 0.0;
+      auto vertices_index = ma->GetElVertices (ei);
+      for (auto vertex1 : vertices_index)
+        {
+          for (auto vertex2 : vertices_index)
+            {
+              Vec<D + 1> v1 = ma->GetPoint<D + 1> (vertex1);
+              Vec<D + 1> v2 = ma->GetPoint<D + 1> (vertex2);
+              anisotropicdiam
+                  = max (anisotropicdiam,
+                         sqrt (L2Norm2 (v1.Range (0, D) - v2.Range (0, D))
+                               + pow (c * (v1 (D) - v2 (D)), 2)));
+            }
+        }
+      return anisotropicdiam * usescale + (usescale == 0);
+    }
+    template <int D> Vec<D + 1> ElCenter (ElementId ei) const
+    {
+      Vec<D + 1> center = 0;
+      auto vertices_index = ma->GetElVertices (ei);
+      for (auto vertex : vertices_index)
+        center += ma->GetPoint<D + 1> (vertex);
+      center *= (1.0 / vertices_index.Size ()) * useshift;
+      return center;
+    }
   };
 
 }

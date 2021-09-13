@@ -2,6 +2,7 @@
 #define FILE_TESTPYTHON_HPP
 #include <tents.hpp>
 #include "scalarmappedfe.hpp"
+#include <unordered_map>
 
 namespace ngcomp
 {
@@ -61,7 +62,7 @@ namespace ngcomp
 
     double TentAdiam (const Tent *tent);
 
-    inline void LapackSolve (SliceMatrix<double> a, SliceVector<double> b);
+    inline void Solve (SliceMatrix<double> a, SliceVector<double> b);
 
     inline int MakeMacroEl (const Array<int> &tentel,
                             std::unordered_map<int, int> &macroel);
@@ -147,7 +148,8 @@ namespace ngcomp
     Matrix<shared_ptr<CoefficientFunction>> GGder;
     Matrix<shared_ptr<CoefficientFunction>> BBder;
     double TentXdiam (const Tent *tent);
-    using TWaveTents<D>::LapackSolve;
+
+    using TWaveTents<D>::Solve;
     using TWaveTents<D>::TentFaceVerts;
 
   public:

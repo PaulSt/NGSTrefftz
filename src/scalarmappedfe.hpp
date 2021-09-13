@@ -146,7 +146,7 @@ namespace ngfem
                          ELEMENT_TYPE aeltype, Vec<D> aelcenter = 0,
                          double aelsize = 1, double ac = 1.0)
         : BaseScalarMappedElement (andof, aord), localmat (alocalmat),
-          eltype (aeltype), elcenter (aelcenter), elsize (aelsize), c (ac)
+          elcenter (aelcenter), elsize (aelsize), eltype (aeltype), c (ac)
     {
       ;
     }
