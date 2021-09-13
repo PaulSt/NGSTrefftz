@@ -173,61 +173,6 @@ namespace ngcomp
     }
 
 
-    template<int D>
-    double TrefftzFESpace :: Adiam(ElementId ei, double c) const
-    {
-        double anisotropicdiam = 0.0;
-        auto vertices_index = ma->GetElVertices(ei);
-        for(auto vertex1 : vertices_index)
-        {
-            for(auto vertex2 : vertices_index)
-            {
-                Vec<D+1> v1 = ma->GetPoint<D+1>(vertex1);
-                Vec<D+1> v2 = ma->GetPoint<D+1>(vertex2);
-                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1.Range(0,D) - v2.Range(0,D)) + pow(c*(v1(D)-v2(D)),2) ) );
-            }
-        }
-        return anisotropicdiam * usescale + (usescale==0);
-    }
-
-
-    template<int D>
-    double TrefftzFESpace :: Adiam(ElementId ei, shared_ptr<CoefficientFunction> c) const
-    {
-        double anisotropicdiam = 0.0;
-        auto vertices_index = ma->GetElVertices(ei);
-
-        for(auto vertex1 : vertices_index)
-        {
-            for(auto vertex2 : vertices_index)
-            {
-                Vec<D+1> v1 = ma->GetPoint<D+1>(vertex1);
-                Vec<D+1> v2 = ma->GetPoint<D+1>(vertex2);
-                IntegrationPoint ip(v1,0);
-                Mat<D+1,D+1> dummy;
-                FE_ElementTransformation<D+1,D+1> et(D==3?ET_TET:D==2?ET_TRIG:ET_SEGM,dummy);
-                MappedIntegrationPoint<D+1,D+1> mip(ip,et,0);
-                mip.Point() = v1;
-                double c1 = wavespeedcf->Evaluate(mip);
-                mip.Point() = v2;
-                double c2 = wavespeedcf->Evaluate(mip);
-
-                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1.Range(0,D) - v2.Range(0,D)) + pow(c1*v1(D)-c2*v2(D),2) ) );
-            }
-        }
-        return anisotropicdiam * usescale + (usescale==0);
-    }
-
-    template<int D>
-    Vec<D+1> TrefftzFESpace :: ElCenter(ElementId ei) const
-    {
-        Vec<D+1> center = 0;
-        auto vertices_index = ma->GetElVertices(ei);
-        for(auto vertex : vertices_index) center += ma->GetPoint<D+1>(vertex);
-        center *= (1.0/vertices_index.Size()) * useshift;
-        return center;
-    }
-
     DocInfo TrefftzFESpace :: GetDocu ()
     {
         auto docu = FESpace::GetDocu();
@@ -243,26 +188,26 @@ namespace ngcomp
     static RegisterFESpace<TrefftzFESpace> initi_trefftz ("trefftzfespace");
 
 
-	// k-th coeff of Legendre polynomial of degree n in monomial basis
-	constexpr double LegCoeffMonBasis(int n, int k)
-	{
-		if(n==0) return 1;
-		if(k>n) return 0;
-		if((n+k)%2) return 0;
-		double coeff = pow(2,-n) * pow(-1,floor((n-k)/2)) * BinCoeff(n,floor((n-k)/2)) * BinCoeff(n+k,n);
-		// double coeff = pow(2,-n) * pow(-1,k) * BinCoeff(n,k) * BinCoeff(2*n-2*k,n);
-		return coeff;
-	}
+    // k-th coeff of Legendre polynomial of degree n in monomial basis
+    constexpr double LegCoeffMonBasis(int n, int k)
+    {
+        if(n==0) return 1;
+        if(k>n) return 0;
+        if((n+k)%2) return 0;
+        double coeff = pow(2,-n) * pow(-1,floor((n-k)/2)) * BinCoeff(n,floor((n-k)/2)) * BinCoeff(n+k,n);
+        // double coeff = pow(2,-n) * pow(-1,k) * BinCoeff(n,k) * BinCoeff(2*n-2*k,n);
+        return coeff;
+    }
 
-	// k-th coeff of Chebyshev polynomial of degree n in monomial basis
-	constexpr double ChebCoeffMonBasis(int n, int k)
-	{
-		if(n==0) return 1;
-		if(k>n) return 0;
-		if((n+k)%2) return 0;
-		double coeff = pow(2,k-1)*n*pow(-1,floor((n-k)/2)) * tgamma((n+k)/2)/(tgamma(floor((n-k)/2)+1)*tgamma(k+1));
-		return coeff;
-	}
+    // k-th coeff of Chebyshev polynomial of degree n in monomial basis
+    constexpr double ChebCoeffMonBasis(int n, int k)
+    {
+        if(n==0) return 1;
+        if(k>n) return 0;
+        if((n+k)%2) return 0;
+        double coeff = pow(2,k-1)*n*pow(-1,floor((n-k)/2)) * tgamma((n+k)/2)/(tgamma(floor((n-k)/2)+1)*tgamma(k+1));
+        return coeff;
+    }
 
     template<int D>
     CSR TWaveBasis<D> :: Basis(int ord, int basistype, int fosystem)
@@ -392,7 +337,7 @@ namespace ngcomp
                     double fac = (factorial(nx)*factorial(ny));
                     BB(nx,ny) = BBder(nx,ny)->Evaluate(mip)/fac * pow(elsize,nx+ny);
                     if(nx<ord-1 && ny<ord-1)
-                    GG(nx,ny) = GGder(nx,ny)->Evaluate(mip)/fac * pow(elsize,nx+ny);
+                        GG(nx,ny) = GGder(nx,ny)->Evaluate(mip)/fac * pow(elsize,nx+ny);
                 }
             }
 
@@ -444,11 +389,11 @@ namespace ngcomp
                                         + (x-betax+1)*(betax+1)/((t+2)*(t+1)*GG(0)) * BB(x-betax+1,y-betay)
                                         * qbasis( basisn, getcoeffx);
                                     if(D==2)
-                                    *newcoeff +=
-                                        (betay+2)*(betay+1)/((t+2)*(t+1)*GG(0)) * BB(x-betax,y-betay)
-                                        * qbasis( basisn, getcoeffyy)
-                                        + (y-betay+1)*(betay+1)/((t+2)*(t+1)*GG(0)) * BB(x-betax,y-betay+1)
-                                        * qbasis( basisn, getcoeffy);
+                                        *newcoeff +=
+                                            (betay+2)*(betay+1)/((t+2)*(t+1)*GG(0)) * BB(x-betax,y-betay)
+                                            * qbasis( basisn, getcoeffyy)
+                                            + (y-betay+1)*(betay+1)/((t+2)*(t+1)*GG(0)) * BB(x-betax,y-betay+1)
+                                            * qbasis( basisn, getcoeffy);
                                     if(betax+betay == x+y) continue;
                                     index[1] = betay; index[0] = betax; index[D] = t+2;
                                     int getcoeff = TWaveBasis<D>::IndexMap2(index, ord);

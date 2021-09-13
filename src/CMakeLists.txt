@@ -25,7 +25,7 @@ add_ngsolve_python_module(ngstrefftz
     python_trefftz.cpp
     diffopmapped.hpp
     scalarmappedfe.cpp
-    trefftzheatfe.cpp
+    #trefftzheatfe.cpp
     trefftzfespace.cpp
     monomialfespace.cpp
     specialcoefficientfunction.cpp
