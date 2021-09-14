@@ -17,5 +17,5 @@ SET (CMAKE_CXX_FLAGS_RELEASE_INIT        "-O3 -DNDEBUG")
 SET (CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT "-O2 -g")' >> ~/ClangOverrides.txt
 
 cmake -DCMAKE_USER_MAKE_RULES_OVERRIDE=~/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm- ../src
-make
+make -j4
 make install

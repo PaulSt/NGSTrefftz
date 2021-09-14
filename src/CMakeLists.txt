@@ -2,7 +2,7 @@ project(ngstrefftz)
 
 cmake_minimum_required(VERSION 3.1)
 
-include_directories(~/projects/ngstents/src)
+include_directories(../dep)
 
 find_package(NGSolve CONFIG REQUIRED
     HINTS $ENV{NETGENDIR}/.. /opt/netgen/ /Applications/Netgen.app/Contents/Resources/CMake C:/netgen
