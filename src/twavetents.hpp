@@ -50,7 +50,7 @@ namespace ngcomp
 
             double TentAdiam(const Tent* tent);
 
-            inline void Solve(SliceMatrix<double> a, SliceVector<double> b);
+            inline void Solve(FlatMatrix<double> a, FlatVector<double> b);
 
             inline int MakeMacroEl(const Array<int> &tentel, std::unordered_map<int,int> &macroel);
 

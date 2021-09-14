@@ -29,7 +29,7 @@ add_ngsolve_python_module(ngstrefftz
     trefftzfespace.cpp
     monomialfespace.cpp
     specialcoefficientfunction.cpp
-    ../../ngstents/src/tents.cpp
+    ../dep/tents.cpp
     twavetents.cpp
     meshtentslab.cpp
     )
