@@ -36,8 +36,8 @@ namespace ngcomp
   inline void
   TWaveTents<D>::Solve (SliceMatrix<double> a, SliceVector<double> b)
   {
-    CalcInverse (elmat);
-    elvec = elmat * elvec;
+    CalcInverse (a, INVERSE_LIB::INV_LAPACK);
+    b = a * b;
   }
 #endif
   template <int D> void TWaveTents<D>::Propagate ()
@@ -131,6 +131,8 @@ namespace ngcomp
 
       // solve
       Solve (elmat, elvec);
+      // CalcInverse(elmat); //,INVERSE_LIB::INV_NGBLA_QR);
+      elvec = elmat * elvec;
       FlatVector<> sol (ndomains * nbasis, &elvec (0));
 
       // eval solution on top of tent
@@ -1069,6 +1071,8 @@ namespace ngcomp
 
       // solve
       Solve (elmat, elvec);
+      CalcInverse (elmat); //,INVERSE_LIB::INV_NGBLA_QR);
+      elvec = elmat * elvec;
       FlatVector<> sol (nbasis, &elvec (0));
 
       // eval solution on top of tent

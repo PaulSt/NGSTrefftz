@@ -14,7 +14,6 @@ namespace ngcomp
     int nel;
     int local_ndof;
     int useshift = 1;
-    int useqt = 0;
     shared_ptr<CoefficientFunction> wavespeedcf;
     CSR basismat;
 
