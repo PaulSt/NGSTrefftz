@@ -13,33 +13,14 @@ namespace ngcomp
 
   TrefftzTents::~TrefftzTents (){};
 
-#ifdef LAPACK
   template <int D>
-  inline void
-  TWaveTents<D>::Solve (SliceMatrix<double> a, SliceVector<double> b)
-  {
-    integer n = a.Width ();
-    integer lda = a.Dist ();
-    integer success;
-    char trans = 'T';
-    integer nrhs = 1;
-    ArrayMem<integer, 100> ipiv (n);
-
-    dgetrf_ (&n, &n, &a (0, 0), &lda, &ipiv[0], &success);
-    dgetrs_ (&trans, &n, &nrhs, &a (0, 0), &lda, &ipiv[0], &b[0], &lda,
-             &success);
-    if (success != 0)
-      cout << "Lapack error: " << success << endl;
-  }
-#else
-  template <int D>
-  inline void
-  TWaveTents<D>::Solve (SliceMatrix<double> a, SliceVector<double> b)
+  inline void TWaveTents<D>::Solve (FlatMatrix<double> a, FlatVector<double> b)
   {
     CalcInverse (a, INVERSE_LIB::INV_LAPACK);
-    b = a * b;
+    Vector<> c = a * b;
+    b = c;
   }
-#endif
+
   template <int D> void TWaveTents<D>::Propagate ()
   {
     // int nthreads = (task_manager) ? task_manager->GetNumThreads() : 1;
@@ -131,8 +112,6 @@ namespace ngcomp
 
       // solve
       Solve (elmat, elvec);
-      // CalcInverse(elmat); //,INVERSE_LIB::INV_NGBLA_QR);
-      elvec = elmat * elvec;
       FlatVector<> sol (ndomains * nbasis, &elvec (0));
 
       // eval solution on top of tent
@@ -1071,8 +1050,6 @@ namespace ngcomp
 
       // solve
       Solve (elmat, elvec);
-      CalcInverse (elmat); //,INVERSE_LIB::INV_NGBLA_QR);
-      elvec = elmat * elvec;
       FlatVector<> sol (nbasis, &elvec (0));
 
       // eval solution on top of tent
