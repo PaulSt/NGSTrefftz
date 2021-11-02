@@ -71,12 +71,12 @@ namespace ngcomp
   };
 }
 
-PYBIND11_MODULE (ngstrefftz, m)
+PYBIND11_MODULE (tngs, m)
 {
   py::module::import ("ngsolve");
   // py::module::import("ngstents");
-  m.attr ("__name__") = "ngstrefftz";
-  m.attr ("__package__") = "ngstrefftz";
+  m.attr ("__name__") = "tngs";
+  m.attr ("__package__") = "tngs";
 
   ExportTrefftzFESpace (m);
   ExportMonomialFESpace (m);

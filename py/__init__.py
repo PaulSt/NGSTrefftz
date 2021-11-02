@@ -1,9 +1,9 @@
-from ngstrefftz.ngstrefftz import *
-from ngstrefftz.DGeq import *
-from ngstrefftz.prodmesh import *
-from ngsolve import *
+from ngsolve.fem import ET,IntegrationRule
+from ngsolve.comp import L2,BilinearForm,LinearForm,SymbolicBFI,SymbolicLFI
 from ngsolve.fem import CoordCF
-from types import MethodType
+from .tngs import *
+from tngs.DGeq import *
+from tngs.prodmesh import *
 
 def GetWave(self,U):
     order=self.GetOrder()
@@ -49,5 +49,3 @@ setattr(TWaveTents2, 'GetWave', GetWave)
 setattr(TWaveTents3, 'GetWave', GetWave)
 setattr(QTWaveTents1, 'GetWave', GetWave)
 setattr(QTWaveTents2, 'GetWave', GetWave)
-# = MethodType(GetWave, None, TrefftzTent)
-# TrefftzTent.GetWave = classmethod(GetWave)

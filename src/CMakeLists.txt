@@ -1,4 +1,4 @@
-project(ngstrefftz)
+project(tngs)
 
 cmake_minimum_required(VERSION 3.1)
 
@@ -13,15 +13,7 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX ${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON} CACHE PATH "Install dir" FORCE)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
-install (FILES
-        ../py/__init__.py 
-        ../py/DGeq.py 
-        ../py/prodmesh.py 
-        DESTINATION ngstrefftz
-        COMPONENT ngstrefftz
-        )
-
-add_ngsolve_python_module(ngstrefftz 
+add_ngsolve_python_module(tngs 
     python_trefftz.cpp
     diffopmapped.hpp
     scalarmappedfe.cpp
@@ -38,4 +30,12 @@ add_ngsolve_python_module(ngstrefftz
 #add_compile_options(-g -O0)
 
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
-install(TARGETS ngstrefftz DESTINATION ngstrefftz)
+install(TARGETS tngs DESTINATION tngs)
+install (FILES
+        ../py/__init__.py 
+        ../py/DGeq.py 
+        ../py/prodmesh.py 
+        DESTINATION tngs
+        COMPONENT tngs
+        )
+
