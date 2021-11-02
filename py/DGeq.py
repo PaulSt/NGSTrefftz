@@ -1,10 +1,5 @@
 from ngsolve import *
 from ngstrefftz import *
-import numpy as np
-import scipy as sp
-import scipy.sparse.linalg
-import scipy.linalg
-
 
 def DGwaveeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alpha=0.5,beta=0.5,gamma=1,mu=0,BB=1):
     D = fes.mesh.dim - 1
