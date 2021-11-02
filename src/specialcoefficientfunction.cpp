@@ -1,40 +1,33 @@
-#ifndef SPECIALCOEFFICIENTFUNCTION_HPP
-#define SPECIALCOEFFICIENTFUNCTION_HPP
-
+#include "specialcoefficientfunction.hpp"
 #include <fem.hpp>
 #include <comp.hpp>
-#include <multigrid.hpp>
 #include <h1lofe.hpp>
 #include <regex>
-
+#include <multigrid.hpp>
 using namespace ngcomp;
+
 namespace ngfem
 {
 
-    class ClipCoefficientFunction : public CoefficientFunction
+    double ClipCoefficientFunction :: Evaluate (const BaseMappedIntegrationPoint & ip) const
     {
-        private:
-            shared_ptr<CoefficientFunction> coef;
-            double clipvalue;
-            int clipdim;
-        public:
-            ///
-            ClipCoefficientFunction(shared_ptr<CoefficientFunction> acoef,int adimension,int aclipdim,double aclipvalue, bool ais_complex = false)
-                : CoefficientFunction(adimension,ais_complex), coef(acoef), clipdim(aclipdim), clipvalue(aclipvalue)
-            { ; }
-            ///
-            virtual double Evaluate (const BaseMappedIntegrationPoint & ip) const;
-            ///
-            virtual void Evaluate (const BaseMappedIntegrationRule & ir, FlatMatrix<double> values) const;
-            virtual void EvaluateStdRule (const BaseMappedIntegrationRule & ir, FlatMatrix<double> values) const;
-    };
+        ip.GetPoint()[clipdim] = clipvalue;
+        return coef->Evaluate(ip);
+    }
 
-
-    class IntegrationPointFunction : public CoefficientFunction
+    void ClipCoefficientFunction :: Evaluate (const BaseMappedIntegrationRule & ir, FlatMatrix<double> values) const
     {
-        public:
+        cout << "not yet implemented" << endl;
+    }
 
-            IntegrationPointFunction(shared_ptr<MeshAccess> mesh, IntegrationRule& intrule, Vector<> ipdata)
+    void ClipCoefficientFunction :: EvaluateStdRule (const BaseMappedIntegrationRule & ir, FlatMatrix<double> values) const
+    {
+        for(size_t i=0;i<ir.Size();i++)
+            values(i,0) = Evaluate(ir[i]);
+    }
+
+
+    IntegrationPointFunction :: IntegrationPointFunction(shared_ptr<MeshAccess> mesh, IntegrationRule& intrule, Vector<> ipdata)
                 : CoefficientFunction(1)
             {
                 values.resize(mesh->GetNE());
@@ -42,7 +35,7 @@ namespace ngfem
                 for (auto& vec : values)
                 {
                     vec.resize(intrule.GetNIP());
-                    for (int i = 0;i < vec.size();i++)
+                    for (size_t i = 0;i < vec.size();i++)
                     {
                         // input data from vector with mip values sorted per element
                         vec[i] = ipdata[intrule.Size()*elnr+i];
@@ -51,7 +44,7 @@ namespace ngfem
                 }
             }
 
-            IntegrationPointFunction(shared_ptr<MeshAccess> mesh, IntegrationRule& intrule, Matrix<> ipdata)
+    IntegrationPointFunction :: IntegrationPointFunction(shared_ptr<MeshAccess> mesh, IntegrationRule& intrule, Matrix<> ipdata)
                 : CoefficientFunction(1)
             {
                 values.resize(mesh->GetNE());
@@ -59,7 +52,7 @@ namespace ngfem
                 for (auto& vec : values)
                 {
                     vec.resize(intrule.GetNIP());
-                    for (int i = 0;i < vec.size();i++)
+                    for (size_t i = 0;i < vec.size();i++)
                     {
                         // input data from matrix with elnr in rows, mip values in cols
                         vec[i] = ipdata(elnr,i);
@@ -68,9 +61,9 @@ namespace ngfem
                 }
             }
 
-            virtual double Evaluate(const BaseMappedIntegrationPoint & ip) const
+            double IntegrationPointFunction :: Evaluate(const BaseMappedIntegrationPoint & ip) const
             {
-                int p = ip.GetIPNr();
+                size_t p = ip.GetIPNr();
                 int el = ip.GetTransformation().GetElementNr();
 
                 if (p < 0 || p >= values[el].size())
@@ -82,11 +75,11 @@ namespace ngfem
                 return values[el][p];
             }
 
-            void PrintTable()
+            void IntegrationPointFunction :: PrintTable()
             {
-                for (int i = 0;i < values.size();i++)
+                for (size_t i = 0;i < values.size();i++)
                 {
-                    for (int j = 0;j < values[i].size();j++)
+                    for (size_t j = 0;j < values[i].size();j++)
                     {
                         cout << values[i][j] << ", ";
                     }
@@ -95,51 +88,16 @@ namespace ngfem
                 cout << endl;
             }
 
-        private:
-            vector<vector<double>> values;
-    };
 
 
-    //class TrefftzCoefficientFunction : public CoefficientFunction
-    //{
-        //int basisfunction;
-        //TrefftzWaveFE<3> treff = TrefftzWaveFE<3>(4,1,ET_TRIG,0);
-
-        //public:
-        //TrefftzCoefficientFunction()
-            //: CoefficientFunction(1) { ; }
-
-        //TrefftzCoefficientFunction(int basis)
-            //: CoefficientFunction(1) { basisfunction = basis; }
-
-        //virtual double Evaluate(const BaseMappedIntegrationPoint& mip) const override
-        //{
-            //FlatVector<double> point = mip.GetPoint();
-
-            //int ndof = treff.GetNDof();
-            //cout  << "nr: " << basisfunction << " / " << ndof << endl;
-            //Vector<double> shape(ndof);
-            ////Matrix<double> shape(ndof,2);
-            //treff.CalcShape(mip,shape);
-            //return shape[basisfunction];
-        //}
-    //};
 
 
-    class WeightedRadiusFunction : public CoefficientFunction
-    {
-        private:
-            Vector<> values;
-
-        public:
-
-            WeightedRadiusFunction(shared_ptr<MeshAccess> mesh, shared_ptr<CoefficientFunction> wavespeedcf)
+            WeightedRadiusFunction :: WeightedRadiusFunction(shared_ptr<MeshAccess> mesh, shared_ptr<CoefficientFunction> wavespeedcf)
                 : CoefficientFunction(1)
             {
                 LocalHeap lh(1000 * 1000 * 100);
                 values.SetSize(mesh->GetNE());
-                int elnr=0;
-                for (auto& vec : values)
+                for (size_t elnr=0;elnr<mesh->GetNE();elnr++)
                 {
                     double anisotropicdiam = 0.0;
                     int D = mesh->GetDimension();
@@ -161,7 +119,7 @@ namespace ngfem
                     double maxc = 0;
                     for(auto vertex1 : vertices_index)
                     {
-                        double c1, c2;
+                        double c1 = 0, c2 = 0;
                         switch(mesh->GetDimension())
                         {
                             case 2:
@@ -192,14 +150,12 @@ namespace ngfem
                         anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1(0,D-1) - center(0,D-1)) + pow(c1*v1(D-1)-c2*center(D-1),2) ) );
                     }
                     values[elnr]=anisotropicdiam/maxc;
-                    elnr++;
                 }
             }
 
-            virtual double Evaluate(const BaseMappedIntegrationPoint & ip) const
+            double WeightedRadiusFunction :: Evaluate(const BaseMappedIntegrationPoint & ip) const
             {
-                int p = ip.GetIPNr();
-                int el = ip.GetTransformation().GetElementNr();
+                size_t el = ip.GetTransformation().GetElementNr();
 
                 if (el < 0 || el >= values.Size())
                 {
@@ -209,13 +165,80 @@ namespace ngfem
 
                 return values[el];
             }
-    };
+
+
+    //class TrefftzCoefficientFunction : public CoefficientFunction
+    //{
+        //int basisfunction;
+        //TrefftzWaveFE<3> treff = TrefftzWaveFE<3>(4,1,ET_TRIG,0);
+
+        //public:
+        //TrefftzCoefficientFunction()
+            //: CoefficientFunction(1) { ; }
+
+        //TrefftzCoefficientFunction(int basis)
+            //: CoefficientFunction(1) { basisfunction = basis; }
+
+        //virtual double Evaluate(const BaseMappedIntegrationPoint& mip) const override
+        //{
+            //FlatVector<double> point = mip.GetPoint();
+
+            //int ndof = treff.GetNDof();
+            //cout  << "nr: " << basisfunction << " / " << ndof << endl;
+            //Vector<double> shape(ndof);
+            ////Matrix<double> shape(ndof,2);
+            //treff.CalcShape(mip,shape);
+            //return shape[basisfunction];
+        //}
+    //};
+
+
 
 }
 
-#ifdef NGS_PYTHON
-#include <python_ngstd.hpp>
-void ExportSpecialCoefficientFunction(py::module m);
-#endif // NGS_PYTHON
 
-#endif
+typedef CoefficientFunction CF;
+typedef shared_ptr<CoefficientFunction> spCF;
+
+#ifdef NGS_PYTHON
+void ExportSpecialCoefficientFunction(py::module m)
+{
+    m.def("ClipCoefficientFunction", [](spCF cf_x, int aclipdim,double aclipvalue) -> shared_ptr<CoefficientFunction>
+          {
+              auto pcf = make_shared<ClipCoefficientFunction>(cf_x,cf_x->Dimension(),aclipdim,aclipvalue,false);
+              pcf->SetDimension(pcf->Dimension());
+              return pcf;
+          },
+          py::call_guard<py::gil_scoped_release>());
+
+    py::class_<IntegrationPointFunction,
+        shared_ptr<IntegrationPointFunction>, CoefficientFunction>
+            (m, "IntegrationPointFunction")
+            .def(py::init([](shared_ptr<MeshAccess> mesh, IntegrationRule& intrule, Vector<> data)
+                 {
+                     return new IntegrationPointFunction(mesh, intrule, data);
+                 }), py::arg("mesh"), py::arg("intrule"), py::arg("Vector"))
+            .def(py::init([](shared_ptr<MeshAccess> mesh, IntegrationRule& intrule, Matrix<> data)
+                 {
+                     return new IntegrationPointFunction(mesh, intrule, data);
+                 }), py::arg("mesh"), py::arg("intrule"), py::arg("Matrix"))
+            .def("PrintTable", &IntegrationPointFunction::PrintTable)
+                ;
+
+
+    py::class_<WeightedRadiusFunction,
+        shared_ptr<WeightedRadiusFunction>, CoefficientFunction>
+            (m, "WeightedRadiusFunction")
+            .def(py::init([](shared_ptr<MeshAccess> mesh, shared_ptr<CoefficientFunction> wavespeedcf)
+                 {
+                     return new WeightedRadiusFunction(mesh, wavespeedcf );
+                 }), py::arg("mesh"), py::arg("CoefficientFunction"));
+
+
+    //py::class_<TrefftzCoefficientFunction, shared_ptr<TrefftzCoefficientFunction>, CoefficientFunction>
+        //(m, "TrefftzCoefficient", "")
+        //.def(py::init<>())
+        //.def(py::init<int>())
+        //;
+}
+#endif // NGS_PYTHON

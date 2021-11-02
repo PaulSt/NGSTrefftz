@@ -1,6 +1,8 @@
-project(trefftzngs)
+project(ngstrefftz)
 
 cmake_minimum_required(VERSION 3.1)
+
+include_directories(../dep)
 
 find_package(NGSolve CONFIG REQUIRED
     HINTS $ENV{NETGENDIR}/.. /opt/netgen/ /Applications/Netgen.app/Contents/Resources/CMake C:/netgen
@@ -12,27 +14,28 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 install (FILES
-        __init__.py 
-        DGeq.py 
-        prodmesh.py 
-        DESTINATION trefftzngs
-        COMPONENT trefftzngs
+        ../py/__init__.py 
+        ../py/DGeq.py 
+        ../py/prodmesh.py 
+        DESTINATION ngstrefftz
+        COMPONENT ngstrefftz
         )
 
-add_ngsolve_python_module(trefftzngs python_trefftz.cpp
+add_ngsolve_python_module(ngstrefftz 
+    python_trefftz.cpp
     diffopmapped.hpp
     scalarmappedfe.cpp
-    trefftzheatfe.cpp
+    #trefftzheatfe.cpp
     trefftzfespace.cpp
     monomialfespace.cpp
     specialcoefficientfunction.cpp
-    ../tents.cpp
-    evolvetent.cpp
-    ../meshtentslab.cpp
+    ../dep/tents.cpp
+    twavetents.cpp
+    meshtentslab.cpp
     )
 
 #add_compile_options(PRIVATE -Wall -Wextra -pedantic)
 #add_compile_options(-g -O0)
 
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
-install(TARGETS trefftzngs DESTINATION trefftzngs)
+install(TARGETS ngstrefftz DESTINATION ngstrefftz)

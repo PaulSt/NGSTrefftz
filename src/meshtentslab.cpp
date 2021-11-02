@@ -1,5 +1,5 @@
 #include "meshtentslab.hpp"
-#include "tents.hpp"
+#include <tents.hpp>
 
 
 namespace ngcomp
@@ -33,7 +33,6 @@ namespace ngcomp
     {
         Point2IndexMap* pim = new Point2IndexMap();    // Your map type may vary, just change the typedef
         int index = 1;
-        int basedim =  ma->GetDimension();
         double dt_eps = 0.00001;
         //get boundaries of the init mesh
         Array<double> bd_points(0);
@@ -51,7 +50,8 @@ namespace ngcomp
         mesh -> SetMaterial(1,"mat");
 
         netgen::FaceDescriptor fd(1,1,0,1);
-        int ind_fd = mesh -> AddFaceDescriptor (fd);
+        //int ind_fd = 
+        mesh -> AddFaceDescriptor (fd);
 
         netgen::FaceDescriptor fdi(1,1,0,1);
         fdi.SetBCName(new string("inflow"));
@@ -77,7 +77,7 @@ namespace ngcomp
             int itop = tent->nbv[0]>tent->vertex ? 2 : 0;
             vertices[ ibot ] = AddPointUnique(mesh,pim,netgen::Point3d(pointc,tent->tbot,0));
             vertices[ itop ] = AddPointUnique(mesh,pim,netgen::Point3d(pointc,tent->ttop,0));
-            for (int k = 0; k < tent->nbv.Size(); k++)
+            for(size_t k = 0; k < tent->nbv.Size(); k++)
             {
                 vertices[2*k+1] = AddPointUnique(mesh,pim,netgen::Point3d(ma->GetPoint<1>(tent->nbv[k])(0),tent->nbtime[k],0));
             }
@@ -98,7 +98,7 @@ namespace ngcomp
             }
             mesh -> AddSurfaceElement(*newel);
 
-            for (int k = 0; k < tent->nbv.Size(); k++)
+            for(size_t k = 0; k < tent->nbv.Size(); k++)
             {
                 // Add 1d Elements - inflow
                 if(tent->tbot < dt_eps && tent->nbtime[k] < dt_eps)

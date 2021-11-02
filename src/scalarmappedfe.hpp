@@ -84,10 +84,16 @@ namespace ngfem
 
     void MatToCSR(Matrix<> mat, CSR &sparsemat);
 
-	inline constexpr long BinCoeff(int n,int k)
-	{
-		return round( tgamma(n+1) / (tgamma(k+1)*tgamma(n-k+1)) );
-	}
+    constexpr inline size_t BinCoeff(size_t n, size_t k) noexcept
+    {
+        return
+          (        k> n  )? 0 :          // out of range
+          (k==0 || k==n  )? 1 :          // edge
+          (k==1 || k==n-1)? n :          // first
+          (     k+k < n  )?              // recursive:
+          (BinCoeff(n-1,k-1) * n)/k :       //  path to k=1   is faster
+          (BinCoeff(n-1,k) * n)/(n-k);      //  path to k=n-1 is faster
+    }
 
 	constexpr long ipow(int base, int expo, int result = 1)
 	{
@@ -110,7 +116,7 @@ namespace ngfem
             using BaseScalarMappedElement::BaseScalarMappedElement;
 
             ScalarMappedElement(int andof, int aord, CSR alocalmat, ELEMENT_TYPE aeltype, Vec<D> aelcenter = 0, double aelsize = 1, double ac = 1.0)
-            : BaseScalarMappedElement( andof, aord), localmat(alocalmat), elcenter(aelcenter), elsize(aelsize), eltype(aeltype), c(ac)
+            : BaseScalarMappedElement( andof, aord), localmat(alocalmat), eltype(aeltype), elcenter(aelcenter), elsize(aelsize), c(ac)
             {;}
 
             double GetWavespeed() const { return this->c; }

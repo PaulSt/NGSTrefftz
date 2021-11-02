@@ -1,13 +1,8 @@
 #include <comp.hpp>    // provides FESpace, ...
-#include <h1lofe.hpp>
-#include <regex>
 #include <python_comp.hpp>
-#include <fem.hpp>
-#include <multigrid.hpp>
 
 #include "trefftzfespace.hpp"
 #include "diffopmapped.hpp"
-#include "trefftzheatfe.hpp"
 
 namespace ngcomp
 {
@@ -17,15 +12,10 @@ namespace ngcomp
     {
         type="trefftzfespace";
 
-        //cout << "======== Constructor of TrefftzFESpace =========" << endl;
-        //cout << "Flags:" << endl << flags;
-
         D = ma->GetDimension() - 1;
 
         this->dgjumps = true;
-        heat = flags.GetNumFlag("heat",0);
-        heattest = flags.GetNumFlag("heattest",0);
-        order = int(flags.GetNumFlag ("order", 3)) * (1+(heat>0));
+        order = int(flags.GetNumFlag ("order", 3));
         c = flags.GetNumFlag ("wavespeed", 1);
         wavespeedcf = make_shared<ConstantCoefficientFunction>(c);
         basistype = flags.GetNumFlag ("basistype", 0);
@@ -33,8 +23,7 @@ namespace ngcomp
         usescale = flags.GetNumFlag("usescale",1);
         useqt = flags.GetNumFlag("useqt",0);
 
-
-        local_ndof = BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1) * (!heat);
+        local_ndof = BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1);
         nel = ma->GetNE();
         ndof = local_ndof * nel;
 
@@ -70,7 +59,7 @@ namespace ngcomp
             cout << "started auto diff.... ";
             shared_ptr<CoefficientFunction> GGcf = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
             shared_ptr<CoefficientFunction> GGcfx = make_shared<ConstantCoefficientFunction>(1)/(awavespeedcf*awavespeedcf);
-            if(aGGcf || useqt)
+            if(aGGcf)
             {
                 GGcf = aGGcf;
                 GGcfx = aGGcf;
@@ -122,40 +111,28 @@ namespace ngcomp
     {
         dnums.SetSize(0);
         if (!DefinedOn (ei) || ei.VB() != VOL) return;
-        // int n_vert = ma->GetNV();		int n_edge = ma->GetNEdges();		int n_cell = ma->GetNE(); Ngs_Element ngel = ma->GetElement (ei);
-        for (int j = ei.Nr()*local_ndof; j<local_ndof*(ei.Nr()+1); j++)
-        {
+        for(size_t j = ei.Nr()*local_ndof; j<local_ndof*(ei.Nr()+1); j++)
             dnums.Append (j);
-        }
-        //cout << "GetDofNrs: ei.Nr() = " << ei.Nr() << " local_ndof:" << local_ndof << " ndof: " << ndof << " dnums: \n" << dnums << endl <<
-        //"================================================" << endl ;
     }
 
 
     FiniteElement & TrefftzFESpace :: GetFE (ElementId ei, Allocator & alloc) const
     {
-
-        //auto vertices_index = ma->GetElVertices(ei);
-        //cout << "element vectice coord: \n"  << ma->GetPoint<3>(vertices_index[0]) << endl<< ma->GetPoint<3>(vertices_index[1]) <<endl<<ma->GetPoint<3>(vertices_index[2])<<endl<<ma->GetPoint<3>(vertices_index[3])<<endl;
-
         Ngs_Element ngel = ma->GetElement(ei);
         ELEMENT_TYPE eltype = ngel.GetType();
 
         if (ei.IsVolume())
         {
             switch (ma->GetElType(ei)) {
+                case ET_POINT:
                 case ET_SEGM:
                     {
+                        throw Exception("illegal dim for space-time element");
+                        break;
                     }
                 case ET_QUAD:
                 case ET_TRIG:
                     {
-                        LocalHeap lh(1000 * 1000);
-                        const ELEMENT_TYPE eltyp = ET_TRIG ;
-                        const int D=2;
-                        IntegrationRule ir (eltyp, 0);
-                        MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
-                        mip.Point() = ElCenter<1>(ei).Range(0,1);
                         if(BBder.Height()!=0 || useqt)
                         {
                             CSR basismat = static_cast<QTWaveBasis<1>*>(basis)->Basis(order, ElCenter<1>(ei), GGder, BBder);
@@ -170,13 +147,6 @@ namespace ngcomp
                 case ET_PYRAMID:
                 case ET_TET:
                     {
-                        LocalHeap lh(1000 * 1000);
-                        const ELEMENT_TYPE eltyp = ET_TRIG ;
-                        const int D=3;
-                        IntegrationRule ir (eltyp, 0);
-                        MappedIntegrationPoint<D,D> mip(ir[0], ma->GetTrafo (ElementId(0), lh));
-                        mip.Point() = ElCenter<2>(ei).Range(0,2);
-
                         if(BBder.Height()!=0 || useqt)
                         {
                             CSR basismat = static_cast<QTWaveBasis<2>*>(basis)->Basis(order, ElCenter<1>(ei), GGder, BBder);
@@ -196,69 +166,12 @@ namespace ngcomp
                  [&alloc] (auto et) -> FiniteElement&
                  { return * new (alloc) DummyFE<et.ElementType()>; });
         }
-        catch (Exception e)
+        catch (Exception &e)
         {
             throw Exception("illegal element type in Trefftz::GetSurfaceFE");
         }
     }
 
-
-    template<int D>
-    double TrefftzFESpace :: Adiam(ElementId ei, double c) const
-    {
-        double anisotropicdiam = 0.0;
-        auto vertices_index = ma->GetElVertices(ei);
-        for(auto vertex1 : vertices_index)
-        {
-            for(auto vertex2 : vertices_index)
-            {
-                Vec<D+1> v1 = ma->GetPoint<D+1>(vertex1);
-                Vec<D+1> v2 = ma->GetPoint<D+1>(vertex2);
-                //cout << "v1: " << v1 << " v1 part: " << v1(1,D-1) << "norm " << L2Norm(v1) << endl ;
-                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1.Range(0,D) - v2.Range(0,D)) + pow(c*(v1(D)-v2(D)),2) ) );
-            }
-        }
-        return anisotropicdiam * usescale + (usescale==0);
-    }
-
-
-    template<int D>
-    double TrefftzFESpace :: Adiam(ElementId ei, shared_ptr<CoefficientFunction> c) const
-    {
-        LocalHeap lh(1000 * 1000);
-        double anisotropicdiam = 0.0;
-        auto vertices_index = ma->GetElVertices(ei);
-
-        for(auto vertex1 : vertices_index)
-        {
-            for(auto vertex2 : vertices_index)
-            {
-                Vec<D+1> v1 = ma->GetPoint<D+1>(vertex1);
-                Vec<D+1> v2 = ma->GetPoint<D+1>(vertex2);
-                //cout << "v1: " << v1 << " v1 part: " << v1.Range(0,D) << " el type: " << ma->GetElType(ei) << " norm " << L2Norm(v1) << endl ;
-                IntegrationRule ir (ma->GetElType(ei), 0);
-                ElementTransformation & trafo = ma->GetTrafo (ei, lh);
-                MappedIntegrationPoint<D+1,D+1> mip(ir[0], trafo);
-                mip.Point() = v1;
-                double c1 = wavespeedcf->Evaluate(mip);
-                mip.Point() = v2;
-                double c2 = wavespeedcf->Evaluate(mip);
-
-                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1.Range(0,D) - v2.Range(0,D)) + pow(c1*v1(D)-c2*v2(D),2) ) );
-            }
-        }
-        return anisotropicdiam * usescale + (usescale==0);
-    }
-
-    template<int D>
-    Vec<D+1> TrefftzFESpace :: ElCenter(ElementId ei) const
-    {
-        Vec<D+1> center = 0;
-        auto vertices_index = ma->GetElVertices(ei);
-        for(auto vertex : vertices_index) center += ma->GetPoint<D+1>(vertex);
-        center *= (1.0/vertices_index.Size()) * useshift;
-        return center;
-    }
 
     DocInfo TrefftzFESpace :: GetDocu ()
     {
@@ -272,37 +185,32 @@ namespace ngcomp
         return docu;
     }
 
-    /*
-       register fe-spaces
-       Object of type TrefftzFESpace can be defined in the pde-file via
-       "define fespace v -type=trefftzfespace"
-       */
     static RegisterFESpace<TrefftzFESpace> initi_trefftz ("trefftzfespace");
 
 
-	// k-th coeff of Legendre polynomial of degree n in monomial basis
-	constexpr double LegCoeffMonBasis(int n, int k)
-	{
-		if(n==0) return 1;
-		if(k>n) return 0;
-		if((n+k)%2) return 0;
-		double coeff = pow(2,-n) * pow(-1,floor((n-k)/2)) * BinCoeff(n,floor((n-k)/2)) * BinCoeff(n+k,n);
-		// double coeff = pow(2,-n) * pow(-1,k) * BinCoeff(n,k) * BinCoeff(2*n-2*k,n);
-		return coeff;
-	}
+    // k-th coeff of Legendre polynomial of degree n in monomial basis
+    constexpr double LegCoeffMonBasis(int n, int k)
+    {
+        if(n==0) return 1;
+        if(k>n) return 0;
+        if((n+k)%2) return 0;
+        double coeff = pow(2,-n) * pow(-1,floor((n-k)/2)) * BinCoeff(n,floor((n-k)/2)) * BinCoeff(n+k,n);
+        // double coeff = pow(2,-n) * pow(-1,k) * BinCoeff(n,k) * BinCoeff(2*n-2*k,n);
+        return coeff;
+    }
 
-	// k-th coeff of Chebyshev polynomial of degree n in monomial basis
-	constexpr double ChebCoeffMonBasis(int n, int k)
-	{
-		if(n==0) return 1;
-		if(k>n) return 0;
-		if((n+k)%2) return 0;
-		double coeff = pow(2,k-1)*n*pow(-1,floor((n-k)/2)) * tgamma((n+k)/2)/(tgamma(floor((n-k)/2)+1)*tgamma(k+1));
-		return coeff;
-	}
+    // k-th coeff of Chebyshev polynomial of degree n in monomial basis
+    constexpr double ChebCoeffMonBasis(int n, int k)
+    {
+        if(n==0) return 1;
+        if(k>n) return 0;
+        if((n+k)%2) return 0;
+        double coeff = pow(2,k-1)*n*pow(-1,floor((n-k)/2)) * tgamma((n+k)/2)/(tgamma(floor((n-k)/2)+1)*tgamma(k+1));
+        return coeff;
+    }
 
     template<int D>
-    CSR TWaveBasis<D> :: Basis(int ord, int basistype)
+    CSR TWaveBasis<D> :: Basis(int ord, int basistype, int fosystem)
     {
         CSR tb;
         const int ndof = (BinCoeff(D + ord, ord) + BinCoeff(D + ord-1, ord-1));
@@ -310,13 +218,12 @@ namespace ngcomp
         Matrix<> trefftzbasis(ndof,npoly);
         trefftzbasis = 0;
         Vec<D+1, int>  coeff = 0;
-        int count = 0;
         for(int b=0;b<ndof;b++)
         {
             int tracker = 0;
             TB_inner(ord, trefftzbasis, coeff, b, D+1, tracker, basistype);
         }
-        MatToCSR(trefftzbasis,tb);
+        MatToCSR(trefftzbasis.Rows(fosystem,ndof),tb);
         return tb;
     }
 
@@ -414,10 +321,10 @@ namespace ngcomp
 
         if ( gtbstore[encode][0].Size() == 0)
         {
-            IntegrationRule ir (D==3?ET_TET:D==2?ET_TRIG:ET_SEGM, 0);
+            IntegrationPoint ip(ElCenter,0);
             Mat<D,D> dummy;
             FE_ElementTransformation<D,D> et(D==3?ET_TET:D==2?ET_TRIG:ET_SEGM,dummy);
-            MappedIntegrationPoint<D,D> mip(ir[0],et,0);
+            MappedIntegrationPoint<D,D> mip(ip,et,0);
             for(int i=0;i<D;i++)
                 mip.Point()[i] = ElCenter[i];
 
@@ -430,7 +337,7 @@ namespace ngcomp
                     double fac = (factorial(nx)*factorial(ny));
                     BB(nx,ny) = BBder(nx,ny)->Evaluate(mip)/fac * pow(elsize,nx+ny);
                     if(nx<ord-1 && ny<ord-1)
-                    GG(nx,ny) = GGder(nx,ny)->Evaluate(mip)/fac * pow(elsize,nx+ny);
+                        GG(nx,ny) = GGder(nx,ny)->Evaluate(mip)/fac * pow(elsize,nx+ny);
                 }
             }
 
@@ -482,11 +389,11 @@ namespace ngcomp
                                         + (x-betax+1)*(betax+1)/((t+2)*(t+1)*GG(0)) * BB(x-betax+1,y-betay)
                                         * qbasis( basisn, getcoeffx);
                                     if(D==2)
-                                    *newcoeff +=
-                                        (betay+2)*(betay+1)/((t+2)*(t+1)*GG(0)) * BB(x-betax,y-betay)
-                                        * qbasis( basisn, getcoeffyy)
-                                        + (y-betay+1)*(betay+1)/((t+2)*(t+1)*GG(0)) * BB(x-betax,y-betay+1)
-                                        * qbasis( basisn, getcoeffy);
+                                        *newcoeff +=
+                                            (betay+2)*(betay+1)/((t+2)*(t+1)*GG(0)) * BB(x-betax,y-betay)
+                                            * qbasis( basisn, getcoeffyy)
+                                            + (y-betay+1)*(betay+1)/((t+2)*(t+1)*GG(0)) * BB(x-betax,y-betay+1)
+                                            * qbasis( basisn, getcoeffy);
                                     if(betax+betay == x+y) continue;
                                     index[1] = betay; index[0] = betax; index[D] = t+2;
                                     int getcoeff = TWaveBasis<D>::IndexMap2(index, ord);
