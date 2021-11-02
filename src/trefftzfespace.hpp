@@ -2,7 +2,6 @@
 #define FILE_TREFFTZFESPACE_HPP
 
 #include "scalarmappedfe.hpp"
-#include <boost/math/special_functions/airy.hpp>
 
 namespace ngcomp
 {
@@ -26,7 +25,7 @@ namespace ngcomp
 
   public:
     TWaveBasis () { ; }
-    static CSR Basis (int ord, int basistype = 0);
+    static CSR Basis (int ord, int basistype = 0, int fosystem = 0);
     static int IndexMap2 (Vec<D + 1, int> index, int ord);
   };
 
@@ -49,14 +48,11 @@ namespace ngcomp
     int order;
     size_t ndof;
     int nel;
-    int nvert;
     int local_ndof;
     float c = 1;
     int useshift = 1;
     int usescale = 1;
     int useqt = 0;
-    int heat = 0;
-    int heattest = 0;
     int basistype;
     shared_ptr<CoefficientFunction> wavespeedcf = nullptr;
     Matrix<shared_ptr<CoefficientFunction>> GGder;
@@ -76,65 +72,33 @@ namespace ngcomp
     static DocInfo GetDocu ();
 
   protected:
-    template <int D> double Adiam (ElementId ei, double c) const;
-    template <int D>
-    double Adiam (ElementId ei, shared_ptr<CoefficientFunction> c) const;
-    template <int D> Vec<D + 1> ElCenter (ElementId ei) const;
-  };
-
-  struct GenericAiry
-  {
-    double operator() (double x) const { return boost::math::airy_ai (x); }
-    SIMD<double> operator() (SIMD<double> x) const
+    template <int D> double Adiam (ElementId ei, double c) const
     {
-      return SIMD<double> (
-          [&] (int i) -> double { return boost::math::airy_ai (x[i]); });
+      double anisotropicdiam = 0.0;
+      auto vertices_index = ma->GetElVertices (ei);
+      for (auto vertex1 : vertices_index)
+        {
+          for (auto vertex2 : vertices_index)
+            {
+              Vec<D + 1> v1 = ma->GetPoint<D + 1> (vertex1);
+              Vec<D + 1> v2 = ma->GetPoint<D + 1> (vertex2);
+              anisotropicdiam
+                  = max (anisotropicdiam,
+                         sqrt (L2Norm2 (v1.Range (0, D) - v2.Range (0, D))
+                               + pow (c * (v1 (D) - v2 (D)), 2)));
+            }
+        }
+      return anisotropicdiam * usescale + (usescale == 0);
     }
-    template <typename T> T operator() (T x) const
+    template <int D> Vec<D + 1> ElCenter (ElementId ei) const
     {
-      throw Exception (string ("airy not available for type ")
-                       + typeid (T).name ());
+      Vec<D + 1> center = 0;
+      auto vertices_index = ma->GetElVertices (ei);
+      for (auto vertex : vertices_index)
+        center += ma->GetPoint<D + 1> (vertex);
+      center *= (1.0 / vertices_index.Size ()) * useshift;
+      return center;
     }
-    template <typename T> AutoDiff<1, T> operator() (AutoDiff<1, T> x) const
-    {
-      throw Exception ("airy(..) is not complex differentiable");
-    }
-    template <typename T>
-    AutoDiffDiff<1, T> operator() (AutoDiffDiff<1, T> x) const
-    {
-      throw Exception ("airy(..) is not complex differentiable");
-    }
-    static string Name () { return "airy"; }
-    void DoArchive (Archive &ar) {}
-  };
-
-  struct GenericAiryP
-  {
-    double operator() (double x) const
-    {
-      return boost::math::airy_ai_prime (x);
-    }
-    SIMD<double> operator() (SIMD<double> x) const
-    {
-      return SIMD<double> (
-          [&] (int i) -> double { return boost::math::airy_ai_prime (x[i]); });
-    }
-    template <typename T> T operator() (T x) const
-    {
-      throw Exception (string ("airy prime not available for type ")
-                       + typeid (T).name ());
-    }
-    template <typename T> AutoDiff<1, T> operator() (AutoDiff<1, T> x) const
-    {
-      throw Exception ("airyp(..) is not complex differentiable");
-    }
-    template <typename T>
-    AutoDiffDiff<1, T> operator() (AutoDiffDiff<1, T> x) const
-    {
-      throw Exception ("airyp(..) is not complex differentiable");
-    }
-    static string Name () { return "airyp"; }
-    void DoArchive (Archive &ar) {}
   };
 
 }
