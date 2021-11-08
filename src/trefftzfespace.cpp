@@ -29,6 +29,8 @@ namespace ngcomp
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
 
+    SetDefinedOn (BND, BitArray (ma->GetNRegions (BND)).Clear ());
+
     switch (D)
       {
       case 1:
