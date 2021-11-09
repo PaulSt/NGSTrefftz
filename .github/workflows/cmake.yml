@@ -15,10 +15,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:     
       - uses: actions/checkout@v2
-      - name: Install ngsolve 
-        run: bash ${{github.workspace}}/.github/workflows/setup_ngsolve.sh 
-      - name: Make tngs
-        run: source ${{github.workspace}}/.github/workflows/setup_tngs.sh 
+      - env:
+          NETGENDIR: ${{env.HOME}}/ngsuite/ngsolve-install/bin
+          PYTHONPATH: ${{env.HOME}}/ngsuite/ngsolve-install/lib/python3/dist-packages:${{ env.PYTHONPATH }}:${{ env.PATH }}
+          PATH: ${{ env.NETGENDIR }}:${{ env.PATH }}
+      - name: Print environment variables
+        run: |
+          echo "NETGENDIR=$NETGENDIR"
+          echo "PATH=$PATH"
+      #- name: Install ngsolve 
+      - run: mkdir ${{env.HOME}}/ngsuite && mkdir ${{env.HOME}}/ngsuite/ngsolve-build && mkdir /home/app/ngsuite/ngsolve-install
+      - run: git clone https://github.com/NGSolve/ngsolve.git ${{env.HOME}}/ngsuite/ngsolve-src
+      - run: cd ${{env.HOME}}/ngsuite/ngsolve-src && git submodule update --init --recursive
+      - run: sed -i '3481 a template class SIMD_MappedIntegrationRule<3,4>;' ${{env.HOME}}/ngsuite/ngsolve-src/fem/intrule.cpp
+      - run: cmake -DCMAKE_INSTALL_PREFIX=${{env.HOME}}/ngsuite/ngsolve-install -B${{env.HOME}}/ngsuite/ngsolve-build -S${{env.HOME}}/ngsuite/ngsolve-src/
+      - run: cmake -B${{github.workspace}} -S${{github.workspace}}/src
+
+      #- run:  make -C/home/app/ngsuite/ngsolve-build
+      #- run:  make -C/home/app/ngsuite/ngsolve-build install
+      
+      #- run:  make -C/home/app/ngstents
+      #- run:  make -C/home/app/ngstents install
+      #- name: Make tngs
+      #  run: source ${{github.workspace}}/.github/workflows/setup_tngs.sh 
       - name: Debugging with tmate
         if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3.6
