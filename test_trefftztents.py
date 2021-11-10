@@ -1,5 +1,5 @@
 from tngs import *
-from ngstents import TentSlab
+# from ngstents import TentSlab
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from ngsolve.TensorProductTools import *
