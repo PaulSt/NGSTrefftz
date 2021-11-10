@@ -1,7 +1,8 @@
 from ngsolve.fem import ET,IntegrationRule
 from ngsolve.comp import L2,BilinearForm,LinearForm,SymbolicBFI,SymbolicLFI
 from ngsolve.fem import CoordCF
-from .tngs import *
+from ngstents._pytents import TentSlab, Tent
+from ._tngs import *
 from tngs.DGeq import *
 from tngs.prodmesh import *
 
