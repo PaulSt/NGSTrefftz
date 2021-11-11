@@ -2,6 +2,7 @@
 #include <h1lofe.hpp>
 #include <paralleldepend.hpp>
 #include "trefftzfespace.hpp"
+#include "intrule4.cpp"
 
 namespace ngcomp
 {
