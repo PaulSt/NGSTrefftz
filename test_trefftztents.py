@@ -152,7 +152,7 @@ def TestAiryTent(order, initmesh, t_step,qtrefftz=1):
     t_start = 0
 
     c=1
-    if D is 1:
+    if D == 1:
         bdd = CoefficientFunction((
             airy(-x-c)*cos(y),
             -airyp(-x-c)*cos(y),
@@ -242,7 +242,7 @@ def SolveWaveTentsFO(initmesh, order, c, t_step):
 
 
 if __name__ == "__main__":
-    order = 2
+    order = 4
     SetNumThreads(1)
     c = 1
     t_step = 2/sqrt(3)
