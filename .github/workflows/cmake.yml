@@ -18,29 +18,15 @@ jobs:
         run: |
              sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install vim python3 python3-pip python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake git g++ libglu1-mesa-dev libblas-dev liblapack-dev
              sudo apt-get -y install libboost-all-dev
-      - name: clone mod NGSolve
-        run: |
-             mkdir /home/runner/work/ngsuite 
-             mkdir /home/runner/work/ngsuite/ngsolve-build 
-             mkdir /home/runner/work/ngsuite/ngsolve-install
-             git clone https://github.com/NGSolve/ngsolve.git /home/runner/work/ngsuite/ngsolve-src
-             cd /home/runner/work/ngsuite/ngsolve-src && git submodule update --init --recursive
-             sed -i '3481 a template class SIMD_MappedIntegrationRule<3,4>;' /home/runner/work/ngsuite/ngsolve-src/fem/intrule.cpp
-      - name: cmake NGSolve
-        run: |
-             cmake -DCMAKE_INSTALL_PREFIX=/home/runner/work/ngsuite/ngsolve-install -B/home/runner/work/ngsuite/ngsolve-build -S/home/runner/work/ngsuite/ngsolve-src/
+             sudo apt-get install -y software-properties-common
+             sudo add-apt-repository universe
+             sudo add-apt-repository ppa:ngsolve/ngsolve -y
+             sudo apt-get install ngsolve -y
+
       - name: set path
         run: |
-             echo "${{ env.NETGENDIR }}" >> $GITHUB_PATH
-             echo "PYTHONPATH=${{ env.NETGEN_PYTHONPATH }}" >> $GITHUB_ENV
-             echo "NETGENDIR=${{ env.NETGENDIR }}"  >> $GITHUB_ENV
-        env:
-             NETGENDIR: /home/runner/work/ngsuite/ngsolve-install/bin
-             NETGEN_PYTHONPATH: /home/runner/work/ngsuite/ngsolve-install/lib/python3/dist-packages
-      - name: compile NGSolve
-        run: |
-             make -C/home/runner/work/ngsuite/ngsolve-build
-             make -C/home/runner/work/ngsuite/ngsolve-build install
+             echo "PYTHONPATH=/usr/lib/python3/dist-packages/" >> $GITHUB_ENV
+             echo "NETGENDIR=/usr/bin/" >> $GITHUB_ENV
       - uses: actions/checkout@v2
       - name: cmake NGSTrefftz
         run: |
