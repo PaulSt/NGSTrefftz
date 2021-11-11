@@ -267,8 +267,9 @@ namespace ngfem
       CalcShape (mir, shape);
       const int nsimd = SIMD<double>::Size ();
       FlatMatrix<double> bdbmat (this->ndof, mir.Size () * nsimd,
-                                 &shape (0, 0)[0]);
-      FlatVector<double> bdbvec (mir.Size () * nsimd, &values (0)[0]);
+                                 reinterpret_cast<double *> (&shape (0, 0)));
+      FlatVector<double> bdbvec (mir.Size () * nsimd,
+                                 reinterpret_cast<double *> (&values (0)));
       bdbvec = Trans (bdbmat) * coefs;
     }
     void
@@ -280,8 +281,9 @@ namespace ngfem
       CalcShape (mir, shape);
       const int nsimd = SIMD<double>::Size ();
       FlatMatrix<double> bdbmat (this->ndof, mir.Size () * nsimd,
-                                 &shape (0, 0)[0]);
-      FlatVector<double> bdbvec (mir.Size () * nsimd, &values (0)[0]);
+                                 reinterpret_cast<double *> (&shape (0, 0)));
+      FlatVector<double> bdbvec (mir.Size () * nsimd,
+                                 reinterpret_cast<double *> (&values (0)));
       coefs.Range (0, this->ndof) += bdbmat * bdbvec;
     }
 
@@ -294,9 +296,11 @@ namespace ngfem
                                             &mem[0]);
       CalcDShape (ir, simddshapes);
       const int nsimd = SIMD<double>::Size ();
-      FlatMatrix<double> dshapes (this->ndof, D * nsimd * ir.Size (),
-                                  &simddshapes (0, 0)[0]);
-      FlatVector<double> bdbvec (D * nsimd * ir.Size (), &values (0, 0)[0]);
+      FlatMatrix<double> dshapes (
+          this->ndof, D * nsimd * ir.Size (),
+          reinterpret_cast<double *> (&simddshapes (0, 0)));
+      FlatVector<double> bdbvec (D * nsimd * ir.Size (),
+                                 reinterpret_cast<double *> (&values (0, 0)));
       bdbvec = Trans (dshapes) * coefs;
     }
     void AddGradTrans (const SIMD_BaseMappedIntegrationRule &mir,
@@ -308,9 +312,11 @@ namespace ngfem
                                             &mem[0]);
       CalcDShape (mir, simddshapes);
       const int nsimd = SIMD<double>::Size ();
-      FlatMatrix<double> dshapes (this->ndof, D * nsimd * mir.Size (),
-                                  &simddshapes (0, 0)[0]);
-      FlatVector<double> bdbvec (D * nsimd * mir.Size (), &values (0, 0)[0]);
+      FlatMatrix<double> dshapes (
+          this->ndof, D * nsimd * mir.Size (),
+          reinterpret_cast<double *> (&simddshapes (0, 0)));
+      FlatVector<double> bdbvec (D * nsimd * mir.Size (),
+                                 reinterpret_cast<double *> (&values (0, 0)));
       coefs.Range (0, this->ndof) += dshapes * bdbvec;
     }
   };
