@@ -165,7 +165,7 @@ namespace ngcomp
                 }
             }
         tel.CalcDShape(smir,simddshapes);
-        FlatMatrix<> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
+        FlatMatrix<> bbmat(nbasis,(D+1)*snip,reinterpret_cast<double*>(&simddshapes(0,0)));
         elvec -= bbmat * bdbvec;
 
         // stabilization to recover second order solution
@@ -178,7 +178,7 @@ namespace ngcomp
             AddABt(simdshapes,simdshapes,elmat);
             for(size_t imip=0;imip<sir.Size();imip++)
                 simdshapes.Col(imip) *= sqrt(area*sir[imip].Weight());
-            FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
+            FlatMatrix<> shapes(nbasis,snip,reinterpret_cast<double*>(&simdshapes(0,0)));
             elvec += shapes*wavefront.Row(elnr).Range(0,snip);
         }
 
@@ -257,7 +257,7 @@ namespace ngcomp
 
         FlatMatrix<SIMD<double>> simddshapes((D+1)*nbasis,sir.Size(),slh);
         tel.CalcDShape(smir,simddshapes);
-        FlatMatrix<double> bbmat(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
+        FlatMatrix<double> bbmat(nbasis,(D+1)*snip,reinterpret_cast<double*>(&simddshapes(0,0)));
 
 
         for(size_t imip=0;imip<smir.Size();imip++)
@@ -357,12 +357,12 @@ namespace ngcomp
         tel.SetWavespeed(this->wavespeed[elnums[0]]);
         FlatMatrix<SIMD<double>> simddshapes1((D+1)*nbasis,sir.Size(),slh);
         tel.CalcDShape(smir,simddshapes1);
-        bbmat[0] = new FlatMatrix<>(nbasis,(D+1)*snip,&simddshapes1(0,0)[0]);
+        bbmat[0] = new FlatMatrix<>(nbasis,(D+1)*snip,reinterpret_cast<double*>(&simddshapes1(0,0)));
 
         tel.SetWavespeed(this->wavespeed[elnums[1]]);
         FlatMatrix<SIMD<double>> simddshapes2((D+1)*nbasis,sir.Size(),slh);
         tel.CalcDShape(smir,simddshapes2);
-        bbmat[1] = new FlatMatrix<>(nbasis,(D+1)*snip,&simddshapes2(0,0)[0]);
+        bbmat[1] = new FlatMatrix<>(nbasis,(D+1)*snip,reinterpret_cast<double*>(&simddshapes2(0,0)));
 
         FlatMatrix<>* bdbmat[4];
         for(int i=0;i<4;i++)
@@ -421,8 +421,8 @@ namespace ngcomp
         if(!fosystem)
         tel.CalcShape(smir,simdshapes);
         //tel.CalcDShape(smir,simddshapes);
-        FlatMatrix<> dshapes(nbasis,(D+1)*snip,&simddshapes(0,0)[0]);
-        FlatMatrix<> shapes(nbasis,snip,&simdshapes(0,0)[0]);
+        FlatMatrix<> dshapes(nbasis,(D+1)*snip,reinterpret_cast<double*>(&simddshapes(0,0)));
+        FlatMatrix<> shapes(nbasis,snip,reinterpret_cast<double*>(&simdshapes(0,0)));
         if(!fosystem)
         wavefront.Row(elnr).Range(0,snip) = Trans(shapes)*sol;
         wavefront.Row(elnr).Range(snip*(!fosystem),snip*(!fosystem)+snip*(D+1)) = Trans(dshapes)*sol;
