@@ -1,10 +1,3 @@
 # trefftzngs
-![](https://github.com/PaulSt/tngs/setup/badge.svg)
 
-I am working on a DG tent-pitching extension for NGSolve using Trefftz basis functions. The code is under constant development. 
-
-depends on [ngsolve](https://github.com/NGSolve/ngsolve)
-and requires to add to [intrule.cpp](https://github.com/NGSolve/ngsolve/blob/master/fem/intrule.cpp)
-```
-template class SIMD_MappedIntegrationRule<3,4>;
-```
+I am working on Trefftz basis functions for [ngsolve](https://github.com/NGSolve/ngsolve). 
