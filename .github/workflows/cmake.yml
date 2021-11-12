@@ -35,7 +35,7 @@ jobs:
       - name: compile NGSTrefftz
         run: |
              make -C/home/runner/work/tngs/tngs/make
-             make -C/home/runner/work/tngs/tngs/make install  
+             sudo make -C/home/runner/work/tngs/tngs/make install  
       - name: test NGSTrefftz
         run: python3 /home/runner/work/tngs/tngs/test_trefftz.py -v
       - name: Debugging with tmate
