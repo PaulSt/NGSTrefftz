@@ -33,7 +33,7 @@ def GetWave(self,U):
         u,v = fes.TnT()
         wavefront = self.GetWavefront()
         a = BilinearForm(fes)
-        a += SymbolicBFI(InnerProduct(u,v))
+        a += SymbolicBFI(u*v)
         a.Assemble()
 
         sirsize = int(wavefront.Width()/(D+1))
