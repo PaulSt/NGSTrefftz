@@ -9,7 +9,7 @@
 //#include <tents.hpp>
 #include "meshtentslab.hpp"
 #include "twavetents.hpp"
-#include "svdtrefftz.cpp"
+//#include "svdtrefftz.hpp"
 
 #include "airy.cpp"
 

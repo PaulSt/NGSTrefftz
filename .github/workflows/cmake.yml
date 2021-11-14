@@ -28,11 +28,10 @@ jobs:
              echo "PYTHONPATH=/usr/lib/python3/dist-packages/" >> $GITHUB_ENV
              echo "NETGENDIR=/usr/bin/" >> $GITHUB_ENV
       - uses: actions/checkout@v2
-        ref: '08c09e52e92fdc45dfea40123e771c9269dbb38d'
+        with:
+          ref: '08c09e52e92fdc45dfea40123e771c9269dbb38d'
       - name: cmake NGSTrefftz
-        run: |
-             mkdir /home/runner/work/tngs/make
-             cmake -B/home/runner/work/tngs/tngs/make -S/home/runner/work/tngs/tngs/src
+        run: cmake -B/home/runner/work/tngs/tngs/make -S/home/runner/work/tngs/tngs/src
       - name: compile NGSTrefftz
         run: |
              make -C/home/runner/work/tngs/tngs/make
@@ -59,11 +58,10 @@ jobs:
              echo "PYTHONPATH=/usr/lib/python3/dist-packages/" >> $GITHUB_ENV
              echo "NETGENDIR=/usr/bin/" >> $GITHUB_ENV
       - uses: actions/checkout@v2
-        ref: '08c09e52e92fdc45dfea40123e771c9269dbb38d'
+        with:
+          ref: '08c09e52e92fdc45dfea40123e771c9269dbb38d'
       - name: cmake NGSTrefftz
-        run: |
-             mkdir /home/runner/work/tngs/make
-             cmake -B/home/runner/work/tngs/tngs/make -S/home/runner/work/tngs/tngs/src
+        run: cmake -B/home/runner/work/tngs/tngs/make -S/home/runner/work/tngs/tngs/src
       - name: compile NGSTrefftz
         run: |
              make -C/home/runner/work/tngs/tngs/make
@@ -79,6 +77,7 @@ jobs:
       - name: install pkgs
         run: |
              brew install python
+             brew install boost
              wget https://www.asc.tuwien.ac.at/~mhochsteger/ngsolve/macos/NGSolve_nightly.dmg
              hdiutil attach NGSolve_nightly.dmg
              cp -R /Volumes/NGSolve/* /Applications
@@ -91,13 +90,13 @@ jobs:
              echo "$NETGENDIR" >> $GITHUB_PATH
       - uses: actions/checkout@v2
       - name: cmake NGSTrefftz
-        run: |
-             mkdir ~/work/ngstents/make
-             cmake -B~/work/ngstents/make -S~/work/ngstents/src/trefftz
+        run: cmake -B/Users/runner/work/tngs/tngs/make -S/Users/runner/work/tngs/tngs/src
       - name: compile NGSTrefftz
         run: |
-             make -C~/work/ngstents/make
-             sudo make -C/home/runner/work/ngstents/make install  
+             make -C/Users/runner/work/tngs/tngs/make
+             sudo make -C/Users/runner/work/tngs/tngs/make install  
+      - name: test NGSTrefftz
+        run: python3 /Users/runner/work/tngs/tngs/test_trefftz.py -v
       - name: Debugging with tmate
         if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3.6
