@@ -20,7 +20,6 @@ add_ngsolve_python_module(_pytents
   )
 
 add_ngsolve_python_module(_tngs 
-    #../dep/python_tents.cpp
     python_trefftz.cpp
     diffopmapped.hpp
     scalarmappedfe.cpp
@@ -28,8 +27,9 @@ add_ngsolve_python_module(_tngs
     trefftzfespace.cpp
     monomialfespace.cpp
     specialcoefficientfunction.cpp
-    #../dep/tents.cpp
     twavetents.cpp
+    svdtrefftz.cpp
+    airy.cpp
     meshtentslab.cpp
     )
 target_link_libraries(_tngs PRIVATE _pytents)
