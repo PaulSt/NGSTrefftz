@@ -267,9 +267,9 @@ namespace ngfem
                 Cast(fel).CalcMappedDShape (mip, Trans(mat));
             }
 
-            template <typename MAT>
+            template <typename SCALMIP, typename MAT>
             static void GenerateMatrix (const FiniteElement & fel,
-                    const MappedIntegrationPoint<D,D,Complex> & mip,
+                    const MappedIntegrationPoint<D,D,SCALMIP> & mip,
                     MAT && mat, LocalHeap & lh)
             {
                 HeapReset hr(lh);
