@@ -925,8 +925,8 @@ namespace ngcomp
 #ifdef NGS_PYTHON
 #include <python_ngstd.hpp>
 
-    template<class T, int D>
-    void DeclareETClass(py::module &m, std::string typestr)
+template<class T, int D>
+void DeclareETClass(py::module &m, std::string typestr)
 {
     using PyETclass = T;
     std::string pyclass_name = typestr;

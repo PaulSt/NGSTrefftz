@@ -28,7 +28,7 @@ add_ngsolve_python_module(_tngs
     monomialfespace.cpp
     specialcoefficientfunction.cpp
     twavetents.cpp
-    #svdtrefftz.cpp
+    svdtrefftz.cpp
     airy.cpp
     meshtentslab.cpp
     )
