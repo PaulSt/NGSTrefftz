@@ -15,6 +15,22 @@ namespace ngcomp
 
   class PolBasis
   {
+  protected:
+    template <int D> static int IndexMap2 (Vec<D + 1, int> index, int ord)
+    {
+      int sum = 0;
+      int temp_size = 0;
+      for (int d = 0; d < D + 1; d++)
+        {
+          for (int p = 0; p < index (d); p++)
+            {
+              sum += BinCoeff (D - d + ord - p - temp_size,
+                               ord - p - temp_size);
+            }
+          temp_size += index (d);
+        }
+      return sum;
+    }
   };
 
   template <int D> class TWaveBasis : public PolBasis
@@ -26,7 +42,6 @@ namespace ngcomp
   public:
     TWaveBasis () { ; }
     static CSR Basis (int ord, int basistype = 0, int fosystem = 0);
-    static int IndexMap2 (Vec<D + 1, int> index, int ord);
   };
 
   template <int D> class QTWaveBasis : public PolBasis
@@ -42,6 +57,17 @@ namespace ngcomp
                double elsize = 1.0, int basistype = 0);
   };
 
+  template <int D> class TLapBasis : public PolBasis
+  {
+    static void TB_inner (int ord, Matrix<> &trefftzbasis,
+                          Vec<D + 1, int> coeffnum, int basis, int dim,
+                          int &tracker, int basistype, double wavespeed = 1.0);
+
+  public:
+    TLapBasis () { ; }
+    static CSR Basis (int ord, int basistype = 0, int fosystem = 0);
+  };
+
   class TrefftzFESpace : public FESpace
   {
     int D;
@@ -50,6 +76,7 @@ namespace ngcomp
     int nel;
     int local_ndof;
     float c = 1;
+    string eqtyp = "wave";
     int useshift = 1;
     int usescale = 1;
     int useqt = 0;
