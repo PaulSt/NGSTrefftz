@@ -76,7 +76,7 @@ def PySVDTrefftz(op,fes,eps):
 
 order = 6
 exact = exp(x)*sin(y)
-eps = 10**-8
+eps = 10**-7
 
 mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
 SetNumThreads(3)
