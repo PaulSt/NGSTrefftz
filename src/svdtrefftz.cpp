@@ -15,9 +15,9 @@ namespace ngcomp
     Array<int> iwork (max (n, m) * 9);
     ngbla::integer info;
     // char jobu = 'A', jobv = 'A';
-    char jobu = 'F', jobv = 'N';
-    char joba = 'A', jobr = 'R';
-    char jobt = 'N', jobp = 'N';
+    // char jobu = 'F', jobv = 'N';
+    // char joba = 'A', jobr = 'R';
+    // char jobt = 'N', jobp = 'N';
     char jobz = 'A';
     ngbla::integer lda = A.Dist (), ldu = U.Dist (), ldv = V.Dist ();
     ngbla::integer lwork = work.Size ();
@@ -64,70 +64,49 @@ namespace ngcomp
     Array<Matrix<double>> Pmats (ma->GetNE (VOL));
     Array<int> nzs (ma->GetNE (VOL));
 
-    ma->IterateElements (
-        VOL, lh,
-        [&] (auto ei, LocalHeap &mlh)
-        // for (auto ei : ma->Elements(VOL))
-        {
-          HeapReset hr (lh);
-          Array<DofId> dofs;
-          fes->GetDofNrs (ei, dofs);
-          auto &trafo = ma->GetTrafo (ei, lh);
-          auto &fel = fes->GetFE (ei, lh);
+    ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
+      HeapReset hr (mlh);
+      Array<DofId> dofs;
+      fes->GetDofNrs (ei, dofs);
+      auto &trafo = ma->GetTrafo (ei, mlh);
+      auto &fel = fes->GetFE (ei, mlh);
 
-          // FlatMatrix<> elmat(dofs.Size(), lh);
-          Matrix<> elmat (dofs.Size ());
-          FlatMatrix<> elmati (dofs.Size (), lh);
-          elmat = 0.0;
-          for (auto &bfi : bfis[VOL])
-            {
-              bfi->CalcElementMatrix (fel, trafo, elmati, lh);
-              elmat += elmati;
-            }
-          // cout << elmat << endl;
-          Matrix<double, ColMajor> U (dofs.Size (), dofs.Size ()),
-              V (dofs.Size (), dofs.Size ());
-          // CalcSVD(elmat,U,V);
-          LapackSVD (elmat, U, V);
-          int nz = 0;
-          for (auto sv : elmat.Diag ())
-            if (sv < eps)
-              nz++;
-          nzs[ei.Nr ()] = nz;
-          // Pwidth += nz;
-          // Pmats[ei.Nr()].AssignMemory (dofs.Size(),dofs.Size(),
-          // allvalues.Addr(dofs.Size()*dofs.Size()*ei.Nr()));
-          Pmats[ei.Nr ()] = (U.Cols (dofs.Size () - nz, dofs.Size ()));
-          // cout << elmat << endl;
-          // cout << U << endl;
-          // cout << Pmats[ei.Nr()] << endl;
-          // auto UT = Trans(U);
-          // cout << U*elmat*UT << endl;
-          // cout << U*elmat*V << endl;
-          // cout << Pmats[ei.Nr()] << endl;
-        });
+      FlatMatrix<> elmat (dofs.Size (), mlh), elmati (dofs.Size (), mlh);
+      elmat = 0.0;
+      for (auto &bfi : bfis[VOL])
+        {
+          bfi->CalcElementMatrix (fel, trafo, elmati, mlh);
+          elmat += elmati;
+        }
+      FlatMatrix<double, ColMajor> U (dofs.Size (), mlh),
+          V (dofs.Size (), mlh);
+      // CalcSVD(elmat,U,V);
+      LapackSVD (elmat, U, V);
+      int nz = 0;
+      for (auto sv : elmat.Diag ())
+        if (sv < eps)
+          nz++;
+      nzs[ei.Nr ()] = nz;
+      // Pmats[ei.Nr()].AssignMemory (dofs.Size(),dofs.Size(),
+      // allvalues.Addr(dofs.Size()*dofs.Size()*ei.Nr()));
+      Pmats[ei.Nr ()] = (U.Cols (dofs.Size () - nz, dofs.Size ()));
+    });
 
     TableCreator<int> creator (ma->GetNE (VOL));
     TableCreator<int> creator2 (ma->GetNE (VOL));
-    for (; !creator.Done (); creator++)
-      ma->IterateElements (VOL, [&] (auto ei)
-                           // for (auto ei : ma->Elements(VOL))
-                           {
-                             Array<DofId> dnums;
-                             fes->GetDofNrs (ei, dnums);
-                             for (DofId d : dnums)
-                               // if (IsRegularDof(d))
-                               creator.Add (ei.Nr (), d);
-                           });
-    for (; !creator2.Done (); creator2++)
-      for (auto ei : ma->Elements (VOL))
-        {
-          int prevdofs = 0;
-          for (int i = 0; i < ei.Nr (); i++)
-            prevdofs += nzs[ei.Nr ()];
-          for (int d = 0; d < nzs[ei.Nr ()]; d++)
-            creator2.Add (ei.Nr (), d + prevdofs);
-        }
+    for (; !creator.Done (); creator++, creator2++)
+      ma->IterateElements (VOL, [&] (auto ei) {
+        Array<DofId> dnums;
+        fes->GetDofNrs (ei, dnums);
+        for (DofId d : dnums)
+          // if (IsRegularDof(d))
+          creator.Add (ei.Nr (), d);
+        int prevdofs = 0;
+        for (int i = 0; i < ei.Nr (); i++)
+          prevdofs += nzs[ei.Nr ()];
+        for (int d = 0; d < nzs[ei.Nr ()]; d++)
+          creator2.Add (ei.Nr (), d + prevdofs);
+      });
     auto table = creator.MoveTable ();
     auto table2 = creator2.MoveTable ();
 
@@ -140,16 +119,9 @@ namespace ngcomp
     SparseMatrix<double> P (fes->GetNDof (), Pwidth, table, table2, false);
     P.SetZero ();
 
-    ma->IterateElements (VOL, [&] (auto ei)
-                         // for(auto ei : ma->Elements(VOL))
-                         {
-                           // Array<DofId> dofs;
-                           // fes->GetDofNrs(ei, dofs);
-                           // cout << Pmats[ei.Nr()] << endl;
-                           P.AddElementMatrix (table[ei.Nr ()],
-                                               table2[ei.Nr ()],
-                                               Pmats[ei.Nr ()]);
-                         });
+    ma->IterateElements (VOL, [&] (auto ei) {
+      P.AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()], Pmats[ei.Nr ()]);
+    });
     svdtt.Stop ();
     shared_ptr<BaseMatrix> re = make_shared<SparseMatrix<double>> (P);
     return re;
