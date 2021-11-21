@@ -78,27 +78,26 @@ order = 6
 exact = exp(x)*sin(y)
 eps = 10**-8
 
-mesh = Mesh(unit_square.GenerateMesh(maxh=0.5))
+mesh = Mesh(unit_square.GenerateMesh(maxh=0.1))
+SetNumThreads(3)
 for order in range(3,7):
     print("ORDER ",order)
 
     ########################################################################
     # L2
     ########################################################################
-    # fes = L2(mesh, order=order,  dgjumps=True)#,all_dofs_together=True)
-    # a,f = dglap(fes,exact)
-    # start = time.time()
-    # gfu = GridFunction(fes)
-    # # gfu.vec.data = np.linalg.solve(A,f.vec.FV())
-    # gfu.vec.data = a.mat.Inverse() * f.vec
-    # # print("time: ", time.time()-start)
-    # print ("L2-error:", sqrt(Integrate((gfu-exact)**2, mesh)))
+    start = time.time()
+    fes = L2(mesh, order=order,  dgjumps=True)#,all_dofs_together=True)
+    a,f = dglap(fes,exact)
+    gfu = GridFunction(fes)
+    # gfu.vec.data = np.linalg.solve(A,f.vec.FV())
+    gfu.vec.data = a.mat.Inverse() * f.vec
+    print("time: ", time.time()-start)
+    print ("L2-error:", sqrt(Integrate((gfu-exact)**2, mesh)))
 
     ########################################################################
     # SVDTrefftz
     ########################################################################
-    # a.DeleteMatrix()
-    # a.Assemble()
     start = time.time()
     fes = L2(mesh, order=order,  dgjumps=True)#,all_dofs_together=True)
     u,v = fes.TnT()
@@ -107,9 +106,8 @@ for order in range(3,7):
     op = (uh[0,0]+uh[1,1])*(vh[0,0]+vh[1,1])*dx
     # op = grad(u)*grad(v) * dx
     # op = InnerProduct(u.Operator("hesse"),v.Operator("hesse"))*dx
-    # SetNumThreads(2)
-    # with TaskManager():
-    PP = SVDTrefftz(op,fes,eps)
+    with TaskManager():
+        PP = SVDTrefftz(op,fes,eps)
     # spspy(PP)
     PPT = PP.CreateTranspose()
     a,f = dglap(fes,exact)
@@ -118,11 +116,10 @@ for order in range(3,7):
     tpgfu = GridFunction(fes)
     tpgfu.vec.data = PP*TU
     print ("SVDTrefftz L2-error:", sqrt(Integrate((tpgfu-exact)**2, mesh)))
-    # print("trefftz time: ", time.time()-start)
-        # print ("vs Trefftz L2-error:", sqrt(Integrate((tpgfu-exact)**2, mesh)))
-        # for t in Timers():
-            # if 'svdt' in t['name']:
-                # print(t)
+    print("trefftz time: ", time.time()-start)
+    for t in Timers():
+        if 'svdt' in t['name']:
+            print(t)
 
 
     ########################################################################
@@ -145,7 +142,7 @@ for order in range(3,7):
     tpgfu = GridFunction(fes)
     tpgfu.vec.data = P@tsol
     print ("PySVDTrefftz L2-error:", sqrt(Integrate((tpgfu-exact)**2, mesh)))
-    print(P.shape,"vs",PP.shape)
+    # print(P.shape,"vs",PP.shape)
 
 
     ########################################################################
