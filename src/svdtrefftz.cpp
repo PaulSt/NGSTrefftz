@@ -1,4 +1,5 @@
 #include "svdtrefftz.hpp"
+#include <bla.hpp>
 
 
 namespace ngcomp
@@ -10,21 +11,38 @@ namespace ngcomp
         static Timer t("LapackSVD"); RegionTimer reg(t);
         ngbla::integer m = A.Width(), n = A.Height();
         Vector<> S(min(n,m));
-        Array<double> work(n*m+100);
+        //Array<double> work(n*m+100);
+        Array<double> work(4*m*m+6*m+m+100);
+        Array<int> iwork(max(n,m)*9);
         ngbla::integer info;
-        char jobu = 'A', jobv = 'A';
+        //char jobu = 'A', jobv = 'A';
+        char jobu = 'F', jobv = 'N';
+        char joba = 'A', jobr = 'R';
+        char jobt = 'N', jobp = 'N';
+        char jobz = 'A';
         ngbla::integer lda = A.Dist(), ldu = U.Dist(), ldv = V.Dist();
         ngbla::integer lwork = work.Size();
 
-        dgesvd_ ( &jobu, &jobv, &m, &n, A.Data(), &lda,
+        //dgesvd_ ( &jobu, &jobv, &m, &n, A.Data(), &lda,
+                 //S.Data(),
+                 //U.Data(), &ldu, V.Data(), &ldv,
+                 //work.Data(), &lwork,
+                 //&info);
+        dgesdd_ ( &jobz, &m, &n, A.Data(), &lda,
                  S.Data(),
                  U.Data(), &ldu, V.Data(), &ldv,
-                 work.Data(), &lwork,
+                 work.Data(), &lwork, iwork.Data(),
                  &info);
-    if(info!=0)
-     cout << "info = " << info << endl;
-     //if (n <= 100)
-     //cout << "S = " << S << endl;
+        //dgejsv_ ( &joba, &jobu, &jobv, &jobr, &jobt, &jobp,
+                 //&m, &n, A.Data(), &lda, S.Data(),
+                 //U.Data(), &ldu, V.Data(), &ldv,
+                 //work.Data(), &lwork, iwork.Data(),
+                 //&info);
+        if(info!=0)
+         cout << "info = " << info << endl;
+         //if (n <= 100)
+         //cout << "S = " << S << endl;
+        A = 0.0;
         A.Diag(0) = S;
     }
 
@@ -45,28 +63,29 @@ namespace ngcomp
             bfis[dx.vb] += make_shared<SymbolicBilinearFormIntegrator> (icf->cf, dx.vb, dx.element_vb);
         }
 
-        Array<double> allvalues(fes->GetNDof()*fes->GetNDof());
-        Array<Matrix<double> > Pmats(ma->GetNE());
-        Array<int> nzs(ma->GetNE());
-
+        //Array<double> allvalues(fes->GetNDof()*fes->GetNDof());
+        Array<Matrix<double> > Pmats(ma->GetNE(VOL));
+        Array<int> nzs(ma->GetNE(VOL));
 
         ma->IterateElements(VOL,lh,[&](auto ei, LocalHeap & mlh)
-        //for (auto ei : ma->Elements())
+        //for (auto ei : ma->Elements(VOL))
         {
-            HeapReset hr(mlh);
+            HeapReset hr(lh);
             Array<DofId> dofs;
             fes->GetDofNrs(ei, dofs);
-            auto & trafo = ma->GetTrafo(ei, mlh);
-            auto & fel = fes->GetFE(ei, mlh);
+            auto & trafo = ma->GetTrafo(ei, lh);
+            auto & fel = fes->GetFE(ei, lh);
 
-            FlatMatrix<> elmat(dofs.Size(), mlh);
-            FlatMatrix<> elmati(dofs.Size(), mlh);
+            //FlatMatrix<> elmat(dofs.Size(), lh);
+            Matrix<> elmat(dofs.Size());
+            FlatMatrix<> elmati(dofs.Size(), lh);
             elmat = 0.0;
             for (auto & bfi : bfis[VOL])
             {
-                bfi -> CalcElementMatrix(fel, trafo, elmati, mlh);
+                bfi -> CalcElementMatrix(fel, trafo, elmati, lh);
                 elmat += elmati;
             }
+            //cout << elmat << endl;
             Matrix<double,ColMajor> U(dofs.Size(),dofs.Size()), V(dofs.Size(),dofs.Size());
             //CalcSVD(elmat,U,V);
             LapackSVD(elmat,U,V);
@@ -76,43 +95,61 @@ namespace ngcomp
             //Pwidth += nz;
             //Pmats[ei.Nr()].AssignMemory (dofs.Size(),dofs.Size(), allvalues.Addr(dofs.Size()*dofs.Size()*ei.Nr()));
             Pmats[ei.Nr()] = (U.Cols(dofs.Size()-nz,dofs.Size()));
+            //cout << elmat << endl;
+            //cout << U << endl;
+            //cout << Pmats[ei.Nr()] << endl;
+            //auto UT = Trans(U);
+            //cout << U*elmat*UT << endl;
+            //cout << U*elmat*V << endl;
+            //cout << Pmats[ei.Nr()] << endl;
         }
         );
 
         TableCreator<int> creator(ma->GetNE(VOL));
         TableCreator<int> creator2(ma->GetNE(VOL));
-        for ( ; !creator.Done(); creator++, creator2++)
-            ma->IterateElements(VOL,lh,[&](auto ei, LocalHeap & mlh)
-            //for (auto ei : ma->Elements())
+        for ( ; !creator.Done(); creator++)
+            ma->IterateElements(VOL,[&](auto ei)
+            //for (auto ei : ma->Elements(VOL))
                                 {
                                     Array<DofId> dnums;
                                     fes->GetDofNrs (ei, dnums);
                                     for (DofId d : dnums)
                                         //if (IsRegularDof(d))
                                         creator.Add (ei.Nr(), d);
+                                }
+        );
+        for ( ; !creator2.Done(); creator2++)
+            for (auto ei : ma->Elements(VOL))
+                                {
                                     int prevdofs = 0;
-                                    for (int i=0;i<ei.Nr();i++) prevdofs += nzs[ei.Nr()];//Pmats[ei.Nr()].Width();
+                                    for (int i=0;i<ei.Nr();i++) prevdofs += nzs[ei.Nr()];
                                     for (int d=0;d<nzs[ei.Nr()];d++)
                                         creator2.Add (ei.Nr(), d+prevdofs);
                                 }
-        );
         auto table = creator.MoveTable();
         auto table2 = creator2.MoveTable();
 
         int Pwidth = 0;
-        for(auto ei : ma->Elements()) Pwidth += nzs[ei.Nr()];
-        SparseMatrix<double> P(fes->GetNDof(), Pwidth, table,table2,false);
+        for(auto ei : ma->Elements(VOL)) Pwidth += nzs[ei.Nr()];
+        if(Pwidth != nzs[0]*(ma->GetNE(VOL))) throw std::logic_error("WARNING: inconsistent nzs, try larger eps?");
 
-        ma->IterateElements(VOL,lh,[&](auto ei, LocalHeap & mlh)
-        //for(auto ei : ma->Elements())
+        SparseMatrix<double> P(fes->GetNDof(), Pwidth, table,table2,false);
+        P.SetZero();
+
+        ma->IterateElements(VOL,[&](auto ei)
+        //for(auto ei : ma->Elements(VOL))
         {
             //Array<DofId> dofs;
             //fes->GetDofNrs(ei, dofs);
+            //cout << Pmats[ei.Nr()] << endl;
             P.AddElementMatrix(table[ei.Nr()],table2[ei.Nr()], Pmats[ei.Nr()]);
-        });
+        }
+        );
         svdtt.Stop();
-        return make_shared<SparseMatrix<double>>(P);
+        shared_ptr<BaseMatrix> re = make_shared<SparseMatrix<double>>(P);
+        return re;
     }
+
 }
 
 #ifdef NGS_PYTHON
@@ -126,8 +163,9 @@ void ExportSVDTrefftz(py::module m)
                             shared_ptr<ngcomp::FESpace> fes,
                             double eps) -> shared_ptr<ngcomp::BaseMatrix>
           {
-              return SVDTrefftz(bf,fes,eps);
+              return ngcomp::SVDTrefftz(bf,fes,eps);
           },
           py::arg("bf"), py::arg("fes"), py::arg("eps"));
+
 }
 #endif // NGS_PYTHON
