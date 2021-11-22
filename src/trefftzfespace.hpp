@@ -12,7 +12,21 @@ namespace ngcomp
         void DoArchive(Archive& ar) {}
     };
 
-    class PolBasis {};
+    class PolBasis {
+        protected:
+            template<int D> static int IndexMap2(Vec<D+1, int> index, int ord)
+            {
+            int sum=0;
+            int temp_size = 0;
+            for(int d=0;d<D+1;d++){
+                for(int p=0;p<index(d);p++){
+                    sum+=BinCoeff(D - d + ord - p - temp_size, ord - p - temp_size);
+                }
+                temp_size+=index(d);
+            }
+            return sum;
+            }
+    };
 
     template<int D>
     class TWaveBasis : public PolBasis
@@ -21,7 +35,6 @@ namespace ngcomp
         public:
         TWaveBasis() {;}
         static CSR Basis(int ord, int basistype = 0, int fosystem = 0);
-        static int IndexMap2(Vec<D+1, int> index, int ord);
     };
 
     template<int D>
@@ -34,6 +47,16 @@ namespace ngcomp
         CSR Basis(int ord, Vec<D+1> ElCenter, Matrix<shared_ptr<CoefficientFunction>> GGder, Matrix<shared_ptr<CoefficientFunction>> BBder, double elsize = 1.0, int basistype=0);
     };
 
+    template<int D>
+    class TLapBasis : public PolBasis
+    {
+        static void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker, int basistype, double wavespeed = 1.0);
+        public:
+        TLapBasis() {;}
+        static CSR Basis(int ord, int basistype = 0, int fosystem = 0);
+    };
+
+
     class TrefftzFESpace : public FESpace
     {
         int D;
@@ -42,6 +65,7 @@ namespace ngcomp
         int nel;
         int local_ndof;
         float c=1;
+        string eqtyp="wave";
         int useshift=1;
         int usescale=1;
         int useqt = 0;
@@ -53,17 +77,17 @@ namespace ngcomp
         PolBasis* basis;
 
         public:
-            TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags);
-            void SetWavespeed(shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> aBBcf = nullptr, shared_ptr<CoefficientFunction> aGGcf = nullptr);
-            string GetClassName () const override { return "trefftz"; }
-            void GetDofNrs (ElementId ei, Array<DofId> & dnums) const override;
-            FiniteElement & GetFE (ElementId ei, Allocator & alloc) const override;
-            size_t GetNDof () const override { return ndof; }
-            static DocInfo GetDocu ();
+        TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags & flags);
+        void SetWavespeed(shared_ptr<CoefficientFunction> awavespeedcf, shared_ptr<CoefficientFunction> aBBcf = nullptr, shared_ptr<CoefficientFunction> aGGcf = nullptr);
+        string GetClassName () const override { return "trefftz"; }
+        void GetDofNrs (ElementId ei, Array<DofId> & dnums) const override;
+        FiniteElement & GetFE (ElementId ei, Allocator & alloc) const override;
+        size_t GetNDof () const override { return ndof; }
+        static DocInfo GetDocu ();
 
         protected:
-            template<int D>
-            double Adiam(ElementId ei, double c) const
+        template<int D>
+        double Adiam(ElementId ei, double c) const
         {
             double anisotropicdiam = 0.0;
             auto vertices_index = ma->GetElVertices(ei);
@@ -78,8 +102,8 @@ namespace ngcomp
             }
             return anisotropicdiam * usescale + (usescale==0);
         }
-            template<int D>
-            Vec<D+1> ElCenter(ElementId ei) const
+        template<int D>
+        Vec<D+1> ElCenter(ElementId ei) const
         {
             Vec<D+1> center = 0;
             auto vertices_index = ma->GetElVertices(ei);

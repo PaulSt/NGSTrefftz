@@ -1,6 +1,7 @@
 #include <python_ngstd.hpp>
 #include <solve.hpp>
-//#include <fem.hpp>
+#include <fem.hpp>
+#include <comp.hpp>
 //using namespace ngsolve;
 #include "trefftzfespace.hpp"
 #include "monomialfespace.hpp"
@@ -9,9 +10,9 @@
 //#include <tents.hpp>
 #include "meshtentslab.hpp"
 #include "twavetents.hpp"
-//#include "svdtrefftz.hpp"
+#include "svdtrefftz.hpp"
 
-#include "airy.cpp"
+//#include "airy.cpp"
 
 
 PYBIND11_MODULE(_tngs,m) {
@@ -24,8 +25,9 @@ PYBIND11_MODULE(_tngs,m) {
     ExportSpecialCoefficientFunction(m);
     ExportTWaveTents(m);
     ExportMeshTentSlab(m);
+    ExportSVDTrefftz(m);
 
-    ExportStdMathFunction<GenericAiry>(m, "airy", "airy function");
-    ExportStdMathFunction<GenericAiryP>(m, "airyp", "airyp function");
+    //ExportStdMathFunction<GenericAiry>(m, "airy", "airy function");
+    //ExportStdMathFunction<GenericAiryP>(m, "airyp", "airyp function");
 }
 
