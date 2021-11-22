@@ -12,7 +12,7 @@
 #include "twavetents.hpp"
 #include "svdtrefftz.hpp"
 
-#include "airy.cpp"
+//#include "airy.cpp"
 
 
 PYBIND11_MODULE(_tngs,m) {
@@ -27,7 +27,7 @@ PYBIND11_MODULE(_tngs,m) {
     ExportMeshTentSlab(m);
     ExportSVDTrefftz(m);
 
-    ExportStdMathFunction<GenericAiry>(m, "airy", "airy function");
-    ExportStdMathFunction<GenericAiryP>(m, "airyp", "airyp function");
+    //ExportStdMathFunction<GenericAiry>(m, "airy", "airy function");
+    //ExportStdMathFunction<GenericAiryP>(m, "airyp", "airyp function");
 }
 
