@@ -72,36 +72,36 @@ jobs:
       - name: Debugging with tmate
         if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3.6
-  test-macos:
-    runs-on: macos-latest
-    steps:     
-      - name: install pkgs
-        run: brew install python3 python
-      - name: download ngsolve
-        run: wget https://www.asc.tuwien.ac.at/~mhochsteger/ngsolve/macos/NGSolve_nightly.dmg
-      - name: mount ngsolve
-        run: hdiutil attach NGSolve_nightly.dmg
-      - name: copy ngsolve
-        run: sudo cp -R /Volumes/NGSolve/Netgen.app /Applications
-      - name: set path
-        run: |
-             echo "PYTHONPATH=/Applications/Netgen.app/Contents/Resources/lib/python3.8/site-packages" >> $GITHUB_ENV
-             echo "NETGENDIR=/Applications/Netgen.app/Contents/MacOS" >> $GITHUB_ENV
-             echo "DYLD_LIBRARY_PATH=/Applications/Netgen.app/Contents/MacOS" >> $GITHUB_ENV
-             echo "DYLD_FRAMEWORK_PATH=/Applications/Netgen.app/Contents/Frameworks" >> $GITHUB_ENV
-             echo "/Applications/Netgen.app/Contents/MacOS" >> $GITHUB_PATH
-      - uses: actions/checkout@v2
-      - name: cmake NGSTrefftz
-        run: cmake -B/Users/runner/work/tngs/tngs/make -S/Users/runner/work/tngs/tngs/src
-      - name: compile NGSTrefftz
-        run: |
-             make -C/Users/runner/work/tngs/tngs/make
-             sudo make -C/Users/runner/work/tngs/tngs/make install  
-      - name: test NGSTrefftz
-        run: |
-             python3 /Users/runner/work/tngs/tngs/.github/tests/wave.py -v
-             python3 /Users/runner/work/tngs/tngs/.github/tests/tents.py -v
-             python3 /Users/runner/work/tngs/tngs/.github/tests/svdt.py -v
-      - name: Debugging with tmate
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3.6
+  #test-macos:
+    #runs-on: macos-latest
+    #steps:     
+      #- name: install pkgs
+        #run: brew install python3 python
+      #- name: download ngsolve
+        #run: wget https://www.asc.tuwien.ac.at/~mhochsteger/ngsolve/macos/NGSolve_nightly.dmg
+      #- name: mount ngsolve
+        #run: hdiutil attach NGSolve_nightly.dmg
+      #- name: copy ngsolve
+        #run: sudo cp -R /Volumes/NGSolve/Netgen.app /Applications
+      #- name: set path
+        #run: |
+             #echo "PYTHONPATH=/Applications/Netgen.app/Contents/Resources/lib/python3.8/site-packages" >> $GITHUB_ENV
+             #echo "NETGENDIR=/Applications/Netgen.app/Contents/MacOS" >> $GITHUB_ENV
+             #echo "DYLD_LIBRARY_PATH=/Applications/Netgen.app/Contents/MacOS" >> $GITHUB_ENV
+             #echo "DYLD_FRAMEWORK_PATH=/Applications/Netgen.app/Contents/Frameworks" >> $GITHUB_ENV
+             #echo "/Applications/Netgen.app/Contents/MacOS" >> $GITHUB_PATH
+      #- uses: actions/checkout@v2
+      #- name: cmake NGSTrefftz
+        #run: cmake -B/Users/runner/work/tngs/tngs/make -S/Users/runner/work/tngs/tngs/src
+      #- name: compile NGSTrefftz
+        #run: |
+             #make -C/Users/runner/work/tngs/tngs/make
+             #sudo make -C/Users/runner/work/tngs/tngs/make install  
+      #- name: test NGSTrefftz
+        #run: |
+             #python3 /Users/runner/work/tngs/tngs/.github/tests/wave.py -v
+             #python3 /Users/runner/work/tngs/tngs/.github/tests/tents.py -v
+             #python3 /Users/runner/work/tngs/tngs/.github/tests/svdt.py -v
+      #- name: Debugging with tmate
+        #if: ${{ failure() }}
+        #uses: mxschmitt/action-tmate@v3.6
