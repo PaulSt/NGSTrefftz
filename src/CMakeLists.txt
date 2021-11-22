@@ -29,7 +29,7 @@ add_ngsolve_python_module(_tngs
     specialcoefficientfunction.cpp
     twavetents.cpp
     svdtrefftz.cpp
-    airy.cpp
+    #airy.cpp
     meshtentslab.cpp
     )
 target_link_libraries(_tngs PRIVATE _pytents)
