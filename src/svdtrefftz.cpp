@@ -3,6 +3,31 @@
 namespace ngcomp
 {
 
+    void LapackSVD (SliceMatrix<> A,
+                    SliceMatrix<double, ColMajor> U,
+                    SliceMatrix<double, ColMajor> V)
+    {
+        static Timer t("LapackSVD"); RegionTimer reg(t);
+        ngbla::integer m = A.Width(), n = A.Height();
+        Vector<> S(min(n,m));
+        Array<double> work(4*m*m+6*m+m+100);
+        Array<int> iwork(max(n,m)*9);
+        ngbla::integer info;
+        char jobz = 'A';
+        ngbla::integer lda = A.Dist(), ldu = U.Dist(), ldv = V.Dist();
+        ngbla::integer lwork = work.Size();
+
+        dgesdd_ ( &jobz, &m, &n, A.Data(), &lda,
+                 S.Data(),
+                 U.Data(), &ldu, V.Data(), &ldv,
+                 work.Data(), &lwork, iwork.Data(),
+                 &info);
+        if(info!=0)
+            cout << "info = " << info << endl;
+        A = 0.0;
+        A.Diag(0) = S;
+    }
+
     shared_ptr<BaseMatrix> SVDTrefftz (shared_ptr<SumOfIntegrals> bf,
                                        shared_ptr<FESpace> fes, double eps)
     {
@@ -40,31 +65,30 @@ namespace ngcomp
                 elmat += elmati;
             }
             FlatMatrix<double,ColMajor> U(dofs.Size(),mlh), V(dofs.Size(),mlh);
-            CalcSVD(elmat,U,V);
+            LapackSVD(elmat,U,V);
+            //CalcSVD(elmat,U,V);
             int nz = 0;
             for(auto sv : elmat.Diag()) if(sv<eps) nz++;
             nzs[ei.Nr()]=nz;
             //Pmats[ei.Nr()].AssignMemory (dofs.Size(),dofs.Size(), allvalues.Addr(dofs.Size()*dofs.Size()*ei.Nr()));
             Pmats[ei.Nr()] = (U.Cols(dofs.Size()-nz,dofs.Size()));
-        }
-        );
+        });
 
         TableCreator<int> creator(ma->GetNE(VOL));
         TableCreator<int> creator2(ma->GetNE(VOL));
         for ( ; !creator.Done(); creator++,creator2++)
             ma->IterateElements(VOL,[&](auto ei)
-                                {
-                                    Array<DofId> dnums;
-                                    fes->GetDofNrs (ei, dnums);
-                                    for (DofId d : dnums)
-                                        //if (IsRegularDof(d))
-                                        creator.Add (ei.Nr(), d);
-                                    int prevdofs = 0;
-                                    for (int i=0;i<ei.Nr();i++) prevdofs += nzs[ei.Nr()];
-                                    for (int d=0;d<nzs[ei.Nr()];d++)
-                                        creator2.Add (ei.Nr(), d+prevdofs);
-                                }
-        );
+            {
+                Array<DofId> dnums;
+                fes->GetDofNrs (ei, dnums);
+                for (DofId d : dnums)
+                    //if (IsRegularDof(d))
+                    creator.Add (ei.Nr(), d);
+                int prevdofs = 0;
+                for (int i=0;i<ei.Nr();i++) prevdofs += nzs[ei.Nr()];
+                for (int d=0;d<nzs[ei.Nr()];d++)
+                    creator2.Add (ei.Nr(), d+prevdofs);
+            });
         auto table = creator.MoveTable();
         auto table2 = creator2.MoveTable();
 
@@ -78,8 +102,7 @@ namespace ngcomp
         ma->IterateElements(VOL,[&](auto ei)
         {
             P.AddElementMatrix(table[ei.Nr()],table2[ei.Nr()], Pmats[ei.Nr()]);
-        }
-        );
+        });
         svdtt.Stop();
         shared_ptr<BaseMatrix> re = make_shared<SparseMatrix<double>>(P);
         return re;
