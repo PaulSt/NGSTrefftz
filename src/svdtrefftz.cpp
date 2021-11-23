@@ -3,6 +3,28 @@
 namespace ngcomp
 {
 
+  void LapackSVD (SliceMatrix<> A, SliceMatrix<double, ColMajor> U,
+                  SliceMatrix<double, ColMajor> V)
+  {
+    static Timer t ("LapackSVD");
+    RegionTimer reg (t);
+    ngbla::integer m = A.Width (), n = A.Height ();
+    Vector<> S (min (n, m));
+    Array<double> work (4 * m * m + 6 * m + m + 100);
+    Array<int> iwork (max (n, m) * 9);
+    ngbla::integer info;
+    char jobz = 'A';
+    ngbla::integer lda = A.Dist (), ldu = U.Dist (), ldv = V.Dist ();
+    ngbla::integer lwork = work.Size ();
+
+    dgesdd_ (&jobz, &m, &n, A.Data (), &lda, S.Data (), U.Data (), &ldu,
+             V.Data (), &ldv, work.Data (), &lwork, iwork.Data (), &info);
+    if (info != 0)
+      cout << "info = " << info << endl;
+    A = 0.0;
+    A.Diag (0) = S;
+  }
+
   shared_ptr<BaseMatrix> SVDTrefftz (shared_ptr<SumOfIntegrals> bf,
                                      shared_ptr<FESpace> fes, double eps)
   {
@@ -41,7 +63,8 @@ namespace ngcomp
         }
       FlatMatrix<double, ColMajor> U (dofs.Size (), mlh),
           V (dofs.Size (), mlh);
-      CalcSVD (elmat, U, V);
+      LapackSVD (elmat, U, V);
+      // CalcSVD(elmat,U,V);
       int nz = 0;
       for (auto sv : elmat.Diag ())
         if (sv < eps)
