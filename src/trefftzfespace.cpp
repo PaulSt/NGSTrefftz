@@ -27,24 +27,70 @@ namespace ngcomp
 
     local_ndof = BinCoeff (D + order, order)
                  + BinCoeff (D + order - 1, order - 1) - (eqtyp == "fowave");
+    if (eqtyp == "fowave")
+      local_ndof = (D + 1) * BinCoeff (D + order, D);
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
 
     SetDefinedOn (BND, BitArray (ma->GetNRegions (BND)).Clear ());
 
+    // evaluators
     switch (D)
       {
       case 1:
         {
-          evaluator[VOL]
-              = make_shared<T_DifferentialOperator<DiffOpMapped<2>>> ();
-          flux_evaluator[VOL] = make_shared<
-              T_DifferentialOperator<DiffOpMappedGradient<2>>> ();
-          additional_evaluators.Set (
-              "hesse",
-              make_shared<T_DifferentialOperator<DiffOpMappedHesse<2>>> ());
+          if (eqtyp == "fowave")
+            evaluator[VOL] = make_shared<T_DifferentialOperator<
+                DiffOpMappedGradient<2, BlockMappedElement<2>>>> ();
+          // evaluator[VOL] =
+          // make_shared<T_DifferentialOperator<DiffOpMappedGradient<2>>>();
+          else
+            {
+              evaluator[VOL]
+                  = make_shared<T_DifferentialOperator<DiffOpMapped<2>>> ();
+              flux_evaluator[VOL] = make_shared<
+                  T_DifferentialOperator<DiffOpMappedGradient<2>>> ();
+              additional_evaluators.Set (
+                  "hesse",
+                  make_shared<
+                      T_DifferentialOperator<DiffOpMappedHesse<2>>> ());
+            }
+          break;
+        }
+      case 2:
+        {
+          if (eqtyp == "fowave")
+            evaluator[VOL] = make_shared<T_DifferentialOperator<
+                DiffOpMappedGradient<3, BlockMappedElement<3>>>> ();
+          // evaluator[VOL] =
+          // make_shared<T_DifferentialOperator<DiffOpMappedGradient<3>>>();
+          else
+            {
+              evaluator[VOL]
+                  = make_shared<T_DifferentialOperator<DiffOpMapped<3>>> ();
+              flux_evaluator[VOL] = make_shared<
+                  T_DifferentialOperator<DiffOpMappedGradient<3>>> ();
+              additional_evaluators.Set (
+                  "hesse",
+                  make_shared<
+                      T_DifferentialOperator<DiffOpMappedHesse<3>>> ());
+            }
+          break;
+        }
+      }
+    // basis
+    switch (D)
+      {
+      case 1:
+        {
           if (eqtyp == "laplace")
             basismat = TLapBasis<1>::Basis (order, basistype);
+          else if (eqtyp == "fowave")
+            {
+              basismats.SetSize (D + 1);
+              for (int d = 0; d < D + 1; d++)
+                basismats[d] = FOTWaveBasis<1>::Basis (order, d);
+            }
           else
             basismat
                 = TWaveBasis<1>::Basis (order, basistype, eqtyp == "fowave");
@@ -53,15 +99,14 @@ namespace ngcomp
         }
       case 2:
         {
-          evaluator[VOL]
-              = make_shared<T_DifferentialOperator<DiffOpMapped<3>>> ();
-          flux_evaluator[VOL] = make_shared<
-              T_DifferentialOperator<DiffOpMappedGradient<3>>> ();
-          additional_evaluators.Set (
-              "hesse",
-              make_shared<T_DifferentialOperator<DiffOpMappedHesse<3>>> ());
           if (eqtyp == "laplace")
             basismat = TLapBasis<2>::Basis (order, basistype);
+          else if (eqtyp == "fowave")
+            {
+              basismats.SetSize (D + 1);
+              for (int d = 0; d < D + 1; d++)
+                basismats[d] = FOTWaveBasis<2>::Basis (order, d);
+            }
           else
             basismat
                 = TWaveBasis<2>::Basis (order, basistype, eqtyp == "fowave");
@@ -176,6 +221,12 @@ namespace ngcomp
                       local_ndof, order, basismat, eltype, ElCenter<1> (ei),
                       1.0));
                 }
+              else if (eqtyp == "fowave")
+                {
+                  return *(new (alloc) BlockMappedElement<2> (
+                      local_ndof, order, basismats, eltype, ElCenter<1> (ei),
+                      Adiam<1> (ei, c), c));
+                }
               else
                 return *(new (alloc) ScalarMappedElement<2> (
                     local_ndof, order, basismat, eltype, ElCenter<1> (ei),
@@ -194,6 +245,12 @@ namespace ngcomp
                   return *(new (alloc) ScalarMappedElement<3> (
                       local_ndof, order, basismat, eltype, ElCenter<2> (ei),
                       1.0));
+                }
+              else if (eqtyp == "fowave")
+                {
+                  return *(new (alloc) BlockMappedElement<3> (
+                      local_ndof, order, basismats, eltype, ElCenter<2> (ei),
+                      Adiam<2> (ei, c), c));
                 }
               else
                 return *(new (alloc) ScalarMappedElement<3> (
@@ -594,6 +651,88 @@ namespace ngcomp
 
   template class TLapBasis<1>;
   template class TLapBasis<2>;
+
+  template <int D> CSR FOTWaveBasis<D>::Basis (int ord, int rdim)
+  {
+    const int nbasis = (D + 1) * BinCoeff (ord + D, D);
+    const int npoly = BinCoeff ((D + 1) + ord, ord);
+    Array<Matrix<>> trefftzbasis (D + 1);
+    for (int d = 0; d < D + 1; d++)
+      {
+        trefftzbasis[d].SetSize (nbasis, npoly);
+        trefftzbasis[d] = 0;
+      }
+    Vec<D + 1, int> coeff = 0;
+    for (int b = 0; b < nbasis; b++)
+      {
+        int tracker = 0;
+        TB_inner (ord, trefftzbasis, coeff, b, D + 1, tracker);
+      }
+    Array<CSR> tb (D + 1);
+    for (int d = 0; d < D + 1; d++)
+      {
+        // cout << d << endl << trefftzbasis[d] << endl;
+        MatToCSR (trefftzbasis[d], tb[d]);
+      }
+    return tb[rdim];
+  }
+
+  template <int D>
+  void FOTWaveBasis<D>::TB_inner (int ord, Array<Matrix<>> &trefftzbasis,
+                                  Vec<D + 1, int> coeffnum, int basis, int dim,
+                                  int &tracker)
+  {
+    if (dim > 0)
+      {
+        while (coeffnum (dim - 1) <= ord)
+          {
+            TB_inner (ord, trefftzbasis, coeffnum, basis, dim - 1, tracker);
+            coeffnum (dim - 1)++;
+          }
+      }
+    else
+      {
+        int sum = 0;
+        for (int i = 0; i < D + 1; i++)
+          sum += coeffnum (i);
+        if (sum <= ord)
+          {
+            if (tracker >= 0)
+              tracker++;
+            int indexmap = PolBasis::IndexMap2<D> (coeffnum, ord);
+            // cout << indexmap << ": " << coeffnum << endl;
+            if (coeffnum (D) == 0 && tracker * (D + 1) > basis)
+              {
+                // cout << "bn " << basis << " tracker " << tracker << endl;
+                int d = basis % (D + 1);
+                trefftzbasis[d](basis, indexmap) = 1;
+                tracker = -1;
+              }
+            else if (coeffnum (D) > 0)
+              {
+                int k = coeffnum (D);
+                for (int d = 0; d < D; d++)
+                  {
+                    Vec<D + 1, int> get_coeff = coeffnum;
+                    get_coeff[D] = get_coeff[D] - 1;
+                    get_coeff[d] = get_coeff[d] + 1;
+                    trefftzbasis[d](basis, indexmap)
+                        = (-1.0 / k) * (coeffnum (d) + 1)
+                          * trefftzbasis[D](
+                              basis, PolBasis::IndexMap2<D> (get_coeff, ord));
+                    // rekursive sum
+                    trefftzbasis[D](basis, indexmap)
+                        += (-1.0 / k) * (coeffnum (d) + 1)
+                           * trefftzbasis[d](
+                               basis, PolBasis::IndexMap2<D> (get_coeff, ord));
+                  }
+              }
+          }
+      }
+  }
+
+  template class FOTWaveBasis<1>;
+  template class FOTWaveBasis<2>;
 
 }
 
