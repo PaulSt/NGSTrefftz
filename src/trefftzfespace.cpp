@@ -25,8 +25,8 @@ namespace ngcomp
     useqt = flags.GetNumFlag ("useqt", 0);
     eqtyp = flags.GetStringFlag ("eq");
 
-    local_ndof
-        = BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1);
+    local_ndof = BinCoeff (D + order, order)
+                 + BinCoeff (D + order - 1, order - 1) - (eqtyp == "fowave");
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
 
@@ -46,7 +46,8 @@ namespace ngcomp
           if (eqtyp == "laplace")
             basismat = TLapBasis<1>::Basis (order, basistype);
           else
-            basismat = TWaveBasis<1>::Basis (order, basistype);
+            basismat
+                = TWaveBasis<1>::Basis (order, basistype, eqtyp == "fowave");
           basis = new QTWaveBasis<1>;
           break;
         }
@@ -62,7 +63,8 @@ namespace ngcomp
           if (eqtyp == "laplace")
             basismat = TLapBasis<2>::Basis (order, basistype);
           else
-            basismat = TWaveBasis<2>::Basis (order, basistype);
+            basismat
+                = TWaveBasis<2>::Basis (order, basistype, eqtyp == "fowave");
           basis = new QTWaveBasis<2>;
           break;
         }
@@ -264,7 +266,7 @@ namespace ngcomp
   }
 
   template <int D>
-  CSR TWaveBasis<D>::Basis (int ord, int basistype, int fosystem)
+  CSR TWaveBasis<D>::Basis (int ord, int basistype, int fowave)
   {
     CSR tb;
     const int ndof
@@ -278,7 +280,7 @@ namespace ngcomp
         int tracker = 0;
         TB_inner (ord, trefftzbasis, coeff, b, D + 1, tracker, basistype);
       }
-    MatToCSR (trefftzbasis.Rows (fosystem, ndof), tb);
+    MatToCSR (trefftzbasis.Rows (fowave, ndof), tb);
     return tb;
   }
 
@@ -518,8 +520,7 @@ namespace ngcomp
   template class QTWaveBasis<1>;
   template class QTWaveBasis<2>;
 
-  template <int D>
-  CSR TLapBasis<D>::Basis (int ord, int basistype, int fosystem)
+  template <int D> CSR TLapBasis<D>::Basis (int ord, int basistype)
   {
     CSR tb;
     const int ndof
@@ -533,7 +534,7 @@ namespace ngcomp
         int tracker = 0;
         TB_inner (ord, trefftzbasis, coeff, b, D + 1, tracker, basistype);
       }
-    MatToCSR (trefftzbasis.Rows (fosystem, ndof), tb);
+    MatToCSR (trefftzbasis, tb);
     return tb;
   }
 
@@ -622,5 +623,7 @@ void ExportTrefftzFESpace (py::module m)
       .def ("SetWavespeed", &TrefftzFESpace::SetWavespeed,
             py::arg ("Wavespeed"), py::arg ("BBcf") = nullptr,
             py::arg ("GGcf") = nullptr);
+
+  // ExportFESpace<FOTWaveFESpace, CompoundFESpace> (m, "FOTWave");
 }
 #endif // NGS_PYTHON

@@ -41,7 +41,7 @@ namespace ngcomp
 
   public:
     TWaveBasis () { ; }
-    static CSR Basis (int ord, int basistype = 0, int fosystem = 0);
+    static CSR Basis (int ord, int basistype = 0, int fowave = 0);
   };
 
   template <int D> class QTWaveBasis : public PolBasis
@@ -65,7 +65,7 @@ namespace ngcomp
 
   public:
     TLapBasis () { ; }
-    static CSR Basis (int ord, int basistype = 0, int fosystem = 0);
+    static CSR Basis (int ord, int basistype = 0);
   };
 
   class TrefftzFESpace : public FESpace
