@@ -1,4 +1,4 @@
-from ngstents import TentSlab
+# from ngstents import TentSlab
 from tngs import *
 from ngsolve.TensorProductTools import *
 from ngsolve import *

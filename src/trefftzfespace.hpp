@@ -34,7 +34,7 @@ namespace ngcomp
         static void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker, int basistype, double wavespeed = 1.0);
         public:
         TWaveBasis() {;}
-        static CSR Basis(int ord, int basistype = 0, int fosystem = 0);
+        static CSR Basis(int ord, int basistype = 0, int fowave = 0);
     };
 
     template<int D>
@@ -53,7 +53,7 @@ namespace ngcomp
         static void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker, int basistype, double wavespeed = 1.0);
         public:
         TLapBasis() {;}
-        static CSR Basis(int ord, int basistype = 0, int fosystem = 0);
+        static CSR Basis(int ord, int basistype = 0);
     };
 
 
