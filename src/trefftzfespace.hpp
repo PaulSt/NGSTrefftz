@@ -56,6 +56,15 @@ namespace ngcomp
         static CSR Basis(int ord, int basistype = 0);
     };
 
+    template<int D>
+    class FOTWaveBasis : public PolBasis
+    {
+        static void TB_inner
+        (int ord, Array<Matrix<>> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker);
+        public:
+        FOTWaveBasis() {;}
+        static CSR Basis(int ord, int rdim);
+    };
 
     class TrefftzFESpace : public FESpace
     {
@@ -74,6 +83,7 @@ namespace ngcomp
         Matrix<shared_ptr<CoefficientFunction>> GGder;
         Matrix<shared_ptr<CoefficientFunction>> BBder;
         CSR basismat;
+        Vector<CSR> basismats;
         PolBasis* basis;
 
         public:

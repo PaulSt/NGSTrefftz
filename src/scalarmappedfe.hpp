@@ -140,13 +140,11 @@ namespace ngfem
             using BaseScalarMappedElement::CalcDShape;
             using BaseScalarMappedElement::CalcMappedDShape;
 
-            void CalcShape (const BaseMappedIntegrationPoint & mip, BareSliceVector<> shape) const;
-            void CalcShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> shape) const;
-            void CalcDShape (const BaseMappedIntegrationPoint & mip, BareSliceMatrix<> dshape) const;
-            void CalcDShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape) const;
-
-            void CalcDShape (const BaseMappedIntegrationRule & mir, BareSliceMatrix<> dshapes) const;
-            //virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape) const;
+            virtual void CalcShape (const BaseMappedIntegrationPoint & mip, BareSliceVector<> shape) const;
+            virtual void CalcShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> shape) const;
+            virtual void CalcDShape (const BaseMappedIntegrationPoint & mip, BareSliceMatrix<> dshape) const;
+            virtual void CalcDShape (const BaseMappedIntegrationRule & mir, BareSliceMatrix<> dshapes) const;
+            virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape) const;
 
             //compute dshape, matrix: ndof x spacedim, Use CalcMappedDShape only for consistancy, can use CalcDShape with BaseMappedIR
             //HD NGS_DLL_HEADER virtual void CalcMappedDShape (const BaseMappedIntegrationPoint & mip, BareSliceMatrix<> dshape) const;
@@ -243,6 +241,42 @@ namespace ngfem
                 coefs.Range(0,this->ndof) += dshapes*bdbvec;
             }
 
+    };
+
+
+    template <int D>
+    class BlockMappedElement : public ScalarMappedElement<D>
+    {
+        private:
+            //const int nbasis;
+            //const int npoly;
+            //Vec<D> elcenter;
+            //double elsize;
+            //float c;
+            //ELEMENT_TYPE eltype;
+            Vector<CSR> localmats;
+
+        public:
+            // TrefftzWaveFE();
+            BlockMappedElement(int andof, int aord, Vector<CSR> alocalmats, ELEMENT_TYPE aeltype, Vec<D> aelcenter = 0, double aelsize = 1, float ac = 1.0) :
+            ScalarMappedElement<D>(andof, aord, alocalmats[0], aeltype, aelcenter, aelsize, ac) , localmats(alocalmats)
+            {;}
+
+            //virtual ELEMENT_TYPE ElementType() const { return eltype; }
+
+            //using ScalarMappedElement<D>::CalcShape;
+            //using ScalarMappedElement<D>::CalcDShape;
+            using ScalarMappedElement<D>::CalcMappedDShape;
+            using ScalarMappedElement<D>::Evaluate;
+            using ScalarMappedElement<D>::EvaluateGrad;
+            using ScalarMappedElement<D>::AddGradTrans;
+
+            void CalcShape (const BaseMappedIntegrationPoint & mip, BareSliceVector<> shape) const override;
+            void CalcShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> shape) const override;
+
+            void CalcDShape (const BaseMappedIntegrationPoint & mip, BareSliceMatrix<> dshape) const override;
+            //void CalcDShape (const BaseMappedIntegrationRule & mir, BareSliceMatrix<> dshapes) const override;
+            void CalcDShape (const SIMD_BaseMappedIntegrationRule & smir, BareSliceMatrix<SIMD<double>> dshape) const override;
     };
 
 }

@@ -956,4 +956,227 @@ namespace ngfem
     template class ScalarMappedElement<3>;
     template class ScalarMappedElement<4>;
 
+    //template<int D>
+    //BlockMappedElement<D> :: BlockMappedElement(int aord, float ac, Vec<D> aelcenter, double aelsize, ELEMENT_TYPE aeltype)
+    //: ord(aord),
+    //c(ac),
+    //nbasis(D * BinCoeff(ord + D-1, D-1)),
+    //npoly(BinCoeff(D + ord, ord)),
+    //elcenter(aelcenter),
+    //elsize(aelsize)
+    ////eltype(aeltype)
+    //{;}
+
+    template<int D>
+    void BlockMappedElement<D> :: CalcShape (const SIMD_BaseMappedIntegrationRule & smir,
+                                        BareSliceMatrix<SIMD<double>> shape) const
+    { throw Exception("Not allowed"); }
+
+    template<int D>
+    void BlockMappedElement<D> :: CalcShape (const BaseMappedIntegrationPoint & mip,
+                                        BareSliceVector<> shape) const
+    { throw Exception("Not allowed"); }
+
+    template<>
+    void BlockMappedElement<1> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
+                                         BareSliceMatrix<> dshape) const
+    { throw Exception("Not implemented point "); }
+    template<>
+    void BlockMappedElement<4> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
+                                         BareSliceMatrix<> dshape) const
+    { throw Exception("Not implemented point "); }
+
+    template<>
+    void BlockMappedElement<2> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
+                                         BareSliceMatrix<> dshape) const
+    {
+        Vec<2> cpoint = mip.GetPoint();
+        cpoint -= elcenter; cpoint *= (1.0/elsize); cpoint[1] *= c;
+        // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+        STACK_ARRAY(double, mem, 2*(order+1)+1); mem[0]=0;
+        double* polxt[2];
+        for(int d=0;d<2;d++)
+        {
+            polxt[d] = &mem[d*(order+1)+1];
+            Monomial (order, cpoint[d], polxt[d]);
+        }
+
+        for(int d=0;d<2;d++)
+        {
+            Vector<double> pol(npoly);
+            for (int i = 0, ii = 0; i <=order; i++)
+                for (int j = 0; j <= order-i; j++)
+                    pol[ii++] = polxt[0][i] * polxt[1][j];
+
+            CSR localmat = localmats[d];
+            for (int i=0; i<this->ndof; ++i)
+            {
+                dshape(i,d) = 0.0;
+                for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
+                    dshape(i,d) += (localmat)[2][j]*pol[(localmat)[1][j]]; // * (d==1 ? c : 1) * (1.0/elsize);
+            }
+        }
+    }
+
+    template<>
+    void BlockMappedElement<3> :: CalcDShape (const BaseMappedIntegrationPoint & mip,
+                                         BareSliceMatrix<> dshape) const
+    {
+        Vec<3> cpoint = mip.GetPoint();
+        cpoint -= elcenter; cpoint *= (1.0/elsize); cpoint[2] *= c;
+        // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+        STACK_ARRAY(double, mem, 3*(order+1)+1); mem[0]=0;
+        //double* polxt[4];
+        Vec<3,double*> polxt;
+        for(int d=0;d<3;d++)
+        {
+            polxt[d] = &mem[d*(order+1)+1];
+            Monomial (order, cpoint[d], polxt[d]);
+        }
+
+        for(int d=0;d<3;d++)
+        {
+            Vector<double> pol(npoly);
+            for (int i = 0, ii = 0; i <=order; i++)
+                for (int j = 0; j <= order-i; j++)
+                    for (int k = 0; k <= order-i-j; k++)
+                        pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
+
+            CSR localmat = localmats[d];
+            for (int i=0; i<this->ndof; ++i)
+            {
+                dshape(i,d) = 0.0;
+                for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
+                    dshape(i,d) += (localmat)[2][j]*pol[(localmat)[1][j]]; // * (d==2 ? c : 1) * (1.0/elsize);
+            }
+        }
+    }
+
+    //template<int D>
+    //void BlockMappedElement<D> :: CalcDShape (const BaseMappedIntegrationRule & mir,
+                                         //BareSliceMatrix<> dshapes) const
+    //{ throw Exception("Not implemented no simd "); }
+
+    template<>
+    void BlockMappedElement<1> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
+                                         BareSliceMatrix<SIMD<double>> dshape) const
+    { throw Exception("Not implemented 1d"); }
+
+    template<>
+    void BlockMappedElement<2> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
+                                         BareSliceMatrix<SIMD<double>> dshape) const
+    {
+        for (int imip = 0; imip < smir.Size(); imip++)
+        {
+            Vec<2,SIMD<double>> cpoint = smir[imip].GetPoint();
+            cpoint -= elcenter; cpoint *= (1.0/elsize); cpoint[1] *= c;
+
+            // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+            STACK_ARRAY(SIMD<double>, mem, 2*(order+1)+1); mem[0]=0;
+            Vec<2,SIMD<double>*> polxt;
+            for(size_t d=0;d<2;d++)
+            {
+                polxt[d] = &mem[d*(order+1)+1];
+                Monomial (order, cpoint[d], polxt[d]);
+            }
+
+            for(int d=0;d<2;d++)
+            {
+                Vector<SIMD<double>> pol(npoly);
+                for (size_t i = 0, ii = 0; i <=order; i++)
+                    for (size_t j = 0; j <= order-i; j++)
+                        pol[ii++] = polxt[0][i] * polxt[1][j];
+
+                CSR localmat = localmats[d];
+                for (int i=0; i<ndof; ++i)
+                {
+                    dshape(i*2+d,imip) = 0.0;
+                    for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
+                        dshape(i*2+d,imip) += (localmat)[2][j]*pol[(localmat)[1][j]];// * (d==1 ? c : 1) * (2.0/elsize);
+                }
+            }
+        }
+    }
+
+    template<>
+    void BlockMappedElement<3> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
+                                         BareSliceMatrix<SIMD<double>> dshape) const
+    {
+        for (int imip = 0; imip < smir.Size(); imip++)
+        {
+            Vec<3,SIMD<double>> cpoint = smir[imip].GetPoint();
+            cpoint -= elcenter; cpoint *= (1.0/elsize); cpoint[2] *= c;
+
+            // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+            STACK_ARRAY(SIMD<double>, mem, 3*(order+1)+1); mem[0]=0;
+            Vec<3,SIMD<double>*> polxt;
+            for(size_t d=0;d<3;d++)
+            {
+                polxt[d] = &mem[d*(order+1)+1];
+                Monomial (order, cpoint[d], polxt[d]);
+            }
+
+            for(int d=0;d<3;d++)
+            {
+                Vector<SIMD<double>> pol(npoly);
+                for (size_t i = 0, ii = 0; i <=order; i++)
+                    for (size_t j = 0; j <= order-i; j++)
+                        for (size_t k = 0; k <= order-i-j; k++)
+                            pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
+
+                CSR localmat = localmats[d];
+                for (int i=0; i<ndof; ++i)
+                {
+                    dshape(i*3+d,imip) = 0.0;
+                    for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
+                        dshape(i*3+d,imip) += (localmat)[2][j]*pol[(localmat)[1][j]];// * (d==2 ? c : 1) * (2.0/elsize);
+                }
+            }
+        }
+    }
+
+    template<>
+    void BlockMappedElement<4> :: CalcDShape (const SIMD_BaseMappedIntegrationRule & smir,
+                                         BareSliceMatrix<SIMD<double>> dshape) const
+    {
+        for (int imip = 0; imip < smir.Size(); imip++)
+        {
+            Vec<4,SIMD<double>> cpoint = smir[imip].GetPoint();
+            cpoint -= elcenter; cpoint *= (1.0/elsize); cpoint[3] *= c;
+
+            // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+            STACK_ARRAY(SIMD<double>, mem, 4*(order+1)+1); mem[0]=0;
+            Vec<4,SIMD<double>*> polxt;
+            for(size_t d=0;d<4;d++)
+            {
+                polxt[d] = &mem[d*(order+1)+1];
+                Monomial (order, cpoint[d], polxt[d]);
+            }
+
+            for(int d=0;d<4;d++)
+            {
+                Vector<SIMD<double>> pol(npoly);
+                for (size_t i = 0, ii = 0; i <=order; i++)
+                    for (size_t j = 0; j <= order-i; j++)
+                        for (size_t k = 0; k <= order-i-j; k++)
+                            for (size_t l = 0; l <= order-i-j-k; l++)
+                                pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k] * polxt[3][l];
+
+                CSR localmat = localmats[d];
+                for (int i=0; i<ndof; ++i)
+                {
+                    dshape(i*4+d,imip) = 0.0;
+                    for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
+                        dshape(i*4+d,imip) += (localmat)[2][j]*pol[(localmat)[1][j]];// * (d==3 ? c : 1) * (2.0/elsize);
+                }
+            }
+        }
+    }
+
+    template class BlockMappedElement<1>;
+    template class BlockMappedElement<2>;
+    template class BlockMappedElement<3>;
+    template class BlockMappedElement<4>;
+
+
 }
