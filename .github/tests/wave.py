@@ -94,7 +94,7 @@ def TestQTrefftz(order, mesh, t_step,qtrefftz=1):
     v0=bdd[2]
     sig0=-bdd[1]
 
-    fes = trefftzfespace(mesh, order=order, dgjumps=True, basistype=0, useshift=True, useqt=True)
+    fes = trefftzfespace(mesh, order=order, dgjumps=True, basistype=0, useshift=True, eq="qtwave")
     fes.SetWavespeed(wavespeed)
     [a,f] = DGwaveeqsys(fes,U0,v0,sig0,wavespeed,gD,True,False,alpha=0.5,beta=0.5,gamma=1,mu=0.5)
     gfu = DGsolve(fes,a,f)
@@ -136,7 +136,7 @@ def TestBessel(order, mesh, t_step):
     v0=bdd[2]
     sig0=-bdd[1]
 
-    fes = trefftzfespace(mesh, order=order, dgjumps=True, basistype=0, useshift=True,usescale=False, useqt=True)
+    fes = trefftzfespace(mesh, order=order, dgjumps=True, basistype=0, useshift=True,usescale=False, eq="qtwave")
     fes.SetWavespeed(wavespeed,BB)
     [a,f] = DGwaveeqsys(fes,U0,v0,sig0,wavespeed,gD,True,False,alpha=0,beta=0,gamma=1,mu=0,BB=BB)
     gfu = DGsolve(fes,a,f)
