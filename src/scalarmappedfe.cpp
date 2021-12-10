@@ -1173,6 +1173,99 @@ namespace ngfem
         }
     }
 
+    template<>
+    void BlockMappedElement<1> :: CalcMappedDDShape (const BaseMappedIntegrationPoint & bmip,
+                                                BareSliceMatrix<> hddshape) const
+    {;}
+
+    template<>
+    void BlockMappedElement<2> :: CalcMappedDDShape (const BaseMappedIntegrationPoint & bmip,
+                                                BareSliceMatrix<> hddshape) const
+    {
+        auto ddshape = hddshape.AddSize(this->ndof, 2*2);
+
+        //auto & mip = static_cast<const MappedIntegrationPoint<2,2> &> (bmip);
+        Vec<2> cpoint = bmip.GetPoint();
+        cpoint -= elcenter;
+        cpoint *= (1.0/elsize);
+
+        // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+        STACK_ARRAY(double, mem2, 2*(order+1)+1); mem2[0]=0;
+        double* polxt[2];
+        for(int d=0;d<2;d++)
+        {
+            polxt[d] = &mem2[d*(order+1)+1];
+            Monomial (order, cpoint[d], polxt[d]);
+        }
+
+        for(int d1=0;d1<2;d1++)
+        {
+            CSR localmat = localmats[d1];
+            for(int d2=0;d2<2;d2++)
+            {
+                Vector<double> pol(npoly);
+                for (int i = 0, ii = 0; i <=order; i++)
+                    for (int j = 0; j <= order-i; j++)
+                        pol[ii++] = (d2==0?i:j)
+                            * polxt[0][i-(d2==0)] * polxt[1][j-(d2==1)];
+
+                for (int i=0; i<this->ndof; ++i)
+                {
+                    ddshape(i,d2*2+d1) = 0.0;
+                    for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
+                        ddshape(i,d2*2+d1) += (localmat)[2][j]*pol[(localmat)[1][j]] * (1.0/elsize);
+                }
+            }
+        }
+    }
+
+    template<>
+    void BlockMappedElement<3> :: CalcMappedDDShape (const BaseMappedIntegrationPoint & bmip,
+                                                BareSliceMatrix<> hddshape) const
+    {
+        auto ddshape = hddshape.AddSize(this->ndof, 3*3);
+        //auto & mip = static_cast<const MappedIntegrationPoint<2,2> &> (bmip);
+        Vec<3> cpoint = bmip.GetPoint();
+        cpoint -= elcenter;
+        cpoint *= (1.0/elsize);
+
+        // +1 size to avoid undefined behavior taking deriv, getting [-1] entry
+        STACK_ARRAY(double, mem2, 3*(order+1)+1); mem2[0]=0;
+        double* polxt[3];
+        for(int d=0;d<3;d++)
+        {
+            polxt[d] = &mem2[d*(order+1)+1];
+            Monomial (order, cpoint[d], polxt[d]);
+        }
+
+        for(int d1=0;d1<3;d1++)
+        {
+            CSR localmat = localmats[d1];
+            for(int d2=0;d2<3;d2++)
+            {
+                Vector<double> pol(npoly);
+                for (int i = 0, ii = 0; i <=order; i++)
+                    for (int j = 0; j <= order-i; j++)
+                        for (int k = 0; k <= order-i-j; k++)
+                            pol[ii++] = (d2==0?i:(d2==1?j:k))
+                                * polxt[0][i-(d2==0)] * polxt[1][j-(d2==1)] * polxt[2][k-(d2==2)];
+
+                for (int i=0; i<this->ndof; ++i)
+                {
+                    ddshape(i,d2*3+d1) = 0.0;
+                    for (int j=(localmat)[0][i]; j<(localmat)[0][i+1]; ++j)
+                        ddshape(i,d2*3+d1) += (localmat)[2][j]*pol[(localmat)[1][j]] * (1.0/elsize);
+                }
+            }
+        }
+    }
+
+    template<>
+    void BlockMappedElement<4> :: CalcMappedDDShape (const BaseMappedIntegrationPoint & bmip,
+                                                BareSliceMatrix<> hddshape) const
+    {;}
+
+
     template class BlockMappedElement<1>;
     template class BlockMappedElement<2>;
     template class BlockMappedElement<3>;

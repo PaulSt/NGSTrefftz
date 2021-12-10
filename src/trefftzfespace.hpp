@@ -66,6 +66,16 @@ namespace ngcomp
         static CSR Basis(int ord, int rdim);
     };
 
+    template<int D>
+    class FOQTWaveBasis : public PolBasis
+    {
+        mutex gentrefftzbasis;
+        Vec<D+1,std::map<string,CSR>> gtbstore;
+        public:
+        FOQTWaveBasis() {;}
+        CSR Basis(int ord, int rdim, Vec<D+1> ElCenter, Matrix<shared_ptr<CoefficientFunction>> GGder, Matrix<shared_ptr<CoefficientFunction>> BBder, double elsize = 1.0);
+    };
+
     class TrefftzFESpace : public FESpace
     {
         int D;
