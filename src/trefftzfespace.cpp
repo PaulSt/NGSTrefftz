@@ -195,10 +195,11 @@ namespace ngcomp
                             return *(new (alloc) ScalarMappedElement<2>(local_ndof,order,basismat,eltype,ElCenter<1>(ei),1.0));
                         }
                         else if(eqtyp=="foqtwave"){
+                            Vec<2,CSR> qbasismats;
                             for(int d=0;d<D+1;d++)
-                                basismats[d]=
+                                qbasismats[d]=
                                     static_cast<FOQTWaveBasis<1>*>(basis)->Basis(order, d, ElCenter<1>(ei), GGder, BBder);
-                            return *(new (alloc) BlockMappedElement<2>(local_ndof,order,basismats,eltype,ElCenter<1>(ei),1.0));
+                            return *(new (alloc) BlockMappedElement<2>(local_ndof,order,qbasismats,eltype,ElCenter<1>(ei),1.0));
                         }
                         else if(eqtyp=="fowave"){
                             return *(new (alloc) BlockMappedElement<2>(local_ndof,order,basismats,eltype,ElCenter<1>(ei),Adiam<1>(ei,c),c));
@@ -218,10 +219,11 @@ namespace ngcomp
                             return *(new (alloc) ScalarMappedElement<3>(local_ndof,order,basismat,eltype,ElCenter<2>(ei),1.0));
                         }
                         else if(eqtyp=="foqtwave"){
+                            Vec<3,CSR> qbasismats;
                             for(int d=0;d<D+1;d++)
-                                basismats[d]=
+                                qbasismats[d]=
                                     static_cast<FOQTWaveBasis<2>*>(basis)->Basis(order, d, ElCenter<2>(ei), GGder, BBder);
-                            return *(new (alloc) BlockMappedElement<3>(local_ndof,order,basismats,eltype,ElCenter<2>(ei),1.0));
+                            return *(new (alloc) BlockMappedElement<3>(local_ndof,order,qbasismats,eltype,ElCenter<2>(ei),1.0));
                         }
                         else if(eqtyp=="fowave"){
                             return *(new (alloc) BlockMappedElement<3>(local_ndof,order,basismats,eltype,ElCenter<2>(ei),Adiam<2>(ei,c),c));
