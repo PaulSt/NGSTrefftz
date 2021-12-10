@@ -244,12 +244,13 @@ namespace ngcomp
                 }
               else if (eqtyp == "foqtwave")
                 {
+                  Vec<2, CSR> qbasismats;
                   for (int d = 0; d < D + 1; d++)
-                    basismats[d]
+                    qbasismats[d]
                         = static_cast<FOQTWaveBasis<1> *> (basis)->Basis (
                             order, d, ElCenter<1> (ei), GGder, BBder);
                   return *(new (alloc) BlockMappedElement<2> (
-                      local_ndof, order, basismats, eltype, ElCenter<1> (ei),
+                      local_ndof, order, qbasismats, eltype, ElCenter<1> (ei),
                       1.0));
                 }
               else if (eqtyp == "fowave")
@@ -279,12 +280,13 @@ namespace ngcomp
                 }
               else if (eqtyp == "foqtwave")
                 {
+                  Vec<3, CSR> qbasismats;
                   for (int d = 0; d < D + 1; d++)
-                    basismats[d]
+                    qbasismats[d]
                         = static_cast<FOQTWaveBasis<2> *> (basis)->Basis (
                             order, d, ElCenter<2> (ei), GGder, BBder);
                   return *(new (alloc) BlockMappedElement<3> (
-                      local_ndof, order, basismats, eltype, ElCenter<2> (ei),
+                      local_ndof, order, qbasismats, eltype, ElCenter<2> (ei),
                       1.0));
                 }
               else if (eqtyp == "fowave")
