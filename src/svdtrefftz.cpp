@@ -43,9 +43,10 @@ namespace ngcomp
             icf->cf, dx.vb, dx.element_vb);
       }
 
-    // Array<double> allvalues(fes->GetNDof()*fes->GetNDof());
-    Array<Matrix<double>> Pmats (ma->GetNE (VOL));
-    Array<int> nzs (ma->GetNE (VOL));
+    shared_ptr<SparseMatrix<double>> P;
+    Table<int> table, table2;
+
+    std::once_flag init_flag;
 
     ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
       HeapReset hr (mlh);
@@ -53,7 +54,6 @@ namespace ngcomp
       fes->GetDofNrs (ei, dofs);
       auto &trafo = ma->GetTrafo (ei, mlh);
       auto &fel = fes->GetFE (ei, mlh);
-
       FlatMatrix<> elmat (dofs.Size (), mlh), elmati (dofs.Size (), mlh);
       elmat = 0.0;
       for (auto &bfi : bfis[VOL])
@@ -69,47 +69,36 @@ namespace ngcomp
       for (auto sv : elmat.Diag ())
         if (sv < eps)
           nz++;
-      nzs[ei.Nr ()] = nz;
-      // Pmats[ei.Nr()].AssignMemory (dofs.Size(),dofs.Size(),
-      // allvalues.Addr(dofs.Size()*dofs.Size()*ei.Nr()));
-      Pmats[ei.Nr ()] = (U.Cols (dofs.Size () - nz, dofs.Size ()));
-    });
 
-    TableCreator<int> creator (ma->GetNE (VOL));
-    TableCreator<int> creator2 (ma->GetNE (VOL));
-    for (; !creator.Done (); creator++, creator2++)
-      ma->IterateElements (VOL, [&] (auto ei) {
-        Array<DofId> dnums;
-        fes->GetDofNrs (ei, dnums);
-        for (DofId d : dnums)
-          // if (IsRegularDof(d))
-          creator.Add (ei.Nr (), d);
-        int prevdofs = 0;
-        for (int i = 0; i < ei.Nr (); i++)
-          prevdofs += nzs[ei.Nr ()];
-        for (int d = 0; d < nzs[ei.Nr ()]; d++)
-          creator2.Add (ei.Nr (), d + prevdofs);
+      std::call_once (init_flag, [&] () {
+        TableCreator<int> creator (ma->GetNE (VOL));
+        TableCreator<int> creator2 (ma->GetNE (VOL));
+        for (; !creator.Done (); creator++, creator2++)
+          for (auto ei : ma->Elements (VOL))
+            {
+              Array<DofId> dnums;
+              fes->GetDofNrs (ei, dnums);
+              for (DofId d : dnums)
+                creator.Add (ei.Nr (), d);
+              int prevdofs = (ei.Nr ()) * nz;
+              for (int d = 0; d < nz; d++)
+                creator2.Add (ei.Nr (), d + prevdofs);
+            }
+        table = creator.MoveTable ();
+        table2 = creator2.MoveTable ();
+
+        P = make_shared<SparseMatrix<double>> (*(new SparseMatrix<double> (
+            fes->GetNDof (), nz * ma->GetNE (VOL), table, table2, false)));
+        P->SetZero ();
       });
-    auto table = creator.MoveTable ();
-    auto table2 = creator2.MoveTable ();
 
-    int Pwidth = 0;
-    for (auto ei : ma->Elements (VOL))
-      Pwidth += nzs[ei.Nr ()];
-    if (Pwidth != nzs[0] * (ma->GetNE (VOL)))
-      throw std::logic_error ("WARNING: inconsistent nzs, try larger eps?");
-
-    SparseMatrix<double> P (fes->GetNDof (), Pwidth, table, table2, false);
-    P.SetZero ();
-
-    ma->IterateElements (VOL, [&] (auto ei) {
-      P.AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()], Pmats[ei.Nr ()]);
+      Matrix<> PP = U.Cols (dofs.Size () - nz, dofs.Size ());
+      P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()], PP);
     });
-    svdtt.Stop ();
-    shared_ptr<BaseMatrix> re = make_shared<SparseMatrix<double>> (P);
-    return re;
-  }
 
+    svdtt.Stop ();
+    return P;
+  }
 }
 
 #ifdef NGS_PYTHON
