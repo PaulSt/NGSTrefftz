@@ -3,8 +3,9 @@
 namespace ngcomp
 {
 
-  void LapackSVD (SliceMatrix<> A, SliceMatrix<double, ColMajor> U,
-                  SliceMatrix<double, ColMajor> V)
+  void
+  LapackSVD (SliceMatrix<double, ColMajor> A, SliceMatrix<double, ColMajor> U,
+             SliceMatrix<double, ColMajor> V)
   {
     static Timer t ("LapackSVD");
     RegionTimer reg (t);
@@ -25,8 +26,18 @@ namespace ngcomp
     A.Diag (0) = S;
   }
 
-  shared_ptr<BaseMatrix> SVDTrefftz (shared_ptr<SumOfIntegrals> bf,
-                                     shared_ptr<FESpace> fes, double eps)
+  void LapackSVD (SliceMatrix<double> A, SliceMatrix<double, ColMajor> U,
+                  SliceMatrix<double, ColMajor> V)
+  {
+    Matrix<double, ColMajor> AA = A;
+    LapackSVD (AA, U, V);
+    A = 0.0;
+    A.Diag (0) = AA.Diag ();
+  }
+
+  std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
+  SVDTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
+              double eps, shared_ptr<SumOfIntegrals> lf)
   {
     static Timer svdtt ("svdtrefftz");
     svdtt.Start ();
@@ -35,7 +46,6 @@ namespace ngcomp
     auto ma = fes->GetMeshAccess ();
 
     Array<shared_ptr<BilinearFormIntegrator>> bfis[4]; // VOL, BND, ...
-
     for (auto icf : bf->icfs)
       {
         auto &dx = icf->dx;
@@ -43,10 +53,20 @@ namespace ngcomp
             icf->cf, dx.vb, dx.element_vb);
       }
 
+    Array<shared_ptr<LinearFormIntegrator>> lfis[4];
+    if (lf)
+      for (auto icf : lf->icfs)
+        {
+          auto &dx = icf->dx;
+          lfis[dx.vb] += make_shared<SymbolicLinearFormIntegrator> (
+              icf->cf, dx.vb, dx.element_vb);
+        }
+
     shared_ptr<SparseMatrix<double>> P;
-    Table<int> table, table2;
+    VVector<double> lfvec (fes->GetNDof ());
 
     std::once_flag init_flag;
+    Table<int> table, table2;
 
     ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
       HeapReset hr (mlh);
@@ -62,9 +82,9 @@ namespace ngcomp
           elmat += elmati;
         }
       FlatMatrix<double, ColMajor> U (dofs.Size (), mlh),
-          V (dofs.Size (), mlh);
-      LapackSVD (elmat, U, V);
-      // CalcSVD(elmat,U,V);
+          Vt (dofs.Size (), mlh);
+      LapackSVD (elmat, U, Vt);
+      // CalcSVD(elmat,U,Vt);
       int nz = 0;
       for (auto sv : elmat.Diag ())
         if (sv < eps)
@@ -92,12 +112,32 @@ namespace ngcomp
         P->SetZero ();
       });
 
-      Matrix<> PP = U.Cols (dofs.Size () - nz, dofs.Size ());
+      Matrix<> PP = Trans (Vt.Rows (dofs.Size () - nz, dofs.Size ()));
       P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()], PP);
+
+      if (lf)
+        {
+          int nnz = dofs.Size () - nz;
+          FlatVector<> elvec (dofs.Size (), mlh), elveci (dofs.Size (), mlh);
+          elvec = 0.0;
+          for (auto &lfi : lfis[VOL])
+            {
+              lfi->CalcElementVector (fel, trafo, elveci, mlh);
+              elvec += elveci;
+            }
+          Matrix<double> Ut = Trans (U).Rows (0, nnz);
+          Matrix<double> V = Trans (Vt).Cols (0, nnz);
+          Matrix<> SigI (nnz, nnz);
+          SigI = 0;
+          for (int i = 0; i < nnz; i++)
+            SigI (i, i) = 1.0 / elmat (i, i);
+          Matrix<> elinverse = V * Matrix (SigI * Ut);
+          lfvec.FV () (table[ei.Nr ()]) = elinverse * elvec;
+        }
     });
 
     svdtt.Stop ();
-    return P;
+    return std::make_tuple (P, make_shared<VVector<double>> (lfvec));
   }
 }
 
@@ -111,9 +151,19 @@ void ExportSVDTrefftz (py::module m)
   m.def (
       "SVDTrefftz",
       [] (shared_ptr<ngfem::SumOfIntegrals> bf,
+          shared_ptr<ngcomp::FESpace> fes, double eps,
+          shared_ptr<ngfem::SumOfIntegrals> lf) {
+        return ngcomp::SVDTrefftz (bf, fes, eps, lf);
+      },
+      py::arg ("bf"), py::arg ("fes"), py::arg ("eps"),
+      py::arg ("lf") = nullptr);
+
+  m.def (
+      "SVDTrefftz",
+      [] (shared_ptr<ngfem::SumOfIntegrals> bf,
           shared_ptr<ngcomp::FESpace> fes,
           double eps) -> shared_ptr<ngcomp::BaseMatrix> {
-        return ngcomp::SVDTrefftz (bf, fes, eps);
+        return std::get<0> (ngcomp::SVDTrefftz (bf, fes, eps, nullptr));
       },
       py::arg ("bf"), py::arg ("fes"), py::arg ("eps"));
 }

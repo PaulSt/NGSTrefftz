@@ -7,9 +7,9 @@
 
 namespace ngcomp
 {
-  shared_ptr<BaseMatrix>
+  std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
   SVDTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
-              double eps = 10e-10);
+              double eps = 10e-10, shared_ptr<SumOfIntegrals> lf = nullptr);
 }
 
 #ifdef NGS_PYTHON
