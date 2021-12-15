@@ -143,11 +143,11 @@ def testsvdtrefftz():
     TU = TA.Inverse()*(PPT*f.vec)
     tpgfu = GridFunction(fes)
     tpgfu.vec.data = PP*TU
-    return sqrt(Integrate((tpgfu-exact)**2, mesh))
     # print("trefftz time: ", time.time()-start)
     # for t in Timers():
         # if 'svdt' in t['name']:
             # print(t)
+    return sqrt(Integrate((tpgfu-exact)**2, mesh))
 
 
 
