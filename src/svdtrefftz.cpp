@@ -50,13 +50,13 @@ namespace ngcomp
         auto ma = fes->GetMeshAccess();
 
         Array<shared_ptr<BilinearFormIntegrator>> bfis[4];  // VOL, BND, ...
-
         for (auto icf : bf->icfs)
         {
             auto & dx = icf->dx;
             bfis[dx.vb] += make_shared<SymbolicBilinearFormIntegrator> (icf->cf, dx.vb, dx.element_vb);
         }
-        Array<shared_ptr<LinearFormIntegrator>> lfis[4];  // VOL, BND, ...
+
+        Array<shared_ptr<LinearFormIntegrator>> lfis[4];  
         if(lf)
             for (auto icf : lf->icfs)
             {
@@ -65,7 +65,6 @@ namespace ngcomp
             }
 
         shared_ptr<SparseMatrix<double>> P;
-        //Vector<> lfvec(fes->GetNDof());
         VVector<double> lfvec(fes->GetNDof());
 
         std::once_flag init_flag;
@@ -86,11 +85,6 @@ namespace ngcomp
                 elmat += elmati;
             }
             FlatMatrix<double,ColMajor> U(dofs.Size(),mlh), Vt(dofs.Size(),mlh);
-            Matrix<> elmato = elmat;
-            //FlatMatrix<double,ColMajor> UU(dofs.Size(),mlh), VVt(dofs.Size(),mlh);
-            //LapackSVD(elmat,VVt,UU);
-            //LapackSVD(elmat,VVt,UU);
-            //FlatMatrix<double> U(dofs.Size(),UU.Data()), Vt(dofs.Size(),VVt.Data());
             LapackSVD(elmat,U,Vt);
             //CalcSVD(elmat,U,Vt);
             int nz = 0;
@@ -119,7 +113,6 @@ namespace ngcomp
 
             });
 
-            //Matrix<> PP = U.Cols(dofs.Size()-nz,dofs.Size());
             Matrix<> PP = Trans(Vt.Rows(dofs.Size()-nz,dofs.Size()));
             P->AddElementMatrix(table[ei.Nr()],table2[ei.Nr()], PP);
 
@@ -134,53 +127,17 @@ namespace ngcomp
                     lfi -> CalcElementVector(fel, trafo, elveci, mlh);
                     elvec += elveci;
                 }
-                //FlatMatrix<double> Ut(nnz,dofs.Size(),U.Data());
                 Matrix<double> Ut = Trans(U).Rows(0,nnz);
                 Matrix<double> V = Trans(Vt).Cols(0,nnz);
-                //cout << "Vt and V" << endl;
-                //cout << Vt << endl;
-                //cout << U << endl;
                 Matrix<> SigI(nnz,nnz);
                 SigI = 0;
                 for(int i=0;i<nnz;i++) SigI(i,i)=1.0/elmat(i,i);
-                //cout << "elmat, sigi"<<nnz << endl;
-                //cout << elmat << endl;
-                //cout << SigI << endl;
-                //cout << "shapes U,V,Sigi" << endl;
-                //cout << Ut.Height() << " " << Ut.Width() << endl;
-                //cout << V.Height() << " " << V.Width() << endl;
-                //cout << SigI.Height() << " " << SigI.Width() << endl;
-                //Matrix<double> calco = U*elmat*VVt;
-                //cout << Trans(U*elmat*Vt)<< endl;
-                //cout << calco<< endl;
-                //cout << "inverse..." << endl;
-                //cout << V*SigI*Ut<< endl;
-                //cout << "hallo"<<endl;
-                //cout << SigI << endl;
-                //cout << V << endl;
-                //cout << Ut << endl;
-                //cout << "hallo"<<endl;
-                //cout << Matrix(V*Matrix(SigI*Ut))<< endl;
                 Matrix<> elinverse = V*Matrix(SigI*Ut);
-            //cout << elinverse*elvec << endl;
-
                 lfvec.FV()(table[ei.Nr()])=elinverse*elvec;
-
-            //cout << (lfvec.FV())(table[ei.Nr()])<<endl;
-                //cout << elmato*elinverse<< endl;
-                //cout << elmato*elinverse*elmato<< endl;
-                //cout << elmato;
-
-
-
-
-
             }
         });
 
-
         svdtt.Stop();
-        //shared_ptr<BaseMatrix> re = make_shared<SparseMatrix<double>>(P);
         return std::make_tuple(P,make_shared<VVector<double>>(lfvec));
     }
 }
