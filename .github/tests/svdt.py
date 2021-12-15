@@ -15,7 +15,8 @@ import numpy as np
     # plt.spy(A); plt.plot(); plt.show()
 
 order = 5
-exact = exp(x)*sin(y)
+exactlap = exp(x)*sin(y)
+exactpoi = sin(x)*sin(y)
 eps = 10**-8
 mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
 SetNumThreads(3)
@@ -23,13 +24,13 @@ SetNumThreads(3)
 ########################################################################
 # L2
 ########################################################################
-def dglap(fes,bndc):
+def dglap(fes,bndc,rhs=0):
     """
     >>> fes = L2(mesh, order=order,  dgjumps=True)#,all_dofs_together=True)
-    >>> a,f = dglap(fes,exact)
+    >>> a,f = dglap(fes,exactlap)
     >>> gfu = GridFunction(fes)
     >>> gfu.vec.data = a.mat.Inverse() * f.vec
-    >>> sqrt(Integrate((gfu-exact)**2, mesh)) # doctest:+ELLIPSIS
+    >>> sqrt(Integrate((gfu-exactlap)**2, mesh)) # doctest:+ELLIPSIS
     4...e-09
     """
     mesh = fes.mesh
@@ -55,7 +56,8 @@ def dglap(fes,bndc):
 
     f = LinearForm(fes)
     f += alpha*order**2/h*bndc*v * ds(skeleton=True) \
-         +(-n*grad(v)*bndc)* ds(skeleton=True)
+         +(-n*grad(v)*bndc)* ds(skeleton=True) \
+         +rhs*v*dx
     f.Assemble()
     return a,f
 
@@ -84,7 +86,7 @@ def PySVDTrefftz(op,fes,eps):
     >>> vh = v.Operator("hesse")
     >>> op = (uh[0,0]+uh[1,1])*(vh[0,0]+vh[1,1])*dx
     >>> P = PySVDTrefftz(op,fes,eps)
-    >>> a,f = dglap(fes,exact)
+    >>> a,f = dglap(fes,exactlap)
     >>> rows,cols,vals = a.mat.COO()
     >>> A = sp.sparse.csr_matrix((vals,(rows,cols)))
     >>> A = A.todense()
@@ -93,7 +95,7 @@ def PySVDTrefftz(op,fes,eps):
     >>> tsol = np.linalg.solve(TA,P.transpose()@f.vec.FV())
     >>> tpgfu = GridFunction(fes)
     >>> tpgfu.vec.data = P@tsol
-    >>> sqrt(Integrate((tpgfu-exact)**2, mesh)) # doctest:+ELLIPSIS
+    >>> sqrt(Integrate((tpgfu-exactlap)**2, mesh)) # doctest:+ELLIPSIS
     1...e-08
     """
 
@@ -138,18 +140,61 @@ def testsvdtrefftz():
         PP = SVDTrefftz(op,fes,eps)
     # spspy(PP)
     PPT = PP.CreateTranspose()
-    a,f = dglap(fes,exact)
+    a,f = dglap(fes,exactlap)
     TA = PPT@a.mat@PP
     TU = TA.Inverse()*(PPT*f.vec)
     tpgfu = GridFunction(fes)
     tpgfu.vec.data = PP*TU
-    return sqrt(Integrate((tpgfu-exact)**2, mesh))
     # print("trefftz time: ", time.time()-start)
     # for t in Timers():
         # if 'svdt' in t['name']:
             # print(t)
+    return sqrt(Integrate((tpgfu-exactlap)**2, mesh))
 
 
+def testsvdtrefftznonsym():
+    """
+    >>> testsvdtrefftznonsym() # doctest:+ELLIPSIS
+    1...e-08
+    """
+    start = time.time()
+    fes = L2(mesh, order=order,  dgjumps=True)#,all_dofs_together=True)
+    u,v = fes.TnT()
+    uh = u.Operator("hesse")
+    vh = v.Operator("hesse")
+    op = (uh[0,0]+uh[1,1])*v*dx
+    with TaskManager():
+        PP = SVDTrefftz(op,fes,eps)
+    PPT = PP.CreateTranspose()
+    a,f = dglap(fes,exactlap)
+    TA = PPT@a.mat@PP
+    TU = TA.Inverse()*(PPT*f.vec)
+    tpgfu = GridFunction(fes)
+    tpgfu.vec.data = PP*TU
+    return sqrt(Integrate((tpgfu-exactlap)**2, mesh))
+
+def testsvdtrefftzpoi():
+    """
+    >>> testsvdtrefftzpoi() # doctest:+ELLIPSIS
+    4...e-09
+    """
+    start = time.time()
+    fes = L2(mesh, order=order,  dgjumps=True)#,all_dofs_together=True)
+    u,v = fes.TnT()
+    uh = u.Operator("hesse")
+    vh = v.Operator("hesse")
+    op = (uh[0,0]+uh[1,1])*(vh[0,0]+vh[1,1])*dx
+    rhs=-exactpoi.Diff(x).Diff(x)-exactpoi.Diff(y).Diff(y)
+    lop = -rhs*(vh[0,0]+vh[1,1])*dx
+    with TaskManager():
+        PP,ufv = SVDTrefftz(op,fes,eps,lop)
+    PPT = PP.CreateTranspose()
+    a,f = dglap(fes,exactpoi,rhs)
+    TA = PPT@a.mat@PP
+    TU = TA.Inverse()*(PPT*(f.vec-a.mat*ufv))
+    tpgfu = GridFunction(fes)
+    tpgfu.vec.data = PP*TU+ufv
+    return sqrt(Integrate((tpgfu-exactpoi)**2, mesh))
 
 
 ########################################################################
@@ -161,10 +206,10 @@ def testlaptrefftz():
     1...e-08
     """
     fes = FESpace("trefftzfespace",mesh,order=order,eq="laplace")
-    a,f = dglap(fes,exact)
+    a,f = dglap(fes,exactlap)
     gfu = GridFunction(fes)
     gfu.vec.data = a.mat.Inverse() * f.vec
-    return sqrt(Integrate((gfu-exact)**2, mesh))
+    return sqrt(Integrate((gfu-exactlap)**2, mesh))
 
 if __name__ == "__main__":
     import doctest
