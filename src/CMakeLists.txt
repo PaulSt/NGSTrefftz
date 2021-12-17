@@ -48,3 +48,7 @@ install (FILES
         #COMPONENT tngs
         )
 
+include(CTest)
+add_test(NAME svdtest COMMAND python3 ../.github/tests/svdt.py -v)
+add_test(NAME tents COMMAND python3 ../.github/tests/tents.py -v)
+add_test(NAME trefftz COMMAND python3 ../.github/tests/wave.py -v)
