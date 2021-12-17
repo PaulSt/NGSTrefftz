@@ -106,9 +106,9 @@ namespace ngcomp
             }
         table = creator.MoveTable ();
         table2 = creator2.MoveTable ();
-
-        P = make_shared<SparseMatrix<double>> (*(new SparseMatrix<double> (
-            fes->GetNDof (), nz * ma->GetNE (VOL), table, table2, false)));
+        SparseMatrix<double> PP (fes->GetNDof (), nz * ma->GetNE (VOL), table,
+                                 table2, false);
+        P = make_shared<SparseMatrix<double>> (PP);
         P->SetZero ();
       });
 
