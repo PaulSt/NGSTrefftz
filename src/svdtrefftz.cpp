@@ -56,7 +56,7 @@ namespace ngcomp
             bfis[dx.vb] += make_shared<SymbolicBilinearFormIntegrator> (icf->cf, dx.vb, dx.element_vb);
         }
 
-        Array<shared_ptr<LinearFormIntegrator>> lfis[4];  
+        Array<shared_ptr<LinearFormIntegrator>> lfis[4];
         if(lf)
             for (auto icf : lf->icfs)
             {
@@ -107,8 +107,8 @@ namespace ngcomp
                     }
                 table = creator.MoveTable();
                 table2 = creator2.MoveTable();
-
-                P = make_shared<SparseMatrix<double>>(*(new SparseMatrix<double>(fes->GetNDof(), nz*ma->GetNE(VOL), table,table2,false)));
+                SparseMatrix<double> PP(fes->GetNDof(), nz*ma->GetNE(VOL), table,table2,false);
+                P = make_shared<SparseMatrix<double>>(PP);
                 P->SetZero();
 
             });
