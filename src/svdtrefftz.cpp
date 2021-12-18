@@ -18,29 +18,62 @@ namespace ngcomp
     ngbla::integer lda = A.Dist (), ldu = U.Dist (), ldv = V.Dist ();
     ngbla::integer lwork = work.Size ();
 
+    // if(std::is_same<SCAL,double>::value)
     dgesdd_ (&jobz, &m, &n, A.Data (), &lda, S.Data (), U.Data (), &ldu,
              V.Data (), &ldv, work.Data (), &lwork, iwork.Data (), &info);
     if (info != 0)
       cout << "info = " << info << endl;
     A = 0.0;
     A.Diag (0) = S;
+    // cout << S << endl;
   }
 
-  void LapackSVD (SliceMatrix<double> A, SliceMatrix<double, ColMajor> U,
-                  SliceMatrix<double, ColMajor> V)
+  void LapackSVD (SliceMatrix<Complex, ColMajor> A,
+                  SliceMatrix<Complex, ColMajor> U,
+                  SliceMatrix<Complex, ColMajor> V)
   {
-    Matrix<double, ColMajor> AA = A;
+    static Timer t ("LapackSVD");
+    RegionTimer reg (t);
+    ngbla::integer m = A.Width (), n = A.Height ();
+    Vector<> S (min (n, m));
+    Array<Complex> work (4 * m * m + 6 * m + m + 100);
+    Array<int> iwork (max (n, m) * 9);
+    Array<double> rwork (max (n, m) * 9);
+    ngbla::integer info;
+    char jobz = 'A';
+    ngbla::integer lda = A.Dist (), ldu = U.Dist (), ldv = V.Dist ();
+    ngbla::integer lwork = work.Size ();
+
+    zgesdd_ (&jobz, &m, &n, A.Data (), &lda, S.Data (), U.Data (), &ldu,
+             V.Data (), &ldv, work.Data (), &lwork, rwork.Data (),
+             iwork.Data (), &info);
+    if (info != 0)
+      cout << "info = " << info << endl;
+    A = 0.0;
+    A.Diag (0) = S;
+  }
+
+  template <class SCAL>
+  void LapackSVD (SliceMatrix<SCAL> A, SliceMatrix<SCAL, ColMajor> U,
+                  SliceMatrix<SCAL, ColMajor> V)
+  {
+    Matrix<SCAL, ColMajor> AA = A;
+    // Matrix<SCAL,ColMajor> AA(A.Height(),A.Width());
+    // for(int i=0;i<A.Height();i++)
+    // for(int j=0;j<A.Width();j++)
+    // AA(i,j)= A(i,j);
     LapackSVD (AA, U, V);
     A = 0.0;
     A.Diag (0) = AA.Diag ();
   }
 
+  template <class SCAL>
   std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
   SVDTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
               double eps, shared_ptr<SumOfIntegrals> lf)
   {
     static Timer svdtt ("svdtrefftz");
-    svdtt.Start ();
+    RegionTimer reg (svdtt);
     LocalHeap lh (1000 * 1000 * 1000);
 
     auto ma = fes->GetMeshAccess ();
@@ -62,8 +95,8 @@ namespace ngcomp
               icf->cf, dx.vb, dx.element_vb);
         }
 
-    shared_ptr<SparseMatrix<double>> P;
-    VVector<double> lfvec (fes->GetNDof ());
+    shared_ptr<SparseMatrix<SCAL>> P;
+    VVector<SCAL> lfvec (fes->GetNDof ());
 
     std::once_flag init_flag;
     Table<int> table, table2;
@@ -74,20 +107,22 @@ namespace ngcomp
       fes->GetDofNrs (ei, dofs);
       auto &trafo = ma->GetTrafo (ei, mlh);
       auto &fel = fes->GetFE (ei, mlh);
-      FlatMatrix<> elmat (dofs.Size (), mlh), elmati (dofs.Size (), mlh);
+      FlatMatrix<SCAL> elmat (dofs.Size (), mlh), elmati (dofs.Size (), mlh);
       elmat = 0.0;
+      // cout << fel.ComplexShapes() << endl;
       for (auto &bfi : bfis[VOL])
         {
           bfi->CalcElementMatrix (fel, trafo, elmati, mlh);
           elmat += elmati;
         }
-      FlatMatrix<double, ColMajor> U (dofs.Size (), mlh),
-          Vt (dofs.Size (), mlh);
-      LapackSVD (elmat, U, Vt);
+      // cout << elmat << endl;
+      FlatMatrix<SCAL, ColMajor> U (dofs.Size (), mlh), Vt (dofs.Size (), mlh);
+      LapackSVD<SCAL> (elmat, U, Vt);
+      // cout << elmat << endl;
       // CalcSVD(elmat,U,Vt);
       int nz = 0;
       for (auto sv : elmat.Diag ())
-        if (sv < eps)
+        if (abs (sv) < eps)
           nz++;
 
       std::call_once (init_flag, [&] () {
@@ -106,39 +141,63 @@ namespace ngcomp
             }
         table = creator.MoveTable ();
         table2 = creator2.MoveTable ();
-        SparseMatrix<double> PP (fes->GetNDof (), nz * ma->GetNE (VOL), table,
-                                 table2, false);
-        P = make_shared<SparseMatrix<double>> (PP);
+
+        SparseMatrix<SCAL> PP (fes->GetNDof (), nz * ma->GetNE (VOL), table,
+                               table2, false);
+        P = make_shared<SparseMatrix<SCAL>> (PP);
         P->SetZero ();
       });
 
-      Matrix<> PP = Trans (Vt.Rows (dofs.Size () - nz, dofs.Size ()));
+      Matrix<SCAL> PP = Trans (Vt.Rows (dofs.Size () - nz, dofs.Size ()));
       P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()], PP);
 
       if (lf)
         {
           int nnz = dofs.Size () - nz;
-          FlatVector<> elvec (dofs.Size (), mlh), elveci (dofs.Size (), mlh);
+          FlatVector<SCAL> elvec (dofs.Size (), mlh),
+              elveci (dofs.Size (), mlh);
           elvec = 0.0;
           for (auto &lfi : lfis[VOL])
             {
               lfi->CalcElementVector (fel, trafo, elveci, mlh);
               elvec += elveci;
             }
-          Matrix<double> Ut = Trans (U).Rows (0, nnz);
-          Matrix<double> V = Trans (Vt).Cols (0, nnz);
-          Matrix<> SigI (nnz, nnz);
-          SigI = 0;
+          Matrix<SCAL> Ut = Trans (U).Rows (0, nnz);
+          Matrix<SCAL> V = Trans (Vt).Cols (0, nnz);
+          Matrix<SCAL> SigI (nnz, nnz);
+          SigI = static_cast<SCAL> (0.0);
+          // SigI = 0.0;
           for (int i = 0; i < nnz; i++)
             SigI (i, i) = 1.0 / elmat (i, i);
-          Matrix<> elinverse = V * Matrix (SigI * Ut);
+          Matrix<SCAL> elinverse = V * SigI * Ut;
           lfvec.FV () (table[ei.Nr ()]) = elinverse * elvec;
         }
     });
 
-    svdtt.Stop ();
-    return std::make_tuple (P, make_shared<VVector<double>> (lfvec));
+    return std::make_tuple (P, make_shared<VVector<SCAL>> (lfvec));
   }
+
+  // template
+  // void LapackSVD<double>
+  //(SliceMatrix<double, ColMajor> A, SliceMatrix<double, ColMajor> U,
+  //SliceMatrix<double, ColMajor> V);
+  // template
+  // void LapackSVD<Complex>
+  //(SliceMatrix<Complex, ColMajor> A, SliceMatrix<Complex, ColMajor> U,
+  //SliceMatrix<Complex, ColMajor> V);
+  template void
+  LapackSVD<double> (SliceMatrix<double> A, SliceMatrix<double, ColMajor> U,
+                     SliceMatrix<double, ColMajor> V);
+  template void
+  LapackSVD<Complex> (SliceMatrix<Complex> A, SliceMatrix<Complex, ColMajor> U,
+                      SliceMatrix<Complex, ColMajor> V);
+  template std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
+  SVDTrefftz<double> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
+                      double eps, shared_ptr<SumOfIntegrals> lf);
+  template std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
+  SVDTrefftz<Complex> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
+                       double eps, shared_ptr<SumOfIntegrals> lf);
+
 }
 
 #ifdef NGS_PYTHON
@@ -153,7 +212,10 @@ void ExportSVDTrefftz (py::module m)
       [] (shared_ptr<ngfem::SumOfIntegrals> bf,
           shared_ptr<ngcomp::FESpace> fes, double eps,
           shared_ptr<ngfem::SumOfIntegrals> lf) {
-        return ngcomp::SVDTrefftz (bf, fes, eps, lf);
+        if (fes->IsComplex ())
+          return ngcomp::SVDTrefftz<Complex> (bf, fes, eps, nullptr);
+
+        return ngcomp::SVDTrefftz<double> (bf, fes, eps, lf);
       },
       py::arg ("bf"), py::arg ("fes"), py::arg ("eps"),
       py::arg ("lf") = nullptr);
@@ -163,7 +225,12 @@ void ExportSVDTrefftz (py::module m)
       [] (shared_ptr<ngfem::SumOfIntegrals> bf,
           shared_ptr<ngcomp::FESpace> fes,
           double eps) -> shared_ptr<ngcomp::BaseMatrix> {
-        return std::get<0> (ngcomp::SVDTrefftz (bf, fes, eps, nullptr));
+        if (fes->IsComplex ())
+          return std::get<0> (
+              ngcomp::SVDTrefftz<Complex> (bf, fes, eps, nullptr));
+
+        return std::get<0> (
+            ngcomp::SVDTrefftz<double> (bf, fes, eps, nullptr));
       },
       py::arg ("bf"), py::arg ("fes"), py::arg ("eps"));
 }
