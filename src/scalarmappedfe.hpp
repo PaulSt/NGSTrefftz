@@ -166,6 +166,7 @@ namespace ngfem
             //Evaluates gradient in integration point ip.
             //Vector x provides coefficient vector.
             HD NGS_DLL_HEADER virtual Vec<D> EvaluateGrad (const BaseMappedIntegrationPoint & ip, BareSliceVector<> x) const;
+            virtual Vec<D,Complex> EvaluateGradComplex (const BaseMappedIntegrationPoint & ip, BareSliceVector<Complex> x) const;
 
             using BaseScalarMappedElement::Evaluate;
             using BaseScalarMappedElement::EvaluateGrad;
@@ -345,7 +346,7 @@ namespace ngfem
                 for (size_t i = 0; i < mir.Size(); i++)
                     CalcDShape (mir[i], dshapes.Cols(i*D,(i+1)*D));
             }
-            Vec<D> EvaluateGrad (const BaseMappedIntegrationPoint & ip, BareSliceVector<Complex> x) const 
+            Vec<D> EvaluateGrad (const BaseMappedIntegrationPoint & ip, BareSliceVector<Complex> x) const
             { throw Exception("OII"); }
 
     };

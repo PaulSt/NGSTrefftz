@@ -239,6 +239,15 @@ namespace ngfem
         Vec<D> grad = Trans (dshape) * x;
         return grad;
     }
+    template<int D>
+    Vec<D,Complex> ScalarMappedElement<D> ::
+    EvaluateGradComplex (const BaseMappedIntegrationPoint & ip, BareSliceVector<Complex> x) const
+    {
+        MatrixFixWidth<D,Complex> dshape(ndof);
+        CalcDShape (ip, dshape);
+        Vec<D,Complex> grad = Trans (dshape) * x;
+        return grad;
+    }
 
 
     template<int D>
