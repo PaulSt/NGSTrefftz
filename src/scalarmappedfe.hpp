@@ -74,6 +74,13 @@ namespace ngfem
     Evaluate (const BaseMappedIntegrationRule &mir, SliceMatrix<> coefs,
               SliceMatrix<> values) const;
 
+    HD NGS_DLL_HEADER virtual Complex
+    EvaluateComplex (const BaseMappedIntegrationPoint &mip,
+                     BareSliceVector<Complex> x) const;
+    HD NGS_DLL_HEADER virtual void
+    Evaluate (const BaseMappedIntegrationRule &mir,
+              BareSliceVector<Complex> coefs, FlatVector<Complex> vals) const;
+
     // Evaluate function in points of integrationrule ir, transpose operation.
     // Vector x provides coefficient vector.
     HD NGS_DLL_HEADER virtual void
@@ -166,6 +173,14 @@ namespace ngfem
       CalcDShape (mip, dshape);
       return dshape;
     }
+    INLINE const FlatMatrixFixWidth<D, Complex>
+    GetDShapeComplex (const BaseMappedIntegrationPoint &mip,
+                      LocalHeap &lh) const
+    {
+      FlatMatrixFixWidth<D, Complex> dshape (ndof, lh);
+      CalcDShape (mip, dshape);
+      return dshape;
+    }
 
     virtual ELEMENT_TYPE ElementType () const { return eltype; }
 
@@ -175,10 +190,20 @@ namespace ngfem
 
     virtual void CalcShape (const BaseMappedIntegrationPoint &mip,
                             BareSliceVector<> shape) const;
+    virtual void CalcShape (const BaseMappedIntegrationPoint &mip,
+                            BareSliceVector<Complex> shape) const
+    {
+      throw Exception ("FE complex but CalcShape not complex");
+    }
     virtual void CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
                             BareSliceMatrix<SIMD<double>> shape) const;
     virtual void CalcDShape (const BaseMappedIntegrationPoint &mip,
                              BareSliceMatrix<> dshape) const;
+    virtual void CalcDShape (const BaseMappedIntegrationPoint &mip,
+                             BareSliceMatrix<Complex> dshape) const
+    {
+      throw Exception ("FE complex but CalcDShape not complex");
+    }
     virtual void CalcDShape (const BaseMappedIntegrationRule &mir,
                              BareSliceMatrix<> dshapes) const;
     virtual void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
@@ -246,6 +271,11 @@ namespace ngfem
 
     void CalcMappedDShape (const BaseMappedIntegrationPoint &bmip,
                            BareSliceMatrix<> dshape) const
+    {
+      CalcDShape (bmip, dshape);
+    }
+    void CalcMappedDShape (const BaseMappedIntegrationPoint &bmip,
+                           BareSliceMatrix<Complex> dshape) const
     {
       CalcDShape (bmip, dshape);
     }
@@ -344,7 +374,7 @@ namespace ngfem
     // virtual ELEMENT_TYPE ElementType() const { return eltype; }
 
     // using ScalarMappedElement<D>::CalcShape;
-    // using ScalarMappedElement<D>::CalcDShape;
+    using ScalarMappedElement<D>::CalcDShape;
     using ScalarMappedElement<D>::CalcMappedDShape;
     using ScalarMappedElement<D>::Evaluate;
     using ScalarMappedElement<D>::EvaluateGrad;
@@ -363,6 +393,89 @@ namespace ngfem
                      BareSliceMatrix<SIMD<double>> dshape) const override;
     void CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
                             BareSliceMatrix<> hddshape) const override;
+  };
+
+  template <int D> class PlainWaveElement : public ScalarMappedElement<D>
+  {
+  private:
+    Vec<D> GetDirection (int i) const;
+    bool iscomplex = true;
+
+  public:
+    PlainWaveElement (int andof, int aord, ELEMENT_TYPE aeltype,
+                      Vec<D> aelcenter = 0, double aelsize = 1, float ac = 1.0)
+        : ScalarMappedElement<D> (andof, aord, Matrix (), aeltype, aelcenter,
+                                  aelsize, ac)
+    {
+      ;
+    }
+
+    // virtual ELEMENT_TYPE ElementType() const { return eltype; }
+
+    // using ScalarMappedElement<D>::CalcShape;
+    // using ScalarMappedElement<D>::CalcDShape;
+    using ScalarMappedElement<D>::CalcMappedDShape;
+    using ScalarMappedElement<D>::Evaluate;
+    using ScalarMappedElement<D>::EvaluateGrad;
+    using ScalarMappedElement<D>::AddGradTrans;
+
+    bool ComplexShapes () const override { return true; }
+
+    Vec<D> EvaluateGrad (const BaseMappedIntegrationPoint &ip,
+                         BareSliceVector<> x) const override
+    {
+      throw Exception ("EvaluateGrad only complex for PW ");
+    }
+    void CalcShape (const BaseMappedIntegrationPoint &mip,
+                    BareSliceVector<> shape) const override
+    {
+      throw Exception ("CalcShape only complex for PW ");
+    }
+    void CalcDShape (const BaseMappedIntegrationPoint &mip,
+                     BareSliceMatrix<> dshape) const override
+    {
+      throw Exception ("CalcDShape only complex for PW ");
+    }
+    void CalcDShape (const BaseMappedIntegrationRule &mir,
+                     BareSliceMatrix<> dshapes) const override
+    {
+      throw Exception ("CalcDShape only complex for PW ");
+    }
+    void CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
+                            BareSliceMatrix<> hddshape) const override
+    {
+      throw Exception ("Not implemented for PW ");
+    }
+    void CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
+                    BareSliceMatrix<SIMD<double>> shape) const override
+    {
+      cout << "NO SIMD" << endl;
+      throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
+    }
+    void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
+                     BareSliceMatrix<SIMD<double>> dshape) const override
+    {
+      cout << "NO SIMD" << endl;
+      throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
+    }
+
+    void CalcShape (const BaseMappedIntegrationPoint &mip,
+                    BareSliceVector<Complex> shape) const override;
+    void CalcDShape (const BaseMappedIntegrationPoint &mip,
+                     BareSliceMatrix<Complex> dshape) const;
+
+    void CalcDShape (const BaseMappedIntegrationRule &mir,
+                     BareSliceMatrix<Complex> dshapes) const
+    {
+      cout << __FILE__ << " " << __LINE__ << endl;
+      for (size_t i = 0; i < mir.Size (); i++)
+        CalcDShape (mir[i], dshapes.Cols (i * D, (i + 1) * D));
+    }
+    Vec<D> EvaluateGrad (const BaseMappedIntegrationPoint &ip,
+                         BareSliceVector<Complex> x) const
+    {
+      throw Exception ("OII");
+    }
   };
 
 }

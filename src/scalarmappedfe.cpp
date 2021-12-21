@@ -79,6 +79,23 @@ namespace ngfem
       vals (i) = Evaluate (mir[i], coefs);
   }
 
+  Complex BaseScalarMappedElement ::EvaluateComplex (
+      const BaseMappedIntegrationPoint &mip, BareSliceVector<Complex> x) const
+  {
+    VectorMem<20, Complex> shape (ndof);
+    CalcShape (mip, shape);
+    return InnerProduct (shape, x);
+  }
+
+  void
+  BaseScalarMappedElement ::Evaluate (const BaseMappedIntegrationRule &mir,
+                                      BareSliceVector<Complex> coefs,
+                                      FlatVector<Complex> vals) const
+  {
+    for (size_t i = 0; i < mir.Size (); i++) //.GetNIP(); i++)
+      vals (i) = EvaluateComplex (mir[i], coefs);
+  }
+
   void BaseScalarMappedElement ::Evaluate (
       const SIMD_BaseMappedIntegrationRule &mir, BareSliceVector<> coefs,
       BareVector<SIMD<double>> values) const
@@ -1447,5 +1464,60 @@ namespace ngfem
   template class BlockMappedElement<2>;
   template class BlockMappedElement<3>;
   template class BlockMappedElement<4>;
+
+  template <> Vec<2> PlainWaveElement<2>::GetDirection (int i) const
+  {
+    // Array<Vec<2>> pwdir(ndof);
+    // for(int i=0;i<ndof;i++)
+    //{
+    Vec<2> pwdir = { cos (2.0 * M_PI * i / this->ndof),
+                     sin (2.0 * M_PI * i / this->ndof) };
+    // cout << pwdir << endl;
+
+    //}
+    return pwdir;
+  }
+
+  template <>
+  void PlainWaveElement<2>::CalcShape (const BaseMappedIntegrationPoint &mip,
+                                       BareSliceVector<Complex> shape) const
+  {
+    // auto & smir = static_cast<const SIMD_BaseMappedIntegrationRuleD>&>
+    // (mir);
+    Vec<2> cpoint = mip.GetPoint ();
+    cpoint -= elcenter;
+    // cout << cpoint << endl;
+
+    for (int i = 0; i < this->ndof; ++i)
+      {
+        Vec<2> dir = GetDirection (i);
+        shape (i) = 0.0;
+        shape (i) = exp (1i * (cpoint[0] * dir[0] + cpoint[1] * dir[1]));
+        // cout << shape(i) << endl;
+      }
+  }
+
+  template <>
+  void PlainWaveElement<2>::CalcDShape (const BaseMappedIntegrationPoint &mip,
+                                        BareSliceMatrix<Complex> dshape) const
+  {
+    Vec<2> cpoint = mip.GetPoint ();
+    cpoint -= elcenter;
+
+    // cout << "calcdshape" << endl;
+    // cout << cpoint << endl;
+    for (int d = 0; d < 2; d++)
+      for (int i = 0; i < this->ndof; ++i)
+        {
+          Vec<2> dir = GetDirection (i);
+          dshape (i, d) = 0.0;
+          dshape (i, d)
+              = 1i * dir[d]
+                * exp (1i * (cpoint[0] * dir[0] + cpoint[1] * dir[1]));
+          // cout << dshape(i,d) << endl;
+        }
+  }
+
+  template class PlainWaveElement<2>;
 
 }

@@ -22,13 +22,23 @@ namespace ngcomp
     basistype = flags.GetNumFlag ("basistype", 0);
     useshift = flags.GetNumFlag ("useshift", 1);
     usescale = flags.GetNumFlag ("usescale", 1);
+    DefineNumListFlag ("eq");
     eqtyp = flags.GetStringFlag ("eq");
 
-    local_ndof = BinCoeff (D + order, order)
-                 + BinCoeff (D + order - 1, order - 1)
-                 - (eqtyp == "fowave_reduced");
     if (eqtyp == "fowave" || eqtyp == "foqtwave")
       local_ndof = (D + 1) * BinCoeff (D + order, D);
+    else if (eqtyp == "wave")
+      local_ndof = BinCoeff (D + order, order)
+                   + BinCoeff (D + order - 1, order - 1)
+                   - (eqtyp == "fowave_reduced");
+    else if (eqtyp == "laplace")
+      local_ndof
+          = BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1);
+    else if (eqtyp == "helmholtz")
+      local_ndof = 2 * order + 1;
+    else
+      local_ndof
+          = BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1);
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
 
@@ -258,6 +268,11 @@ namespace ngcomp
                   return *(new (alloc) BlockMappedElement<2> (
                       local_ndof, order, basismats, eltype, ElCenter<1> (ei),
                       Adiam<1> (ei, c), c));
+                }
+              if (eqtyp == "helmholtz")
+                {
+                  return *(new (alloc) PlainWaveElement<2> (
+                      local_ndof, order, eltype, ElCenter<1> (ei), c));
                 }
               else
                 return *(new (alloc) ScalarMappedElement<2> (
