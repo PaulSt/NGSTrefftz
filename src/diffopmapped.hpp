@@ -427,9 +427,11 @@ namespace ngfem
       cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).CalcMappedDShape (mip, Trans (mat));
     }
+
+    template <typename SCALMIP>
     static void
     GenerateMatrix (const FiniteElement &fel,
-                    const MappedIntegrationPoint<D, D> &mip,
+                    const MappedIntegrationPoint<D, D, SCALMIP> &mip,
                     SliceMatrix<Complex, ColMajor> mat, LocalHeap &lh)
     {
       cout << __FILE__ << " " << __LINE__ << endl;
@@ -475,27 +477,53 @@ namespace ngfem
     }
 
     ///
-    template <typename MIP, class TVX, class TVY>
-    static void Apply (const FiniteElement &fel, const MIP &mip, const TVX &x,
-                       TVY &&y, LocalHeap &lh)
-    {
-      cout << __FILE__ << " " << __LINE__ << endl;
-      HeapReset hr (lh);
-      typedef typename TVX::TSCAL TSCAL;
-      Vec<D, TSCAL> hv = Trans (Cast (fel).GetDShape (mip, lh)) * x;
-      y = hv;
-      // y = Trans (mip.GetJacobianInverse()) * hv;
-    }
 
-    template <class TVY>
+    // template <class TVY>
+    // static void Apply (const FiniteElement & fel, const
+    // MappedIntegrationPoint<D,D> & mip, const FlatVector<> & x, TVY && y,
+    // LocalHeap & lh)
+    //{
+    // cout << __FILE__<<" "<<__LINE__<<endl;
+    // Vec<D> hv = Cast(fel).EvaluateGrad(mip, x);
+    ////y = Trans (mip.GetJacobianInverse()) * hv;
+    // y = hv;
+    //}
+
     static void
     Apply (const FiniteElement &fel, const MappedIntegrationPoint<D, D> &mip,
-           const FlatVector<> &x, TVY &&y, LocalHeap &lh)
+           const BareSliceVector<Complex> &x, FlatVector<Complex> &&y,
+           LocalHeap &lh)
     {
       cout << __FILE__ << " " << __LINE__ << endl;
       Vec<D> hv = Cast (fel).EvaluateGrad (mip, x);
       // y = Trans (mip.GetJacobianInverse()) * hv;
       y = hv;
+    }
+    template <typename MIP, class TVY>
+    static void
+    Apply (const FiniteElement &fel, const MIP &mip,
+           const BareSliceVector<Complex> &x, TVY &&y, LocalHeap &lh)
+    {
+      // cout << __FILE__<<" "<<__LINE__<<endl;
+      // cout << typeid(x).name() << endl;
+      // cout << typeid(y).name() << endl;
+      Vec<D, Complex> hv = Cast (fel).EvaluateGradComplex (mip, x);
+      y = hv;
+      HeapReset hr (lh);
+    }
+
+    template <typename MIP, class TVX, class TVY>
+    static void Apply (const FiniteElement &fel, const MIP &mip, const TVX &x,
+                       TVY &&y, LocalHeap &lh)
+    {
+      cout << __FILE__ << " " << __LINE__ << endl;
+      cout << typeid (x).name () << endl;
+      cout << typeid (y).name () << endl;
+      HeapReset hr (lh);
+      typedef typename TVX::TSCAL TSCAL;
+      Vec<D, TSCAL> hv = Trans (Cast (fel).GetDShape (mip, lh)) * x;
+      y = hv;
+      // y = Trans (mip.GetJacobianInverse()) * hv;
     }
 
     using DiffOp<DiffOpMappedGradient<D, FEL>>::ApplyIR;

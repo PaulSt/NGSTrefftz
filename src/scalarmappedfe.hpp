@@ -222,6 +222,9 @@ namespace ngfem
     HD NGS_DLL_HEADER virtual Vec<D>
     EvaluateGrad (const BaseMappedIntegrationPoint &ip,
                   BareSliceVector<> x) const;
+    virtual Vec<D, Complex>
+    EvaluateGradComplex (const BaseMappedIntegrationPoint &ip,
+                         BareSliceVector<Complex> x) const;
 
     using BaseScalarMappedElement::AddGradTrans;
     using BaseScalarMappedElement::Evaluate;
