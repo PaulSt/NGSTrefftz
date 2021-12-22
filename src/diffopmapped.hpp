@@ -48,27 +48,8 @@ namespace ngfem
     // static void GenerateMatrix (const FiniteElement & fel, const MIP & mip,
     // MAT && mat, LocalHeap & lh)
     //{
-    // cout << __FILE__<<" "<<__LINE__<<endl;
-    // cout << typeid(mat).name() << endl;
     // HeapReset hr(lh);
     // mat.Row(0) = Cast(fel).GetShape(mip, lh);
-    //}
-
-    // static void GenerateMatrix (const FiniteElement & fel,
-    // const BaseMappedIntegrationPoint & mip,
-    // FlatMatrixFixHeight<1> & mat, LocalHeap & lh)
-    //{
-    // cout << __FILE__<<" "<<__LINE__<<endl;
-    // Cast(fel).CalcShape (mip, mat.Row(0)); // FlatVector<> (fel.GetNDof(),
-    // &mat(0,0)));
-    //}
-    // static void GenerateMatrix (const FiniteElement & fel,
-    // const BaseMappedIntegrationPoint & mip,
-    // FlatMatrixFixHeight<1,Complex> & mat, LocalHeap & lh)
-    //{
-    // cout << __FILE__<<" "<<__LINE__<<endl;
-    // Cast(fel).CalcShape (mip, mat.Row(0)); // FlatVector<> (fel.GetNDof(),
-    // &mat(0,0)));
     //}
 
     static void
@@ -76,7 +57,6 @@ namespace ngfem
                     const BaseMappedIntegrationPoint &mip,
                     SliceMatrix<double, ColMajor> mat, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).CalcShape (mip, mat.Row (0));
     }
     static void
@@ -84,7 +64,6 @@ namespace ngfem
                     const BaseMappedIntegrationPoint &mip,
                     SliceMatrix<Complex, ColMajor> mat, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).CalcShape (mip, mat.Row (0));
     }
 
@@ -94,7 +73,6 @@ namespace ngfem
                                   const BaseMappedIntegrationRule &mir,
                                   MAT &mat, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).CalcShape (mir, Trans (mat));
     }
 
@@ -110,9 +88,6 @@ namespace ngfem
     static void Apply (const FiniteElement &fel, const MIP &mip, const TVX &x,
                        TVY &y, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
-      cout << typeid (x).name () << endl;
-      cout << typeid (y).name () << endl;
       HeapReset hr (lh);
       y = Trans (Cast (fel).GetShape (mip, lh)) * x;
     }
@@ -121,7 +96,6 @@ namespace ngfem
     Apply (const FiniteElement &fel, const MappedIntegrationPoint<D, D> &mip,
            const FlatVector<double> &x, FlatVector<double> &y, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       y (0) = Cast (fel).Evaluate (mip, x);
     }
 
@@ -130,7 +104,6 @@ namespace ngfem
            const BareSliceVector<Complex> &x, FlatVector<Complex> &y,
            LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       y (0) = Cast (fel).EvaluateComplex (mip, x);
     }
 
@@ -139,7 +112,6 @@ namespace ngfem
     static void ApplyIR (const FiniteElement &fel, const MIR &mir,
                          BareSliceVector<double> x, TMY y, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).Evaluate (mir, x, FlatVector<> (mir.Size (), &y (0, 0)));
     }
 
@@ -148,7 +120,6 @@ namespace ngfem
     ApplyIR (const FiniteElement &fel, const MIR &mir,
              BareSliceVector<Complex> x, SliceMatrix<Complex> y, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       // Cast(fel).Evaluate (mir,
       // SliceMatrix<double> (fel.GetNDof(), 2, 2, reinterpret_cast<double*>
       // (&x(0))), SliceMatrix<double> (mir.Size(), 2, 2,
@@ -164,7 +135,6 @@ namespace ngfem
                  const SIMD_BaseMappedIntegrationRule &mir,
                  BareSliceVector<double> x, BareSliceMatrix<SIMD<double>> y)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).Evaluate (mir, x, y.Row (0));
     }
 
@@ -172,7 +142,6 @@ namespace ngfem
     static void ApplyTrans (const FiniteElement &fel, const MIP &mip,
                             const TVX &x, TVY &y, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       HeapReset hr (lh);
       y.Range (0, fel.GetNDof ()) = Cast (fel).GetShape (mip, lh) * x;
     }
@@ -183,7 +152,6 @@ namespace ngfem
                               FlatMatrix<double> x, BareSliceVector<double> y,
                               LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).EvaluateTrans (mir, FlatVector<> (mir.Size (), &x (0, 0)), y);
     }
 
@@ -200,7 +168,6 @@ namespace ngfem
     static void ApplyTransIR (const FiniteElement &fel, const MIR &mir,
                               const TVX &x, TVY &y, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       y.Range (0, DIM * fel.GetNDof ()) = 0.0;
       for (size_t i = 0; i < mir.Size (); i++)
         {
@@ -212,13 +179,8 @@ namespace ngfem
     static void ApplyTransAdd (const FiniteElement &fel, const MIP &mip,
                                const TVX &x, TVY &y, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
-      // cout << __FILE__<<" "<<__LINE__<<endl;
-      // cout << typeid(x).name() << endl;
-      // cout << typeid(y).name() << endl;
       if (fel.ComplexShapes ())
         {
-          cout << __FILE__ << " " << __LINE__ << endl;
           HeapReset hr (lh);
           FlatMatrixFixHeight<DIM_DMAT, Complex> mat (DIM * fel.GetNDof (),
                                                       lh);
@@ -237,31 +199,6 @@ namespace ngfem
           y.Range (DIM * fel.GetNDof ()) += Trans (mat) * x;
         }
     }
-    // using DiffOp<DiffOpMappedGradient<D, FEL> >::AddTransIR;
-    // using DiffOp<DiffOpMappedGradient<D, FEL> >::AddTransAdd;
-    //  for complex shapes in lfi, symbolicintegrator.cpp T_CalcFacetVector ->
-    //  diffop_impl.hpp ApplyTrans,ApplyTransIR ->
-    // template <class MIP>
-    // static void ApplyTransAdd (const FiniteElement & fel,
-    // const MIP & mip,
-    // FlatVector<Complex> x, BareSliceVector<Complex> y,
-    // LocalHeap & lh)
-    //{
-    // cout << __FILE__<<" "<<__LINE__<<endl;
-    // if(fel.ComplexShapes())
-    //{
-    // FlatMatrixFixHeight<DIM_DMAT, Complex> mat(DIM*fel.GetNDof(), lh);
-    ////Cast(fel).CalcShape (mip, mat.Row(0));
-    // GenerateMatrix (fel, mip, mat, lh);
-    // y.Range(DIM*fel.GetNDof()) += Trans (mat) * x;
-    // }
-    // else
-    //{
-    // FlatMatrixFixHeight<DIM_DMAT, double> mat(DIM*fel.GetNDof(), lh);
-    // GenerateMatrix (fel, mip, mat, lh);
-    // y.Range(DIM*fel.GetNDof()) += Trans (mat) * x;
-    // }
-    //}
 
     using DiffOp<DiffOpMapped<D, FEL>>::AddTransSIMDIR;
     static void
@@ -269,7 +206,6 @@ namespace ngfem
                     const SIMD_BaseMappedIntegrationRule &mir,
                     BareSliceMatrix<SIMD<double>> y, BareSliceVector<double> x)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).AddTrans (mir, y.Row (0), x);
     }
   };
@@ -424,7 +360,6 @@ namespace ngfem
                     const MappedIntegrationPoint<D, D> &mip,
                     SliceMatrix<double, ColMajor> mat, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).CalcMappedDShape (mip, Trans (mat));
     }
 
@@ -434,9 +369,7 @@ namespace ngfem
                     const MappedIntegrationPoint<D, D, SCALMIP> &mip,
                     SliceMatrix<Complex, ColMajor> mat, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).CalcDShape (mip, Trans (mat));
-      // cout << mat << endl;
     }
 
     template <typename SCALMIP, typename MAT>
@@ -445,16 +378,7 @@ namespace ngfem
                     const MappedIntegrationPoint<D, D, SCALMIP> &mip,
                     MAT &&mat, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
-      cout << typeid (mat).name () << endl;
-      cout << typeid (mip).name () << endl;
-      ////cout << (mat).IsComplex() << endl;
-      // cout << (mip).IsComplex() << endl;
-      // cout << (fel.ComplexShapes());
       HeapReset hr (lh);
-      // if(fel.ComplexShapes())
-      // mat = Trans (Cast(fel).GetDShapeComplex(mip,lh));
-      // else
       mat = Trans (Cast (fel).GetDShape (mip, lh));
     }
 
@@ -463,7 +387,6 @@ namespace ngfem
                       const MappedIntegrationRule<D, D> &mir,
                       SliceMatrix<double, ColMajor> mat, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).CalcMappedDShape (mir, Trans (mat));
     }
 
@@ -472,7 +395,6 @@ namespace ngfem
                           const SIMD_BaseMappedIntegrationRule &mir,
                           BareSliceMatrix<SIMD<double>> mat)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).CalcMappedDShape (mir, mat);
     }
 
@@ -494,7 +416,6 @@ namespace ngfem
            const BareSliceVector<Complex> &x, FlatVector<Complex> &&y,
            LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Vec<D> hv = Cast (fel).EvaluateGrad (mip, x);
       // y = Trans (mip.GetJacobianInverse()) * hv;
       y = hv;
@@ -504,9 +425,6 @@ namespace ngfem
     Apply (const FiniteElement &fel, const MIP &mip,
            const BareSliceVector<Complex> &x, TVY &&y, LocalHeap &lh)
     {
-      // cout << __FILE__<<" "<<__LINE__<<endl;
-      // cout << typeid(x).name() << endl;
-      // cout << typeid(y).name() << endl;
       Vec<D, Complex> hv = Cast (fel).EvaluateGradComplex (mip, x);
       y = hv;
       HeapReset hr (lh);
@@ -516,9 +434,6 @@ namespace ngfem
     static void Apply (const FiniteElement &fel, const MIP &mip, const TVX &x,
                        TVY &&y, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
-      cout << typeid (x).name () << endl;
-      cout << typeid (y).name () << endl;
       HeapReset hr (lh);
       typedef typename TVX::TSCAL TSCAL;
       Vec<D, TSCAL> hv = Trans (Cast (fel).GetDShape (mip, lh)) * x;
@@ -533,7 +448,6 @@ namespace ngfem
                          const FlatVector<double> x,
                          FlatMatrixFixWidth<D, double> y, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       FlatMatrixFixWidth<D> grad (mir.Size (), &y (0));
       Cast (fel).EvaluateGrad (mir, x, grad);
       /*
@@ -551,7 +465,6 @@ namespace ngfem
                  const SIMD_BaseMappedIntegrationRule &mir,
                  BareSliceVector<double> x, BareSliceMatrix<SIMD<double>> y)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).EvaluateGrad (mir, x, y);
     }
 
@@ -562,8 +475,6 @@ namespace ngfem
     // BareSliceVector<Complex> y,
     // LocalHeap & lh) const override
     //{
-    // cout << __FILE__<<" "<<__LINE__<<endl;
-    // cout << "HELLO";
     ////y.Range(0,fel.GetNDof()) = Cast(fel).GetDShape(mip,lh) * x;
     //}
     // void ApplyTrans (const FiniteElement & fel,
@@ -581,7 +492,6 @@ namespace ngfem
     static void ApplyTrans (const FiniteElement &fel, const MIP &mip,
                             const TVX &x, TVY &y, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       typedef typename TVX::TSCAL TSCAL;
       Vec<D, TSCAL> vx = x;
       // auto hv = mip.GetJacobianInverse() * vx;
@@ -593,9 +503,6 @@ namespace ngfem
     static void ApplyTransAdd (const FiniteElement &fel, const MIP &mip,
                                const TVX &x, TVY &y, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
-      // cout << typeid(x).name() << endl;
-      // cout << typeid(y).name() << endl;
       typedef typename MIP::TSCAL TSCAL;
 
       HeapReset hr (lh);
@@ -615,7 +522,6 @@ namespace ngfem
     {
       if (fel.ComplexShapes ())
         {
-          cout << __FILE__ << " " << __LINE__ << endl;
           FlatMatrixFixHeight<DIM_DMAT, Complex> mat (DIM * fel.GetNDof (),
                                                       lh);
           y.Range (DIM * fel.GetNDof ())
@@ -635,7 +541,6 @@ namespace ngfem
     static void ApplyTransIR (const FiniteElement &fel, const MIR &mir,
                               const TVX &x, TVY &y, LocalHeap &lh)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       y.Range (0, DIM * fel.GetNDof ()) = 0.0;
       for (size_t i = 0; i < mir.Size (); i++)
         {
@@ -661,7 +566,6 @@ namespace ngfem
                     const SIMD_BaseMappedIntegrationRule &mir,
                     BareSliceMatrix<SIMD<double>> y, BareSliceVector<double> x)
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       Cast (fel).AddGradTrans (mir, y, x);
     }
   };

@@ -1476,26 +1476,16 @@ namespace ngfem
 
   template <> Vec<2> PlainWaveElement<2>::GetDirection (int i) const
   {
-    // Array<Vec<2>> pwdir(ndof);
-    // for(int i=0;i<ndof;i++)
-    //{
-    Vec<2> pwdir = { cos (2.0 * M_PI * i / this->ndof),
-                     sin (2.0 * M_PI * i / this->ndof) };
-    // cout << pwdir << endl;
-
-    //}
-    return pwdir;
+    return { cos (2.0 * M_PI * i / this->ndof),
+             sin (2.0 * M_PI * i / this->ndof) };
   }
 
   template <>
   void PlainWaveElement<2>::CalcShape (const BaseMappedIntegrationPoint &mip,
                                        BareSliceVector<Complex> shape) const
   {
-    // auto & smir = static_cast<const SIMD_BaseMappedIntegrationRuleD>&>
-    // (mir);
     Vec<2> cpoint = mip.GetPoint ();
-    // cpoint -= elcenter;
-    // cout << cpoint << endl;
+    cpoint -= elcenter;
 
     for (int i = 0; i < this->ndof; ++i)
       {
@@ -1503,7 +1493,6 @@ namespace ngfem
         shape (i) = 0.0;
         shape (i)
             = exp (1i * (cpoint[0] * dir[0] + cpoint[1] * dir[1]) * conj);
-        // cout << shape(i) << endl;
       }
   }
 
@@ -1512,10 +1501,8 @@ namespace ngfem
                                         BareSliceMatrix<Complex> dshape) const
   {
     Vec<2> cpoint = mip.GetPoint ();
-    // cpoint -= elcenter;
+    cpoint -= elcenter;
 
-    // cout << "calcdshape" << endl;
-    // cout << cpoint << endl;
     for (int d = 0; d < 2; d++)
       for (int i = 0; i < this->ndof; ++i)
         {
@@ -1524,7 +1511,6 @@ namespace ngfem
           dshape (i, d)
               = 1i * dir[d] * conj
                 * exp (1i * (cpoint[0] * dir[0] + cpoint[1] * dir[1]) * conj);
-          // cout << dshape(i,d) << endl;
         }
   }
 
