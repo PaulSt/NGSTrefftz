@@ -23,6 +23,7 @@ add_ngsolve_python_module(_tngs
     python_trefftz.cpp
     diffopmapped.hpp
     scalarmappedfe.cpp
+    planewavefe.cpp
     #trefftzheatfe.cpp
     trefftzfespace.cpp
     monomialfespace.cpp

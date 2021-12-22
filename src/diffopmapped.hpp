@@ -44,25 +44,26 @@ namespace ngfem
       return static_cast<const FEL &> (fel);
     }
 
-    // template <typename MIP, typename MAT>
-    // static void GenerateMatrix (const FiniteElement & fel, const MIP & mip,
-    // MAT && mat, LocalHeap & lh)
-    //{
-    // HeapReset hr(lh);
-    // mat.Row(0) = Cast(fel).GetShape(mip, lh);
-    //}
+    template <typename MIP, typename MAT>
+    static void GenerateMatrix (const FiniteElement &fel, const MIP &mip,
+                                MAT &&mat, LocalHeap &lh)
+    {
+      HeapReset hr (lh);
+      mat.Row (0) = Cast (fel).GetShape (mip, lh);
+    }
+
+    static void GenerateMatrix (const FiniteElement &fel,
+                                const BaseMappedIntegrationPoint &mip,
+                                FlatMatrixFixHeight<1> &mat, LocalHeap &lh)
+    {
+      Cast (fel).CalcShape (
+          mip, mat.Row (0)); // FlatVector<> (fel.GetNDof(), &mat(0,0)));
+    }
 
     static void
     GenerateMatrix (const FiniteElement &fel,
                     const BaseMappedIntegrationPoint &mip,
                     SliceMatrix<double, ColMajor> mat, LocalHeap &lh)
-    {
-      Cast (fel).CalcShape (mip, mat.Row (0));
-    }
-    static void
-    GenerateMatrix (const FiniteElement &fel,
-                    const BaseMappedIntegrationPoint &mip,
-                    SliceMatrix<Complex, ColMajor> mat, LocalHeap &lh)
     {
       Cast (fel).CalcShape (mip, mat.Row (0));
     }
@@ -99,14 +100,6 @@ namespace ngfem
       y (0) = Cast (fel).Evaluate (mip, x);
     }
 
-    static void
-    Apply (const FiniteElement &fel, const MappedIntegrationPoint<D, D> &mip,
-           const BareSliceVector<Complex> &x, FlatVector<Complex> &y,
-           LocalHeap &lh)
-    {
-      y (0) = Cast (fel).EvaluateComplex (mip, x);
-    }
-
     // using DiffOp<DiffOpId<D, FEL> >::ApplyIR;
     template <class MIR, class TMY>
     static void ApplyIR (const FiniteElement &fel, const MIR &mir,
@@ -120,12 +113,12 @@ namespace ngfem
     ApplyIR (const FiniteElement &fel, const MIR &mir,
              BareSliceVector<Complex> x, SliceMatrix<Complex> y, LocalHeap &lh)
     {
-      // Cast(fel).Evaluate (mir,
-      // SliceMatrix<double> (fel.GetNDof(), 2, 2, reinterpret_cast<double*>
-      // (&x(0))), SliceMatrix<double> (mir.Size(), 2, 2,
-      // reinterpret_cast<double*> (&y(0))));
-      Cast (fel).Evaluate (mir, x,
-                           FlatVector<Complex> (mir.Size (), &y (0, 0)));
+      Cast (fel).Evaluate (
+          mir,
+          SliceMatrix<double> (fel.GetNDof (), 2, 2,
+                               reinterpret_cast<double *> (&x (0))),
+          SliceMatrix<double> (mir.Size (), 2, 2,
+                               reinterpret_cast<double *> (&y (0))));
     }
 
     // using ApplySIMDIR;
@@ -155,49 +148,12 @@ namespace ngfem
       Cast (fel).EvaluateTrans (mir, FlatVector<> (mir.Size (), &x (0, 0)), y);
     }
 
-    // template <class MIR>
-    // static void ApplyTransIR (const FiniteElement & fel,
-    // const MIR & mir,
-    // FlatMatrix<Complex> x, BareSliceVector<Complex> y,
-    // LocalHeap & lh)
-    //{
-    // cout << __FILE__<<" "<<__LINE__<<endl;
-    // DiffOp<DiffOpMapped<D, FEL> > :: ApplyTransIR (fel, mir, x, y, lh);
-    //}
-    template <typename MIR, class TVX, class TVY>
+    template <class MIR>
     static void ApplyTransIR (const FiniteElement &fel, const MIR &mir,
-                              const TVX &x, TVY &y, LocalHeap &lh)
+                              FlatMatrix<Complex> x,
+                              BareSliceVector<Complex> y, LocalHeap &lh)
     {
-      y.Range (0, DIM * fel.GetNDof ()) = 0.0;
-      for (size_t i = 0; i < mir.Size (); i++)
-        {
-          HeapReset hr (lh);
-          ApplyTransAdd (fel, mir[i], x.Row (i), y, lh);
-        }
-    }
-    template <typename MIP, class TVX, class TVY>
-    static void ApplyTransAdd (const FiniteElement &fel, const MIP &mip,
-                               const TVX &x, TVY &y, LocalHeap &lh)
-    {
-      if (fel.ComplexShapes ())
-        {
-          HeapReset hr (lh);
-          FlatMatrixFixHeight<DIM_DMAT, Complex> mat (DIM * fel.GetNDof (),
-                                                      lh);
-          // Cast(fel).CalcShape (mip, mat.Row(0));
-          GenerateMatrix (fel, mip, mat, lh);
-          y.Range (DIM * fel.GetNDof ()) += Trans (mat) * x;
-        }
-      else
-        {
-          typedef typename MIP::TSCAL TSCAL;
-
-          HeapReset hr (lh);
-
-          FlatMatrixFixHeight<DIM_DMAT, TSCAL> mat (DIM * fel.GetNDof (), lh);
-          GenerateMatrix (fel, mip, mat, lh);
-          y.Range (DIM * fel.GetNDof ()) += Trans (mat) * x;
-        }
+      DiffOp<DiffOpMapped<D, FEL>>::ApplyTransIR (fel, mir, x, y, lh);
     }
 
     using DiffOp<DiffOpMapped<D, FEL>>::AddTransSIMDIR;
@@ -363,15 +319,6 @@ namespace ngfem
       Cast (fel).CalcMappedDShape (mip, Trans (mat));
     }
 
-    template <typename SCALMIP>
-    static void
-    GenerateMatrix (const FiniteElement &fel,
-                    const MappedIntegrationPoint<D, D, SCALMIP> &mip,
-                    SliceMatrix<Complex, ColMajor> mat, LocalHeap &lh)
-    {
-      Cast (fel).CalcDShape (mip, Trans (mat));
-    }
-
     template <typename SCALMIP, typename MAT>
     static void
     GenerateMatrix (const FiniteElement &fel,
@@ -379,7 +326,8 @@ namespace ngfem
                     MAT &&mat, LocalHeap &lh)
     {
       HeapReset hr (lh);
-      mat = Trans (Cast (fel).GetDShape (mip, lh));
+      mat = Trans (
+          Cast (fel).GetDShape (mip, lh)); //* mip.GetJacobianInverse ());
     }
 
     static void
@@ -399,37 +347,6 @@ namespace ngfem
     }
 
     ///
-
-    // template <class TVY>
-    // static void Apply (const FiniteElement & fel, const
-    // MappedIntegrationPoint<D,D> & mip, const FlatVector<> & x, TVY && y,
-    // LocalHeap & lh)
-    //{
-    // cout << __FILE__<<" "<<__LINE__<<endl;
-    // Vec<D> hv = Cast(fel).EvaluateGrad(mip, x);
-    ////y = Trans (mip.GetJacobianInverse()) * hv;
-    // y = hv;
-    //}
-
-    static void
-    Apply (const FiniteElement &fel, const MappedIntegrationPoint<D, D> &mip,
-           const BareSliceVector<Complex> &x, FlatVector<Complex> &&y,
-           LocalHeap &lh)
-    {
-      Vec<D> hv = Cast (fel).EvaluateGrad (mip, x);
-      // y = Trans (mip.GetJacobianInverse()) * hv;
-      y = hv;
-    }
-    template <typename MIP, class TVY>
-    static void
-    Apply (const FiniteElement &fel, const MIP &mip,
-           const BareSliceVector<Complex> &x, TVY &&y, LocalHeap &lh)
-    {
-      Vec<D, Complex> hv = Cast (fel).EvaluateGradComplex (mip, x);
-      y = hv;
-      HeapReset hr (lh);
-    }
-
     template <typename MIP, class TVX, class TVY>
     static void Apply (const FiniteElement &fel, const MIP &mip, const TVX &x,
                        TVY &&y, LocalHeap &lh)
@@ -439,6 +356,16 @@ namespace ngfem
       Vec<D, TSCAL> hv = Trans (Cast (fel).GetDShape (mip, lh)) * x;
       y = hv;
       // y = Trans (mip.GetJacobianInverse()) * hv;
+    }
+
+    template <class TVY>
+    static void
+    Apply (const FiniteElement &fel, const MappedIntegrationPoint<D, D> &mip,
+           const FlatVector<> &x, TVY &&y, LocalHeap &lh)
+    {
+      Vec<D> hv = Cast (fel).EvaluateGrad (mip, x);
+      // y = Trans (mip.GetJacobianInverse()) * hv;
+      y = hv;
     }
 
     using DiffOp<DiffOpMappedGradient<D, FEL>>::ApplyIR;
@@ -469,25 +396,6 @@ namespace ngfem
     }
 
     ///
-    // void ApplyTrans (const FiniteElement & fel,
-    // const BaseMappedIntegrationPoint & mip,
-    // FlatVector<Complex> x,
-    // BareSliceVector<Complex> y,
-    // LocalHeap & lh) const override
-    //{
-    ////y.Range(0,fel.GetNDof()) = Cast(fel).GetDShape(mip,lh) * x;
-    //}
-    // void ApplyTrans (const FiniteElement & fel,
-    // const BaseMappedIntegrationRule & mir,
-    // FlatMatrix<Complex> flux,
-    // BareSliceVector<Complex> x,
-    // LocalHeap & lh) const override
-    //{
-    // cout << __FILE__<<" "<<__LINE__<<endl;
-    // cout << "HELLO";
-    //}
-
-    // using DiffOp<DiffOpMappedGradient<D, FEL> >::ApplyTans;
     template <typename MIP, class TVX, class TVY>
     static void ApplyTrans (const FiniteElement &fel, const MIP &mip,
                             const TVX &x, TVY &y, LocalHeap &lh)
@@ -498,67 +406,6 @@ namespace ngfem
       y.Range (0, fel.GetNDof ())
           = Cast (fel).GetDShape (mip, lh) * vx; //* hv;
     }
-
-    template <typename MIP, class TVX, class TVY>
-    static void ApplyTransAdd (const FiniteElement &fel, const MIP &mip,
-                               const TVX &x, TVY &y, LocalHeap &lh)
-    {
-      typedef typename MIP::TSCAL TSCAL;
-
-      HeapReset hr (lh);
-
-      FlatMatrixFixHeight<DIM_DMAT, TSCAL> mat (DIM * fel.GetNDof (), lh);
-      GenerateMatrix (fel, mip, mat, lh);
-      y.Range (DIM * fel.GetNDof ()) += Trans (mat) * x;
-    }
-    // using DiffOp<DiffOpMappedGradient<D, FEL> >::AddTransIR;
-    // using DiffOp<DiffOpMappedGradient<D, FEL> >::AddTransAdd;
-    //  for complex shapes in lfi, symbolicintegrator.cpp T_CalcFacetVector ->
-    //  diffop_impl.hpp ApplyTrans,ApplyTransIR ->
-    template <class MIP>
-    static void ApplyTransAdd (const FiniteElement &fel, const MIP &mip,
-                               FlatVector<Complex> x,
-                               BareSliceVector<Complex> y, LocalHeap &lh)
-    {
-      if (fel.ComplexShapes ())
-        {
-          FlatMatrixFixHeight<DIM_DMAT, Complex> mat (DIM * fel.GetNDof (),
-                                                      lh);
-          y.Range (DIM * fel.GetNDof ())
-              += (Cast (fel).GetDShapeComplex (mip, lh)) * x;
-          // GenerateMatrix (fel, mip, mat, lh);
-          // y.Range(DIM*fel.GetNDof()) += Trans (mat) * x;
-        }
-      else
-        {
-          FlatMatrixFixHeight<DIM_DMAT, double> mat (DIM * fel.GetNDof (), lh);
-          GenerateMatrix (fel, mip, mat, lh);
-          y.Range (DIM * fel.GetNDof ()) += Trans (mat) * x;
-        }
-    }
-
-    template <typename MIR, class TVX, class TVY>
-    static void ApplyTransIR (const FiniteElement &fel, const MIR &mir,
-                              const TVX &x, TVY &y, LocalHeap &lh)
-    {
-      y.Range (0, DIM * fel.GetNDof ()) = 0.0;
-      for (size_t i = 0; i < mir.Size (); i++)
-        {
-          HeapReset hr (lh);
-          ApplyTransAdd (fel, mir[i], x.Row (i), y, lh);
-        }
-    }
-
-    // template <class MIR>
-    // static void ApplyTransIR (const FiniteElement & fel,
-    // const MIR & mir,
-    // FlatMatrix<Complex> x, BareSliceVector<Complex> y,
-    // LocalHeap & lh)
-    //{
-    // cout << __FILE__<<" "<<__LINE__<<endl;
-    ////DiffOp<DiffOpMappedGradient<D, FEL> > :: ApplyTransIR (fel, mir, x, y,
-    ///lh);
-    //}
 
     using DiffOp<DiffOpMappedGradient<D, FEL>>::AddTransSIMDIR;
     static void

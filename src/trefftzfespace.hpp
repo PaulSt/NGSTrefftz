@@ -2,6 +2,7 @@
 #define FILE_TREFFTZFESPACE_HPP
 
 #include "scalarmappedfe.hpp"
+#include "planewavefe.hpp"
 
 namespace ngcomp
 {

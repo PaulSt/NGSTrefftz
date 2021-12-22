@@ -60,6 +60,13 @@ namespace ngcomp
                   make_shared<
                       T_DifferentialOperator<DiffOpMappedHesse<2>>> ());
             }
+          if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
+            {
+              evaluator[VOL] = make_shared<
+                  T_DifferentialOperator<DiffOpMappedComplex<2>>> ();
+              flux_evaluator[VOL] = make_shared<
+                  T_DifferentialOperator<DiffOpMappedGradientComplex<2>>> ();
+            }
           else
             {
               evaluator[VOL]
@@ -272,7 +279,7 @@ namespace ngcomp
               if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
                 {
 
-                  return *(new (alloc) PlainWaveElement<2> (
+                  return *(new (alloc) PlaneWaveElement<2> (
                       local_ndof, order, eltype, ElCenter<1> (ei), 1.0, c,
                       (eqtyp == "helmholtz" ? 1 : -1)));
                 }
