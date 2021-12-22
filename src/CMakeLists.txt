@@ -23,6 +23,7 @@ add_ngsolve_python_module(_tngs
     python_trefftz.cpp
     diffopmapped.hpp
     scalarmappedfe.cpp
+    planewavefe.cpp
     #trefftzheatfe.cpp
     trefftzfespace.cpp
     monomialfespace.cpp
@@ -50,5 +51,5 @@ install (FILES
 
 include(CTest)
 add_test(NAME svdtest COMMAND python3 ../.github/tests/svdt.py -v)
-add_test(NAME tents COMMAND python3 ../.github/tests/tents.py -v)
 add_test(NAME trefftz COMMAND python3 ../.github/tests/wave.py -v)
+add_test(NAME tents COMMAND python3 ../.github/tests/tents.py -v)

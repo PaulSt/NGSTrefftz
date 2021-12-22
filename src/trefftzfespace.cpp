@@ -22,13 +22,23 @@ namespace ngcomp
     basistype = flags.GetNumFlag ("basistype", 0);
     useshift = flags.GetNumFlag ("useshift", 1);
     usescale = flags.GetNumFlag ("usescale", 1);
+    DefineNumListFlag ("eq");
     eqtyp = flags.GetStringFlag ("eq");
 
-    local_ndof = BinCoeff (D + order, order)
-                 + BinCoeff (D + order - 1, order - 1)
-                 - (eqtyp == "fowave_reduced");
     if (eqtyp == "fowave" || eqtyp == "foqtwave")
       local_ndof = (D + 1) * BinCoeff (D + order, D);
+    else if (eqtyp == "wave")
+      local_ndof = BinCoeff (D + order, order)
+                   + BinCoeff (D + order - 1, order - 1)
+                   - (eqtyp == "fowave_reduced");
+    else if (eqtyp == "laplace")
+      local_ndof
+          = BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1);
+    else if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
+      local_ndof = 2 * order + 1;
+    else
+      local_ndof
+          = BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1);
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
 
@@ -49,6 +59,13 @@ namespace ngcomp
                   "grad",
                   make_shared<
                       T_DifferentialOperator<DiffOpMappedHesse<2>>> ());
+            }
+          if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
+            {
+              evaluator[VOL] = make_shared<
+                  T_DifferentialOperator<DiffOpMappedComplex<2>>> ();
+              flux_evaluator[VOL] = make_shared<
+                  T_DifferentialOperator<DiffOpMappedGradientComplex<2>>> ();
             }
           else
             {
@@ -258,6 +275,13 @@ namespace ngcomp
                   return *(new (alloc) BlockMappedElement<2> (
                       local_ndof, order, basismats, eltype, ElCenter<1> (ei),
                       Adiam<1> (ei, c), c));
+                }
+              if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
+                {
+
+                  return *(new (alloc) PlaneWaveElement<2> (
+                      local_ndof, order, eltype, ElCenter<1> (ei), 1.0, c,
+                      (eqtyp == "helmholtz" ? 1 : -1)));
                 }
               else
                 return *(new (alloc) ScalarMappedElement<2> (
