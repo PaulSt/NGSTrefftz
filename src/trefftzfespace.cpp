@@ -30,7 +30,7 @@ namespace ngcomp
             local_ndof = BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1) - (eqtyp=="fowave_reduced");
         else if(eqtyp=="laplace")
             local_ndof = BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1);
-        else if(eqtyp=="helmholtz")
+        else if(eqtyp=="helmholtz" || eqtyp=="helmholtzconj")
             local_ndof = 2*order+1;
         else
             local_ndof = BinCoeff(D + order, order) + BinCoeff(D + order-1, order-1);
@@ -212,9 +212,10 @@ namespace ngcomp
                         else if(eqtyp=="fowave"){
                             return *(new (alloc) BlockMappedElement<2>(local_ndof,order,basismats,eltype,ElCenter<1>(ei),Adiam<1>(ei,c),c));
                         }
-                        if(eqtyp=="helmholtz")
+                        if(eqtyp=="helmholtz" || eqtyp=="helmholtzconj")
                         {
-                            return *(new (alloc) PlainWaveElement<2>(local_ndof,order,eltype,ElCenter<1>(ei),c));
+
+                            return *(new (alloc) PlainWaveElement<2>(local_ndof,order,eltype,ElCenter<1>(ei),1.0,c,(eqtyp=="helmholtz"?1:-1)));
                         }
                         else
                             return *(new (alloc) ScalarMappedElement<2>(local_ndof,order,basismat,eltype,ElCenter<1>(ei),Adiam<1>(ei,c),c));

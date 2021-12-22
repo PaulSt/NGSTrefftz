@@ -1316,14 +1316,14 @@ namespace ngfem
     {
         //auto & smir = static_cast<const SIMD_BaseMappedIntegrationRuleD>&> (mir);
         Vec<2> cpoint = mip.GetPoint();
-        cpoint -= elcenter;
+        //cpoint -= elcenter;
         //cout << cpoint << endl;
 
         for (int i=0; i<this->ndof; ++i)
         {
             Vec<2> dir = GetDirection(i);
             shape(i) = 0.0;
-            shape(i) = exp(1i*(cpoint[0]*dir[0] + cpoint[1]*dir[1]));
+            shape(i) = exp(1i*(cpoint[0]*dir[0] + cpoint[1]*dir[1])*conj);
             //cout << shape(i) << endl;
         }
     }
@@ -1332,7 +1332,7 @@ namespace ngfem
     void PlainWaveElement<2> :: CalcDShape (const BaseMappedIntegrationPoint & mip, BareSliceMatrix<Complex> dshape) const
     {
         Vec<2> cpoint = mip.GetPoint();
-        cpoint -= elcenter;
+        //cpoint -= elcenter;
 
         //cout << "calcdshape" << endl;
         //cout << cpoint << endl;
@@ -1341,7 +1341,7 @@ namespace ngfem
             {
                 Vec<2> dir = GetDirection(i);
                 dshape(i,d) = 0.0;
-                dshape(i,d) = 1i*dir[d]*exp(1i*(cpoint[0]*dir[0] + cpoint[1]*dir[1]));
+                dshape(i,d) = 1i*dir[d]*conj*exp(1i*(cpoint[0]*dir[0] + cpoint[1]*dir[1])*conj);
                 //cout << dshape(i,d) << endl;
             }
     }
