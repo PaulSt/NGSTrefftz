@@ -403,12 +403,15 @@ namespace ngfem
   private:
     Vec<D> GetDirection (int i) const;
     bool iscomplex = true;
+    int conj;
 
   public:
     PlainWaveElement (int andof, int aord, ELEMENT_TYPE aeltype,
-                      Vec<D> aelcenter = 0, double aelsize = 1, float ac = 1.0)
+                      Vec<D> aelcenter = 0, double aelsize = 1, float ac = 1.0,
+                      int aconj = 1)
         : ScalarMappedElement<D> (andof, aord, Matrix (), aeltype, aelcenter,
-                                  aelsize, ac)
+                                  aelsize, ac),
+          conj (aconj)
     {
       ;
     }
