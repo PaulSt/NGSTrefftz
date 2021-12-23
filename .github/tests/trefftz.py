@@ -4,10 +4,102 @@ from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from ngsolve.TensorProductTools import *
 from ngsolve import *
+from svdt import *
 import time
 
-# USE tenthight = wavespeed + 3
 
+########################################################################
+# Laplace
+########################################################################
+def testlaptrefftz(order,mesh):
+    """
+    >>> order = 5
+    >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
+    >>> testlaptrefftz(order,mesh) # doctest:+ELLIPSIS
+    1...e-08
+    """
+    fes = FESpace("trefftzfespace",mesh,order=order,eq="laplace")
+    a,f = dglap(fes,exactlap)
+    gfu = GridFunction(fes)
+    gfu.vec.data = a.mat.Inverse() * f.vec
+    return sqrt(Integrate((gfu-exactlap)**2, mesh))
+
+########################################################################
+# Helmholtz
+########################################################################
+def dghelm(fes,fes2,bndc,omega):
+    mesh = fes.mesh
+    order = fes.globalorder
+    n = specialcf.normal(mesh.dim)
+    h = specialcf.mesh_size
+    alpha = 1/(omega*h)
+    beta = omega*h
+    delta = omega*h
+
+    u = fes.TrialFunction()
+    v = fes.TestFunction()
+    if fes2 is not None:
+        v = fes2.TestFunction()
+    jump_u = (u-u.Other())*n
+    jump_v = (v-v.Other())*n
+    jump_du = (grad(u)-grad(u.Other()))*n
+    jump_dv = (grad(v)-grad(v.Other()))*n
+    mean_u = 0.5 * ((u)+(u.Other()))
+    mean_du = 0.5 * (grad(u)+grad(u.Other()))
+    mean_dv = 0.5 * (grad(v)+grad(v.Other()))
+
+    a = BilinearForm(fes)
+    if fes2 is not None:
+        a = BilinearForm(fes,fes2)
+    a += mean_u*(jump_dv) * dx(skeleton=True)
+    a += 1/omega*1j*beta*jump_du*(jump_dv) * dx(skeleton=True)
+    a += -mean_du*(jump_v) * dx(skeleton=True)
+    a += omega*1j*alpha*jump_u*(jump_v) * dx(skeleton=True)
+
+    a += (1-delta)*u*(grad(v))*n * ds(skeleton=True)
+    a += 1/omega*1j*delta*(grad(u)*n)*((grad(v))*n) * ds(skeleton=True)
+    a += -delta*grad(u)*n*(v) * ds(skeleton=True)
+    a += omega*1j*(1-delta)*u*(v) * ds(skeleton=True)
+
+    f = LinearForm(fes)
+    if fes2 is not None:
+        f = LinearForm(fes2)
+    f += 1/omega*1j*delta*bndc*(grad(v))*n*ds(skeleton=True)
+    f += (1-delta)*bndc*(v)*ds(skeleton=True)
+
+    with TaskManager():
+        a.Assemble()
+        f.Assemble()
+    return a,f
+
+def testhelmtrefftz(order,mesh):
+    """
+    >>> order = 5
+    >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
+    >>> testhelmtrefftz(order,mesh) # doctest:+ELLIPSIS
+    6...e-10
+    """
+    omega=1
+    exact = exp(1j*sqrt(0.5)*(x+y))
+    gradexact = CoefficientFunction((sqrt(0.5)*1j*exact, sqrt(0.5)*1j*exact))
+    n = specialcf.normal(mesh.dim)
+    bndc = CoefficientFunction((sqrt(0.5)*1j*exact, sqrt(0.5)*1j*exact))*n + 1j*omega*exact
+
+    fes = FESpace("trefftzfespace",mesh,order=order,eq="laplace")
+    fes = trefftzfespace(mesh,order=order,eq="helmholtz",complex=True,dgjumps=True)
+    fes2 = trefftzfespace(mesh,order=order,eq="helmholtzconj",complex=True,dgjumps=True)
+    a,f = dghelm(fes,fes2,bndc,omega)
+    gfu = GridFunction(fes)
+    gfu.Set(exact)
+    with TaskManager():
+        gfu.vec.data = a.mat.Inverse() * f.vec
+    terror = sqrt(Integrate((gfu-exact)*Conj(gfu-exact), mesh).real)
+    return terror
+
+
+########################################################################
+# Waveeq
+########################################################################
 def TestSolution2D(fes,c,timeoffset=0):
     k = 3
     truesol = sin( k*(c*y + x) )

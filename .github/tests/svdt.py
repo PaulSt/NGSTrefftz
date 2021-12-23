@@ -197,19 +197,6 @@ def testsvdtrefftzpoi():
     return sqrt(Integrate((tpgfu-exactpoi)**2, mesh))
 
 
-########################################################################
-# Trefftz
-########################################################################
-def testlaptrefftz():
-    """
-    >>> testlaptrefftz() # doctest:+ELLIPSIS
-    1...e-08
-    """
-    fes = FESpace("trefftzfespace",mesh,order=order,eq="laplace")
-    a,f = dglap(fes,exactlap)
-    gfu = GridFunction(fes)
-    gfu.vec.data = a.mat.Inverse() * f.vec
-    return sqrt(Integrate((gfu-exactlap)**2, mesh))
 
 if __name__ == "__main__":
     import doctest

@@ -270,12 +270,19 @@ namespace ngcomp
     DocInfo TrefftzFESpace :: GetDocu ()
     {
         auto docu = FESpace::GetDocu();
-        docu.Arg("useshift") = "bool = True\n"
-            "  use shift of basis functins to element center and scale them";
-        docu.Arg("basistype") = "bool = True\n"
-            "  use shift of basis functins to element center and scale them";
-        docu.Arg("wavespeed") = "bool = True\n"
-            "  use shift of basis functins to element center and scale them";
+        docu.Arg("eq") = "string\n"
+            "Choose type of Trefftz functions, currently available are:\n"
+            "  laplace - for Laplace equation\n"
+            "  wave - for the second order acoustic wave equation\n"
+            "  fowave - for the first order acoustic wave equation, returns TnT (sigv,tauw)\n"
+            "  helmholtz - planewaves for the helmholtz equation\n"
+            "  helmholtzconj - returns the complex conjungate of the planewaves \n";
+        //docu.Arg("useshift") = "bool = True\n"
+            //"  use shift of basis functins to element center and scale them";
+        //docu.Arg("basistype") = "bool = True\n"
+            //"  use shift of basis functins to element center and scale them";
+        //docu.Arg("wavespeed") = "bool = True\n"
+            //"  use shift of basis functins to element center and scale them";
         return docu;
     }
 
