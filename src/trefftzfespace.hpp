@@ -60,9 +60,9 @@ namespace ngcomp
 
   template <int D> class TLapBasis : public PolBasis
   {
-    static void TB_inner (int ord, Matrix<> &trefftzbasis,
-                          Vec<D + 1, int> coeffnum, int basis, int dim,
-                          int &tracker, int basistype, double wavespeed = 1.0);
+    static void
+    TB_inner (int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis,
+              int dim, int &tracker, int basistype, double wavespeed = 1.0);
 
   public:
     TLapBasis () { ; }

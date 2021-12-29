@@ -13,7 +13,7 @@ namespace ngcomp
   {
     type = "trefftzfespace";
 
-    D = ma->GetDimension () - 1;
+    D = ma->GetDimension ();
 
     this->dgjumps = true;
     order = int (flags.GetNumFlag ("order", 3));
@@ -26,19 +26,19 @@ namespace ngcomp
     eqtyp = flags.GetStringFlag ("eq");
 
     if (eqtyp == "fowave" || eqtyp == "foqtwave")
-      local_ndof = (D + 1) * BinCoeff (D + order, D);
+      local_ndof = (D)*BinCoeff (D - 1 + order, D - 1);
     else if (eqtyp == "wave")
-      local_ndof = BinCoeff (D + order, order)
-                   + BinCoeff (D + order - 1, order - 1)
+      local_ndof = BinCoeff (D - 1 + order, order)
+                   + BinCoeff (D - 1 + order - 1, order - 1)
                    - (eqtyp == "fowave_reduced");
     else if (eqtyp == "laplace")
-      local_ndof
-          = BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1);
+      local_ndof = BinCoeff (D - 1 + order, order)
+                   + BinCoeff (D - 1 + order - 1, order - 1);
     else if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
       local_ndof = 2 * order + 1;
     else
-      local_ndof
-          = BinCoeff (D + order, order) + BinCoeff (D + order - 1, order - 1);
+      local_ndof = BinCoeff (D - 1 + order, order)
+                   + BinCoeff (D - 1 + order - 1, order - 1);
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
 
@@ -47,7 +47,7 @@ namespace ngcomp
     // evaluators
     switch (D)
       {
-      case 1:
+      case 2:
         {
           if (eqtyp == "fowave" || eqtyp == "foqtwave")
             {
@@ -80,7 +80,7 @@ namespace ngcomp
             }
           break;
         }
-      case 2:
+      case 3:
         {
           if (eqtyp == "fowave" || eqtyp == "foqtwave")
             {
@@ -110,14 +110,14 @@ namespace ngcomp
     // basis
     switch (D)
       {
-      case 1:
+      case 2:
         {
           if (eqtyp == "laplace")
             basismat = TLapBasis<1>::Basis (order, basistype);
           else if (eqtyp == "fowave" || eqtyp == "foqtwave")
             {
-              basismats.SetSize (D + 1);
-              for (int d = 0; d < D + 1; d++)
+              basismats.SetSize (D);
+              for (int d = 0; d < D; d++)
                 basismats[d] = FOTWaveBasis<1>::Basis (order, d);
               basis = new FOQTWaveBasis<1>;
             }
@@ -129,14 +129,14 @@ namespace ngcomp
             }
           break;
         }
-      case 2:
+      case 3:
         {
           if (eqtyp == "laplace")
             basismat = TLapBasis<2>::Basis (order, basistype);
           else if (eqtyp == "fowave" || eqtyp == "foqtwave")
             {
-              basismats.SetSize (D + 1);
-              for (int d = 0; d < D + 1; d++)
+              basismats.SetSize (D);
+              for (int d = 0; d < D; d++)
                 basismats[d] = FOTWaveBasis<2>::Basis (order, d);
               basis = new FOQTWaveBasis<2>;
             }
@@ -177,10 +177,10 @@ namespace ngcomp
         static Timer timereval ("QTrefftzDerEval");
         timerder.Start ();
         GGder.SetSize (this->order - (eqtyp == "qtwave"),
-                       pow (this->order - (eqtyp == "qtwavw"), D == 2));
+                       pow (this->order - (eqtyp == "qtwavw"), D == 3));
 
         for (int ny = 0;
-             ny <= (this->order - 1 - (eqtyp == "qtwave")) * (D == 2); ny++)
+             ny <= (this->order - 1 - (eqtyp == "qtwave")) * (D == 3); ny++)
           {
             for (int nx = 0; nx <= this->order - 1 - (eqtyp == "qtwave"); nx++)
               {
@@ -204,8 +204,8 @@ namespace ngcomp
         timerbb.Start ();
         shared_ptr<CoefficientFunction> BBcf = aBBcf;
         shared_ptr<CoefficientFunction> BBcfx = aBBcf;
-        BBder.SetSize (this->order, (this->order - 1) * (D == 2) + 1);
-        for (int ny = 0; ny <= (this->order - 1) * (D == 2); ny++)
+        BBder.SetSize (this->order, (this->order - 1) * (D == 3) + 1);
+        for (int ny = 0; ny <= (this->order - 1) * (D == 3); ny++)
           {
             for (int nx = 0; nx <= this->order - 1; nx++)
               {
@@ -262,7 +262,7 @@ namespace ngcomp
               else if (eqtyp == "foqtwave")
                 {
                   Vec<2, CSR> qbasismats;
-                  for (int d = 0; d < D + 1; d++)
+                  for (int d = 0; d < D; d++)
                     qbasismats[d]
                         = static_cast<FOQTWaveBasis<1> *> (basis)->Basis (
                             order, d, ElCenter<1> (ei), GGder, BBder);
@@ -280,8 +280,8 @@ namespace ngcomp
                 {
 
                   return *(new (alloc) PlaneWaveElement<2> (
-                      local_ndof, order, eltype, ElCenter<1> (ei), 1.0, c,
-                      (eqtyp == "helmholtz" ? 1 : -1)));
+                      local_ndof, order, eltype, ElCenter<1> (ei),
+                      Adiam<1> (ei, c), c, (eqtyp == "helmholtz" ? 1 : -1)));
                 }
               else
                 return *(new (alloc) ScalarMappedElement<2> (
@@ -305,7 +305,7 @@ namespace ngcomp
               else if (eqtyp == "foqtwave")
                 {
                   Vec<3, CSR> qbasismats;
-                  for (int d = 0; d < D + 1; d++)
+                  for (int d = 0; d < D; d++)
                     qbasismats[d]
                         = static_cast<FOQTWaveBasis<2> *> (basis)->Basis (
                             order, d, ElCenter<2> (ei), GGder, BBder);
@@ -655,15 +655,15 @@ namespace ngcomp
   {
     CSR tb;
     const int ndof
-        = (BinCoeff (D + ord, ord) + BinCoeff (D + ord - 1, ord - 1));
-    const int npoly = (BinCoeff (D + 1 + ord, ord));
+        = (BinCoeff (D - 1 + ord, ord) + BinCoeff (D - 1 + ord - 1, ord - 1));
+    const int npoly = (BinCoeff (D + ord, ord));
     Matrix<> trefftzbasis (ndof, npoly);
     trefftzbasis = 0;
-    Vec<D + 1, int> coeff = 0;
+    Vec<D, int> coeff = 0;
     for (int b = 0; b < ndof; b++)
       {
         int tracker = 0;
-        TB_inner (ord, trefftzbasis, coeff, b, D + 1, tracker, basistype);
+        TB_inner (ord, trefftzbasis, coeff, b, D, tracker, basistype);
       }
     MatToCSR (trefftzbasis, tb);
     return tb;
@@ -671,7 +671,7 @@ namespace ngcomp
 
   template <int D>
   void TLapBasis<D>::TB_inner (int ord, Matrix<> &trefftzbasis,
-                               Vec<D + 1, int> coeffnum, int basis, int dim,
+                               Vec<D, int> coeffnum, int basis, int dim,
                                int &tracker, int basistype, double wavespeed)
   {
     if (dim > 0)
@@ -686,14 +686,14 @@ namespace ngcomp
     else
       {
         int sum = 0;
-        for (int i = 0; i < D + 1; i++)
+        for (int i = 0; i < D; i++)
           sum += coeffnum (i);
         if (sum <= ord)
           {
             if (tracker >= 0)
               tracker++;
-            int indexmap = PolBasis::IndexMap2<D> (coeffnum, ord);
-            int k = coeffnum (D);
+            int indexmap = PolBasis::IndexMap2<D - 1> (coeffnum, ord);
+            int k = coeffnum (D - 1);
             if (k == 0 || k == 1)
               {
                 if (tracker > basis)
@@ -704,17 +704,17 @@ namespace ngcomp
                     tracker = -1;
                   }
               }
-            else if (coeffnum (D) > 1)
+            else if (coeffnum (D - 1) > 1)
               {
-                for (int m = 0; m < D; m++) // rekursive sum
+                for (int m = 0; m < D - 1; m++) // rekursive sum
                   {
-                    Vec<D + 1, int> get_coeff = coeffnum;
-                    get_coeff[D] = get_coeff[D] - 2;
+                    Vec<D, int> get_coeff = coeffnum;
+                    get_coeff[D - 1] = get_coeff[D - 1] - 2;
                     get_coeff[m] = get_coeff[m] + 2;
                     trefftzbasis (basis, indexmap)
                         -= (coeffnum (m) + 1) * (coeffnum (m) + 2)
-                           * trefftzbasis (
-                               basis, PolBasis::IndexMap2<D> (get_coeff, ord));
+                           * trefftzbasis (basis, PolBasis::IndexMap2<D - 1> (
+                                                      get_coeff, ord));
                   }
                 trefftzbasis (basis, indexmap)
                     *= wavespeed * wavespeed / (k * (k - 1));
@@ -725,6 +725,7 @@ namespace ngcomp
 
   template class TLapBasis<1>;
   template class TLapBasis<2>;
+  template class TLapBasis<3>;
 
   template <int D> CSR FOTWaveBasis<D>::Basis (int ord, int rdim)
   {
