@@ -86,7 +86,7 @@ namespace ngcomp
             case 2:
                 {
                     if(eqtyp=="laplace")
-                        basismat = TLapBasis<1>::Basis(order, basistype);
+                        basismat = TLapBasis<2>::Basis(order, basistype);
                     else if(eqtyp=="fowave" || eqtyp=="foqtwave"){
                         basismats.SetSize(D);
                         for(int d=0;d<D;d++) basismats[d]=FOTWaveBasis<1>::Basis(order, d);
@@ -102,7 +102,7 @@ namespace ngcomp
             case 3:
                 {
                     if(eqtyp=="laplace")
-                        basismat = TLapBasis<2>::Basis(order, basistype);
+                        basismat = TLapBasis<3>::Basis(order, basistype);
                     else if(eqtyp=="fowave" || eqtyp=="foqtwave"){
                         basismats.SetSize(D);
                         for(int d=0;d<D;d++) basismats[d]=FOTWaveBasis<2>::Basis(order, d);

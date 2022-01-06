@@ -24,10 +24,9 @@ namespace ngcomp
                  work.Data(), &lwork, iwork.Data(),
                  &info);
         if(info!=0)
-            cout << "info = " << info << endl;
+            throw Exception("something went wrong in the svd " + info);
         A = 0.0;
         A.Diag(0) = S;
-        //cout << S << endl;
     }
 
     void LapackSVD (SliceMatrix<Complex, ColMajor> A,
@@ -39,7 +38,7 @@ namespace ngcomp
         Vector<> S(min(n,m));
         Array<Complex> work(4*m*m+6*m+m+100);
         Array<int> iwork(max(n,m)*9);
-        Array<double> rwork(max(n,m)*9);
+        Array<double> rwork(5*max(n,m)*min(n,m)+5*min(n,m));
         ngbla::integer info;
         char jobz = 'A';
         ngbla::integer lda = A.Dist(), ldu = U.Dist(), ldv = V.Dist();
@@ -51,7 +50,7 @@ namespace ngcomp
                  work.Data(), &lwork, rwork.Data(), iwork.Data(),
                  &info);
         if(info!=0)
-            cout << "info = " << info << endl;
+            throw Exception("something went wrong in the svd " + info);
         A = 0.0;
         A.Diag(0) = S;
     }
@@ -112,17 +111,15 @@ namespace ngcomp
             auto & fel = fes->GetFE(ei, mlh);
             FlatMatrix<SCAL> elmat(dofs.Size(), mlh), elmati(dofs.Size(), mlh);
             elmat = 0.0;
-            //cout << fel.ComplexShapes() << endl;
             for (auto & bfi : bfis[VOL])
             {
                 bfi -> CalcElementMatrix(fel, trafo, elmati, mlh);
                 elmat += elmati;
             }
-            //cout << elmat << endl;
             FlatMatrix<SCAL,ColMajor> U(dofs.Size(),mlh), Vt(dofs.Size(),mlh);
             LapackSVD<SCAL>(elmat,U,Vt);
-            //cout << elmat << endl;
             //CalcSVD(elmat,U,Vt);
+
             int nz = 0;
             for(auto sv : elmat.Diag()) if(abs(sv)<eps) nz++;
 
@@ -147,7 +144,6 @@ namespace ngcomp
                 SparseMatrix<SCAL> PP(fes->GetNDof(), nz*ma->GetNE(VOL), table,table2,false);
                 P = make_shared<SparseMatrix<SCAL>>(PP);
                 P->SetZero();
-
             });
 
             Matrix<SCAL> PP = Trans(Vt.Rows(dofs.Size()-nz,dofs.Size()));

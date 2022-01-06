@@ -2,6 +2,7 @@ from ngsolve import *
 from tngs import *
 import time
 from netgen.geom2d import unit_square
+from netgen.csg import unit_cube
 import scipy as sp
 import numpy as np
 
@@ -18,7 +19,8 @@ order = 5
 exactlap = exp(x)*sin(y)
 exactpoi = sin(x)*sin(y)
 eps = 10**-8
-mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
+mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
+mesh3d = Mesh(unit_cube.GenerateMesh(maxh = 1))
 SetNumThreads(3)
 
 ########################################################################
@@ -26,11 +28,11 @@ SetNumThreads(3)
 ########################################################################
 def dglap(fes,bndc,rhs=0):
     """
-    >>> fes = L2(mesh, order=order,  dgjumps=True)#,all_dofs_together=True)
+    >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
     >>> a,f = dglap(fes,exactlap)
     >>> gfu = GridFunction(fes)
     >>> gfu.vec.data = a.mat.Inverse() * f.vec
-    >>> sqrt(Integrate((gfu-exactlap)**2, mesh)) # doctest:+ELLIPSIS
+    >>> sqrt(Integrate((gfu-exactlap)**2, mesh2d)) # doctest:+ELLIPSIS
     4...e-09
     """
     mesh = fes.mesh
@@ -80,7 +82,7 @@ def LocalP(A,eps=10**-9,printP=0):
 
 def PySVDTrefftz(op,fes,eps):
     """
-    >>> fes = L2(mesh, order=order,  dgjumps=True)#,all_dofs_together=True)
+    >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
     >>> u,v = fes.TnT()
     >>> uh = u.Operator("hesse")
     >>> vh = v.Operator("hesse")
@@ -95,10 +97,10 @@ def PySVDTrefftz(op,fes,eps):
     >>> tsol = np.linalg.solve(TA,P.transpose()@f.vec.FV())
     >>> tpgfu = GridFunction(fes)
     >>> tpgfu.vec.data = P@tsol
-    >>> sqrt(Integrate((tpgfu-exactlap)**2, mesh)) # doctest:+ELLIPSIS
+    >>> sqrt(Integrate((tpgfu-exactlap)**2, mesh2d)) # doctest:+ELLIPSIS
     1...e-08
     """
-
+    mesh = fes.mesh
     opbf = BilinearForm(fes)
     opbf += op
     opbf.Assemble()
@@ -123,13 +125,14 @@ def PySVDTrefftz(op,fes,eps):
 ########################################################################
 # SVDTrefftz
 ########################################################################
-def testsvdtrefftz():
+def testsvdtrefftz(fes):
     """
-    >>> testsvdtrefftz() # doctest:+ELLIPSIS
+    >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
+    >>> testsvdtrefftz(fes) # doctest:+ELLIPSIS
     1...e-08
     """
     start = time.time()
-    fes = L2(mesh, order=order,  dgjumps=True)#,all_dofs_together=True)
+    mesh = fes.mesh
     u,v = fes.TnT()
     uh = u.Operator("hesse")
     vh = v.Operator("hesse")
@@ -152,13 +155,14 @@ def testsvdtrefftz():
     return sqrt(Integrate((tpgfu-exactlap)**2, mesh))
 
 
-def testsvdtrefftznonsym():
+def testsvdtrefftznonsym(fes):
     """
-    >>> testsvdtrefftznonsym() # doctest:+ELLIPSIS
+    >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
+    >>> testsvdtrefftznonsym(fes) # doctest:+ELLIPSIS
     1...e-08
     """
     start = time.time()
-    fes = L2(mesh, order=order,  dgjumps=True)#,all_dofs_together=True)
+    mesh = fes.mesh
     u,v = fes.TnT()
     uh = u.Operator("hesse")
     vh = v.Operator("hesse")
@@ -173,13 +177,14 @@ def testsvdtrefftznonsym():
     tpgfu.vec.data = PP*TU
     return sqrt(Integrate((tpgfu-exactlap)**2, mesh))
 
-def testsvdtrefftzpoi():
+def testsvdtrefftzpoi(fes):
     """
-    >>> testsvdtrefftzpoi() # doctest:+ELLIPSIS
+    >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
+    >>> testsvdtrefftzpoi(fes) # doctest:+ELLIPSIS
     4...e-09
     """
+    mesh = fes.mesh
     start = time.time()
-    fes = L2(mesh, order=order,  dgjumps=True)#,all_dofs_together=True)
     u,v = fes.TnT()
     uh = u.Operator("hesse")
     vh = v.Operator("hesse")

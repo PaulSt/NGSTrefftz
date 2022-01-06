@@ -17,6 +17,9 @@ def testlaptrefftz(order,mesh):
     >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
     >>> testlaptrefftz(order,mesh) # doctest:+ELLIPSIS
     1...e-08
+    >>> mesh = Mesh(unit_cube.GenerateMesh(maxh = 1))
+    >>> testlaptrefftz(order,mesh) # doctest:+ELLIPSIS
+    2...e-06
     """
     fes = FESpace("trefftzfespace",mesh,order=order,eq="laplace")
     a,f = dglap(fes,exactlap)
