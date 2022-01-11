@@ -149,7 +149,7 @@ def ProdMesh(ngmeshbase,t_steps):
 	return mesh
 
 
-def CartSquare(N,t_steps,xshift=0):
+def CartSquare(N,t_steps,xshift=0,bndc="dirichlet"):
 	ngmesh = ngm.Mesh()
 	ngmesh.SetGeometry(unit_square)
 	ngmesh.dim = 2
@@ -181,7 +181,7 @@ def CartSquare(N,t_steps,xshift=0):
 		ngmesh.Add(ngm.Element1D([pnums[i + t_steps * (N + 1)], pnums[i + 1 + t_steps * (N + 1)]], index=2))
 
 	fde = ngm.FaceDescriptor(surfnr=3,domin=1,bc=3)
-	fde.bcname = "dirichlet"
+	fde.bcname = bndc
 	fdid = ngmesh.Add(fde)
 	for i in range(t_steps):
 		ngmesh.Add(ngm.Element1D([pnums[N + i * (N + 1)], pnums[N + (i + 1) * (N + 1)]], index=3))
@@ -190,7 +190,7 @@ def CartSquare(N,t_steps,xshift=0):
 
 	ngmesh.SetBCName(0,"inflow")
 	ngmesh.SetBCName(1,"outflow")
-	ngmesh.SetBCName(2,"dirichlet")
+	ngmesh.SetBCName(2,bndc)
 
 	mesh = Mesh(ngmesh)
 	# print("boundaries" + str(mesh.GetBoundaries()))
