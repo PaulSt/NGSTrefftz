@@ -50,7 +50,7 @@ namespace ngcomp
                         //flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedHesse<2>>>();
                         additional_evaluators.Set ("grad", make_shared<T_DifferentialOperator<DiffOpMappedHesse<2>>> ());
                     }
-                    if(eqtyp=="helmholtz" || eqtyp=="helmholtzconj")
+                    else if(eqtyp=="helmholtz" || eqtyp=="helmholtzconj")
                     {
                         evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedComplex<2>>>();
                         flux_evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpMappedGradientComplex<2>>>();
@@ -217,7 +217,7 @@ namespace ngcomp
                         else if(eqtyp=="fowave"){
                             return *(new (alloc) BlockMappedElement<2>(local_ndof,order,basismats,eltype,ElCenter<1>(ei),Adiam<1>(ei,c),c));
                         }
-                        if(eqtyp=="helmholtz" || eqtyp=="helmholtzconj")
+                        else if(eqtyp=="helmholtz" || eqtyp=="helmholtzconj")
                         {
 
                             return *(new (alloc) PlaneWaveElement<2>(local_ndof,order,eltype,ElCenter<1>(ei),Adiam<1>(ei,c),c,(eqtyp=="helmholtz"?1:-1)));
