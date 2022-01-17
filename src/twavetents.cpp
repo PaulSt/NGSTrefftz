@@ -327,11 +327,13 @@ namespace ngcomp
         Mat<D+1, D+1> vert;
         Array<int> sel_verts(D);
         ma->GetFacetPNums (fnr, sel_verts);
-        vert.Col(0).Range(0,D) = ma->GetPoint<D>(tent->vertex);
+        //vert.Col(0).Range(0,D) = ma->GetPoint<D>(tent->vertex);
+        vert.Col(0) = ma->GetPoint<D>(tent->vertex);
         vert(D,0) = tent->tbot;
         for(int n=0;n<D;n++)
         {
-            vert.Col(n+1).Range(0,D) = ma->GetPoint<D>(sel_verts[n]);
+            //vert.Col(n+1).Range(0,D) = ma->GetPoint<D>(sel_verts[n]);
+            vert.Col(n+1) = ma->GetPoint<D>(sel_verts[n]);
             vert(D,n+1) = tent->vertex==sel_verts[n] ? tent->ttop : tent->nbtime[tent->nbv.Pos(sel_verts[n])];
         }
 
@@ -436,11 +438,13 @@ namespace ngcomp
         if(top==0) //boundary element
         {
             auto sel_verts = ma->GetElVertices(ElementId(BND,elnr));
-            v.Col(0).Range(0,D) = ma->GetPoint<D>(tent->vertex);
+            //v.Col(0).Range(0,D) = ma->GetPoint<D>(tent->vertex);
+            v.Col(0) = ma->GetPoint<D>(tent->vertex);
             v(D,0) = tent->tbot;
             for(int n=0;n<D;n++)
             {
-                v.Col(n+1).Range(0,D) = ma->GetPoint<D>(sel_verts[n]);
+                //v.Col(n+1).Range(0,D) = ma->GetPoint<D>(sel_verts[n]);
+                v.Col(n+1) = ma->GetPoint<D>(sel_verts[n]);
                 v(D,n+1) = tent->vertex==sel_verts[n] ? tent->ttop : tent->nbtime[tent->nbv.Pos(sel_verts[n])];
             }
         }
@@ -450,7 +454,8 @@ namespace ngcomp
             // determine linear basis function coeffs to use for tent face
             for(size_t ivert = 0;ivert<vnr.Size();ivert++)
             {
-                v.Col(ivert).Range(0,D) = ma->GetPoint<D>(vnr[ivert]);
+                //v.Col(ivert).Range(0,D) = ma->GetPoint<D>(vnr[ivert]);
+                v.Col(ivert) = ma->GetPoint<D>(vnr[ivert]);
                 if(vnr[ivert] == tent->vertex) v(D,ivert) =  top==1 ? tent->ttop : tent->tbot;
                 else for(size_t k = 0; k < tent->nbv.Size(); k++)
                     if(vnr[ivert] == tent->nbv[k]) v(D,ivert) = tent->nbtime[k];
