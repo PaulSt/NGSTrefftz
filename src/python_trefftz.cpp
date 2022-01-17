@@ -15,10 +15,10 @@
 //#include "airy.cpp"
 
 
-PYBIND11_MODULE(_tngs,m) {
+PYBIND11_MODULE(_trefftz,m) {
     py::module::import("ngsolve");
-    m.attr("__name__") = "tngs";
-    m.attr("__package__") = "tngs";
+    m.attr("__name__") = "ngstrefftz";
+    m.attr("__package__") = "ngstrefftz";
 
     ExportTrefftzFESpace(m);
     ExportMonomialFESpace(m);

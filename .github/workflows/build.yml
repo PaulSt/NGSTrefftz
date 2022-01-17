@@ -33,6 +33,8 @@ jobs:
         run: |
              make -C $GITHUB_WORKSPACE/NGSTrefftz/make
              sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
+      - name: test NGSTrefftz
+        run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make test
       - name: Debugging with tmate
         if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3.6
@@ -63,3 +65,5 @@ jobs:
         run: |
              make -C $GITHUB_WORKSPACE/NGSTrefftz/make
              sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
+      - name: test NGSTrefftz
+        run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make test

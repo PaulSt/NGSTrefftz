@@ -1,4 +1,4 @@
-from tngs import *
+from ngstrefftz import *
 # from ngstents import TentSlab
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
