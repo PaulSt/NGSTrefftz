@@ -1,8 +1,8 @@
-project(tngs)
+project(ngstrefftz)
 
 cmake_minimum_required(VERSION 3.1)
 
-include_directories(../dep)
+include_directories(../external_dependencies/ngstents/src)
 
 find_package(NGSolve CONFIG REQUIRED
     HINTS $ENV{NETGENDIR}/.. /opt/netgen/ /Applications/Netgen.app/Contents/Resources/CMake C:/netgen
@@ -14,12 +14,15 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 
+if (NOT TARGET _pytents)
 add_ngsolve_python_module(_pytents
-  ../dep/python_tents.cpp
-  ../dep/tents.cpp
+  ../external_dependencies/ngstents/src/python_tents.cpp
+  ../external_dependencies/ngstents/src/tents.cpp
   )
+install(TARGETS _pytents DESTINATION ngstents)
+endif()
 
-add_ngsolve_python_module(_tngs 
+add_ngsolve_python_module(_trefftz 
     python_trefftz.cpp
     diffopmapped.hpp
     scalarmappedfe.cpp
@@ -33,20 +36,19 @@ add_ngsolve_python_module(_tngs
     #airy.cpp
     meshtentslab.cpp
     )
-target_link_libraries(_tngs PRIVATE _pytents)
+target_link_libraries(_trefftz PRIVATE _pytents)
 
 #add_compile_options(PRIVATE -Wall -Wextra -pedantic)
 #add_compile_options(-g -O0)
 
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
-install(TARGETS _pytents DESTINATION ngstents)
-install(TARGETS _tngs DESTINATION tngs)
+install(TARGETS _trefftz DESTINATION ngstrefftz)
 install (FILES
-        ../py/__init__.py 
-        ../py/DGeq.py 
-        ../py/prodmesh.py 
-        DESTINATION tngs
-        #COMPONENT tngs
+        __init__.py 
+        DGeq.py 
+        prodmesh.py 
+        DESTINATION ngstrefftz
+        #COMPONENT ngstrefftz
         )
 
 include(CTest)
