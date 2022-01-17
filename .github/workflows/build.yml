@@ -33,37 +33,8 @@ jobs:
         run: |
              make -C $GITHUB_WORKSPACE/NGSTrefftz/make
              sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
-      - name: test NGSTrefftz
-        run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make test
+      #- name: test NGSTrefftz
+      #  run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make test
       - name: Debugging with tmate
         if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3.6
-
-  macos:
-    runs-on: macos-latest
-    steps:     
-      - name: install pkgs
-        run: |
-             brew install python
-             wget https://www.asc.tuwien.ac.at/~mhochsteger/ngsolve/macos/NGSolve_nightly.dmg
-             hdiutil attach NGSolve_nightly.dmg
-             cp -R /Volumes/NGSolve/* /Applications
-      - name: set path
-        run: |
-             echo "PYTHONPATH=$PYTHONPATH:/Applications/Netgen.app/Contents/Resources/lib/python3.8/site-packages:." >> $GITHUB_ENV
-             echo "NETGENDIR=/Applications/Netgen.app/Contents/MacOS" >> $GITHUB_ENV
-             echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$NETGENDIR" >> $GITHUB_ENV
-             echo "DYLD_FRAMEWORK_PATH=$DYLD_FRAMEWORK_PATH:$NETGENDIR/../Frameworks" >> $GITHUB_ENV
-             echo "$NETGENDIR" >> $GITHUB_PATH
-      - uses: actions/checkout@v2
-        with:
-          submodules: 'True'
-          path: 'NGSTrefftz'
-      - name: cmake NGSTrefftz
-        run: cmake -B $GITHUB_WORKSPACE/NGSTrefftz/make -S $GITHUB_WORKSPACE/NGSTrefftz/src/
-      - name: compile NGSTrefftz
-        run: |
-             make -C $GITHUB_WORKSPACE/NGSTrefftz/make
-             sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
-      - name: test NGSTrefftz
-        run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make test
