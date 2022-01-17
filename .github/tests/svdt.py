@@ -1,5 +1,5 @@
 from ngsolve import *
-from tngs import *
+from ngstrefftz import *
 import time
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube

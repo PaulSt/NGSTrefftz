@@ -1,5 +1,5 @@
-from ngstents import TentSlab
-from tngs import *
+# from ngstents import TentSlab
+from ngstrefftz import *
 from ngsolve.TensorProductTools import *
 from ngsolve import *
 import time
