@@ -1,4 +1,4 @@
-#include "svdtrefftz.hpp"
+#include "embtrefftz.hpp"
 
 namespace ngcomp
 {
@@ -68,7 +68,7 @@ namespace ngcomp
 
   template <class SCAL>
   std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
-  SVDTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
+  EmbTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
               double eps, shared_ptr<SumOfIntegrals> lf)
   {
     static Timer svdtt ("svdtrefftz");
@@ -189,10 +189,10 @@ namespace ngcomp
   LapackSVD<Complex> (SliceMatrix<Complex> A, SliceMatrix<Complex, ColMajor> U,
                       SliceMatrix<Complex, ColMajor> V);
   template std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
-  SVDTrefftz<double> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
+  EmbTrefftz<double> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                       double eps, shared_ptr<SumOfIntegrals> lf);
   template std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
-  SVDTrefftz<Complex> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
+  EmbTrefftz<Complex> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                        double eps, shared_ptr<SumOfIntegrals> lf);
 
 }
@@ -202,32 +202,32 @@ namespace ngcomp
 //#include <comp.hpp>
 //#include <fem.hpp>
 // using namespace ngfem;
-void ExportSVDTrefftz (py::module m)
+void ExportEmbTrefftz (py::module m)
 {
   m.def (
-      "SVDTrefftz",
+      "TrefftzEmbedding",
       [] (shared_ptr<ngfem::SumOfIntegrals> bf,
           shared_ptr<ngcomp::FESpace> fes, double eps,
           shared_ptr<ngfem::SumOfIntegrals> lf) {
         if (fes->IsComplex ())
-          return ngcomp::SVDTrefftz<Complex> (bf, fes, eps, nullptr);
+          return ngcomp::EmbTrefftz<Complex> (bf, fes, eps, nullptr);
 
-        return ngcomp::SVDTrefftz<double> (bf, fes, eps, lf);
+        return ngcomp::EmbTrefftz<double> (bf, fes, eps, lf);
       },
       py::arg ("bf"), py::arg ("fes"), py::arg ("eps"),
       py::arg ("lf") = nullptr);
 
   m.def (
-      "SVDTrefftz",
+      "TrefftzEmbedding",
       [] (shared_ptr<ngfem::SumOfIntegrals> bf,
           shared_ptr<ngcomp::FESpace> fes,
           double eps) -> shared_ptr<ngcomp::BaseMatrix> {
         if (fes->IsComplex ())
           return std::get<0> (
-              ngcomp::SVDTrefftz<Complex> (bf, fes, eps, nullptr));
+              ngcomp::EmbTrefftz<Complex> (bf, fes, eps, nullptr));
 
         return std::get<0> (
-            ngcomp::SVDTrefftz<double> (bf, fes, eps, nullptr));
+            ngcomp::EmbTrefftz<double> (bf, fes, eps, nullptr));
       },
       py::arg ("bf"), py::arg ("fes"), py::arg ("eps"));
 }

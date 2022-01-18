@@ -10,7 +10,7 @@
 //#include <tents.hpp>
 #include "meshtentslab.hpp"
 #include "twavetents.hpp"
-#include "svdtrefftz.hpp"
+#include "embtrefftz.hpp"
 
 //#include "airy.cpp"
 
@@ -25,7 +25,7 @@ PYBIND11_MODULE (_trefftz, m)
   ExportSpecialCoefficientFunction (m);
   ExportTWaveTents (m);
   ExportMeshTentSlab (m);
-  ExportSVDTrefftz (m);
+  ExportEmbTrefftz (m);
 
   // ExportStdMathFunction<GenericAiry>(m, "airy", "airy function");
   // ExportStdMathFunction<GenericAiryP>(m, "airyp", "airyp function");
