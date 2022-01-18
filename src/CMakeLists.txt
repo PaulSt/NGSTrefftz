@@ -32,7 +32,7 @@ add_ngsolve_python_module(_trefftz
     monomialfespace.cpp
     specialcoefficientfunction.cpp
     twavetents.cpp
-    svdtrefftz.cpp
+    embtrefftz.cpp
     #airy.cpp
     meshtentslab.cpp
     )
@@ -52,6 +52,6 @@ install (FILES
         )
 
 include(CTest)
-add_test(NAME svdtest COMMAND python3 ../.github/tests/svdt.py -v)
+add_test(NAME embtrefftz COMMAND python3 ../.github/tests/embt.py -v)
 add_test(NAME trefftz COMMAND python3 ../.github/tests/trefftz.py -v)
 add_test(NAME tents COMMAND python3 ../.github/tests/tents.py -v)

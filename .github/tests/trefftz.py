@@ -4,7 +4,7 @@ from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from ngsolve.TensorProductTools import *
 from ngsolve import *
-from svdt import *
+from embt import *
 import time
 
 

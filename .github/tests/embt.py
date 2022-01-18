@@ -123,12 +123,12 @@ def PySVDTrefftz(op,fes,eps):
 
 
 ########################################################################
-# SVDTrefftz
+# EmbTrefftz
 ########################################################################
-def testsvdtrefftz(fes):
+def testembtrefftz(fes):
     """
     >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
-    >>> testsvdtrefftz(fes) # doctest:+ELLIPSIS
+    >>> testembtrefftz(fes) # doctest:+ELLIPSIS
     1...e-08
     """
     start = time.time()
@@ -140,7 +140,7 @@ def testsvdtrefftz(fes):
     # op = grad(u)*grad(v) * dx
     # op = InnerProduct(u.Operator("hesse"),v.Operator("hesse"))*dx
     with TaskManager():
-        PP = SVDTrefftz(op,fes,eps)
+        PP = TrefftzEmbedding(op,fes,eps)
     # spspy(PP)
     PPT = PP.CreateTranspose()
     a,f = dglap(fes,exactlap)
@@ -155,10 +155,10 @@ def testsvdtrefftz(fes):
     return sqrt(Integrate((tpgfu-exactlap)**2, mesh))
 
 
-def testsvdtrefftznonsym(fes):
+def testembtrefftznonsym(fes):
     """
     >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
-    >>> testsvdtrefftznonsym(fes) # doctest:+ELLIPSIS
+    >>> testembtrefftznonsym(fes) # doctest:+ELLIPSIS
     1...e-08
     """
     start = time.time()
@@ -168,7 +168,7 @@ def testsvdtrefftznonsym(fes):
     vh = v.Operator("hesse")
     op = (uh[0,0]+uh[1,1])*v*dx
     with TaskManager():
-        PP = SVDTrefftz(op,fes,eps)
+        PP = TrefftzEmbedding(op,fes,eps)
     PPT = PP.CreateTranspose()
     a,f = dglap(fes,exactlap)
     TA = PPT@a.mat@PP
@@ -177,10 +177,10 @@ def testsvdtrefftznonsym(fes):
     tpgfu.vec.data = PP*TU
     return sqrt(Integrate((tpgfu-exactlap)**2, mesh))
 
-def testsvdtrefftzpoi(fes):
+def testembtrefftzpoi(fes):
     """
     >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
-    >>> testsvdtrefftzpoi(fes) # doctest:+ELLIPSIS
+    >>> testembtrefftzpoi(fes) # doctest:+ELLIPSIS
     4...e-09
     """
     mesh = fes.mesh
@@ -192,7 +192,7 @@ def testsvdtrefftzpoi(fes):
     rhs=-exactpoi.Diff(x).Diff(x)-exactpoi.Diff(y).Diff(y)
     lop = -rhs*(vh[0,0]+vh[1,1])*dx
     with TaskManager():
-        PP,ufv = SVDTrefftz(op,fes,eps,lop)
+        PP,ufv = TrefftzEmbedding(op,fes,eps,lop)
     PPT = PP.CreateTranspose()
     a,f = dglap(fes,exactpoi,rhs)
     TA = PPT@a.mat@PP
