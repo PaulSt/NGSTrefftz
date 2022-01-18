@@ -1,0 +1,57 @@
+FROM ubuntu:latest
+
+WORKDIR /home/app
+
+RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get -y install vim python3 python3-pip python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake git g++ libglu1-mesa-dev libblas-dev liblapack-dev
+#RUN apt-get install -y software-properties-common
+RUN pip3 install numpy
+
+RUN mkdir /home/app/ngsuite && mkdir /home/app/ngsuite/ngsolve-build && mkdir /home/app/ngsuite/ngsolve-install
+RUN git clone https://github.com/NGSolve/ngsolve.git /home/app/ngsuite/ngsolve-src
+RUN cd /home/app/ngsuite/ngsolve-src && git submodule update --init --recursive
+RUN sed -i '3481 a template class SIMD_MappedIntegrationRule<3,4>;' /home/app/ngsuite/ngsolve-src/fem/intrule.cpp
+
+RUN git clone https://github.com/jayggg/ngstents /home/app/ngstents
+RUN sed -i '/template class TWaveTents<3>/s/.*\/\///' /home/app/ngstents/src/trefftz/twavetents.cpp
+RUN sed -i '/DeclareETClass<TWaveTents<3>, 3>/s/.*\/\///' /home/app/ngstents/src/trefftz/twavetents.cpp
+RUN sed -i '/else if(D==3)/s/.*\/\///' /home/app/ngstents/src/trefftz/twavetents.cpp
+RUN sed -i '/make_shared<TWaveTents<3>>/s/.*\/\///' /home/app/ngstents/src/trefftz/twavetents.cpp
+
+RUN cmake -DCMAKE_INSTALL_PREFIX=/home/app/ngsuite/ngsolve-install -B/home/app/ngsuite/ngsolve-build -S/home/app/ngsuite/ngsolve-src/
+RUN make -C/home/app/ngsuite/ngsolve-build
+RUN make -C/home/app/ngsuite/ngsolve-build install
+ENV NETGENDIR=/home/app/ngsuite/ngsolve-install/bin
+ENV PATH=$NETGENDIR:$PATH
+ENV PYTHONPATH=$NETGENDIR/../lib/python3/dist-packages:$PATH
+
+RUN cmake -B/home/app/ngstents -S/home/app/ngstents/src
+RUN make -C/home/app/ngstents
+RUN make -C/home/app/ngstents install
+
+
+
+RUN apt-get install npm nodejs -y
+RUN pip3 install jupyter_contrib_nbextensions
+RUN pip3 install jupyter_nbextensions_configurator
+RUN pip3 install RISE
+RUN pip3 install ipywidgets
+
+RUN jupyter contrib nbextension install 
+RUN jupyter nbextensions_configurator enable 
+RUN jupyter nbextension enable codefolding/main
+RUN jupyter nbextension enable scratchpad/main
+RUN jupyter nbextension enable toc2/main
+# RUN jupyter nbextension enable varInspector/main
+RUN jupyter nbextension enable hide_header/main
+#RUN jupyter nbextension install --py widgetsnbextension
+RUN jupyter nbextension enable --py widgetsnbextension
+#RUN jupyter nbextension enable --py ngsolve
+RUN pip3 install webgui_jupyter_widgets
+#RUN jupyter nbextension install --py webgui_jupyter_widgets
+RUN jupyter nbextension enable --py webgui_jupyter_widgets
+
+RUN cd /home/app/ngstents/tentswebgui && ./build.sh
+RUN cd /home/app/ngstents/tentswebgui && pip3 install .
+RUN jupyter nbextension install --py tentswebgui
+RUN jupyter nbextension enable --py tentswebgui
+
