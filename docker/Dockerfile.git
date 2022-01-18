@@ -9,24 +9,25 @@ RUN pip3 install numpy
 RUN mkdir /home/app/ngsuite && mkdir /home/app/ngsuite/ngsolve-build && mkdir /home/app/ngsuite/ngsolve-install
 RUN git clone https://github.com/NGSolve/ngsolve.git /home/app/ngsuite/ngsolve-src
 RUN cd /home/app/ngsuite/ngsolve-src && git submodule update --init --recursive
-RUN sed -i '3481 a template class SIMD_MappedIntegrationRule<3,4>;' /home/app/ngsuite/ngsolve-src/fem/intrule.cpp
+RUN cd /home/app/ngsuite/ngsolve-src && git remote add paul https://github.com/PaulSt/ngsolve && git fetch paul
 
-RUN git clone https://github.com/jayggg/ngstents /home/app/ngstents
-RUN sed -i '/template class TWaveTents<3>/s/.*\/\///' /home/app/ngstents/src/trefftz/twavetents.cpp
-RUN sed -i '/DeclareETClass<TWaveTents<3>, 3>/s/.*\/\///' /home/app/ngstents/src/trefftz/twavetents.cpp
-RUN sed -i '/else if(D==3)/s/.*\/\///' /home/app/ngstents/src/trefftz/twavetents.cpp
-RUN sed -i '/make_shared<TWaveTents<3>>/s/.*\/\///' /home/app/ngstents/src/trefftz/twavetents.cpp
+RUN git config --global user.email "docker@build.com"
+RUN cd /home/app/ngsuite/ngsolve-src && git merge paul/matmul-complex 
+RUN cd /home/app/ngsuite/ngsolve-src && git merge paul/dgcomplexshapes
+
 
 RUN cmake -DCMAKE_INSTALL_PREFIX=/home/app/ngsuite/ngsolve-install -B/home/app/ngsuite/ngsolve-build -S/home/app/ngsuite/ngsolve-src/
-RUN make -C/home/app/ngsuite/ngsolve-build
+RUN make -C/home/app/ngsuite/ngsolve-build -j6
 RUN make -C/home/app/ngsuite/ngsolve-build install
 ENV NETGENDIR=/home/app/ngsuite/ngsolve-install/bin
 ENV PATH=$NETGENDIR:$PATH
 ENV PYTHONPATH=$NETGENDIR/../lib/python3/dist-packages:$PATH
 
-RUN cmake -B/home/app/ngstents -S/home/app/ngstents/src
-RUN make -C/home/app/ngstents
-RUN make -C/home/app/ngstents install
+
+RUN git clone --recursive https://github.com/PaulSt/NGSTrefftz /home/app/ngstrefftz
+RUN cmake -B/home/app/ngstrefftz -S/home/app/ngstrefftz/src
+RUN make -C/home/app/ngstrefftz
+RUN make -C/home/app/ngstrefftz install
 
 
 
@@ -50,8 +51,8 @@ RUN pip3 install webgui_jupyter_widgets
 #RUN jupyter nbextension install --py webgui_jupyter_widgets
 RUN jupyter nbextension enable --py webgui_jupyter_widgets
 
-RUN cd /home/app/ngstents/tentswebgui && ./build.sh
-RUN cd /home/app/ngstents/tentswebgui && pip3 install .
+RUN cd /home/app/ngstrefftz/external_dependencies/ngstents/tentswebgui && ./build.sh
+RUN cd /home/app/ngstrefftz/external_dependencies/ngstents/tentswebgui && pip3 install .
 RUN jupyter nbextension install --py tentswebgui
 RUN jupyter nbextension enable --py tentswebgui
 
