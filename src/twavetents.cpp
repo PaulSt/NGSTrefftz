@@ -143,6 +143,7 @@ namespace ngcomp
         FlatVector<SIMD<double>> mirtimes(sir.Size(),slh);
 
         /// Integration over bot of tent
+        // rows of bdbmat / entries in bdbvec correspond to setting up trial functions
         vert = TentFaceVerts(tent, elnr, -1);
         linbasis = vert.Row(D);
         faceint.Evaluate(sir, linbasis, mirtimes);
@@ -269,11 +270,12 @@ namespace ngcomp
         bdbvec = 0;
         if(ma->GetMaterial(ElementId(BND,surfel)) == "neumann")
         {
+            // had trouble evaluating the normal when passing bndc as n*grad(u), which is why it is now done here. Not useful for actual Neumann bndc, only for testing
             FlatMatrix<SIMD<double>> bdeval(D,sir.Size(),slh);
             bddatum->Evaluate(smir,bdeval);
             double beta = 0.5;
             for(size_t imip=0;imip<snip;imip++)
-                for(int r=0;r<D;r++)
+                for(int r=0;r<(D+1);r++)
                     for(int d=0;d<(D+1);d++)
                     {
                         bdbmat.Row(r*snip+imip) += (d<D?-n(d)*beta:1.0) * (-n(r)) * sir[imip/nsimd].Weight()[imip%nsimd]*area * bbmat.Col(d*snip+imip);
@@ -285,15 +287,15 @@ namespace ngcomp
             FlatMatrix<SIMD<double>> bdeval(1,sir.Size(),slh);
             bddatum->Evaluate(smir,bdeval);
             FlatMatrix<SIMD<double>> wavespeed(1,sir.Size(),slh);
-            auto localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(this->wavespeedcf);
+            auto localwavespeedcf = make_shared<ConstantCoefficientFunction>(1)/(this->wavespeedcf*this->wavespeedcf);
             localwavespeedcf->Evaluate(smir,wavespeed);
-            //double alpha = 0.5;
+            double alpha = 0.5;
 
             for(size_t imip=0;imip<snip;imip++)
             {
                 double weight = area * sir[imip/nsimd].Weight()[imip%nsimd];
-                bdbmat.Row(D*snip+imip) += weight * wavespeed(0,imip/nsimd)[imip%nsimd] * bbmat.Col(D*snip+imip);
-                bdbvec(D*snip+imip) -= weight * wavespeed(0,imip/nsimd)[imip%nsimd] * bdeval(0,imip/nsimd)[imip%nsimd];
+                bdbmat.Row(D*snip+imip) += weight * alpha * wavespeed(0,imip/nsimd)[imip%nsimd] * bbmat.Col(D*snip+imip);
+                bdbvec(D*snip+imip) -= weight * alpha * wavespeed(0,imip/nsimd)[imip%nsimd] * bdeval(0,imip/nsimd)[imip%nsimd];
                 for(int d=0;d<D;d++)
                 {
                     bdbmat.Row(D*snip+imip) -= n(d) * weight * bbmat.Col(d*snip+imip);
@@ -372,8 +374,8 @@ namespace ngcomp
             bdbmat[i] = new FlatMatrix<>((D+1)*snip,nbasis,slh);
             *bdbmat[i] = 0;
         }
-        //double alpha = 0;
-        //double beta = 0;
+        double alpha = 0;
+        double beta = 0;
 
         double area = TentFaceArea(vert);
         for(size_t imip=0;imip<snip;imip++)
