@@ -1,9 +1,8 @@
 #include "embtrefftz.hpp"
+#include <bla.hpp>
 
-namespace ngcomp
-{
+namespace ngbla{
 
-#ifdef LAPACK
     void LapackSVD (SliceMatrix<double, ColMajor> A,
                     SliceMatrix<double, ColMajor> U,
                     SliceMatrix<double, ColMajor> V)
@@ -55,7 +54,7 @@ namespace ngcomp
         A = 0.0;
         A.Diag(0) = S;
     }
-#endif
+
 
     template <class SCAL>
     void GetSVD (SliceMatrix<SCAL> A,
@@ -75,6 +74,19 @@ namespace ngcomp
         A = 0.0;
         A.Diag(0)=AA.Diag();
     }
+
+    template
+    void GetSVD<double>
+        (SliceMatrix<double> A, SliceMatrix<double, ColMajor> U, SliceMatrix<double, ColMajor> V);
+
+    template
+    void GetSVD<Complex>
+        (SliceMatrix<Complex> A, SliceMatrix<Complex, ColMajor> U, SliceMatrix<Complex, ColMajor> V);
+}
+
+
+namespace ngcomp
+{
 
     template <class SCAL>
     std::tuple<shared_ptr<BaseMatrix>,shared_ptr<BaseVector>> EmbTrefftz (shared_ptr<SumOfIntegrals> bf,
@@ -123,7 +135,7 @@ namespace ngcomp
                 elmat += elmati;
             }
             FlatMatrix<SCAL,ColMajor> U(dofs.Size(),mlh), Vt(dofs.Size(),mlh);
-            GetSVD<SCAL>(elmat,U,Vt);
+            ngbla::GetSVD<SCAL>(elmat,U,Vt);
 
             int nz = 0;
             for(auto sv : elmat.Diag()) if(abs(sv)<eps) nz++;
@@ -179,18 +191,6 @@ namespace ngcomp
         return std::make_tuple(P,make_shared<VVector<SCAL>>(lfvec));
     }
 
-  //template
-    //void LapackSVD<double>
-        //(SliceMatrix<double, ColMajor> A, SliceMatrix<double, ColMajor> U, SliceMatrix<double, ColMajor> V);
-  //template
-    //void LapackSVD<Complex>
-        //(SliceMatrix<Complex, ColMajor> A, SliceMatrix<Complex, ColMajor> U, SliceMatrix<Complex, ColMajor> V);
-  template
-    void GetSVD<double>
-        (SliceMatrix<double> A, SliceMatrix<double, ColMajor> U, SliceMatrix<double, ColMajor> V);
-  template
-    void GetSVD<Complex>
-        (SliceMatrix<Complex> A, SliceMatrix<Complex, ColMajor> U, SliceMatrix<Complex, ColMajor> V);
   template
       std::tuple<shared_ptr<BaseMatrix>,shared_ptr<BaseVector>> EmbTrefftz<double>
           (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes, double eps, shared_ptr<SumOfIntegrals> lf);
