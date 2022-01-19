@@ -3,6 +3,7 @@
 namespace ngcomp
 {
 
+#ifdef LAPACK
   void
   LapackSVD (SliceMatrix<double, ColMajor> A, SliceMatrix<double, ColMajor> U,
              SliceMatrix<double, ColMajor> V)
@@ -22,7 +23,8 @@ namespace ngcomp
     dgesdd_ (&jobz, &m, &n, A.Data (), &lda, S.Data (), U.Data (), &ldu,
              V.Data (), &ldv, work.Data (), &lwork, iwork.Data (), &info);
     if (info != 0)
-      throw Exception ("something went wrong in the svd " + info);
+      throw Exception ("something went wrong in the svd "
+                       + std::to_string (info));
     A = 0.0;
     A.Diag (0) = S;
   }
@@ -47,21 +49,27 @@ namespace ngcomp
              V.Data (), &ldv, work.Data (), &lwork, rwork.Data (),
              iwork.Data (), &info);
     if (info != 0)
-      throw Exception ("something went wrong in the svd " + info);
+      throw Exception ("something went wrong in the svd "
+                       + std::to_string (info));
     A = 0.0;
     A.Diag (0) = S;
   }
+#endif
 
   template <class SCAL>
-  void LapackSVD (SliceMatrix<SCAL> A, SliceMatrix<SCAL, ColMajor> U,
-                  SliceMatrix<SCAL, ColMajor> V)
+  void GetSVD (SliceMatrix<SCAL> A, SliceMatrix<SCAL, ColMajor> U,
+               SliceMatrix<SCAL, ColMajor> V)
   {
     Matrix<SCAL, ColMajor> AA = A;
     // Matrix<SCAL,ColMajor> AA(A.Height(),A.Width());
     // for(int i=0;i<A.Height();i++)
     // for(int j=0;j<A.Width();j++)
     // AA(i,j)= A(i,j);
+#ifdef LAPACK
     LapackSVD (AA, U, V);
+#else
+    CalcSVD (AA, U, V);
+#endif
     A = 0.0;
     A.Diag (0) = AA.Diag ();
   }
@@ -114,8 +122,7 @@ namespace ngcomp
           elmat += elmati;
         }
       FlatMatrix<SCAL, ColMajor> U (dofs.Size (), mlh), Vt (dofs.Size (), mlh);
-      LapackSVD<SCAL> (elmat, U, Vt);
-      // CalcSVD(elmat,U,Vt);
+      GetSVD<SCAL> (elmat, U, Vt);
 
       int nz = 0;
       for (auto sv : elmat.Diag ())
@@ -183,11 +190,11 @@ namespace ngcomp
   //(SliceMatrix<Complex, ColMajor> A, SliceMatrix<Complex, ColMajor> U,
   //SliceMatrix<Complex, ColMajor> V);
   template void
-  LapackSVD<double> (SliceMatrix<double> A, SliceMatrix<double, ColMajor> U,
-                     SliceMatrix<double, ColMajor> V);
+  GetSVD<double> (SliceMatrix<double> A, SliceMatrix<double, ColMajor> U,
+                  SliceMatrix<double, ColMajor> V);
   template void
-  LapackSVD<Complex> (SliceMatrix<Complex> A, SliceMatrix<Complex, ColMajor> U,
-                      SliceMatrix<Complex, ColMajor> V);
+  GetSVD<Complex> (SliceMatrix<Complex> A, SliceMatrix<Complex, ColMajor> U,
+                   SliceMatrix<Complex, ColMajor> V);
   template std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
   EmbTrefftz<double> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                       double eps, shared_ptr<SumOfIntegrals> lf);
