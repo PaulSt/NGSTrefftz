@@ -41,6 +41,17 @@ target_link_libraries(_trefftz PRIVATE _pytents)
 #add_compile_options(PRIVATE -Wall -Wextra -pedantic)
 #add_compile_options(-g -O0)
 
+option( USE_LAPACK       "build ngsolve with LAPACK" ON)
+if (USE_LAPACK) # currently needed for SVD in embTrefftz, TODO: switch to ngsolve interface..
+    find_package(BLAS)
+    find_package(LAPACK)
+    if(LAPACK_FOUND AND BLAS_FOUND)
+       set(lapackblas_libraries ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+    endif()
+    target_link_libraries(_trefftz PRIVATE ${lapackblas_libraries})
+endif (USE_LAPACK)
+
+
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
 install(TARGETS _trefftz DESTINATION ngstrefftz)
 install (FILES

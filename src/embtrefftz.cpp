@@ -3,6 +3,7 @@
 
 namespace ngbla{
 
+#ifdef LAPACK
     void LapackSVD (SliceMatrix<double, ColMajor> A,
                     SliceMatrix<double, ColMajor> U,
                     SliceMatrix<double, ColMajor> V)
@@ -54,7 +55,7 @@ namespace ngbla{
         A = 0.0;
         A.Diag(0) = S;
     }
-
+#endif
 
     template <class SCAL>
     void GetSVD (SliceMatrix<SCAL> A,
