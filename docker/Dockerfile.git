@@ -24,12 +24,12 @@ ENV PATH=$NETGENDIR:$PATH
 ENV PYTHONPATH=$NETGENDIR/../lib/python3/dist-packages:$PATH
 
 
+
+
 RUN git clone --recursive https://github.com/PaulSt/NGSTrefftz /home/app/ngstrefftz
 RUN cmake -B/home/app/ngstrefftz -S/home/app/ngstrefftz/src
 RUN make -C/home/app/ngstrefftz
 RUN make -C/home/app/ngstrefftz install
-
-
 
 RUN apt-get install npm nodejs -y
 RUN pip3 install jupyter_contrib_nbextensions
