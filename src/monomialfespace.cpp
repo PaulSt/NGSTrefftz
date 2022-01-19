@@ -1,9 +1,5 @@
 #include <comp.hpp>    // provides FESpace, ...
-#include <h1lofe.hpp>
-#include <regex>
 #include <python_comp.hpp>
-#include <fem.hpp>
-#include <multigrid.hpp>
 
 #include "monomialfespace.hpp"
 #include "diffopmapped.hpp"
@@ -54,21 +50,6 @@ namespace ngcomp
             dnums.Append (j);
     }
 
-    template<int D>
-    CSR MonomialFESpace :: MonomialBasis(int ord) const
-    {
-        CSR tb;
-        const int npoly = BinCoeff(D+1 + ord, ord);
-        Matrix<> basis(npoly,npoly);
-        basis = 0.0;
-        for(int i = 0;i<npoly;i++)
-            basis(i,i)=1.0;
-
-        MatToCSR(basis,tb);
-        return tb;
-    }
-
-
     FiniteElement & MonomialFESpace :: GetFE (ElementId ei, Allocator & alloc) const
     {
         Ngs_Element ngel = ma->GetElement(ei);
@@ -112,44 +93,6 @@ namespace ngcomp
         }
     }
 
-
-    template<int D>
-    double MonomialFESpace :: Adiam(ElementId ei) const
-    {
-        LocalHeap lh(1000 * 1000);
-        double anisotropicdiam = 0.0;
-        auto vertices_index = ma->GetElVertices(ei);
-
-        for(auto vertex1 : vertices_index)
-        {
-            for(auto vertex2 : vertices_index)
-            {
-                Vec<D+1> v1 = ma->GetPoint<D+1>(vertex1);
-                Vec<D+1> v2 = ma->GetPoint<D+1>(vertex2);
-                IntegrationRule ir (ma->GetElType(ei), 0);
-                ElementTransformation & trafo = ma->GetTrafo (ei, lh);
-                MappedIntegrationPoint<D+1,D+1> mip(ir[0], trafo);
-                mip.Point() = v1;
-                double c1 = wavespeedcf->Evaluate(mip);
-                mip.Point() = v2;
-                double c2 = wavespeedcf->Evaluate(mip);
-
-                anisotropicdiam = max( anisotropicdiam, sqrt( L2Norm2(v1.Range(0,D) - v2.Range(0,D)) + pow(c1*v1(D)-c2*v2(D),2) ) );
-            }
-        }
-        return anisotropicdiam * useshift + (useshift==0);
-    }
-
-
-    template<int D>
-    Vec<D+1> MonomialFESpace :: ElCenter(ElementId ei) const
-    {
-        Vec<D+1> center = 0;
-        auto vertices_index = ma->GetElVertices(ei);
-        for(auto vertex : vertices_index) center += ma->GetPoint<D+1>(vertex);
-        center *= (1.0/vertices_index.Size()) * useshift;
-        return center;
-    }
 
     DocInfo MonomialFESpace :: GetDocu ()
     {
