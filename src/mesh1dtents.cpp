@@ -1,5 +1,5 @@
-#include "meshtentslab.hpp"
 #include <tents.hpp>
+#include "mesh1dtents.hpp"
 
 namespace ngcomp
 {
@@ -30,22 +30,18 @@ namespace ngcomp
     return pi;
   }
 
-  shared_ptr<MeshAccess>
-  NgsTPmesh (shared_ptr<MeshAccess> ma,
-             shared_ptr<CoefficientFunction> wavespeedcf, double dt)
+  shared_ptr<MeshAccess> NgsTP1dmesh (shared_ptr<TentPitchedSlab> tps)
   {
     Point2IndexMap *pim = new Point2IndexMap (); // Your map type may vary,
                                                  // just change the typedef
     int index = 1;
     double dt_eps = 0.00001;
+    shared_ptr<MeshAccess> ma = tps->ma;
+    double dt = tps->GetSlabHeight ();
     // get boundaries of the init mesh
     Array<double> bd_points (0);
     for (auto el : ma->Elements (BND))
       bd_points.Append (ma->GetPoint<1> (el.Vertices ()[0]) (0));
-
-    TentPitchedSlab tps = TentPitchedSlab (ma, 1000 * 1000 * 1000);
-    tps.SetMaxWavespeed (wavespeedcf);
-    tps.PitchTents<1> (dt, 1);
 
     auto mesh = make_shared<netgen::Mesh> ();
     mesh->SetDimension (ma->GetDimension () + 1);
@@ -69,9 +65,9 @@ namespace ngcomp
     fdd.SetBCName (new string ("dirichlet"));
     int ind_fdd = mesh->AddFaceDescriptor (fdd);
 
-    for (int i = 0; i < tps.GetNTents (); i++)
+    for (int i = 0; i < tps->GetNTents (); i++)
       {
-        const Tent *tent = &tps.GetTent (i);
+        const Tent *tent = &tps->GetTent (i);
         // cout << *tent << endl;
         if (tent->ttop < tent->tbot + dt_eps)
           {
@@ -169,13 +165,11 @@ namespace ngcomp
 
 #ifdef NGS_PYTHON
 #include <python_ngstd.hpp>
-void ExportMeshTentSlab (py::module m)
+void ExportMesh1dTents (py::module m)
 {
-  m.def ("NgsTPmesh",
-         [] (shared_ptr<MeshAccess> ma,
-             shared_ptr<CoefficientFunction> wavespeedcf,
-             double dt) -> shared_ptr<MeshAccess> {
-           return NgsTPmesh (ma, wavespeedcf, dt);
+  m.def ("Mesh1dTents",
+         [] (shared_ptr<TentPitchedSlab> tps) -> shared_ptr<MeshAccess> {
+           return NgsTP1dmesh (tps);
          } //, py::call_guard<py::gil_scoped_release>()
   );
 }

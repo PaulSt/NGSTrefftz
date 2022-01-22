@@ -27,14 +27,13 @@ add_ngsolve_python_module(_trefftz
     diffopmapped.hpp
     scalarmappedfe.cpp
     planewavefe.cpp
-    #trefftzheatfe.cpp
     trefftzfespace.cpp
-    monomialfespace.cpp
     specialcoefficientfunction.cpp
     twavetents.cpp
     embtrefftz.cpp
-    #airy.cpp
-    meshtentslab.cpp
+    mesh1dtents.cpp
+    #monomialfespace.cpp for testing
+    #airy.cpp for testing, require boost
     )
 target_link_libraries(_trefftz PRIVATE _pytents)
 
@@ -56,8 +55,6 @@ message("With 'make install' the python package will be installed to: ${CMAKE_IN
 install(TARGETS _trefftz DESTINATION ngstrefftz)
 install (FILES
         __init__.py 
-        DGeq.py 
-        prodmesh.py 
         DESTINATION ngstrefftz
         #COMPONENT ngstrefftz
         )
