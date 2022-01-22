@@ -3,8 +3,6 @@ from ngsolve.comp import L2,BilinearForm,LinearForm,SymbolicBFI,SymbolicLFI,FESp
 from ngsolve.fem import CoordCF
 from ngstents._pytents import TentSlab, Tent
 from ._trefftz import *
-from ngstrefftz.DGeq import *
-from ngstrefftz.prodmesh import *
 
 def GetWave(self,U):
     order=self.GetOrder()
