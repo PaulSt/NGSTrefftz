@@ -3,14 +3,13 @@
 #include <fem.hpp>
 #include <comp.hpp>
 //using namespace ngsolve;
-#include "trefftzfespace.hpp"
-#include "monomialfespace.hpp"
-#include "diffopmapped.hpp"
-#include "specialcoefficientfunction.hpp"
 //#include <tents.hpp>
-#include "meshtentslab.hpp"
+#include "trefftzfespace.hpp"
+#include "specialcoefficientfunction.hpp"
 #include "twavetents.hpp"
 #include "embtrefftz.hpp"
+#include "mesh1dtents.hpp"
+//#include "monomialfespace.hpp"
 
 //#include "airy.cpp"
 
@@ -21,12 +20,11 @@ PYBIND11_MODULE(_trefftz,m) {
     m.attr("__package__") = "ngstrefftz";
 
     ExportTrefftzFESpace(m);
-    ExportMonomialFESpace(m);
     ExportSpecialCoefficientFunction(m);
     ExportTWaveTents(m);
-    ExportMeshTentSlab(m);
     ExportEmbTrefftz(m);
-
+    ExportMesh1dTents(m);
+    //ExportMonomialFESpace(m);
     //ExportStdMathFunction<GenericAiry>(m, "airy", "airy function");
     //ExportStdMathFunction<GenericAiryP>(m, "airyp", "airyp function");
 }

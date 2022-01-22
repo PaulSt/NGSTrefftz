@@ -3,7 +3,7 @@
 
 #ifdef NGS_PYTHON
 #include <python_ngstd.hpp>
-void ExportMeshTentSlab(py::module m);
+void ExportMesh1dTents(py::module m);
 #endif // NGS_PYTHON
 
 #endif
