@@ -374,8 +374,8 @@ namespace ngcomp
             bdbmat[i] = new FlatMatrix<>((D+1)*snip,nbasis,slh);
             *bdbmat[i] = 0;
         }
-        double alpha = 0;
-        double beta = 0;
+        //double alpha = 0;
+        //double beta = 0;
 
         double area = TentFaceArea(vert);
         for(size_t imip=0;imip<snip;imip++)
