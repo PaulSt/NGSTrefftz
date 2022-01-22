@@ -1,9 +1,12 @@
 name: build
+
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  release:
+    types: [created]
 
 env:
   BUILD_TYPE: Debug
@@ -42,12 +45,8 @@ jobs:
   macos:
     runs-on: macos-latest
     steps:     
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
       - name: install pkgs
         run: |
-             #brew install python
              brew install openblas
              brew install lapack
              echo "LDFLAGS=-L/usr/local/opt/openblas/lib -L/usr/local/opt/lapack/lib" >> $GITHUB_ENV
@@ -55,9 +54,11 @@ jobs:
              echo "PKG_CONFIG_PATH=/usr/local/opt/openblas/lib/pkgconfig:/usr/local/opt/lapack/lib/pkgconfig" >> $GITHUB_ENV
       - name: install ngsolve
         run: |
-             wget https://www.asc.tuwien.ac.at/~mhochsteger/ngsolve/macos/NGSolve-6.2.2105.dmg
-             hdiutil attach NGSolve-6.2.2105.dmg
+             wget https://www.asc.tuwien.ac.at/~mhochsteger/ngsolve/macos/NGSolve_nightly.dmg
+             hdiutil attach NGSolve_nightly.dmg
              cp -R /Volumes/NGSolve/* /Applications
+      - name: set path
+        run: |
              echo "PYTHONPATH=$PYTHONPATH:/Applications/Netgen.app/Contents/Resources/lib/python3.8/site-packages:." >> $GITHUB_ENV
              echo "NETGENDIR=/Applications/Netgen.app/Contents/MacOS" >> $GITHUB_ENV
              echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$NETGENDIR" >> $GITHUB_ENV
@@ -73,6 +74,25 @@ jobs:
         run: |
              make -C $GITHUB_WORKSPACE/NGSTrefftz/make
              sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
-      - name: Debugging with tmate
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3.6
+
+
+  publish:
+    needs: [ubuntu,macos]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'created' #startsWith(github.ref, 'refs/tags/v') # && github.event_name == 'push' 
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'True'
+      - name: Update pip and Install setuptools
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install setuptools
+      - name: Package ngstrefftz sources for PyPI
+        run: python3 setup.py sdist
+      - name: Publish source distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          skip_existing: true
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
