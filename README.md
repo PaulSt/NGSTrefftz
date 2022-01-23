@@ -1,6 +1,6 @@
 # NGSTrefftz
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/PaulSt/NGSTrefftz/HEAD?filepath=notebooks%2Findex.ipynb)
-[![Docker Image Version (latest by date)](https://img.shields.io/docker/v/paulstdocker/ngstrefftz?label=docker&logo=docker)](https://hub.docker.com/repository/docker/paulstdocker/ngstrefftz)
+[![Docker Image Version (latest by date)](https://img.shields.io/docker/v/paulstdocker/ngstrefftz?label=docker&logo=docker)](https://hub.docker.com/r/paulstdocker/ngstrefftz)
 [![PyPI](https://img.shields.io/pypi/v/ngstrefftz?color=blue&logo=pypi)](https://pypi.org/project/ngstrefftz/)
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/PaulSt/NGSTrefftz/build?logo=github)](https://github.com/PaulSt/NGSTrefftz/actions)
 
