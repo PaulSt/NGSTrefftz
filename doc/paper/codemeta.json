@@ -1,0 +1,23 @@
+{
+  "@context": "https://raw.githubusercontent.com/codemeta/codemeta/master/codemeta.jsonld",
+  "@type": "Code",
+  "author": [
+    {
+      "@id": " https://orcid.org/0000-0001-5073-3366",
+      "@type": "Person",
+      "email": "p.stocker@math.uni-goettingen.de",
+      "name": "Paul",
+      "affiliation": "Georg-August-Universität Göttingen"
+    }
+  ],
+  "identifier": "",
+  "codeRepository": "https://github.com/PaulSt/NGSTrefftz",
+  "datePublished": "2022-01-29",
+  "dateModified": "2022-01-29",
+  "dateCreated": "2022-01-29",
+  "description": "Add-On to NGSolve for Trefftz methods",
+  "keywords": "numerical methods for PDEs, finite elements, Trefftz methods",
+  "license": "LGPL v3.0",
+  "title": "NGSTrefftz",
+  "version": "v0.0.0"
+}
