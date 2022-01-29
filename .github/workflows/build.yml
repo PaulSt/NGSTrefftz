@@ -2,9 +2,7 @@ name: build
 
 on:
   push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
   release:
     types: [created]
 
@@ -96,3 +94,21 @@ jobs:
           skip_existing: true
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+
+  paper:
+    runs-on: ubuntu-latest
+    name: Paper Draft
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build draft PDF
+        uses: openjournals/openjournals-draft-action@master
+        with:
+          journal: joss
+          paper-path: doc/paper/paper.md
+      - name: Upload
+        uses: actions/upload-artifact@v1
+        with:
+          name: joss_paper
+          path: doc/paper/paper.pdf
