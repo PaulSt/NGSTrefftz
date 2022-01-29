@@ -1,5 +1,5 @@
 # NGSTrefftz
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/PaulSt/NGSTrefftz/HEAD?filepath=doc%2notebooks%2Findex.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/PaulSt/NGSTrefftz/HEAD?filepath=doc%2Fnotebooks%2Findex.ipynb)
 [![Docker Image Version (latest by date)](https://img.shields.io/docker/v/paulstdocker/ngstrefftz?label=docker&logo=docker)](https://hub.docker.com/r/paulstdocker/ngstrefftz)
 [![PyPI](https://img.shields.io/pypi/v/ngstrefftz?color=blue&logo=pypi)](https://pypi.org/project/ngstrefftz/)
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/PaulSt/NGSTrefftz/build?logo=github)](https://github.com/PaulSt/NGSTrefftz/actions)
@@ -9,7 +9,7 @@ NGSTrefftz provides a framework to implement Trefftz finite element spaces for !
 ## Try it out!
 You can try out some jupyter notebooks:
 * Launch the Binder here:   
-  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/PaulSt/NGSTrefftz/HEAD?filepath=doc%2notebooks%2Findex.ipynb)
+  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/PaulSt/NGSTrefftz/HEAD?filepath=doc%2Fnotebooks%2Findex.ipynb)
 * Or run the docker locally (you need to have docker installed):
 ```bash
 git clone https://github.com/PaulSt/NGSTrefftz
