@@ -9,7 +9,7 @@ NGSTrefftz provides a framework to implement Trefftz finite element spaces for !
 ## Try it out!
 You can try out some jupyter notebooks:
 * Launch the Binder here:   
-  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/PaulSt/NGSTrefftz/HEAD?filepath=notebooks%2Findex.ipynb)
+  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/PaulSt/NGSTrefftz/HEAD?filepath=doc%2notebooks%2Findex.ipynb)
 * Or run the docker locally (you need to have docker installed):
 ```bash
 git clone https://github.com/PaulSt/NGSTrefftz
