@@ -1,13 +1,13 @@
 project(ngstrefftz)
-
 cmake_minimum_required(VERSION 3.1)
 
-include_directories(../external_dependencies/ngstents/src)
+option(EXT_TTEST "Add helpfull functions for testing" OFF)
+option(USE_LAPACK "build ngstrefftz with LAPACK" ON)
+
 
 find_package(NGSolve CONFIG REQUIRED
     HINTS $ENV{NETGENDIR}/.. /opt/netgen/ /Applications/Netgen.app/Contents/Resources/CMake C:/netgen
     )
-
 # check if CMAKE_INSTALL_PREFIX is set by user, if not install in NGSolve python dir
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX ${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON} CACHE PATH "Install dir" FORCE)
@@ -15,6 +15,7 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 
 if (NOT TARGET _pytents)
+include_directories(../external_dependencies/ngstents/src)
 add_ngsolve_python_module(_pytents
   ../external_dependencies/ngstents/src/python_tents.cpp
   ../external_dependencies/ngstents/src/tents.cpp
@@ -31,16 +32,19 @@ add_ngsolve_python_module(_trefftz
     specialcoefficientfunction.cpp
     twavetents.cpp
     embtrefftz.cpp
-    mesh1dtents.cpp
-    #monomialfespace.cpp for testing
-    #airy.cpp for testing, require boost
     )
+if(EXT_TTEST)
+    add_compile_definitions(EXT_TTEST)
+    target_sources(_trefftz PRIVATE
+    monomialfespace.cpp 
+    mesh1dtents.cpp
+    #airy.cpp #for testing, requires boost
+    )
+endif()
 target_link_libraries(_trefftz PRIVATE _pytents)
-
 #add_compile_options(PRIVATE -Wall -Wextra -pedantic)
 #add_compile_options(-g -O0)
 
-option( USE_LAPACK       "build ngsolve with LAPACK" ON)
 if (USE_LAPACK) # currently needed for SVD in embTrefftz, TODO: switch to ngsolve interface..
     find_package(BLAS)
     find_package(LAPACK)
