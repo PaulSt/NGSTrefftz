@@ -22,7 +22,7 @@ The package implements Trefftz based discontinuous Galerkin (DG) methods in `NGS
 Trefftz methods reduce the number of unknowns in the discretization of PDE problems by injecting knowledge of the PDE into the approximation functions.
 Like `NGSolve`, `NGSTrefftz` is written in C++ and integrates seamlessly with the easy-to-use Python interface of `NGSolve`.
 
-Trefftz methods originate from [@trefftz1926] and have since been developed for a wide range of problems, for an overview see [@cbe1997trefftz; @TrefftzSurvey; @Qin05; @LLHC08].
+Trefftz methods originate from [@trefftz1926] and have since been developed for a wide range of problems, for an overview see [@cbe1997trefftz; @TrefftzSurvey; @Qin05; @LLHC08; @kk95].
 The central principle of Trefftz methods is the construction of a discrete basis of solutions to the differential operator under consideration, making the space of Trefftz functions problem dependent. 
 In combination with finite elements the Trefftz basis is constructed locally, on each mesh element, continuity and boundary conditions are then enforced in the variational formulation.
 
