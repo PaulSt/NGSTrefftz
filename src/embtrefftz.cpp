@@ -102,8 +102,7 @@ namespace ngcomp
     for (auto icf : bf->icfs)
       {
         auto &dx = icf->dx;
-        bfis[dx.vb] += make_shared<SymbolicBilinearFormIntegrator> (
-            icf->cf, dx.vb, dx.element_vb);
+        bfis[dx.vb] += icf->MakeBilinearFormIntegrator ();
       }
 
     Array<shared_ptr<LinearFormIntegrator>> lfis[4];
@@ -111,8 +110,7 @@ namespace ngcomp
       for (auto icf : lf->icfs)
         {
           auto &dx = icf->dx;
-          lfis[dx.vb] += make_shared<SymbolicLinearFormIntegrator> (
-              icf->cf, dx.vb, dx.element_vb);
+          lfis[dx.vb] += icf->MakeLinearFormIntegrator ();
         }
 
     shared_ptr<SparseMatrix<SCAL>> P;
