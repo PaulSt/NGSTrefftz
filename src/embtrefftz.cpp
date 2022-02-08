@@ -126,36 +126,62 @@ namespace ngcomp
             HeapReset hr(mlh);
             Array<DofId> dofs;
             fes->GetDofNrs(ei, dofs);
+
+            bool definedhere = false;
+            for (auto icf : bf->icfs)
+            {
+                if (icf->dx.vb == VOL)
+                    if ( (!icf->dx.definedonelements) || (icf->dx.definedonelements->Test(ei.Nr())))
+                        definedhere = true;
+            }
+            if (!definedhere)
+                return; // escape lambda
+
             auto & trafo = ma->GetTrafo(ei, mlh);
             auto & fel = fes->GetFE(ei, mlh);
             FlatMatrix<SCAL> elmat(dofs.Size(), mlh), elmati(dofs.Size(), mlh);
             elmat = 0.0;
             for (auto & bfi : bfis[VOL])
             {
-                bfi -> CalcElementMatrix(fel, trafo, elmati, mlh);
-                elmat += elmati;
+                if (bfi->DefinedOnElement(ei.Nr()))
+                {
+                    bfi -> CalcElementMatrix(fel, trafo, elmati, mlh);
+                    elmat += elmati;
+                }
             }
             FlatMatrix<SCAL,ColMajor> U(dofs.Size(),mlh), Vt(dofs.Size(),mlh);
             ngbla::GetSVD<SCAL>(elmat,U,Vt);
 
             int nz = 0;
+            // assumption here: all (active) elements have the same number of (weak) Trefftz fcts.
             for(auto sv : elmat.Diag()) if(abs(sv)<eps) nz++;
-
 
             std::call_once(init_flag, [&](){
                 TableCreator<int> creator(ma->GetNE(VOL));
                 TableCreator<int> creator2(ma->GetNE(VOL));
                 for ( ; !creator.Done(); creator++,creator2++)
+                {
+                    int prevdofs = 0;
                     for(auto ei : ma->Elements(VOL))
                     {
                         Array<DofId> dnums;
                         fes->GetDofNrs (ei, dnums);
+                        bool hasregdof = false;
                         for (DofId d : dnums)
-                            creator.Add (ei.Nr(), d);
-                        int prevdofs = (ei.Nr())*nz;
-                        for (int d=0;d<nz;d++)
-                            creator2.Add (ei.Nr(), d+prevdofs);
+                            if (IsRegularDof(d))
+                            {
+                                creator.Add (ei.Nr(), d);
+                                hasregdof = true;
+                            }
+                        // assumption here: Either all or no dof is regular
+                        if (hasregdof)
+                        {
+                            for (int d=0;d<nz;d++)
+                                creator2.Add (ei.Nr(), d+prevdofs);
+                            prevdofs += nz;
+                        }
                     }
+                }
                 table = creator.MoveTable();
                 table2 = creator2.MoveTable();
 
@@ -175,8 +201,11 @@ namespace ngcomp
                 elvec = 0.0;
                 for (auto & lfi : lfis[VOL])
                 {
-                    lfi -> CalcElementVector(fel, trafo, elveci, mlh);
-                    elvec += elveci;
+                    if (lfi->DefinedOnElement(ei.Nr()))
+                    {
+                        lfi -> CalcElementVector(fel, trafo, elveci, mlh);
+                        elvec += elveci;
+                    }
                 }
                 Matrix<SCAL> Ut = Trans(U).Rows(0,nnz);
                 Matrix<SCAL> V = Trans(Vt).Cols(0,nnz);
