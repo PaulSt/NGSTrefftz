@@ -68,4 +68,4 @@ install (FILES
 include(CTest)
 add_test(NAME embtrefftz COMMAND python3 ../.github/tests/embt.py -v)
 add_test(NAME trefftz COMMAND python3 ../.github/tests/trefftz.py -v)
-#add_test(NAME tents COMMAND python3 ../.github/tests/tents.py -v)
+add_test(NAME tents COMMAND python3 ../.github/tests/tents.py -v)
