@@ -1,12 +1,14 @@
 project(ngstrefftz)
 cmake_minimum_required(VERSION 3.1)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(EXT_TTEST "Add helpfull functions for testing" OFF)
+option(EXT_TTEST "Add helpful functions for testing" OFF)
 option(USE_LAPACK "build ngstrefftz with LAPACK" ON)
 
 
 find_package(NGSolve CONFIG REQUIRED
-    HINTS $ENV{NETGENDIR}/.. /opt/netgen/ /Applications/Netgen.app/Contents/Resources/CMake C:/netgen
+  HINTS $ENV{NETGENDIR}/.. $ENV{NETGENDIR}/../Resources/CMake /opt/netgen/ /Applications/Netgen.app/Contents/Resources/CMake C:/netgen
     )
 # check if CMAKE_INSTALL_PREFIX is set by user, if not install in NGSolve python dir
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -66,4 +68,4 @@ install (FILES
 include(CTest)
 add_test(NAME embtrefftz COMMAND python3 ../.github/tests/embt.py -v)
 add_test(NAME trefftz COMMAND python3 ../.github/tests/trefftz.py -v)
-add_test(NAME tents COMMAND python3 ../.github/tests/tents.py -v)
+#add_test(NAME tents COMMAND python3 ../.github/tests/tents.py -v)

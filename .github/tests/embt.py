@@ -3,17 +3,6 @@ from ngstrefftz import *
 import time
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
-import scipy as sp
-import numpy as np
-
-# import matplotlib.pylab as plt
-# def trunc(values, decs=0):
-    # return np.round(values*10**decs)/(10**decs)
-# def spspy(sparsemat):
-    # rows,cols,vals = sparsemat.COO()
-    # A = sp.sparse.csr_matrix((vals,(rows,cols)))
-    # # A = A.todense()
-    # plt.spy(A); plt.plot(); plt.show()
 
 order = 5
 exactlap = exp(x)*sin(y)
@@ -67,6 +56,21 @@ def dglap(fes,bndc,rhs=0):
 ########################################################################
 # PySVDTrefftz
 ########################################################################
+try:
+    import scipy as sp
+    import numpy as np
+except ImportError as e:
+    pass 
+
+# import matplotlib.pylab as plt
+# def trunc(values, decs=0):
+    # return np.round(values*10**decs)/(10**decs)
+# def spspy(sparsemat):
+    # rows,cols,vals = sparsemat.COO()
+    # A = sp.sparse.csr_matrix((vals,(rows,cols)))
+    # # A = A.todense()
+    # plt.spy(A); plt.plot(); plt.show()
+
 
 def LocalP(A,eps=10**-9,printP=0):
     U,s,V = np.linalg.svd(A)
@@ -74,31 +78,31 @@ def LocalP(A,eps=10**-9,printP=0):
     nnz = (s>=eps).sum()
     S=np.diag(s)
     P = U[:,nnz:]
-    if printP==True:
-        print(trunc(A,decs=0))
-        print(trunc(U,decs=3))
-        print(trunc(P,decs=3))
+    # if printP==True:
+        # print(trunc(A,decs=0))
+        # print(trunc(U,decs=3))
+        # print(trunc(P,decs=3))
     return P
 
 def PySVDTrefftz(op,fes,eps):
     """
-    >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
-    >>> u,v = fes.TnT()
-    >>> uh = u.Operator("hesse")
-    >>> vh = v.Operator("hesse")
-    >>> op = (uh[0,0]+uh[1,1])*(vh[0,0]+vh[1,1])*dx
-    >>> P = PySVDTrefftz(op,fes,eps)
-    >>> a,f = dglap(fes,exactlap)
-    >>> rows,cols,vals = a.mat.COO()
-    >>> A = sp.sparse.csr_matrix((vals,(rows,cols)))
-    >>> A = A.todense()
-    >>> TA = P.transpose()@A@P
+    # >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
+    # >>> u,v = fes.TnT()
+    # >>> uh = u.Operator("hesse")
+    # >>> vh = v.Operator("hesse")
+    # >>> op = (uh[0,0]+uh[1,1])*(vh[0,0]+vh[1,1])*dx
+    # >>> P = PySVDTrefftz(op,fes,eps)
+    # >>> a,f = dglap(fes,exactlap)
+    # >>> rows,cols,vals = a.mat.COO()
+    # >>> A = sp.sparse.csr_matrix((vals,(rows,cols)))
+    # >>> A = A.todense()
+    # >>> TA = P.transpose()@A@P
 
-    >>> tsol = np.linalg.solve(TA,P.transpose()@f.vec.FV())
-    >>> tpgfu = GridFunction(fes)
-    >>> tpgfu.vec.data = P@tsol
-    >>> sqrt(Integrate((tpgfu-exactlap)**2, mesh2d)) # doctest:+ELLIPSIS
-    1...e-08
+    # >>> tsol = np.linalg.solve(TA,P.transpose()@f.vec.FV())
+    # >>> tpgfu = GridFunction(fes)
+    # >>> tpgfu.vec.data = P@tsol
+    # >>> sqrt(Integrate((tpgfu-exactlap)**2, mesh2d)) # doctest:+ELLIPSIS
+    # 1...e-08
     """
     mesh = fes.mesh
     opbf = BilinearForm(fes)
