@@ -108,6 +108,10 @@ jobs:
              sudo add-apt-repository universe
              sudo add-apt-repository ppa:ngsolve/nightly -y
              sudo apt-get install ngsolve -y
+      - name: set path
+        run: |
+             echo "PYTHONPATH=/usr/lib/python3/dist-packages/" >> $GITHUB_ENV
+             echo "NETGENDIR=/usr/bin/" >> $GITHUB_ENV
       - name: install ngstrefftz
         run: pip install ngstrefftz
 
