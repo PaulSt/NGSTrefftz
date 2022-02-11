@@ -137,14 +137,33 @@ namespace ngcomp
 
       auto &trafo = ma->GetTrafo (ei, mlh);
       auto &fel = fes->GetFE (ei, mlh);
-      FlatMatrix<SCAL> elmat (dofs.Size (), mlh), elmati (dofs.Size (), mlh);
+
+      FlatMatrix<SCAL> elmat (dofs.Size (), mlh);
       elmat = 0.0;
-      for (auto &bfi : bfis[VOL])
+      bool symmetric_so_far = true;
+
+      int bfi_ind = 0;
+      while (bfi_ind < bfis[VOL].Size ())
         {
+          auto &bfi = bfis[VOL][bfi_ind];
+          bfi_ind++;
           if (bfi->DefinedOnElement (ei.Nr ()))
             {
-              bfi->CalcElementMatrix (fel, trafo, elmati, mlh);
-              elmat += elmati;
+              auto &mapped_trafo
+                  = trafo.AddDeformation (bfi->GetDeformation ().get (), mlh);
+              try
+                {
+                  bfi->CalcElementMatrixAdd (fel, mapped_trafo, elmat,
+                                             symmetric_so_far, mlh);
+                }
+              catch (ExceptionNOSIMD e)
+                {
+                  elmat = 0.0;
+                  cout << IM (6) << "ExceptionNOSIMD " << e.What () << endl
+                       << "switching to scalar evaluation" << endl;
+                  bfi->SetSimdEvaluate (false);
+                  bfi_ind = 0;
+                }
             }
         }
       FlatMatrix<SCAL, ColMajor> U (dofs.Size (), mlh), Vt (dofs.Size (), mlh);
@@ -160,9 +179,10 @@ namespace ngcomp
       std::call_once (init_flag, [&] () {
         TableCreator<int> creator (ma->GetNE (VOL));
         TableCreator<int> creator2 (ma->GetNE (VOL));
+        int prevdofs = 0;
         for (; !creator.Done (); creator++, creator2++)
           {
-            int prevdofs = 0;
+            prevdofs = 0;
             for (auto ei : ma->Elements (VOL))
               {
                 Array<DofId> dnums;
@@ -186,8 +206,8 @@ namespace ngcomp
         table = creator.MoveTable ();
         table2 = creator2.MoveTable ();
 
-        SparseMatrix<SCAL> PP (fes->GetNDof (), nz * ma->GetNE (VOL), table,
-                               table2, false);
+        SparseMatrix<SCAL> PP (fes->GetNDof (), prevdofs, table, table2,
+                               false);
         P = make_shared<SparseMatrix<SCAL>> (PP);
         P->SetZero ();
       });
@@ -205,7 +225,9 @@ namespace ngcomp
             {
               if (lfi->DefinedOnElement (ei.Nr ()))
                 {
-                  lfi->CalcElementVector (fel, trafo, elveci, mlh);
+                  auto &mapped_trafo = trafo.AddDeformation (
+                      lfi->GetDeformation ().get (), mlh);
+                  lfi->CalcElementVector (fel, mapped_trafo, elveci, mlh);
                   elvec += elveci;
                 }
             }
