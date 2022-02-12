@@ -9,7 +9,7 @@ namespace ngbla{
                     SliceMatrix<double, ColMajor> V)
     {
         static Timer t("LapackSVD"); RegionTimer reg(t);
-        ngbla::integer m = A.Width(), n = A.Height();
+        ngbla::integer n = A.Width(), m = A.Height();
         Vector<> S(min(n,m));
         Array<double> work(4*m*m+6*m+m+100);
         Array<int> iwork(max(n,m)*9);
@@ -27,7 +27,7 @@ namespace ngbla{
         if(info!=0)
             throw Exception("something went wrong in the svd " + std::to_string(info));
         A = 0.0;
-        A.Diag(0) = S;
+        A.Diag(0) = S; 
     }
 
     void LapackSVD (SliceMatrix<Complex, ColMajor> A,
@@ -35,7 +35,7 @@ namespace ngbla{
                     SliceMatrix<Complex, ColMajor> V)
     {
         static Timer t("LapackSVD"); RegionTimer reg(t);
-        ngbla::integer m = A.Width(), n = A.Height();
+        ngbla::integer n = A.Width(), m = A.Height();
         Vector<> S(min(n,m));
         Array<Complex> work(4*m*m+6*m+m+100);
         Array<int> iwork(max(n,m)*9);
@@ -73,7 +73,9 @@ namespace ngbla{
         CalcSVD(AA,U,V);
 #endif
         A = 0.0;
-        A.Diag(0)=AA.Diag();
+        //A.Diag(0)=AA.Diag();
+        for(int i=0;i<min(A.Width(),A.Height());i++)
+            A(i,i)=AA(i,i);
     }
 
     template
@@ -91,12 +93,19 @@ namespace ngcomp
 
     template <class SCAL>
     std::tuple<shared_ptr<BaseMatrix>,shared_ptr<BaseVector>> EmbTrefftz (shared_ptr<SumOfIntegrals> bf,
-                                       shared_ptr<FESpace> fes, double eps,
-                                       shared_ptr<SumOfIntegrals> lf
+                                       shared_ptr<FESpace> fes,
+                                       shared_ptr<SumOfIntegrals> lf,
+                                       double eps, shared_ptr<FESpace> test_fes, int tndof
                                        )
     {
         static Timer svdtt("svdtrefftz"); RegionTimer reg(svdtt);
         LocalHeap lh(1000 * 1000 * 1000);
+
+        bool mixed_mode = true;
+        if(test_fes == nullptr){
+            mixed_mode = false;
+            test_fes = fes;
+        }
 
         auto ma = fes->GetMeshAccess();
 
@@ -124,6 +133,8 @@ namespace ngcomp
         ma->IterateElements(VOL,lh,[&](auto ei, LocalHeap & mlh)
         {
             HeapReset hr(mlh);
+            Array<DofId> test_dofs;
+            test_fes->GetDofNrs(ei, test_dofs);
             Array<DofId> dofs;
             fes->GetDofNrs(ei, dofs);
 
@@ -138,9 +149,12 @@ namespace ngcomp
                 return; // escape lambda
 
             auto & trafo = ma->GetTrafo(ei, mlh);
-            auto & fel = fes->GetFE(ei, mlh);
-            
-            FlatMatrix<SCAL> elmat(dofs.Size(), mlh);
+
+            auto & test_fel = test_fes->GetFE(ei, mlh);
+            auto & trial_fel = fes->GetFE(ei, mlh);
+
+            FlatMatrix<SCAL> elmat(test_dofs.Size(), dofs.Size(), mlh);
+
             elmat = 0.0;
             bool symmetric_so_far = true;
 
@@ -154,7 +168,13 @@ namespace ngcomp
                     auto & mapped_trafo = trafo.AddDeformation(bfi->GetDeformation().get(), mlh);
                     try
                     {
-                        bfi -> CalcElementMatrixAdd(fel, mapped_trafo, elmat, symmetric_so_far, mlh);
+                        if(mixed_mode){
+                            const auto & mixed_fel = MixedFiniteElement(trial_fel, test_fel);
+                            bfi -> CalcElementMatrixAdd(mixed_fel, mapped_trafo, elmat, symmetric_so_far, mlh);
+                        }
+                        else{
+                            bfi -> CalcElementMatrixAdd(test_fel, mapped_trafo, elmat, symmetric_so_far, mlh);
+                        }
                     }
                     catch (ExceptionNOSIMD e)
                     {
@@ -166,12 +186,17 @@ namespace ngcomp
                     }
                 }
             }
-            FlatMatrix<SCAL,ColMajor> U(dofs.Size(),mlh), Vt(dofs.Size(),mlh);
+            FlatMatrix<SCAL,ColMajor> U(test_dofs.Size(),mlh), Vt(dofs.Size(),mlh);
             ngbla::GetSVD<SCAL>(elmat,U,Vt);
 
-            int nz = 0;
             // assumption here: all (active) elements have the same number of (weak) Trefftz fcts.
-            for(auto sv : elmat.Diag()) if(abs(sv)<eps) nz++;
+            int nz = 0;
+            if(mixed_mode)
+                nz = trial_fel.GetNDof() - test_fel.GetNDof();
+            else if(tndof)
+                nz = tndof;
+            else
+                for(auto sv : elmat.Diag()) if(abs(sv)<eps) nz++;
 
             std::call_once(init_flag, [&](){
                 TableCreator<int> creator(ma->GetNE(VOL));
@@ -215,20 +240,23 @@ namespace ngcomp
             if(lf)
             {
                 int nnz = dofs.Size() - nz;
-                FlatVector<SCAL> elvec(dofs.Size(), mlh), elveci(dofs.Size(), mlh);
+
+                FlatVector<SCAL> elvec(test_dofs.Size(), mlh), elveci(test_dofs.Size(), mlh);
                 elvec = 0.0;
                 for (auto & lfi : lfis[VOL])
                 {
                     if (lfi->DefinedOnElement(ei.Nr()))
                     {
                         auto & mapped_trafo = trafo.AddDeformation(lfi->GetDeformation().get(), mlh);
-                        lfi -> CalcElementVector(fel, mapped_trafo, elveci, mlh);
+                        lfi -> CalcElementVector(test_fel, mapped_trafo, elveci, mlh);
+                        //lfi -> CalcElementVector(fel, mapped_trafo, elveci, mlh);
                         elvec += elveci;
                     }
                 }
                 Matrix<SCAL> Ut = Trans(U).Rows(0,nnz);
                 Matrix<SCAL> V = Trans(Vt).Cols(0,nnz);
                 Matrix<SCAL> SigI(nnz,nnz);
+
                 SigI = static_cast<SCAL>(0.0);
                 //SigI = 0.0;
                 for(int i=0;i<nnz;i++) SigI(i,i)=1.0/elmat(i,i);
@@ -242,10 +270,12 @@ namespace ngcomp
 
   template
       std::tuple<shared_ptr<BaseMatrix>,shared_ptr<BaseVector>> EmbTrefftz<double>
-          (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes, double eps, shared_ptr<SumOfIntegrals> lf);
+          (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes, shared_ptr<SumOfIntegrals> lf,
+                                       double eps, shared_ptr<FESpace> test_fes, int tndof);
   template
       std::tuple<shared_ptr<BaseMatrix>,shared_ptr<BaseVector>> EmbTrefftz<Complex>
-          (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes, double eps, shared_ptr<SumOfIntegrals> lf);
+          (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes, shared_ptr<SumOfIntegrals> lf,
+                                       double eps, shared_ptr<FESpace> test_fes, int tndof);
 
 }
 
@@ -258,28 +288,31 @@ void ExportEmbTrefftz(py::module m)
 {
     m.def("TrefftzEmbedding", [] (shared_ptr<ngfem::SumOfIntegrals> bf,
                             shared_ptr<ngcomp::FESpace> fes,
+                            shared_ptr<ngfem::SumOfIntegrals> lf,
                             double eps,
-                            shared_ptr<ngfem::SumOfIntegrals> lf
+                            shared_ptr<ngcomp::FESpace> test_fes, int tndof
                             )
           {
               if(fes->IsComplex())
-                  return ngcomp::EmbTrefftz<Complex>(bf,fes,eps,nullptr);
+                  return ngcomp::EmbTrefftz<Complex>(bf,fes,lf,eps,test_fes,tndof);
 
-              return ngcomp::EmbTrefftz<double>(bf,fes,eps,lf);
+              return ngcomp::EmbTrefftz<double>(bf,fes,lf,eps,test_fes,tndof);
           },
-          py::arg("bf"), py::arg("fes"), py::arg("eps"), py::arg("lf")=nullptr);
+          py::arg("bf"), py::arg("fes"), py::arg("lf"), py::arg("eps")=10^-12, py::arg("test_fes")=nullptr, py::arg("tndof")=0);
+
 
     m.def("TrefftzEmbedding", [] (shared_ptr<ngfem::SumOfIntegrals> bf,
                             shared_ptr<ngcomp::FESpace> fes,
-                            double eps
+                            double eps,
+                            shared_ptr<ngcomp::FESpace> test_fes, int tndof
                             ) -> shared_ptr<ngcomp::BaseMatrix>
           {
               if(fes->IsComplex())
-                  return std::get<0>(ngcomp::EmbTrefftz<Complex>(bf,fes,eps,nullptr));
+                  return std::get<0>(ngcomp::EmbTrefftz<Complex>(bf,fes,nullptr,eps,test_fes,tndof));
 
-              return std::get<0>(ngcomp::EmbTrefftz<double>(bf,fes,eps,nullptr));
+              return std::get<0>(ngcomp::EmbTrefftz<double>(bf,fes,nullptr,eps,test_fes,tndof));
           },
-          py::arg("bf"), py::arg("fes"), py::arg("eps"));
+          py::arg("bf"), py::arg("fes"), py::arg("eps")=10^-12, py::arg("test_fes")=nullptr, py::arg("tndof")=0);
 
 }
 #endif // NGS_PYTHON
