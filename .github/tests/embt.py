@@ -10,7 +10,9 @@ exactpoi = sin(x)*sin(y)
 eps = 10**-8
 mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
 mesh3d = Mesh(unit_cube.GenerateMesh(maxh = 1))
-SetNumThreads(3)
+SetNumThreads(1)
+
+Lap = lambda u : sum(Trace(u.Operator('hesse')))
 
 ########################################################################
 # L2
@@ -60,7 +62,7 @@ try:
     import scipy as sp
     import numpy as np
 except ImportError as e:
-    pass 
+    pass
 
 # import matplotlib.pylab as plt
 # def trunc(values, decs=0):
@@ -159,6 +161,29 @@ def testembtrefftz(fes):
     return sqrt(Integrate((tpgfu-exactlap)**2, mesh))
 
 
+def testembtrefftz_mixed(fes):
+    """
+    >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
+    >>> testembtrefftz_mixed(fes) # doctest:+ELLIPSIS
+    1...e-08
+    """
+    mesh = fes.mesh
+    test_fes = L2(mesh, order=fes.globalorder-2,  dgjumps=True)#,all_dofs_together=True)
+    u=fes.TrialFunction()
+    v=test_fes.TestFunction()
+    op = Lap(u)*(v)*dx
+    startsvd = time.time()
+    with TaskManager():
+        PP = TrefftzEmbedding(op,fes,test_fes=test_fes)
+    PPT = PP.CreateTranspose()
+    a,f = dglap(fes,exactlap)
+    TA = PPT@a.mat@PP
+    TU = TA.Inverse()*(PPT*f.vec)
+    tpgfu = GridFunction(fes)
+    tpgfu.vec.data = PP*TU
+    return sqrt(Integrate((tpgfu-exactlap)**2, mesh))
+
+
 def testembtrefftznonsym(fes):
     """
     >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
@@ -193,10 +218,34 @@ def testembtrefftzpoi(fes):
     uh = u.Operator("hesse")
     vh = v.Operator("hesse")
     op = (uh[0,0]+uh[1,1])*(vh[0,0]+vh[1,1])*dx
-    rhs=-exactpoi.Diff(x).Diff(x)-exactpoi.Diff(y).Diff(y)
+    rhs = -exactpoi.Diff(x).Diff(x)-exactpoi.Diff(y).Diff(y)
     lop = -rhs*(vh[0,0]+vh[1,1])*dx
     with TaskManager():
-        PP,ufv = TrefftzEmbedding(op,fes,eps,lop)
+        PP,ufv = TrefftzEmbedding(op,fes,lop,eps)
+    PPT = PP.CreateTranspose()
+    a,f = dglap(fes,exactpoi,rhs)
+    TA = PPT@a.mat@PP
+    TU = TA.Inverse()*(PPT*(f.vec-a.mat*ufv))
+    tpgfu = GridFunction(fes)
+    tpgfu.vec.data = PP*TU+ufv
+    return sqrt(Integrate((tpgfu-exactpoi)**2, mesh))
+
+
+def testembtrefftzpoi_mixed(fes):
+    """
+    >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
+    >>> testembtrefftzpoi_mixed(fes) # doctest:+ELLIPSIS
+    3...e-09
+    """
+    mesh = fes.mesh
+    test_fes = L2(mesh, order=fes.globalorder-2,  dgjumps=True)#,all_dofs_together=True)
+    u=fes.TrialFunction()
+    v=test_fes.TestFunction()
+    op = Lap(u)*(v)*dx
+    rhs = -exactpoi.Diff(x).Diff(x)-exactpoi.Diff(y).Diff(y)
+    lop = -rhs*v*dx
+    with TaskManager():
+        PP,ufv = TrefftzEmbedding(op,fes,lop,test_fes=test_fes)
     PPT = PP.CreateTranspose()
     a,f = dglap(fes,exactpoi,rhs)
     TA = PPT@a.mat@PP
