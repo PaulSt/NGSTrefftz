@@ -804,7 +804,7 @@ namespace ngcomp
                 (this->wavespeedcf)->Evaluate(smir_fix,lwavespeed);
 
                 this->CalcTentEl(tent->els[elnr],tent,tel,
-                                 [lwavespeed](int imip){return lwavespeed(0,imip/nsimd)[imip%nsimd];},
+                                 [&](int imip){return lwavespeed(0,imip/nsimd)[imip%nsimd];},
                                  sir,slh,elmat,elvec,topdshapes[elnr]);
             }
 
