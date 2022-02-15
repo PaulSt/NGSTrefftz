@@ -18,7 +18,7 @@ namespace ngfem
     PlaneWaveElement (int andof, int aord, ELEMENT_TYPE aeltype,
                       Vec<D> aelcenter = 0, double aelsize = 1, float ac = 1.0,
                       int aconj = 1)
-        : ScalarMappedElement<D> (andof, aord, Matrix (), aeltype, aelcenter,
+        : ScalarMappedElement<D> (andof, aord, Matrix<> (), aeltype, aelcenter,
                                   aelsize, ac),
           conj (aconj)
     {
