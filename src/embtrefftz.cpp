@@ -310,9 +310,8 @@ void ExportEmbTrefftz (py::module m)
 
         return ngcomp::EmbTrefftz<double> (bf, fes, lf, eps, test_fes, tndof);
       },
-      py::arg ("bf"), py::arg ("fes"), py::arg ("lf"),
-      py::arg ("eps") = 10 ^ -12, py::arg ("test_fes") = nullptr,
-      py::arg ("tndof") = 0);
+      py::arg ("bf"), py::arg ("fes"), py::arg ("lf"), py::arg ("eps") = 1e-12,
+      py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0);
 
   m.def (
       "TrefftzEmbedding",
@@ -327,7 +326,7 @@ void ExportEmbTrefftz (py::module m)
         return std::get<0> (ngcomp::EmbTrefftz<double> (bf, fes, nullptr, eps,
                                                         test_fes, tndof));
       },
-      py::arg ("bf"), py::arg ("fes"), py::arg ("eps") = 10 ^ -12,
+      py::arg ("bf"), py::arg ("fes"), py::arg ("eps") = 1e-12,
       py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0);
 }
 #endif // NGS_PYTHON

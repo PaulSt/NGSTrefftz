@@ -970,7 +970,7 @@ namespace ngcomp
 
           this->CalcTentEl (
               tent->els[elnr], tent, tel,
-              [lwavespeed] (int imip) {
+              [&] (int imip) {
                 return lwavespeed (0, imip / nsimd)[imip % nsimd];
               },
               sir, slh, elmat, elvec, topdshapes[elnr]);
