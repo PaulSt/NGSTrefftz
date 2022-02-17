@@ -17,10 +17,10 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 
 if (NOT TARGET _pytents)
-include_directories(../external_dependencies/ngstents/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../external_dependencies/ngstents/src)
 add_ngsolve_python_module(_pytents
-  ../external_dependencies/ngstents/src/python_tents.cpp
-  ../external_dependencies/ngstents/src/tents.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../external_dependencies/ngstents/src/python_tents.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../external_dependencies/ngstents/src/tents.cpp
   )
 install(TARGETS _pytents DESTINATION ngstents)
 endif()
@@ -66,6 +66,11 @@ install (FILES
         )
 
 include(CTest)
-add_test(NAME embtrefftz COMMAND python3 ../.github/tests/embt.py -v)
-add_test(NAME trefftz COMMAND python3 ../.github/tests/trefftz.py -v)
-add_test(NAME tents COMMAND python3 ../.github/tests/tents.py -v)
+file(COPY 
+    ${CMAKE_CURRENT_SOURCE_DIR}/../.github/tests/embt.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/../.github/tests/trefftz.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/../.github/tests/tents.py
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Testing)
+add_test(NAME embtrefftz COMMAND python3 ${CMAKE_CURRENT_BINARY_DIR}/Testing/embt.py -v)
+add_test(NAME trefftz COMMAND python3 ${CMAKE_CURRENT_BINARY_DIR}/Testing/trefftz.py -v)
+add_test(NAME tents COMMAND python3 ${CMAKE_CURRENT_BINARY_DIR}/Testing/tents.py -v)
