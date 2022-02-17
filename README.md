@@ -18,7 +18,7 @@ docker run -p 8888:8888 ngstrefftz_jupyter
 ```
 
 ## Installing the package
-You need to have [NGSolve](https://www.ngsolve.com/) installed. Then you can either:
+You can either:
  * install using pip
 ```bash
 pip install ngstrefftz
@@ -29,6 +29,13 @@ git clone --recursive https://github.com/PaulSt/NGSTrefftz
 mkdir ./NGSTrefftz/make && cd ./NGSTrefftz/make
 cmake ../src && make install
 ```
+### Dependencies
+You need to have [NGSolve](https://www.ngsolve.com/) installed. To build the package you need
+* cmake  >= 3.1
+* gcc >= 9 or clang >= 10
+* ngsolve >= 6.2
+
+To access the newest features the nightly version of NGSolve works best and lapack >= 3.9 is required.
 
 ## Papers using the code
 * Tent pitching and Trefftz-DG method for the acoustic wave equation  
