@@ -2,7 +2,10 @@
 project(ngstrefftz)
 ########################################################
 
+### Options
 option(USE_LAPACK "build ngstrefftz with LAPACK" ON)
+
+add_compile_options("$<$<CONFIG:DEBUG>:-W;-Wall;-Wextra;-Wpedantic;-g;>")
 
 ### Requirements
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
@@ -50,15 +53,8 @@ add_ngsolve_python_module(_trefftz
     )
 target_link_libraries(_trefftz PRIVATE _pytents)
 set_target_properties(_trefftz PROPERTIES
-    #ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/ngstrefftz"
-    #RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
-
-
-
-#add_compile_options(PRIVATE -Wall -Wextra -pedantic)
-#add_compile_options(-g -O0)
 
 ### link lapack if found
 if (USE_LAPACK) # currently needed for SVD in embTrefftz, TODO: switch to ngsolve interface..
@@ -73,11 +69,11 @@ endif (USE_LAPACK)
 ### install
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
 install(TARGETS _trefftz DESTINATION ${NGSTREFFTZ_INSTALL_DIR_PYTHON})
-install (FILES
+install(FILES
         __init__.py 
         DESTINATION ${NGSTREFFTZ_INSTALL_DIR_PYTHON}
         #COMPONENT ngstrefftz
-        )
+       )
 
 ### tests
 include(CTest)
