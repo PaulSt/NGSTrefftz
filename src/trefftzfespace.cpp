@@ -375,6 +375,42 @@ namespace ngcomp
 
   static RegisterFESpace<TrefftzFESpace> initi_trefftz ("trefftzfespace");
 
+  //////////////////////////// Trefftz basis ////////////////////////////
+
+  template <int D, typename TFunc>
+  void TraversePol (int order, const TFunc &func)
+  {
+    switch (D)
+      {
+      case 0:
+        break;
+      case 1:
+        for (int i = 0, ii = 0; i <= order; i++)
+          func (ii++, Vec<1, int>{ i });
+        break;
+      case 2:
+        for (int i = 0, ii = 0; i <= order; i++)
+          for (int j = 0; j <= order - i; j++)
+            func (ii++, Vec<2, int>{ j, i });
+        break;
+      case 3:
+        for (int i = 0, ii = 0; i <= order; i++)
+          for (int j = 0; j <= order - i; j++)
+            for (int k = 0; k <= order - i - j; k++)
+              func (ii++, Vec<3, int>{ k, j, i });
+        break;
+      case 4:
+        for (int i = 0, ii = 0; i <= order; i++)
+          for (int j = 0; j <= order - i; j++)
+            for (int k = 0; k <= order - i - j; k++)
+              for (int l = 0; l <= order - i - j - k; l++)
+                func (ii++, Vec<4, int>{ l, k, j, i });
+        break;
+      default:
+        throw Exception ("TraverseDimensions: too many dimensions!");
+      }
+  }
+
   // k-th coeff of Legendre polynomial of degree n in monomial basis
   constexpr double LegCoeffMonBasis (int n, int k)
   {
@@ -406,6 +442,8 @@ namespace ngcomp
     return coeff;
   }
 
+  constexpr int factorial (int n) { return n > 1 ? n * factorial (n - 1) : 1; }
+
   template <int D>
   CSR TWaveBasis<D>::Basis (int ord, int basistype, int fowave)
   {
@@ -415,101 +453,185 @@ namespace ngcomp
     const int npoly = (BinCoeff (D + 1 + ord, ord));
     Matrix<> trefftzbasis (ndof, npoly);
     trefftzbasis = 0;
-    Vec<D + 1, int> coeff = 0;
-    for (int b = 0; b < ndof; b++)
+    for (int basis = 0; basis < ndof; basis++)
       {
         int tracker = 0;
-        TB_inner (ord, trefftzbasis, coeff, b, D + 1, tracker, basistype);
+        TraversePol<D + 1> (ord, [&] (int i, Vec<D + 1, int> coeff) {
+          if (tracker >= 0)
+            tracker++;
+          int indexmap = PolBasis::IndexMap2<D> (coeff, ord);
+          int k = coeff (D);
+          if (k == 0 || k == 1)
+            {
+              switch (basistype)
+                {
+                case 0:
+                  if (tracker > basis)
+                    {
+                      // trefftzbasis( i, setbasis++ ) = 1.0; //set the l-th
+                      // coeff to 1
+                      trefftzbasis (basis, indexmap) = 1;
+                      tracker = -1;
+                    }
+                  // i += ndof-1;	//jump to time = 2 if i=0
+                  break;
+                case 1:
+                  if ((k == 0 && basis < BinCoeff (D + ord, ord))
+                      || (k == 1 && basis >= BinCoeff (D + ord, ord)))
+                    {
+                      trefftzbasis (basis, indexmap) = 1;
+                      for (int exponent : coeff.Range (0, D))
+                        trefftzbasis (basis, indexmap)
+                            *= LegCoeffMonBasis (basis, exponent);
+                    }
+                  break;
+                case 2:
+                  if ((k == 0 && basis < BinCoeff (D + ord, ord))
+                      || (k == 1 && basis >= BinCoeff (D + ord, ord)))
+                    {
+                      trefftzbasis (basis, indexmap) = 1;
+                      for (int exponent : coeff.Range (0, D))
+                        trefftzbasis (basis, indexmap)
+                            *= ChebCoeffMonBasis (basis, exponent);
+                    }
+                  break;
+                }
+            }
+          else if (coeff (D) > 1)
+            {
+              for (int m = 0; m < D; m++) // rekursive sum
+                {
+                  Vec<D + 1, int> get_coeff = coeff;
+                  get_coeff[D] = get_coeff[D] - 2;
+                  get_coeff[m] = get_coeff[m] + 2;
+                  trefftzbasis (basis, indexmap)
+                      += (coeff (m) + 1) * (coeff (m) + 2)
+                         * trefftzbasis (
+                             basis, PolBasis::IndexMap2<D> (get_coeff, ord));
+                }
+              double wavespeed = 1.0;
+              trefftzbasis (basis, indexmap)
+                  *= wavespeed * wavespeed / (k * (k - 1));
+            }
+        });
       }
     MatToCSR (trefftzbasis.Rows (fowave, ndof), tb);
     return tb;
-  }
-
-  template <int D>
-  void TWaveBasis<D>::TB_inner (int ord, Matrix<> &trefftzbasis,
-                                Vec<D + 1, int> coeffnum, int basis, int dim,
-                                int &tracker, int basistype, double wavespeed)
-  {
-    if (dim > 0)
-      {
-        while (coeffnum (dim - 1) <= ord)
-          {
-            TB_inner (ord, trefftzbasis, coeffnum, basis, dim - 1, tracker,
-                      basistype, wavespeed);
-            coeffnum (dim - 1)++;
-          }
-      }
-    else
-      {
-        int sum = 0;
-        for (int i = 0; i < D + 1; i++)
-          sum += coeffnum (i);
-        if (sum <= ord)
-          {
-            if (tracker >= 0)
-              tracker++;
-            int indexmap = PolBasis::IndexMap2<D> (coeffnum, ord);
-            int k = coeffnum (D);
-            if (k == 0 || k == 1)
-              {
-                switch (basistype)
-                  {
-                  case 0:
-                    if (tracker > basis)
-                      {
-                        // trefftzbasis( i, setbasis++ ) = 1.0; //set the l-th
-                        // coeff to 1
-                        trefftzbasis (basis, indexmap) = 1;
-                        tracker = -1;
-                      }
-                    // i += ndof-1;	//jump to time = 2 if i=0
-                    break;
-                  case 1:
-                    if ((k == 0 && basis < BinCoeff (D + ord, ord))
-                        || (k == 1 && basis >= BinCoeff (D + ord, ord)))
-                      {
-                        trefftzbasis (basis, indexmap) = 1;
-                        for (int exponent : coeffnum.Range (0, D))
-                          trefftzbasis (basis, indexmap)
-                              *= LegCoeffMonBasis (basis, exponent);
-                      }
-                    break;
-                  case 2:
-                    if ((k == 0 && basis < BinCoeff (D + ord, ord))
-                        || (k == 1 && basis >= BinCoeff (D + ord, ord)))
-                      {
-                        trefftzbasis (basis, indexmap) = 1;
-                        for (int exponent : coeffnum.Range (0, D))
-                          trefftzbasis (basis, indexmap)
-                              *= ChebCoeffMonBasis (basis, exponent);
-                      }
-                    break;
-                  }
-              }
-            else if (coeffnum (D) > 1)
-              {
-                for (int m = 0; m < D; m++) // rekursive sum
-                  {
-                    Vec<D + 1, int> get_coeff = coeffnum;
-                    get_coeff[D] = get_coeff[D] - 2;
-                    get_coeff[m] = get_coeff[m] + 2;
-                    trefftzbasis (basis, indexmap)
-                        += (coeffnum (m) + 1) * (coeffnum (m) + 2)
-                           * trefftzbasis (
-                               basis, PolBasis::IndexMap2<D> (get_coeff, ord));
-                  }
-                trefftzbasis (basis, indexmap)
-                    *= wavespeed * wavespeed / (k * (k - 1));
-              }
-          }
-      }
   }
 
   template class TWaveBasis<1>;
   template class TWaveBasis<2>;
   template class TWaveBasis<3>;
 
-  constexpr int factorial (int n) { return n > 1 ? n * factorial (n - 1) : 1; }
+  template <int D> CSR TLapBasis<D>::Basis (int ord, int basistype)
+  {
+    CSR tb;
+    const int ndof
+        = (BinCoeff (D - 1 + ord, ord) + BinCoeff (D - 1 + ord - 1, ord - 1));
+    const int npoly = (BinCoeff (D + ord, ord));
+    Matrix<> trefftzbasis (ndof, npoly);
+    trefftzbasis = 0;
+    for (int basis = 0; basis < ndof; basis++)
+      {
+        int tracker = 0;
+        TraversePol<D + 1> (ord, [&] (int i, Vec<D + 1, int> coeff) {
+          if (tracker >= 0)
+            tracker++;
+          int indexmap = PolBasis::IndexMap2<D - 1> (coeff, ord);
+          int k = coeff (D - 1);
+          if (k == 0 || k == 1)
+            {
+              if (tracker > basis)
+                {
+                  // trefftzbasis( i, setbasis++ ) = 1.0; //set the l-th coeff
+                  // to 1
+                  trefftzbasis (basis, indexmap) = 1;
+                  tracker = -1;
+                }
+            }
+          else if (coeff (D - 1) > 1)
+            {
+              for (int m = 0; m < D - 1; m++) // rekursive sum
+                {
+                  Vec<D, int> get_coeff = coeff;
+                  get_coeff[D - 1] = get_coeff[D - 1] - 2;
+                  get_coeff[m] = get_coeff[m] + 2;
+                  trefftzbasis (basis, indexmap)
+                      -= (coeff (m) + 1) * (coeff (m) + 2)
+                         * trefftzbasis (basis, PolBasis::IndexMap2<D - 1> (
+                                                    get_coeff, ord));
+                }
+              double lapcoeff = 1.0;
+              trefftzbasis (basis, indexmap)
+                  *= lapcoeff * lapcoeff / (k * (k - 1));
+            }
+        });
+      }
+    MatToCSR (trefftzbasis, tb);
+    return tb;
+  }
+
+  template class TLapBasis<1>;
+  template class TLapBasis<2>;
+  template class TLapBasis<3>;
+
+  template <int D> CSR FOTWaveBasis<D>::Basis (int ord, int rdim)
+  {
+    const int ndof = (D + 1) * BinCoeff (ord + D, D);
+    const int npoly = BinCoeff ((D + 1) + ord, ord);
+    Array<Matrix<>> trefftzbasis (D + 1);
+    for (int d = 0; d < D + 1; d++)
+      {
+        trefftzbasis[d].SetSize (ndof, npoly);
+        trefftzbasis[d] = 0;
+      }
+    for (int basis = 0; basis < ndof; basis++)
+      {
+        int tracker = 0;
+        TraversePol<D + 1> (ord, [&] (int i, Vec<D + 1, int> coeff) {
+          if (tracker >= 0)
+            tracker++;
+          int indexmap = PolBasis::IndexMap2<D> (coeff, ord);
+          if (coeff (D) == 0 && tracker * (D + 1) > basis)
+            {
+              int d = basis % (D + 1);
+              trefftzbasis[d](basis, indexmap) = 1;
+              tracker = -1;
+            }
+          else if (coeff (D) > 0)
+            {
+              int k = coeff (D);
+              for (int d = 0; d < D; d++)
+                {
+                  Vec<D + 1, int> get_coeff = coeff;
+                  get_coeff[D] = get_coeff[D] - 1;
+                  get_coeff[d] = get_coeff[d] + 1;
+                  trefftzbasis[d](basis, indexmap)
+                      = (-1.0 / k) * (coeff (d) + 1)
+                        * trefftzbasis[D](
+                            basis, PolBasis::IndexMap2<D> (get_coeff, ord));
+                  trefftzbasis[D](basis, indexmap)
+                      += (-1.0 / k) * (coeff (d) + 1)
+                         * trefftzbasis[d](
+                             basis, PolBasis::IndexMap2<D> (get_coeff, ord));
+                }
+            }
+        });
+      }
+    Array<CSR> tb (D + 1);
+    for (int d = 0; d < D + 1; d++)
+      {
+        // cout << d << endl << trefftzbasis[d] << endl;
+        MatToCSR (trefftzbasis[d], tb[d]);
+      }
+    return tb[rdim];
+  }
+
+  template class FOTWaveBasis<1>;
+  template class FOTWaveBasis<2>;
+  template class FOTWaveBasis<3>;
+
+  //////////////////////////// quasi-Trefftz basis ////////////////////////////
 
   template <int D>
   CSR QTWaveBasis<D>::Basis (int ord, Vec<D + 1> ElCenter,
@@ -549,10 +671,10 @@ namespace ngcomp
               }
           }
 
-        const int nbasis
+        const int ndof
             = (BinCoeff (D + ord, ord) + BinCoeff (D + ord - 1, ord - 1));
         const int npoly = BinCoeff (D + 1 + ord, ord);
-        Matrix<> qbasis (nbasis, npoly);
+        Matrix<> qbasis (ndof, npoly);
         qbasis = 0;
 
         for (int t = 0, basisn = 0; t < 2; t++)
@@ -567,7 +689,7 @@ namespace ngcomp
                 qbasis (basisn++, PolBasis::IndexMap2<D> (index, ord)) = 1.0;
               }
 
-        for (int basisn = 0; basisn < nbasis; basisn++)
+        for (int basisn = 0; basisn < ndof; basisn++)
           {
             for (int ell = 0; ell < ord - 1; ell++)
               {
@@ -661,164 +783,6 @@ namespace ngcomp
   template class QTWaveBasis<1>;
   template class QTWaveBasis<2>;
 
-  template <int D> CSR TLapBasis<D>::Basis (int ord, int basistype)
-  {
-    CSR tb;
-    const int ndof
-        = (BinCoeff (D - 1 + ord, ord) + BinCoeff (D - 1 + ord - 1, ord - 1));
-    const int npoly = (BinCoeff (D + ord, ord));
-    Matrix<> trefftzbasis (ndof, npoly);
-    trefftzbasis = 0;
-    Vec<D, int> coeff = 0;
-    for (int b = 0; b < ndof; b++)
-      {
-        int tracker = 0;
-        TB_inner (ord, trefftzbasis, coeff, b, D, tracker, basistype);
-      }
-    MatToCSR (trefftzbasis, tb);
-    return tb;
-  }
-
-  template <int D>
-  void TLapBasis<D>::TB_inner (int ord, Matrix<> &trefftzbasis,
-                               Vec<D, int> coeffnum, int basis, int dim,
-                               int &tracker, int basistype, double wavespeed)
-  {
-    if (dim > 0)
-      {
-        while (coeffnum (dim - 1) <= ord)
-          {
-            TB_inner (ord, trefftzbasis, coeffnum, basis, dim - 1, tracker,
-                      basistype, wavespeed);
-            coeffnum (dim - 1)++;
-          }
-      }
-    else
-      {
-        int sum = 0;
-        for (int i = 0; i < D; i++)
-          sum += coeffnum (i);
-        if (sum <= ord)
-          {
-            if (tracker >= 0)
-              tracker++;
-            int indexmap = PolBasis::IndexMap2<D - 1> (coeffnum, ord);
-            int k = coeffnum (D - 1);
-            if (k == 0 || k == 1)
-              {
-                if (tracker > basis)
-                  {
-                    // trefftzbasis( i, setbasis++ ) = 1.0; //set the l-th
-                    // coeff to 1
-                    trefftzbasis (basis, indexmap) = 1;
-                    tracker = -1;
-                  }
-              }
-            else if (coeffnum (D - 1) > 1)
-              {
-                for (int m = 0; m < D - 1; m++) // rekursive sum
-                  {
-                    Vec<D, int> get_coeff = coeffnum;
-                    get_coeff[D - 1] = get_coeff[D - 1] - 2;
-                    get_coeff[m] = get_coeff[m] + 2;
-                    trefftzbasis (basis, indexmap)
-                        -= (coeffnum (m) + 1) * (coeffnum (m) + 2)
-                           * trefftzbasis (basis, PolBasis::IndexMap2<D - 1> (
-                                                      get_coeff, ord));
-                  }
-                trefftzbasis (basis, indexmap)
-                    *= wavespeed * wavespeed / (k * (k - 1));
-              }
-          }
-      }
-  }
-
-  template class TLapBasis<1>;
-  template class TLapBasis<2>;
-  template class TLapBasis<3>;
-
-  template <int D> CSR FOTWaveBasis<D>::Basis (int ord, int rdim)
-  {
-    const int nbasis = (D + 1) * BinCoeff (ord + D, D);
-    const int npoly = BinCoeff ((D + 1) + ord, ord);
-    Array<Matrix<>> trefftzbasis (D + 1);
-    for (int d = 0; d < D + 1; d++)
-      {
-        trefftzbasis[d].SetSize (nbasis, npoly);
-        trefftzbasis[d] = 0;
-      }
-    Vec<D + 1, int> coeff = 0;
-    for (int b = 0; b < nbasis; b++)
-      {
-        int tracker = 0;
-        TB_inner (ord, trefftzbasis, coeff, b, D + 1, tracker);
-      }
-    Array<CSR> tb (D + 1);
-    for (int d = 0; d < D + 1; d++)
-      {
-        // cout << d << endl << trefftzbasis[d] << endl;
-        MatToCSR (trefftzbasis[d], tb[d]);
-      }
-    return tb[rdim];
-  }
-
-  template <int D>
-  void FOTWaveBasis<D>::TB_inner (int ord, Array<Matrix<>> &trefftzbasis,
-                                  Vec<D + 1, int> coeffnum, int basis, int dim,
-                                  int &tracker)
-  {
-    if (dim > 0)
-      {
-        while (coeffnum (dim - 1) <= ord)
-          {
-            TB_inner (ord, trefftzbasis, coeffnum, basis, dim - 1, tracker);
-            coeffnum (dim - 1)++;
-          }
-      }
-    else
-      {
-        int sum = 0;
-        for (int i = 0; i < D + 1; i++)
-          sum += coeffnum (i);
-        if (sum <= ord)
-          {
-            if (tracker >= 0)
-              tracker++;
-            int indexmap = PolBasis::IndexMap2<D> (coeffnum, ord);
-            // cout << indexmap << ": " << coeffnum << endl;
-            if (coeffnum (D) == 0 && tracker * (D + 1) > basis)
-              {
-                // cout << "bn " << basis << " tracker " << tracker << endl;
-                int d = basis % (D + 1);
-                trefftzbasis[d](basis, indexmap) = 1;
-                tracker = -1;
-              }
-            else if (coeffnum (D) > 0)
-              {
-                int k = coeffnum (D);
-                for (int d = 0; d < D; d++)
-                  {
-                    Vec<D + 1, int> get_coeff = coeffnum;
-                    get_coeff[D] = get_coeff[D] - 1;
-                    get_coeff[d] = get_coeff[d] + 1;
-                    trefftzbasis[d](basis, indexmap)
-                        = (-1.0 / k) * (coeffnum (d) + 1)
-                          * trefftzbasis[D](
-                              basis, PolBasis::IndexMap2<D> (get_coeff, ord));
-                    // rekursive sum
-                    trefftzbasis[D](basis, indexmap)
-                        += (-1.0 / k) * (coeffnum (d) + 1)
-                           * trefftzbasis[d](
-                               basis, PolBasis::IndexMap2<D> (get_coeff, ord));
-                  }
-              }
-          }
-      }
-  }
-
-  template class FOTWaveBasis<1>;
-  template class FOTWaveBasis<2>;
-
   template <int D>
   CSR FOQTWaveBasis<D>::Basis (int ord, int rdim, Vec<D + 1> ElCenter,
                                Matrix<shared_ptr<CoefficientFunction>> GGder,
@@ -856,12 +820,12 @@ namespace ngcomp
               }
           }
 
-        const int nbasis = (D + 1) * BinCoeff (ord + D, D);
+        const int ndof = (D + 1) * BinCoeff (ord + D, D);
         const int npoly = BinCoeff ((D + 1) + ord, ord);
         Array<Matrix<>> qbasis (D + 1);
         for (int d = 0; d < D + 1; d++)
           {
-            qbasis[d].SetSize (nbasis, npoly);
+            qbasis[d].SetSize (ndof, npoly);
             qbasis[d] = 0;
           }
 
@@ -879,7 +843,7 @@ namespace ngcomp
                 }
           }
 
-        for (int basisn = 0; basisn < nbasis; basisn++)
+        for (int basisn = 0; basisn < ndof; basisn++)
           {
             for (int ell = 0; ell < ord; ell++)
               {
