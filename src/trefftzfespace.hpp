@@ -7,14 +7,8 @@
 namespace ngcomp
 {
 
-    struct GenericSqrt {
-        template <typename T> T operator() (T x) const { return sqrt(x); }
-        static string Name() { return "sqrt"; }
-        void DoArchive(Archive& ar) {}
-    };
-
     class PolBasis {
-        protected:
+        public:
             template<int D> static int IndexMap2(Vec<D+1, int> index, int ord)
             {
             int sum=0;
@@ -27,55 +21,9 @@ namespace ngcomp
             }
             return sum;
             }
+            //TODO: virtual static CSR Basis(int ord, int basistype = 0, int fowave = 0);
     };
 
-    template<int D>
-    class TWaveBasis : public PolBasis
-    {
-        static void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker, int basistype, double wavespeed = 1.0);
-        public:
-        TWaveBasis() {;}
-        static CSR Basis(int ord, int basistype = 0, int fowave = 0);
-    };
-
-    template<int D>
-    class QTWaveBasis : public PolBasis
-    {
-        mutex gentrefftzbasis;
-        std::map<string,CSR> gtbstore;
-        public:
-        QTWaveBasis() {;}
-        CSR Basis(int ord, Vec<D+1> ElCenter, Matrix<shared_ptr<CoefficientFunction>> GGder, Matrix<shared_ptr<CoefficientFunction>> BBder, double elsize = 1.0, int basistype=0);
-    };
-
-    template<int D>
-    class TLapBasis : public PolBasis
-    {
-        static void TB_inner(int ord, Matrix<> &trefftzbasis, Vec<D, int> coeffnum, int basis, int dim, int &tracker, int basistype, double wavespeed = 1.0);
-        public:
-        TLapBasis() {;}
-        static CSR Basis(int ord, int basistype = 0);
-    };
-
-    template<int D>
-    class FOTWaveBasis : public PolBasis
-    {
-        static void TB_inner
-        (int ord, Array<Matrix<>> &trefftzbasis, Vec<D+1, int> coeffnum, int basis, int dim, int &tracker);
-        public:
-        FOTWaveBasis() {;}
-        static CSR Basis(int ord, int rdim);
-    };
-
-    template<int D>
-    class FOQTWaveBasis : public PolBasis
-    {
-        mutex gentrefftzbasis;
-        Vec<D+1,std::map<string,CSR>> gtbstore;
-        public:
-        FOQTWaveBasis() {;}
-        CSR Basis(int ord, int rdim, Vec<D+1> ElCenter, Matrix<shared_ptr<CoefficientFunction>> GGder, Matrix<shared_ptr<CoefficientFunction>> BBder, double elsize = 1.0);
-    };
 
     class TrefftzFESpace : public FESpace
     {
@@ -135,6 +83,55 @@ namespace ngcomp
     };
 
 
+    //////////////////////////// Trefftz basis ////////////////////////////
+
+    template<int D>
+    class TWaveBasis : public PolBasis
+    {
+        public:
+        TWaveBasis() {;}
+        static CSR Basis(int ord, int basistype = 0, int fowave = 0);
+    };
+
+    template<int D>
+    class TLapBasis : public PolBasis
+    {
+        public:
+        TLapBasis() {;}
+        static CSR Basis(int ord, int basistype = 0);
+    };
+
+    template<int D>
+    class FOTWaveBasis : public PolBasis
+    {
+        public:
+        FOTWaveBasis() {;}
+        static CSR Basis(int ord, int rdim);
+    };
+
+
+    //////////////////////////// quasi-Trefftz basis ////////////////////////////
+
+    template<int D>
+    class QTWaveBasis : public PolBasis
+    {
+        mutex gentrefftzbasis;
+        std::map<string,CSR> gtbstore;
+        public:
+        QTWaveBasis() {;}
+        CSR Basis(int ord, Vec<D+1> ElCenter, Matrix<shared_ptr<CoefficientFunction>> GGder, Matrix<shared_ptr<CoefficientFunction>> BBder, double elsize = 1.0, int basistype=0);
+    };
+
+
+    template<int D>
+    class FOQTWaveBasis : public PolBasis
+    {
+        mutex gentrefftzbasis;
+        Vec<D+1,std::map<string,CSR>> gtbstore;
+        public:
+        FOQTWaveBasis() {;}
+        CSR Basis(int ord, int rdim, Vec<D+1> ElCenter, Matrix<shared_ptr<CoefficientFunction>> GGder, Matrix<shared_ptr<CoefficientFunction>> BBder, double elsize = 1.0);
+    };
 
 }
 

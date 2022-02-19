@@ -12,7 +12,7 @@ exactpoi = sin(x)*sin(y)
 eps = 10**-8
 mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
 mesh3d = Mesh(unit_cube.GenerateMesh(maxh = 1))
-SetNumThreads(1)
+SetNumThreads(3)
 
 Lap = lambda u : sum(Trace(u.Operator('hesse')))
 
