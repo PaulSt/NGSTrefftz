@@ -1,3 +1,5 @@
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(sys.path[0])))
 from ngstrefftz import *
 # from ngstents import TentSlab
 from netgen.geom2d import unit_square

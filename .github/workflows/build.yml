@@ -33,11 +33,11 @@ jobs:
       - name: cmake NGSTrefftz
         run: cmake -B $GITHUB_WORKSPACE/NGSTrefftz/make -S $GITHUB_WORKSPACE/NGSTrefftz/src/
       - name: compile NGSTrefftz
-        run: |
-             make -C $GITHUB_WORKSPACE/NGSTrefftz/make
-             sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
+        run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make
       - name: test NGSTrefftz
         run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make test
+      - name: install NGSTrefftz
+        run: sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
       #- name: Debugging with tmate
         #if: ${{ failure() }}
         #uses: mxschmitt/action-tmate@v3
@@ -71,9 +71,7 @@ jobs:
       - name: cmake NGSTrefftz
         run: cmake -B $GITHUB_WORKSPACE/NGSTrefftz/make -S $GITHUB_WORKSPACE/NGSTrefftz/src/
       - name: compile NGSTrefftz
-        run: |
-             make -C $GITHUB_WORKSPACE/NGSTrefftz/make
-             sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
+        run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make
 
 
   pypi-publish:
