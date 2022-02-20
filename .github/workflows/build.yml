@@ -73,9 +73,35 @@ jobs:
       - name: compile NGSTrefftz
         run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make
 
+  pypi-test:
+    needs: [ubuntu,macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: install pkgs
+        run: |
+             sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install vim python3 python3-pip python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake git g++ libglu1-mesa-dev libblas-dev liblapack-dev
+             sudo apt-get install -y software-properties-common
+             sudo add-apt-repository universe
+             sudo add-apt-repository ppa:ngsolve/nightly -y
+             sudo apt-get install ngsolve -y
+      - name: set path
+        run: |
+             echo "PYTHONPATH=/usr/lib/python3/dist-packages/" >> $GITHUB_ENV
+             echo "NETGENDIR=/usr/bin/" >> $GITHUB_ENV
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'True'
+      - name: Update pip and Install setuptools
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install setuptools
+      - name: Package ngstrefftz sources for PyPI
+        run: python3 setup.py sdist
+      - name: pip install ngstrefftz
+        run: pip install dist/*
 
   pypi-publish:
-    needs: [ubuntu,macos]
+    needs: [pypi-test]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'created' #startsWith(github.ref, 'refs/tags/v') # && github.event_name == 'push' 
     steps:
@@ -94,24 +120,6 @@ jobs:
           skip_existing: true
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
-
-  pypi-test:
-    needs: [pypi-publish]
-    runs-on: ubuntu-latest
-    steps:
-      - name: install pkgs
-        run: |
-             sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install vim python3 python3-pip python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake git g++ libglu1-mesa-dev libblas-dev liblapack-dev
-             sudo apt-get install -y software-properties-common
-             sudo add-apt-repository universe
-             sudo add-apt-repository ppa:ngsolve/nightly -y
-             sudo apt-get install ngsolve -y
-      - name: set path
-        run: |
-             echo "PYTHONPATH=/usr/lib/python3/dist-packages/" >> $GITHUB_ENV
-             echo "NETGENDIR=/usr/bin/" >> $GITHUB_ENV
-      - name: install ngstrefftz
-        run: pip install ngstrefftz
 
   docker:
     needs: [ubuntu,macos]
