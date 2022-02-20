@@ -70,6 +70,8 @@ endif (USE_LAPACK)
 
 ### install
 message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
+message("Make sure to add it to the python path: 
+>   export PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${NGSOLVE_INSTALL_DIR_PYTHON}:$PYTHONPATH")
 install(TARGETS _trefftz DESTINATION ${NGSTREFFTZ_INSTALL_DIR_PYTHON})
 install(FILES
         __init__.py 
