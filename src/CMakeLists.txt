@@ -24,16 +24,17 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX ${NGSOLVE_INSTALL_DIR} CACHE PATH "Install dir" FORCE)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 set(NGSTREFFTZ_INSTALL_DIR_PYTHON ${CMAKE_INSTALL_PREFIX}/${NGSOLVE_INSTALL_DIR_PYTHON}/ngstrefftz)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
 
 ### add ngstents dependency if needed
 if (NOT TARGET _pytents)
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../external_dependencies/ngstents/src)
+    include_directories(${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src)
     set(NGSTENTS_INSTALL_DIR_PYTHON ${CMAKE_INSTALL_PREFIX}/${NGSOLVE_INSTALL_DIR_PYTHON}/ngstents)
     add_ngsolve_python_module(_pytents
-      ${CMAKE_CURRENT_SOURCE_DIR}/../external_dependencies/ngstents/src/python_tents.cpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/../external_dependencies/ngstents/src/tents.cpp
+      ${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src/python_tents.cpp
+      ${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src/tents.cpp
       )
-    set_target_properties(_pytents PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/ngstents")
+    set_target_properties(_pytents PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents")
     install(TARGETS _pytents DESTINATION ${NGSTENTS_INSTALL_DIR_PYTHON})
 endif()
 
@@ -53,8 +54,9 @@ add_ngsolve_python_module(_trefftz
     )
 target_link_libraries(_trefftz PRIVATE _pytents)
 set_target_properties(_trefftz PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/ngstrefftz"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz"
 )
+file(COPY ${CMAKE_SOURCE_DIR}/__init__.py DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz)
 
 ### link lapack if found
 if (USE_LAPACK) # currently needed for SVD in embTrefftz, TODO: switch to ngsolve interface..
@@ -75,14 +77,14 @@ install(FILES
         #COMPONENT ngstrefftz
        )
 
-### tests
+### tests 
+# TODO: tests only work if library output = binary dir
 include(CTest)
 file(COPY 
-    ${CMAKE_CURRENT_SOURCE_DIR}/../test/embt.py
-    ${CMAKE_CURRENT_SOURCE_DIR}/../test/trefftz.py
-    ${CMAKE_CURRENT_SOURCE_DIR}/../test/tents.py
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Testing)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/ngstrefftz)
-add_test(NAME embtrefftz COMMAND python3 ${CMAKE_CURRENT_BINARY_DIR}/Testing/embt.py -v)
-add_test(NAME trefftz COMMAND python3 ${CMAKE_CURRENT_BINARY_DIR}/Testing/trefftz.py -v)
-add_test(NAME tents COMMAND python3 ${CMAKE_CURRENT_BINARY_DIR}/Testing/tents.py -v)
+    ${CMAKE_SOURCE_DIR}/../test/embt.py
+    ${CMAKE_SOURCE_DIR}/../test/trefftz.py
+    ${CMAKE_SOURCE_DIR}/../test/tents.py
+     DESTINATION ${CMAKE_BINARY_DIR}/Testing)
+add_test(NAME embtrefftz COMMAND python3 ${CMAKE_BINARY_DIR}/Testing/embt.py -v)
+add_test(NAME trefftz COMMAND python3 ${CMAKE_BINARY_DIR}/Testing/trefftz.py -v)
+add_test(NAME tents COMMAND python3 ${CMAKE_BINARY_DIR}/Testing/tents.py -v)

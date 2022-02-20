@@ -25,7 +25,7 @@ def get_version():
 
     if isdir(join(d, '.git')):
         # Get the version using "git describe".
-        cmd = 'git describe --tags --match v[0-9]*'.split()
+        cmd = 'git describe --always --tags --match v[0-9]*'.split()
         try:
             version = subprocess.check_output(cmd).decode().strip()
         except subprocess.CalledProcessError:
@@ -101,12 +101,13 @@ class CMakeBuild(build_ext):
                                                               self.distribution.get_version())
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
+
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
-        subprocess.check_call(['mv', '_trefftz.so', 'ngstrefftz'], cwd=self.build_lib)
-        subprocess.check_call(['mkdir', 'ngstents'], cwd=self.build_lib)
-        subprocess.check_call(['mv', '_pytents.so', 'ngstents'], cwd=self.build_lib)
+        # subprocess.check_call(['mv', '_trefftz.so', 'ngstrefftz'], cwd=self.build_lib)
+        # subprocess.check_call(['mkdir', 'ngstents'], cwd=self.build_lib)
+        # subprocess.check_call(['mv', '_pytents.so', 'ngstents'], cwd=self.build_lib)
 
 setup(
     name='ngstrefftz',
@@ -121,6 +122,7 @@ setup(
     packages=["ngstrefftz"],
     package_dir={"ngstrefftz": "src"},
     package_data={"ngstrefftz": ["*"
+                                ,"../test/*"
                                 ,"../external_dependencies/ngstents/*"\
                                 ,"../external_dependencies/ngstents/src/*"\
                                 ,"../external_dependencies/ngstents/py/*"\
