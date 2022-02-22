@@ -27,7 +27,7 @@ namespace ngbla{
         if(info!=0)
             throw Exception("something went wrong in the svd " + std::to_string(info));
         A = 0.0;
-        A.Diag(0) = S; 
+        A.Diag(0) = S;
     }
 
     void LapackSVD (SliceMatrix<Complex, ColMajor> A,
@@ -101,6 +101,10 @@ namespace ngcomp
         static Timer svdtt("svdtrefftz"); RegionTimer reg(svdtt);
         LocalHeap lh(1000 * 1000 * 1000);
 
+
+        if(eps==0 && tndof==0 && test_fes==nullptr)
+            throw Exception("Need to specify eps, tndof, or test_fes");
+
         bool mixed_mode = true;
         if(test_fes == nullptr){
             mixed_mode = false;
@@ -154,10 +158,8 @@ namespace ngcomp
             auto & trial_fel = fes->GetFE(ei, mlh);
 
             FlatMatrix<SCAL> elmat(test_dofs.Size(), dofs.Size(), mlh);
-
             elmat = 0.0;
             bool symmetric_so_far = true;
-
             int bfi_ind = 0;
             while (bfi_ind < bfis[VOL].Size())
             {
@@ -191,12 +193,13 @@ namespace ngcomp
 
             // assumption here: all (active) elements have the same number of (weak) Trefftz fcts.
             int nz = 0;
-            if(mixed_mode)
-                nz = trial_fel.GetNDof() - test_fel.GetNDof();
-            else if(tndof)
+            if(tndof)
                 nz = tndof;
             else
-                for(auto sv : elmat.Diag()) if(abs(sv)<eps) nz++;
+            {
+                nz = trial_fel.GetNDof() - test_fel.GetNDof();
+                for(int i = 0; i < min(elmat.Width(), elmat.Height()); i++) if(abs(elmat(i,i)) < eps) nz++;
+            }
 
             std::call_once(init_flag, [&](){
                 TableCreator<int> creator(ma->GetNE(VOL));
@@ -298,7 +301,7 @@ void ExportEmbTrefftz(py::module m)
 
               return ngcomp::EmbTrefftz<double>(bf,fes,lf,eps,test_fes,tndof);
           },
-          py::arg("bf"), py::arg("fes"), py::arg("lf"), py::arg("eps")=1e-12, py::arg("test_fes")=nullptr, py::arg("tndof")=0);
+          py::arg("bf"), py::arg("fes"), py::arg("lf"), py::arg("eps")=0, py::arg("test_fes")=nullptr, py::arg("tndof")=0);
 
 
     m.def("TrefftzEmbedding", [] (shared_ptr<ngfem::SumOfIntegrals> bf,
@@ -312,7 +315,7 @@ void ExportEmbTrefftz(py::module m)
 
               return std::get<0>(ngcomp::EmbTrefftz<double>(bf,fes,nullptr,eps,test_fes,tndof));
           },
-          py::arg("bf"), py::arg("fes"), py::arg("eps")=1e-12, py::arg("test_fes")=nullptr, py::arg("tndof")=0);
+          py::arg("bf"), py::arg("fes"), py::arg("eps")=0, py::arg("test_fes")=nullptr, py::arg("tndof")=0);
 
 }
 #endif // NGS_PYTHON
