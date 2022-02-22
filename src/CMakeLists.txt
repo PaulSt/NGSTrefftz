@@ -1,11 +1,25 @@
 ########################################################
 project(ngstrefftz)
 ########################################################
+if(NOT WIN32)
+  string(ASCII 27 Esc)
+  set(BoldCyan    "${Esc}[1;36m")
+endif()
 
 ### Options
 option(USE_LAPACK "build ngstrefftz with LAPACK" ON)
 
-add_compile_options("$<$<CONFIG:DEBUG>:-W;-Wall;-Wextra;-Wpedantic;-g;>")
+# Set a default build type if none was specified
+set(default_build_type "Release")
+if(EXISTS "${CMAKE_SOURCE_DIR}/../.git")
+  set(default_build_type "Debug")
+endif()
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
+  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
+  # Set the possible values of build type for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")# "MinSizeRel" "RelWithDebInfo")
+endif()
 
 ### Requirements
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
@@ -52,6 +66,7 @@ add_ngsolve_python_module(_trefftz
     mesh1dtents.cpp
     #airy.cpp #for testing, requires boost
     )
+target_compile_options(_trefftz PRIVATE "$<$<CONFIG:DEBUG>:-W;-Wall;-Wextra;-Wpedantic;-Wno-unused-parameter;-g;>")
 target_link_libraries(_trefftz PRIVATE _pytents)
 set_target_properties(_trefftz PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz"
@@ -69,9 +84,9 @@ if (USE_LAPACK) # currently needed for SVD in embTrefftz, TODO: switch to ngsolv
 endif (USE_LAPACK)
 
 ### install
-message("With 'make install' the python package will be installed to: ${CMAKE_INSTALL_PREFIX}")
-message("Make sure to add it to the python path: 
->   export PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${NGSOLVE_INSTALL_DIR_PYTHON}:$PYTHONPATH")
+message("${BoldCyan}With 'make install' the package will be installed to: ${CMAKE_INSTALL_PREFIX}
+Make sure to add it to the python path: 
+-->   export PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${NGSOLVE_INSTALL_DIR_PYTHON}:$PYTHONPATH")
 install(TARGETS _trefftz DESTINATION ${NGSTREFFTZ_INSTALL_DIR_PYTHON})
 install(FILES
         __init__.py 
