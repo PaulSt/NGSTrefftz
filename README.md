@@ -30,7 +30,7 @@ git clone --recursive https://github.com/PaulSt/NGSTrefftz
 mkdir ./NGSTrefftz/make && cd ./NGSTrefftz/make
 cmake ../src && make install
 ```
-### Dependencies
+#### Dependencies
 You need to have [NGSolve](https://www.ngsolve.com/) installed. To build the package you need
 * cmake  >= 3.1
 * gcc >= 9 or clang >= 10
@@ -38,7 +38,14 @@ You need to have [NGSolve](https://www.ngsolve.com/) installed. To build the pac
 
 To access the newest features the nightly version of NGSolve works best and lapack >= 3.9 is required.
 
-## Papers using the code
+## News
+Feb, 2022: If you are using NGSolve nightly releases: [NGSolve@eda758d](https://github.com/NGSolve/ngsolve/commit/eda758d99483888851913d8a5c9aff4d0cbc9cc2) breaks a dependency and [NGSolve@3d52ecd](https://github.com/NGSolve/ngsolve/commit/3d52ecd615f2b7c409219eebaba99288ea19c1bc) produces import issue. Make sure to update ngstrefftz submodules and move to newest ngsolve version, at least [NGSolve@5839a09](https://github.com/NGSolve/ngsolve/commit/5839a09810235a938bd85807d8e638d3a0b6c69d).
+
+Jan, 2022: NGSTrefftz is now available via pip! 🚀
+
+Nov, 2021: NGSTrefftz now comes in a docker and with binder notebooks! 🚀
+
+#### Papers using the code
 * Tent pitching and Trefftz-DG method for the acoustic wave equation  
 [![arXiv](https://img.shields.io/badge/arXiv-1907.02367-b31b1b.svg)](https://arxiv.org/abs/1907.02367)
 * A space-time quasi-Trefftz DG method for the wave equation with piecewise-smooth coefficients  
