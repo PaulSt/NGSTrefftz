@@ -300,7 +300,18 @@ void ExportEmbTrefftz(py::module m)
                   return ngcomp::EmbTrefftz<Complex>(bf,fes,lf,eps,test_fes,tndof);
 
               return ngcomp::EmbTrefftz<double>(bf,fes,lf,eps,test_fes,tndof);
-          },
+          }, R"mydelimiter(
+                Computes the Trefftz embedding and particular solution.
+
+                :param bf: operator for which the Trefftz embedding is computed.
+                :param fes: DG finite element space of the weak formulation.
+                :param lf: Rhs used to compute the particular solution.
+                :param eps: Threshold for singular values to be considered zero, defaults to 0
+                :param test_fes: Used if test space differs from trial space, defaults to None
+                :param tndof: If known, local ndofs of the Trefftz space, also eps and/or test_fes are used to find the dimension, defaults to 0
+
+                :return: [Trefftz embeddint, particular solution]
+            )mydelimiter",
           py::arg("bf"), py::arg("fes"), py::arg("lf"), py::arg("eps")=0, py::arg("test_fes")=nullptr, py::arg("tndof")=0);
 
 
@@ -314,8 +325,14 @@ void ExportEmbTrefftz(py::module m)
                   return std::get<0>(ngcomp::EmbTrefftz<Complex>(bf,fes,nullptr,eps,test_fes,tndof));
 
               return std::get<0>(ngcomp::EmbTrefftz<double>(bf,fes,nullptr,eps,test_fes,tndof));
-          },
+          }, R"mydelimiter(
+                Used without the parameter lf as input the function only returns the Trefftz embedding.
+
+                :return: Trefftz embeddint
+            )mydelimiter",
           py::arg("bf"), py::arg("fes"), py::arg("eps")=0, py::arg("test_fes")=nullptr, py::arg("tndof")=0);
 
 }
 #endif // NGS_PYTHON
+
+
