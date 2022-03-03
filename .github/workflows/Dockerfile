@@ -4,6 +4,8 @@ WORKDIR /home/app
 
 RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get -y install vim python3 python3-pip python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake git g++ libglu1-mesa-dev libblas-dev liblapack-dev
 
+#RUN pip install ngsolve ngstrefftz
+
 RUN apt-get update
 RUN apt-get update
 RUN apt-get install -y software-properties-common
