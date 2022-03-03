@@ -31,7 +31,7 @@ release = 'v0.0.4'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 # extensions = [ "myst_nb" ]
-extensions = ["sphinx.ext.autodoc","sphinx.ext.mathjax","sphinx.ext.todo",
+extensions = ["sphinx.ext.autodoc","sphinx.ext.mathjax","sphinx.ext.todo","sphinx.ext.githubpages",
               "IPython.sphinxext.ipython_console_highlighting", "IPython.sphinxext.ipython_directive",
               "nbsphinx",
               "m2r2"
@@ -85,7 +85,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'paper']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'paper','env']
 
 # LaTeX
 latex_engine = 'xelatex'
