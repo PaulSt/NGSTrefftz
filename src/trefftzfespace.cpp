@@ -16,7 +16,7 @@ namespace ngcomp
     D = ma->GetDimension ();
 
     this->dgjumps = true;
-    order = int (flags.GetNumFlag ("order", 3));
+    order = int (flags.GetNumFlag ("order", 1));
     c = flags.GetNumFlag ("wavespeed", 1);
     wavespeedcf = make_shared<ConstantCoefficientFunction> (c);
     basistype = flags.GetNumFlag ("basistype", 0);
@@ -343,33 +343,30 @@ namespace ngcomp
 
   DocInfo TrefftzFESpace ::GetDocu ()
   {
-    auto docu = FESpace::GetDocu ();
-    docu.Arg ("eq")
-        = "string\n"
-          "  Choose type of Trefftz functions, currently available are:\n"
-          "  * laplace - for Laplace equation\n"
-          "  * wave - for the second order acoustic wave equation\n"
-          "  * fowave - for the first order acoustic wave equation, returns "
-          "TnT (sigv,tauw)\n"
-          "  * helmholtz - planewaves for the helmholtz equation\n"
-          "  * helmholtzconj - returns the complex conjungate of the "
-          "planewaves \n";
+    // auto docu = FESpace::GetDocu();
+    DocInfo docu;
+    docu.short_docu = "Trefftz space for different PDEs. Use kwarg 'eq' to "
+                      "choose the PDE, currently implemented are:\n"
+                      " - laplace - for Laplace equation\n"
+                      " - wave - for the second order acoustic wave equation\n"
+                      " - fowave - for the first order acoustic wave "
+                      "equation, returns TnT (sigv,tauw)\n"
+                      " - helmholtz - planewaves for the helmholtz equation\n"
+                      " - helmholtzconj - returns the complex conjungate of "
+                      "the planewaves \n";
+    docu.Arg ("eq") = "string\n"
+                      "  Choose type of Trefftz functions.";
+    docu.Arg ("order") = "int = 1\n"
+                         "  Order of finite element space";
+    docu.Arg ("dgjumps") = "bool = True\n"
+                           "  Enable discontinuous space for DG methods, this "
+                           "flag is always True for trefftzfespace.";
+    docu.Arg ("complex") = "bool = False\n"
+                           "  Set if FESpace should be complex";
     // docu.Arg("useshift") = "bool = True\n"
     //"  use shift of basis functins to element center and scale them";
-    // docu.Arg("basistype") = "bool = True\n"
-    //"  use shift of basis functins to element center and scale them";
-    // docu.Arg("wavespeed") = "bool = True\n"
-    //"  use shift of basis functins to element center and scale them";
-    docu.short_docu
-        = "Trefftz space for different PDEs. Use kwarg 'eq' to choose the "
-          "PDE, currently implemented are:\n"
-          "  * laplace - for Laplace equation\n"
-          "  * wave - for the second order acoustic wave equation\n"
-          "  * fowave - for the first order acoustic wave equation, returns "
-          "TnT (sigv,tauw)\n"
-          "  * helmholtz - planewaves for the helmholtz equation\n"
-          "  * helmholtzconj - returns the complex conjungate of the "
-          "planewaves \n";
+    // docu.Arg("basistype")
+    // docu.Arg("wavespeed")
     return docu;
   }
 

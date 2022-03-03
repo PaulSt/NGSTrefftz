@@ -11,7 +11,15 @@ namespace ngcomp
   public:
     TrefftzTents () { ; }
     virtual int dimensio () { return 0; }
-    virtual ~TrefftzTents () = 0;
+    virtual void Propagate () { throw Exception ("TrefftzTents virtual!"); }
+    virtual void SetInitial (shared_ptr<CoefficientFunction> init)
+    {
+      throw Exception ("TrefftzTents virtual!");
+    }
+    virtual void SetBoundaryCF (shared_ptr<CoefficientFunction> abddatum)
+    {
+      throw Exception ("TrefftzTents virtual!");
+    }
   };
 
   template <int D> class TWaveTents : public TrefftzTents
@@ -104,14 +112,14 @@ namespace ngcomp
         }
     }
 
-    void Propagate ();
+    void Propagate () override;
 
     Matrix<>
     MakeWavefront (shared_ptr<CoefficientFunction> cf, double time = 0);
 
     Matrix<> GetWavefront () { return wavefront; }
 
-    void SetInitial (shared_ptr<CoefficientFunction> init)
+    void SetInitial (shared_ptr<CoefficientFunction> init) override
     {
       wavefront = MakeWavefront (init);
       if (init->Dimension () == D + 1)
@@ -122,7 +130,7 @@ namespace ngcomp
         }
     }
 
-    void SetBoundaryCF (shared_ptr<CoefficientFunction> abddatum)
+    void SetBoundaryCF (shared_ptr<CoefficientFunction> abddatum) override
     {
       bddatum = abddatum;
     }

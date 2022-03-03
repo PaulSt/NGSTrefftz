@@ -12,8 +12,6 @@ namespace ngcomp
     return (T (0) <= val) - (val < T (0));
   }
 
-  TrefftzTents::~TrefftzTents (){};
-
   template <int D>
   inline void TWaveTents<D>::Solve (FlatMatrix<double> a, FlatVector<double> b)
   {
@@ -1126,10 +1124,7 @@ void DeclareETClass (py::module &m, std::string typestr)
   py::class_<PyETclass, shared_ptr<PyETclass>, TrefftzTents> (
       m, pyclass_name.c_str ())
       //.def(py::init<>())
-      .def ("Propagate", &PyETclass::Propagate)
       .def ("MakeWavefront", &PyETclass::MakeWavefront)
-      .def ("SetInitial", &PyETclass::SetInitial)
-      .def ("SetBoundaryCF", &PyETclass::SetBoundaryCF)
       .def ("GetWavefront", &PyETclass::GetWavefront)
       .def ("Error", &PyETclass::Error)
       .def ("L2Error", &PyETclass::L2Error)
@@ -1143,7 +1138,11 @@ void DeclareETClass (py::module &m, std::string typestr)
 
 void ExportTWaveTents (py::module m)
 {
-  py::class_<TrefftzTents, shared_ptr<TrefftzTents>> (m, "TrefftzTents");
+  py::class_<TrefftzTents, shared_ptr<TrefftzTents>> (m, "TrefftzTents")
+      .def ("Propagate", &TrefftzTents::Propagate, "Solve tent slab")
+      .def ("SetInitial", &TrefftzTents::SetInitial, "Set initial condition")
+      .def ("SetBoundaryCF", &TrefftzTents::SetBoundaryCF,
+            "Set boundary condition");
 
   DeclareETClass<TWaveTents<1>, 1> (m, "TWaveTents1");
   DeclareETClass<TWaveTents<2>, 2> (m, "TWaveTents2");
@@ -1176,7 +1175,15 @@ void ExportTWaveTents (py::module m)
           }
         return tr;
       },
-      "Create Wavetent object", py::arg ("order"), py::arg ("tps"),
-      py::arg ("wavespeedcf"), py::arg ("BBcf") = nullptr);
+      R"mydelimiter(
+                Create solver for acoustiv wave equation on tent-pitched mesh.
+
+                :param order: Polynomial order of the Trefftz space.
+                :param tps: Tent-pitched slab.
+                :param wavespeedcf: PDE Coefficient
+                :param BB: PDE Coefficient
+            )mydelimiter",
+      py::arg ("order"), py::arg ("tps"), py::arg ("wavespeedcf"),
+      py::arg ("BBcf") = nullptr);
 }
 #endif // NGS_PYTHON
