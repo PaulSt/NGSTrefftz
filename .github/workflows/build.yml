@@ -159,7 +159,6 @@ jobs:
   docs:
     needs: [ubuntu,macos]
     runs-on: ubuntu-latest
-    #if: github.event_name == 'release' && github.event.action == 'created'
     steps:
       - uses: actions/checkout@master
         with:
@@ -221,6 +220,7 @@ jobs:
           #requirements_path: ./docs/requirements.txt
       - name: Push changes
         uses: ad-m/github-push-action@master
+        if: github.event_name == 'release' && github.event.action == 'created'
         with:
           directory: 'NGSTrefftz'
           github_token: ${{ secrets.GITHUB_TOKEN }}
