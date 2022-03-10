@@ -1,5 +1,5 @@
-import sys, os
-sys.path.append(os.path.join(os.path.dirname(sys.path[0])))
+# import sys, os
+# sys.path.append(os.path.join(os.path.dirname(sys.path[0])))
 from ngsolve import *
 from ngstrefftz import *
 import time
@@ -26,7 +26,7 @@ def dglap(fes,bndc,rhs=0):
     >>> gfu = GridFunction(fes)
     >>> gfu.vec.data = a.mat.Inverse() * f.vec
     >>> sqrt(Integrate((gfu-exactlap)**2, mesh2d)) # doctest:+ELLIPSIS
-    4...e-09
+    3...e-09
     """
     mesh = fes.mesh
     order = fes.globalorder
@@ -137,7 +137,7 @@ def testembtrefftz(fes):
     """
     >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
     >>> testembtrefftz(fes) # doctest:+ELLIPSIS
-    1...e-08
+    8...e-09
     """
     start = time.time()
     mesh = fes.mesh
@@ -167,7 +167,7 @@ def testembtrefftz_mixed(fes):
     """
     >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
     >>> testembtrefftz_mixed(fes) # doctest:+ELLIPSIS
-    1...e-08
+    8...e-09
     """
     mesh = fes.mesh
     test_fes = L2(mesh, order=fes.globalorder-2,  dgjumps=True)#,all_dofs_together=True)
@@ -190,7 +190,7 @@ def testembtrefftznonsym(fes):
     """
     >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
     >>> testembtrefftznonsym(fes) # doctest:+ELLIPSIS
-    1...e-08
+    8...e-09
     """
     start = time.time()
     mesh = fes.mesh
@@ -212,7 +212,7 @@ def testembtrefftzpoi(fes):
     """
     >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
     >>> testembtrefftzpoi(fes) # doctest:+ELLIPSIS
-    4...e-09
+    3...e-09
     """
     mesh = fes.mesh
     start = time.time()

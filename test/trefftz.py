@@ -1,5 +1,5 @@
-import sys, os
-sys.path.append(os.path.join(os.path.dirname(sys.path[0])))
+# import sys, os
+# sys.path.append(os.path.join(os.path.dirname(sys.path[0])))
 from ngstrefftz import *
 # from ngstents import TentSlab
 from netgen.geom2d import unit_square
@@ -254,7 +254,7 @@ def testlaptrefftz(order,mesh):
     >>> order = 5
     >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
     >>> testlaptrefftz(order,mesh) # doctest:+ELLIPSIS
-    1...e-08
+    8...e-09
     >>> mesh = Mesh(unit_cube.GenerateMesh(maxh = 1))
     >>> testlaptrefftz(order,mesh) # doctest:+ELLIPSIS
     2...e-06
@@ -319,7 +319,7 @@ def testhelmtrefftz(order,mesh):
     >>> order = 5
     >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
     >>> testhelmtrefftz(order,mesh) # doctest:+ELLIPSIS
-    6...e-10
+    7...e-10
     """
     omega=1
     exact = exp(1j*sqrt(0.5)*(x+y))
