@@ -33,10 +33,25 @@ release = 'v0.0.4'
 # extensions = [ "myst_nb" ]
 extensions = ["sphinx.ext.autodoc","sphinx.ext.mathjax","sphinx.ext.todo","sphinx.ext.githubpages",
               "IPython.sphinxext.ipython_console_highlighting", "IPython.sphinxext.ipython_directive",
+              "jupyter_sphinx.execute",
+              "RunNotebook",
               "nbsphinx",
               "m2r2"
               ]
 # source_suffix = ['.rst', '.md']
+
+# Run notebook configuration
+
+# The template used when exporting from nbconvert
+#   full  - Outputs the full HTML document [Default]
+#   basic - Outputs a single div (with no additional resources)
+run_notebook_export_template = 'basic'  # Default: 'full'
+
+# Display the source links to the generated evaluated files
+run_notebook_display_source_links = False  # Default: True
+
+# Whether or not to evaluate the notebooks prior to embedding them
+evaluate_notebooks = False  # Default: True
 
 # START nbsphinx stuff
 #increase timeout for cell execution, since some files take long to execute
