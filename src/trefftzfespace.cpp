@@ -531,7 +531,7 @@ namespace ngcomp
     for (int basis = 0; basis < ndof; basis++)
       {
         int tracker = 0;
-        TraversePol<D + 1> (ord, [&] (int i, Vec<D + 1, int> coeff) {
+        TraversePol<D> (ord, [&] (int i, Vec<D, int> coeff) {
           if (tracker >= 0)
             tracker++;
           int indexmap = PolBasis::IndexMap2<D - 1> (coeff, ord);
