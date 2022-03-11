@@ -23,7 +23,7 @@ Guidelines for bug reports:
 
 3. **Isolate the problem**: Create a minimal example showing the problem.
 
-4. **Open an [issue](https://github.com/paulst/ngstrefftz/issues)**: Describe the expected outcome and report the OS, the compiler, and NGSolve version you are using.
+4. **Open an issue**: Using the [issue tracker](https://github.com/paulst/ngstrefftz/issues), describe the expected outcome and report the OS, the compiler, and NGSolve version you are using.
 
 ## Pull requests
 

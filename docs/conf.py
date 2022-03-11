@@ -88,9 +88,9 @@ release = get_version()
 extensions = ["sphinx.ext.autodoc","sphinx.ext.mathjax","sphinx.ext.todo","sphinx.ext.githubpages",
               "IPython.sphinxext.ipython_console_highlighting", "IPython.sphinxext.ipython_directive",
               "jupyter_sphinx.execute",
-              "RunNotebook",
               "nbsphinx",
-              "m2r2"
+              "m2r2",
+              "sphinxemoji.sphinxemoji",
               ]
 # source_suffix = ['.rst', '.md']
 

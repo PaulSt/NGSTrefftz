@@ -318,8 +318,8 @@ def testhelmtrefftz(order,mesh):
     """
     >>> order = 5
     >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
-    >>> testhelmtrefftz(order,mesh) # doctest:+ELLIPSIS
-    7...e-10
+    >>> [testhelmtrefftz(order,mesh)] # doctest:+ELLIPSIS
+    [...e-10]
     """
     omega=1
     exact = exp(1j*sqrt(0.5)*(x+y))

@@ -86,6 +86,7 @@ where :math:`h` is the mesh size, :math:`p` is the polynomial degree and :math:`
     from ngsolve import *
     from ngstrefftz import *
     from netgen.geom2d import unit_square
+    from ngsolve.webgui import Draw
     p=5
 
 For a given mesh we construct the Trefftz finite element space as 
@@ -223,7 +224,6 @@ As an exact solution we used
     (a,f) = lap_problem(fes)
     gfu = GridFunction(fes)
     gfu.vec.data = a.mat.Inverse(inverse='sparsecholesky') * f.vec
-    from ngsolve.webgui import Draw
     Draw(gfu)
 
 
@@ -301,6 +301,9 @@ How to get started?
 
 .. _notebooks: notebooks/index.html
 .. _embedded Trefftz method: notebooks/embTrefftz.html
+
+
+.. mdinclude:: ../CONTRIBUTING.md
 
 NGSTrefftz Notebooks
 ========================================
