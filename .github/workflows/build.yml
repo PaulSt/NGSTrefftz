@@ -225,6 +225,11 @@ jobs:
           directory: 'NGSTrefftz'
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
+      - name: Upload
+        uses: actions/upload-artifact@v1
+        with:
+          name: gh-page
+          path: _build/*
       - name: Debugging 
         if: ${{ failure() }}
         run: cat /tmp/sphinx*
