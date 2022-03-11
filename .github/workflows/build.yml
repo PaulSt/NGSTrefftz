@@ -35,7 +35,7 @@ jobs:
       - name: compile NGSTrefftz
         run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make
       - name: test NGSTrefftz
-        run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make test
+        run: env CTEST_OUTPUT_ON_FAILURE=1 make -C $GITHUB_WORKSPACE/NGSTrefftz/make test
       - name: install NGSTrefftz
         run: sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
       #- name: Debugging with tmate
@@ -225,11 +225,12 @@ jobs:
           directory: 'NGSTrefftz'
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
+      - run: tree -d .
       - name: Upload
         uses: actions/upload-artifact@v1
         with:
           name: gh-page
-          path: _build/*
+          path: 'NGSTrefftz/'
       - name: Debugging 
         if: ${{ failure() }}
         run: cat /tmp/sphinx*

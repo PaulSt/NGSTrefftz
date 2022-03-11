@@ -79,3 +79,5 @@ webgui-jupyter-widgets==0.2.8
 widgetsnbextension==3.5.2
 matplotlib
 ipympl
+jupyter-sphinx
+sphinxemoji
