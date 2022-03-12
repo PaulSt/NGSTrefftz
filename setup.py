@@ -6,6 +6,7 @@ import re
 import sys
 import platform
 import subprocess
+import warnings
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
@@ -76,7 +77,7 @@ class CMakeBuild(build_ext):
             raise RuntimeError("CMake must be installed to build the following extensions: " +
                                ", ".join(e.name for e in self.extensions))
         if "NETGENDIR" not in os.environ:
-            raise RuntimeError("Could not find NETGENDIR")
+            warnings.warn("Could not find NETGENDIR")
         try:
             import ngsolve
         except:
