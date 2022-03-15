@@ -22,7 +22,7 @@ The package implements Trefftz based discontinuous Galerkin (DG) methods in `NGS
 Trefftz methods reduce the number of unknowns in the discretization of PDE problems by injecting knowledge of the PDE into the approximation functions.
 Like `NGSolve`, `NGSTrefftz` is written in C++ and integrates seamlessly with the easy-to-use Python interface of `NGSolve`.
 
-Trefftz methods originate from [@trefftz1926] and have since been developed for a wide range of problems, for an overview see [@cbe1997trefftz; @TrefftzSurvey; @Qin05; @LLHC08; @kk95].
+Trefftz methods originate from @trefftz1926 and have since been developed for a wide range of problems, for an overview see @cbe1997trefftz, @TrefftzSurvey, @Qin05, @LLHC08, @kk95.
 The central principle of Trefftz methods is the construction of a discrete basis of solutions to the differential operator under consideration, making the space of Trefftz functions problem dependent. 
 In combination with finite elements the Trefftz basis is constructed locally, on each mesh element, continuity and boundary conditions are then enforced in the variational formulation.
 
@@ -36,18 +36,18 @@ this approach is also often referred to as frameless Trefftz elements.
 
 On top of that, the package provides unique features that are:
 
-* A quasi-Trefftz space that provides Trefftz-like properties for the acoustic wave equation with smooth coefficients. The method and results are presented in [@qtrefftz].
+* A quasi-Trefftz space that provides Trefftz-like properties for the acoustic wave equation with smooth coefficients. The method and results are presented in @qtrefftz.
 
 * A space--time Trefftz method for the acoustic wave equation on tent-pitched meshes. 
 Tent-pitching is a space--time meshing strategy that provides mesh elements that conform to the causality constraint of a hyperbolic system. 
-The meshes are generated using [`ngstents`](https://github.com/jayggg/ngstents) and can be used with the Trefftz and quasi-Trefftz space for the acoustic wave equation, results are shown in [@StockerSchoeberl; @qtrefftz].
+The meshes are generated using [`ngstents`](https://github.com/jayggg/ngstents) and can be used with the Trefftz and quasi-Trefftz space for the acoustic wave equation, results are shown in @StockerSchoeberl and @qtrefftz.
 
-* A general framework to produce Trefftz spaces implicitly is provided by an implementation of the embedded Trefftz method, see [@embtrefftz].
+* A general framework to produce Trefftz spaces implicitly is provided by an implementation of the embedded Trefftz method, see @embtrefftz.
 The approach produces a Galerkin projection of an underlying discontinuous Galerkin method onto a subspace of Trefftz-type. 
 It can be applied to very general cases, including inhomogeneous sources and non-constant coefficient differential operators.
 
 The aim of this package is to facilitate research into Trefftz methods and to make them more accessible to a broad audience.
-To the best of our knowledge, the only other open source software package that provides Trefftz finite element methods is [`FreeHyTe`](https://www.sites.google.com/site/ionutdmoldovan/freehyte), implemented in `MATLAB`. 
+To the best of our knowledge, the only other open source software package that provides Trefftz finite element methods is [`FreeHyTe`](https://www.sites.google.com/site/ionutdmoldovan/freehyte) [@freehyte], implemented in `MATLAB`. 
 Examples for the usage of all the features in `NGSTrefftz` are provided in the form of jupyter notebooks.
 
 # Acknowledgements
