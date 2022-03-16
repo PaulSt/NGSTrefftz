@@ -8,7 +8,7 @@
 [![status](https://joss.theoj.org/papers/c2f4e85b118c22b81aa27d7799265409/status.svg)](https://joss.theoj.org/papers/c2f4e85b118c22b81aa27d7799265409)
 [![docs](https://img.shields.io/badge/docs-NGSTrefftz-blue?logo=readthedocs)](https://paulst.github.io/NGSTrefftz/)
 
-NGSTrefftz provides a framework to implement Trefftz finite element spaces for [NGSolve](https://www.ngsolve.com), with several Trefftz spaces already implemented. Additionally, Trefftz-DG on tent-pitched meshes for the acoustic wave equation is implemented using meshes provided by [ngstents](https://github.com/jayggg/ngstents). Furthermore, the package includes an implementation of the embedded Trefftz method.
+NGSTrefftz provides a framework to implement Trefftz finite element spaces for [NGSolve](https://www.ngsolve.org), with several Trefftz spaces already implemented. Additionally, Trefftz-DG on tent-pitched meshes for the acoustic wave equation is implemented using meshes provided by [ngstents](https://github.com/jayggg/ngstents). Furthermore, the package includes an implementation of the embedded Trefftz method.
 
 ## Try it out!
 You can try out some jupyter notebooks:
@@ -38,8 +38,8 @@ mkdir ./NGSTrefftz/make && cd ./NGSTrefftz/make
 cmake ../src && make install
 ```
 
-#### Dependencies
-You need to have [NGSolve](https://www.ngsolve.com/) installed. To build the package you need
+### Dependencies
+You need to have [NGSolve](https://www.ngsolve.org) installed. To build the package you need
  * cmake  >= 3.1
  * gcc >= 9 or clang >= 10
  * ngsolve >= 6.2
