@@ -5,8 +5,6 @@
 
 .. mdinclude:: ../README.md
 
-.. .. include:: notebooks/laplace.rst
-
 
 Introduction to Trefftz-DG
 ========================================
@@ -86,7 +84,6 @@ where :math:`h` is the mesh size, :math:`p` is the polynomial degree and :math:`
     from ngsolve import *
     from ngstrefftz import *
     from netgen.geom2d import unit_square
-    from ngsolve.webgui import Draw
     p=5
 
 For a given mesh we construct the Trefftz finite element space as 
@@ -219,6 +216,7 @@ As an exact solution we used
 
 .. jupyter-execute::
 
+    from ngsolve.webgui import Draw
     mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
     fes = trefftzfespace(mesh,order=5,eq="laplace",dgjumps=True)
     (a,f) = lap_problem(fes)
@@ -277,7 +275,7 @@ The solution in the full polynomial space is then given by :math:`\bu=\bT\bu_\IT
 
 Trefftz + tent-pitching 
 ----------------------------------------
-Given a tent-pitched mesh produced by ngstrefftz the following function returns a solver using Trefftz, or quas-Trefftz, finite elements to solve the acoustic wave equation.
+Given a tent-pitched mesh produced by ngstents the following function returns a solver using Trefftz, or quas-Trefftz, finite elements to solve the acoustic wave equation.
 
 .. autofunction:: ngstrefftz.TWave
 
@@ -299,11 +297,15 @@ How to get started?
 
 - Before undertaking the implementation of a new Trefftz space in C++, or especially if your PDE does not have a easy-to-construct Trefftz space, consider checking out the `embedded Trefftz method`_.
 
+If you are implementing a new method using NGSTrefftz consider `contributing`_.
+
 .. _notebooks: notebooks/index.html
 .. _embedded Trefftz method: notebooks/embTrefftz.html
 
 
+.. _contributing: 
 .. mdinclude:: ../CONTRIBUTING.md
+
 
 NGSTrefftz Notebooks
 ========================================

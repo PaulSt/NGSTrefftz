@@ -55,7 +55,7 @@ Jan, 2022: NGSTrefftz is now available via pip! 🚀
 
 Nov, 2021: NGSTrefftz now comes in a docker and with binder notebooks! 🚀
 
-#### Papers using the code
+## Papers using the code
 * Tent pitching and Trefftz-DG method for the acoustic wave equation  
 [![arXiv](https://img.shields.io/badge/arXiv-1907.02367-b31b1b.svg)](https://arxiv.org/abs/1907.02367)
 * A space-time quasi-Trefftz DG method for the wave equation with piecewise-smooth coefficients  

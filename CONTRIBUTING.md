@@ -1,6 +1,6 @@
 # Contributing to `NGSTrefftz`
 
-:+1::tada: Thanks for taking the time to contribute! :tada::+1:
+**Thanks for taking the time to contribute!**
 
 To get an overview of the project, check out the [README](README.md).
 
@@ -40,14 +40,20 @@ Tips on opening a pull request:
    git checkout -b <your-feature-name>
    ```
 
-3. Once the implementation is done, use Git's
+3. Run the test suite by calling 
+   ```bash
+   make test
+   ```
+   in your build directory. Consider adding new tests for you feature - have a look in the test folder.
+
+4. Once the implementation is done, use Git's
    [interactive rebase](https://help.github.com/articles/interactive-rebase)
    feature to tidy up your commits.
    ```bash
    git rebase --interactive --fork-point main <your-feature-name> 
    ```
 
-4. Push your topic branch up to your fork and [open a Pull Request](https://help.github.com/articles/using-pull-requests/).
+5. Push your topic branch up to your fork and [open a Pull Request](https://help.github.com/articles/using-pull-requests/).
 
 **IMPORTANT**: By submitting a patch, you agree to allow the project owners to license your work under the terms of the *LGPL License*.
 
