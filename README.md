@@ -44,7 +44,7 @@ To build the package the following software needs to be installed
  * [gcc](https://gcc.gnu.org/) >= 9 or [clang](https://clang.llvm.org/) >= 10
  * [ngsolve](https://www.ngsolve.org) >= 6.2
 
-To access the newest features the nightly version of NGSolve works best and lapack >= 3.9 is required.
+To access the newest features the nightly version of NGSolve works best and [lapack](http://www.netlib.org/lapack/) >= 3.9 is required.
 
 ## News
 Mar, 2022: NGSTrefftz now has a [website](https://paulst.github.io/NGSTrefftz/)! 🚀
