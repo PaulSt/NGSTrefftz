@@ -39,10 +39,10 @@ cmake ../src && make install
 ```
 
 ### Dependencies
-You need to have [NGSolve](https://www.ngsolve.org) installed. To build the package you need
- * cmake  >= 3.1
- * gcc >= 9 or clang >= 10
- * ngsolve >= 6.2
+To build the package the following software needs to be installed
+ * [cmake](https://cmake.org/) >= 3.1
+ * [gcc](https://gcc.gnu.org/) >= 9 or [clang](https://clang.llvm.org/) >= 10
+ * [ngsolve](https://www.ngsolve.org) >= 6.2
 
 To access the newest features the nightly version of NGSolve works best and lapack >= 3.9 is required.
 

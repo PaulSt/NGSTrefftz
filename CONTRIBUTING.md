@@ -1,6 +1,6 @@
 # Contributing to `NGSTrefftz`
 
-**Thanks for taking the time to contribute!**
+🎉**Thanks for taking the time to contribute!** 🎉
 
 To get an overview of the project, check out the [README](README.md).
 
