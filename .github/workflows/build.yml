@@ -38,9 +38,9 @@ jobs:
         run: env CTEST_OUTPUT_ON_FAILURE=1 make -C $GITHUB_WORKSPACE/NGSTrefftz/make test
       - name: install NGSTrefftz
         run: sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
-      #- name: Debugging with tmate
-        #if: ${{ failure() }}
-        #uses: mxschmitt/action-tmate@v3
+      - name: Debugging with tmate
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
 
   macos:
     runs-on: macos-latest
@@ -72,6 +72,13 @@ jobs:
         run: cmake -B $GITHUB_WORKSPACE/NGSTrefftz/make -S $GITHUB_WORKSPACE/NGSTrefftz/src/
       - name: compile NGSTrefftz
         run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make
+      #- name: test NGSTrefftz
+        #run: env CTEST_OUTPUT_ON_FAILURE=1 make -C $GITHUB_WORKSPACE/NGSTrefftz/make test
+      #- name: install NGSTrefftz
+        #run: sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
+      #- name: Debugging with tmate
+        #if: ${{ failure() }}
+        #uses: mxschmitt/action-tmate@v3
 
   pypi-test:
     needs: [ubuntu,macos]
