@@ -3,6 +3,29 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. raw:: html
+
+    <style>
+        .p-Widget {
+            height: 400px;
+        }
+        .dg.main {
+            margin-left: 0px;
+        }
+        div.p-Widget div div div div.dg ul li {
+            list-style: none;
+            margin-left: 0px;
+        }
+        div.p-Widget div div div div.dg ul li div.dg {
+            margin-bottom: 0px;
+        }
+    </style>
+
+.. only:: html
+    .. role:: raw-html(raw)
+        :format: html
+
+
 .. mdinclude:: ../README.md
 
 
@@ -42,12 +65,12 @@ For an element :math:`K` in out mesh :math:`\Th` we define the local Trefftz spa
     \end{split} \end{align*}
 
 
-For the Laplace problem the Trefftz space is given by harmonic polynomials, e.g. for polynomial of order 3 in two dimensions the space is given by
+For the Laplace problem the Trefftz space is given by harmonic polynomials, e.g. for polynomials of order 3 in two dimensions the space is given by
 
 .. math::
 
     \begin{align*} \begin{split}
-    \mathbb{T}^p(K):=\text{span}\{1,x,y,xy,x^2-y^2,x^3-3y^2x,y^3-3x^2y\}
+    \mathbb{T}^3(K)=\text{span}\{1,x,y,xy,x^2-y^2,x^3-3y^2x,y^3-3x^2y\}
     \end{split} \end{align*}
 
 The local degrees of freedom are reduced from the dimension of the full polynomials, given by :math:`\big(\begin{smallmatrix}p+n\\p\end{smallmatrix}\big)`, to
@@ -91,7 +114,7 @@ For a given mesh we construct the Trefftz finite element space as
 .. math::
 
     \begin{align*} \begin{split}
-    \mathbb{T}^p(\Th):=\prod_{K\in\Th} \mathbb{T}^p(\Th)
+    \mathbb{T}^p(\Th):=\prod_{K\in\Th} \mathbb{T}^p(K)
     \end{split} \end{align*}
 
 in NGSolve this is done by
@@ -212,7 +235,7 @@ As an exact solution we used
 
 .. math::
 
-    u(x,y) = \exp(x)\sin(y), \quad \text{in} \quad [0,1]^2
+    u(x,y) = \exp(x)\sin(y) \quad \text{in} \quad [0,1]^2.
 
 .. jupyter-execute::
 
@@ -225,7 +248,22 @@ As an exact solution we used
     Draw(gfu)
 
 
+How to get started?
+----------------------------------------
 
+- If you want to see more implementations using Trefftz-DG methods or use an already implemented Trefftz space, have a look at the `notebooks`_ and the `documentation`_.
+
+- If you are looking to implement a (polynomial) Trefftz space, a good starting point is to have a look at `trefftzspace.hpp <https://github.com/PaulSt/NGSTrefftz/blob/main/src/trefftzfespace.hpp>`_. For Trefftz spaces based on plane waves check out `planewavefe.hpp <https://github.com/PaulSt/NGSTrefftz/blob/main/src/planewavefe.hpp>`_.
+
+- Before undertaking the implementation of a new Trefftz space in C++, or especially if your PDE does not have a easy-to-construct Trefftz space, consider checking out the `embedded Trefftz method`_.
+
+If you are implementing a new method using NGSTrefftz consider `contributing`_.
+
+.. _notebooks: notebooks/index.html
+.. _embedded Trefftz method: notebooks/embTrefftz.html
+
+
+.. _documentation: 
 Documentation
 ========================================
 
@@ -259,7 +297,7 @@ It can be applied to very general cases, including inhomogeneous sources and non
 \newcommand{\inner}[1]{\langle #1 \rangle}
 \DeclareMathOperator\Ker{ker}`
 
-Specifically, for an operator :math:`\calL` we are looking to find a basis for its kernel over the space of polynomails. We call this projectoin :math:`\bT`
+Specifically, for an operator :math:`\calL` we are looking to find a basis for its kernel over the space of polynomails. We call this projection :math:`\bT`
 Then we can solve the reduced problem: Find :math:`\bu_\IT` so that 
 
 .. math::
@@ -288,21 +326,6 @@ The solver class returned by :code:`TWave` is used to set initial and boundary c
    .. automethod:: SetBoundaryCF
 
 
-How to get started?
-----------------------------------------
-
-- If you want to see more implementations using Trefftz-DG methods or use an already implemented Trefftz space, have a look at the `notebooks`_.
-
-- If you are looking to implement a (polynomial) Trefftz space, a good starting point is to have a look at `trefftzspace.hpp <https://github.com/PaulSt/NGSTrefftz/blob/main/src/trefftzfespace.hpp>`_. For Trefftz spaces based on plane waves check out `planewavefe.hpp <https://github.com/PaulSt/NGSTrefftz/blob/main/src/planewavefe.hpp>`_.
-
-- Before undertaking the implementation of a new Trefftz space in C++, or especially if your PDE does not have a easy-to-construct Trefftz space, consider checking out the `embedded Trefftz method`_.
-
-If you are implementing a new method using NGSTrefftz consider `contributing`_.
-
-.. _notebooks: notebooks/index.html
-.. _embedded Trefftz method: notebooks/embTrefftz.html
-
-
 .. _contributing: 
 .. mdinclude:: ../CONTRIBUTING.md
 
@@ -310,10 +333,14 @@ If you are implementing a new method using NGSTrefftz consider `contributing`_.
 NGSTrefftz Notebooks
 ========================================
 
+Take a look at the `notebooks`_! 
+You can run them online `here`_. 
+
+.. _here: https://mybinder.org/v2/gh/PaulSt/NGSTrefftz/HEAD?filepath=doc%2Fnotebooks%2Findex.ipynb
+
 .. toctree::
    :maxdepth: 1
 
-   notebooks/index.ipynb
    notebooks/laplace.ipynb
    notebooks/helmholtz.ipynb
    notebooks/twave.ipynb

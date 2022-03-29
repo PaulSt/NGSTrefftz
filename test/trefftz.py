@@ -332,7 +332,6 @@ def testhelmtrefftz(order,mesh):
     fes2 = trefftzfespace(mesh,order=order,eq="helmholtzconj",complex=True,dgjumps=True)
     a,f = dghelm(fes,fes2,bndc,omega)
     gfu = GridFunction(fes)
-    gfu.Set(exact)
     with TaskManager():
         gfu.vec.data = a.mat.Inverse() * f.vec
     terror = sqrt(Integrate((gfu-exact)*Conj(gfu-exact), mesh).real)
