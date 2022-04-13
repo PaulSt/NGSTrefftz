@@ -1,6 +1,5 @@
 #include "embtrefftz.hpp"
 #include <bla.hpp>
-
 namespace ngbla
 {
 
@@ -93,7 +92,8 @@ namespace ngcomp
   std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
   EmbTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
               shared_ptr<SumOfIntegrals> lf, double eps,
-              shared_ptr<FESpace> test_fes, int tndof)
+              shared_ptr<FESpace> test_fes, int tndof,
+              std::map<std::string, Vector<SCAL>> *stats)
   {
     static Timer svdtt ("svdtrefftz");
     RegionTimer reg (svdtt);
@@ -131,6 +131,8 @@ namespace ngcomp
 
     std::once_flag init_flag;
     Table<int> table, table2;
+
+    Array<Vector<SCAL>> singular_values (ma->GetNE ());
 
     ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
       HeapReset hr (mlh);
@@ -195,6 +197,9 @@ namespace ngcomp
       FlatMatrix<SCAL, ColMajor> U (test_dofs.Size (), mlh),
           Vt (dofs.Size (), mlh);
       ngbla::GetSVD<SCAL> (elmat, U, Vt);
+
+      if (stats)
+        singular_values[ei.Nr ()] = Vector<SCAL> (elmat.Diag ());
 
       // assumption here: all (active) elements have the same number of (weak)
       // Trefftz fcts.
@@ -279,25 +284,45 @@ namespace ngcomp
         }
     });
 
+    if (stats)
+      {
+        // Singular value avg
+        Vector<SCAL> sing_val_avg (singular_values[0].Size ());
+        sing_val_avg = 0;
+        for (auto i : singular_values)
+          sing_val_avg += i;
+        sing_val_avg /= ma->GetNE ();
+        (*stats)["singavg"] = Vector<SCAL> (sing_val_avg);
+
+        // Singular value variance
+        Vector<SCAL> sing_val_var (singular_values[0].Size ());
+        sing_val_var = 0;
+        for (auto i : singular_values)
+          for (int j = 0; j < singular_values[0].Size (); j++)
+            sing_val_var[j] += pow (i[j] - sing_val_avg[j], 2);
+        sing_val_var /= ma->GetNE ();
+        for (auto &i : sing_val_var)
+          i = sqrt (i);
+        (*stats)["singvar"] = Vector<SCAL> (sing_val_var);
+      }
+
     return std::make_tuple (P, make_shared<VVector<SCAL>> (lfvec));
   }
 
   template std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
   EmbTrefftz<double> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                       shared_ptr<SumOfIntegrals> lf, double eps,
-                      shared_ptr<FESpace> test_fes, int tndof);
+                      shared_ptr<FESpace> test_fes, int tndof,
+                      std::map<std::string, Vector<double>> *stats);
   template std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
   EmbTrefftz<Complex> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                        shared_ptr<SumOfIntegrals> lf, double eps,
-                       shared_ptr<FESpace> test_fes, int tndof);
+                       shared_ptr<FESpace> test_fes, int tndof,
+                       std::map<std::string, Vector<Complex>> *stats);
 
 }
 
 #ifdef NGS_PYTHON
-//#include <python_ngstd.hpp>
-//#include <comp.hpp>
-//#include <fem.hpp>
-// using namespace ngfem;
 void ExportEmbTrefftz (py::module m)
 {
   m.def (
@@ -305,12 +330,33 @@ void ExportEmbTrefftz (py::module m)
       [] (shared_ptr<ngfem::SumOfIntegrals> bf,
           shared_ptr<ngcomp::FESpace> fes,
           shared_ptr<ngfem::SumOfIntegrals> lf, double eps,
-          shared_ptr<ngcomp::FESpace> test_fes, int tndof) {
-        if (fes->IsComplex ())
-          return ngcomp::EmbTrefftz<Complex> (bf, fes, lf, eps, test_fes,
-                                              tndof);
+          shared_ptr<ngcomp::FESpace> test_fes, int tndof,
+          py::object stats_dict) {
+        py::extract<py::dict> stats_ (stats_dict);
+        shared_ptr<py::dict> pystats = nullptr;
+        if (stats_.check ())
+          pystats = make_shared<py::dict> (stats_ ());
 
-        return ngcomp::EmbTrefftz<double> (bf, fes, lf, eps, test_fes, tndof);
+        if (fes->IsComplex ())
+          {
+            std::map<std::string, ngcomp::Vector<Complex>> stats;
+            auto P = ngcomp::EmbTrefftz<Complex> (bf, fes, lf, eps, test_fes,
+                                                  tndof, &stats);
+            if (pystats)
+              for (auto const &x : stats)
+                (*pystats)[py::cast (x.first)] = py::cast (x.second);
+            return P;
+          }
+        else
+          {
+            std::map<std::string, ngcomp::Vector<double>> stats;
+            auto P = ngcomp::EmbTrefftz<double> (bf, fes, lf, eps, test_fes,
+                                                 tndof, &stats);
+            if (pystats)
+              for (auto const &x : stats)
+                (*pystats)[py::cast (x.first)] = py::cast (x.second);
+            return P;
+          }
       },
       R"mydelimiter(
                 Computes the Trefftz embedding and particular solution.
@@ -321,31 +367,53 @@ void ExportEmbTrefftz (py::module m)
                 :param eps: Threshold for singular values to be considered zero, defaults to 0
                 :param test_fes: Used if test space differs from trial space, defaults to None
                 :param tndof: If known, local ndofs of the Trefftz space, also eps and/or test_fes are used to find the dimension, defaults to 0
+                :param stats_dict: A given dictionary will be filles with stats on the singular values.
 
                 :return: [Trefftz embeddint, particular solution]
             )mydelimiter",
       py::arg ("bf"), py::arg ("fes"), py::arg ("lf"), py::arg ("eps") = 0,
-      py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0);
+      py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0,
+      py::arg ("stats_dict") = py::none ());
 
   m.def (
       "TrefftzEmbedding",
       [] (shared_ptr<ngfem::SumOfIntegrals> bf,
           shared_ptr<ngcomp::FESpace> fes, double eps,
-          shared_ptr<ngcomp::FESpace> test_fes,
-          int tndof) -> shared_ptr<ngcomp::BaseMatrix> {
-        if (fes->IsComplex ())
-          return std::get<0> (ngcomp::EmbTrefftz<Complex> (
-              bf, fes, nullptr, eps, test_fes, tndof));
+          shared_ptr<ngcomp::FESpace> test_fes, int tndof,
+          py::object stats_dict) -> shared_ptr<ngcomp::BaseMatrix> {
+        py::extract<py::dict> stats_ (stats_dict);
+        shared_ptr<py::dict> pystats = nullptr;
+        if (stats_.check ())
+          pystats = make_shared<py::dict> (stats_ ());
 
-        return std::get<0> (ngcomp::EmbTrefftz<double> (bf, fes, nullptr, eps,
-                                                        test_fes, tndof));
+        if (fes->IsComplex ())
+          {
+            std::map<std::string, ngcomp::Vector<Complex>> stats;
+            auto P = std::get<0> (ngcomp::EmbTrefftz<Complex> (
+                bf, fes, nullptr, eps, test_fes, tndof, &stats));
+            if (pystats)
+              for (auto const &x : stats)
+                (*pystats)[py::cast (x.first)] = py::cast (x.second);
+            return P;
+          }
+        else
+          {
+            std::map<std::string, ngcomp::Vector<double>> stats;
+            auto P = std::get<0> (ngcomp::EmbTrefftz<double> (
+                bf, fes, nullptr, eps, test_fes, tndof, &stats));
+            if (pystats)
+              for (auto const &x : stats)
+                (*pystats)[py::cast (x.first)] = py::cast (x.second);
+            return P;
+          }
       },
       R"mydelimiter(
                 Used without the parameter lf as input the function only returns the Trefftz embedding.
 
-                :return: Trefftz embeddint
+                :return: Trefftz embedding
             )mydelimiter",
       py::arg ("bf"), py::arg ("fes"), py::arg ("eps") = 0,
-      py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0);
+      py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0,
+      py::arg ("stats_dict") = py::none ());
 }
 #endif // NGS_PYTHON
