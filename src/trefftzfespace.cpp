@@ -31,6 +31,8 @@ namespace ngcomp
       local_ndof = BinCoeff (D - 1 + order, order)
                    + BinCoeff (D - 1 + order - 1, order - 1)
                    - (eqtyp == "fowave_reduced");
+    else if (eqtyp == "heat")
+      local_ndof = BinCoeff (D - 1 + order, order);
     else if (eqtyp == "laplace")
       local_ndof = BinCoeff (D - 1 + order, order)
                    + BinCoeff (D - 1 + order - 1, order - 1);
@@ -39,6 +41,10 @@ namespace ngcomp
     else
       local_ndof = BinCoeff (D - 1 + order, order)
                    + BinCoeff (D - 1 + order - 1, order - 1);
+
+    if (eqtyp == "heat")
+      usescale = 0;
+
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
 
@@ -121,6 +127,10 @@ namespace ngcomp
                 basismats[d] = FOTWaveBasis<1>::Basis (order, d);
               basis = new FOQTWaveBasis<1>;
             }
+          else if (eqtyp == "heat")
+            {
+              basismat = THeatBasis<1>::Basis (order, 0);
+            }
           else
             {
               basismat = TWaveBasis<1>::Basis (order, basistype,
@@ -139,6 +149,10 @@ namespace ngcomp
               for (int d = 0; d < D; d++)
                 basismats[d] = FOTWaveBasis<2>::Basis (order, d);
               basis = new FOQTWaveBasis<2>;
+            }
+          else if (eqtyp == "heat")
+            {
+              basismat = THeatBasis<2>::Basis (order, 0);
             }
           else
             {
@@ -519,6 +533,57 @@ namespace ngcomp
   template class TWaveBasis<1>;
   template class TWaveBasis<2>;
   template class TWaveBasis<3>;
+
+  template <int D>
+  CSR THeatBasis<D>::Basis (int ord, int basistype, int fowave)
+  {
+    CSR tb;
+    const int ndof = BinCoeff (D + ord, ord);
+    const int npoly = BinCoeff (D + 1 + ord, ord);
+    Matrix<> trefftzbasis (ndof, npoly);
+    trefftzbasis = 0;
+    for (int basis = 0; basis < ndof; basis++)
+      {
+        int tracker = 0;
+        TraversePol<D + 1> (ord, [&] (int i, Vec<D + 1, int> coeff) {
+          if (tracker >= 0)
+            tracker++;
+          int indexmap = PolBasis::IndexMap2<D> (coeff, ord);
+          int k = coeff (D);
+          int sum = 0;
+          for (int m = 0; m <= D; m++)
+            sum += coeff[m];
+          if (k == 0)
+            {
+              if (tracker > basis)
+                {
+                  trefftzbasis (basis, indexmap) = 1;
+                  tracker = -1;
+                }
+            }
+          else if (coeff (D) > 0 && sum != ord)
+            {
+              for (int m = 0; m < D; m++) // rekursive sum
+                {
+                  Vec<D + 1, int> get_coeff = coeff;
+                  get_coeff[D] = get_coeff[D] - 1;
+                  get_coeff[m] = get_coeff[m] + 2;
+                  trefftzbasis (basis, indexmap)
+                      += (coeff (m) + 1) * (coeff (m) + 2)
+                         * trefftzbasis (
+                             basis, PolBasis::IndexMap2<D> (get_coeff, ord));
+                }
+              trefftzbasis (basis, indexmap) *= 1.0 / k;
+            }
+        });
+      }
+    MatToCSR (trefftzbasis.Rows (fowave, ndof), tb);
+    return tb;
+  }
+
+  template class THeatBasis<1>;
+  template class THeatBasis<2>;
+  template class THeatBasis<3>;
 
   template <int D> CSR TLapBasis<D>::Basis (int ord, int basistype)
   {
