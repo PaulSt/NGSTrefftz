@@ -8,6 +8,8 @@ from ngsolve.TensorProductTools import *
 from ngsolve import *
 from embt import *
 import time
+ngsglobals.msg_level=0
+
 
 def DGwaveeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alpha=0.5,beta=0.5,gamma=1,mu=0,BB=1):
     D = fes.mesh.dim - 1
@@ -370,7 +372,7 @@ def Cartsolve2D(fes,c,fullsys=False,inputsol=None):
     >>> mesh = CartSquare(N,c*N)
 
     using Trefftz basis
-    >>> fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True, basistype=0)
+    >>> fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True)
     >>> Cartsolve2D(fes,c) # doctest:+ELLIPSIS
     [17.0, ..., ...e-09, ...e-08]
 
@@ -428,7 +430,7 @@ def TestQTrefftz(order, mesh, t_step,qtrefftz=1):
     v0=bdd[2]
     sig0=-bdd[1]
 
-    fes = trefftzfespace(mesh, order=order, dgjumps=True, basistype=0, useshift=True, eq="qtwave")
+    fes = trefftzfespace(mesh, order=order, dgjumps=True, eq="qtwave")
     fes.SetWavespeed(wavespeed)
     [a,f] = DGwaveeqsys(fes,U0,v0,sig0,wavespeed,gD,True,False,alpha=0.5,beta=0.5,gamma=1,mu=0.5)
     gfu = GridFunction(fes, name="uDG")
@@ -471,7 +473,7 @@ def TestBessel(order, mesh, t_step):
     v0=bdd[2]
     sig0=-bdd[1]
 
-    fes = trefftzfespace(mesh, order=order, dgjumps=True, basistype=0, useshift=True,usescale=False, eq="qtwave")
+    fes = trefftzfespace(mesh, order=order, dgjumps=True, eq="qtwave")
     fes.SetWavespeed(wavespeed,BB)
     [a,f] = DGwaveeqsys(fes,U0,v0,sig0,wavespeed,gD,True,False,alpha=0,beta=0,gamma=1,mu=0,BB=BB)
     gfu = GridFunction(fes, name="uDG")
