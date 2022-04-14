@@ -200,9 +200,9 @@ jobs:
              sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
              python3 -c "import sys; print(sys.path)"
              python3 -c "import ngstrefftz"
-             ln -s /usr/lib/python3/dist-packages/ngsolve /opt/hostedtoolcache/Python/3.10.2/x64/lib/python3.10/site-packages/
-             ln -s /usr/lib/python3/dist-packages/ngstrefftz /opt/hostedtoolcache/Python/3.10.2/x64/lib/python3.10/site-packages/
-             ln -s /usr/lib/python3/dist-packages/ngstents /opt/hostedtoolcache/Python/3.10.2/x64/lib/python3.10/site-packages/
+             #ln -s /usr/lib/python3/dist-packages/ngsolve /opt/hostedtoolcache/Python/3.10.2/x64/lib/python3.10/site-packages/
+             #ln -s /usr/lib/python3/dist-packages/ngstrefftz /opt/hostedtoolcache/Python/3.10.2/x64/lib/python3.10/site-packages/
+             #ln -s /usr/lib/python3/dist-packages/ngstents /opt/hostedtoolcache/Python/3.10.2/x64/lib/python3.10/site-packages/
       - name: jupyter stuff
         run: |
              pip install jupyter_contrib_nbextensions 

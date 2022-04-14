@@ -40,7 +40,7 @@ namespace ngcomp
     string eqtyp = "wave";
     int useshift = 1;
     int usescale = 1;
-    int basistype;
+    int basistype = 0;
     shared_ptr<CoefficientFunction> wavespeedcf = nullptr;
     Matrix<shared_ptr<CoefficientFunction>> GGder;
     Matrix<shared_ptr<CoefficientFunction>> BBder;
@@ -95,6 +95,13 @@ namespace ngcomp
   {
   public:
     TWaveBasis () { ; }
+    static CSR Basis (int ord, int basistype = 0, int fowave = 0);
+  };
+
+  template <int D> class THeatBasis : public PolBasis
+  {
+  public:
+    THeatBasis () { ; }
     static CSR Basis (int ord, int basistype = 0, int fowave = 0);
   };
 

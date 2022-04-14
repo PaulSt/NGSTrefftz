@@ -481,6 +481,67 @@ def TestBessel(order, mesh, t_step):
     return dgerror
 
 
+
+########################################################################
+# Heateq
+########################################################################
+import ngsolve.meshes as ngsm
+def TestHeat():
+    """
+    Solve heat equation using Trefftz fcts
+    >>> TestHeat() # doctest:+ELLIPSIS
+    4...e-11
+    """
+    mesh = ngsm.MakeStructured2DMesh(nx=32, ny=32, periodic_x=False)  #y is time component
+
+    order = 4
+    # fes = L2(mesh, order=order, dgjumps=True)
+    fes = trefftzfespace(mesh, order=2*order, dgjumps=True, eq="heat")
+    u, v = fes.TnT()
+
+    eps =  1
+    b = CoefficientFunction((0, 1))
+    ubnd = exp(y)*exp(x)
+    lambd = 10
+    h = specialcf.mesh_size
+    n = specialcf.normal(mesh.dim)
+
+    space_jump_u = (u-u.Other())
+    space_jump_v = (v-v.Other())
+    space_mean_dudn = 0.5* (grad(u)[0]+grad(u.Other())[0])*n[0]
+    space_mean_dvdn = 0.5* (grad(v)[0]+grad(v.Other())[0])*n[0]
+
+    space_diffusion = grad(u)[0]*grad(v)[0] * dx \
+        + lambd*(order*n[0])**2/h*space_jump_u*space_jump_v*dx(skeleton=True) \
+        + (-space_mean_dudn*space_jump_v - space_mean_dvdn*space_jump_u)*dx(skeleton=True) \
+        + (-grad(u)[0]*n[0] * v -grad(v)[0]*n[0] * u)*ds(definedon=mesh.Boundaries("left|right"),skeleton=True) \
+        + lambd*(order*n[0])**2/h*u*v*ds(definedon=mesh.Boundaries("left|right"),skeleton=True)
+
+    space_time_convection = -b * u * grad(v)*dx \
+        + b*n*IfPos(b*n, u, u.Other()) * (v-v.Other()) * dx(skeleton=True) \
+        + b*n*u*v * ds(definedon=mesh.Boundaries("top"), skeleton=True)
+
+    a = BilinearForm(fes, symmetric=False)
+    a += eps * space_diffusion + space_time_convection
+    a.Assemble()
+
+    #f_coef = (ubnd.Diff(y)-eps*ubnd.Diff(x).Diff(x) )
+
+    f = LinearForm(fes)
+    #f += f_coef * v * dx
+    f += -b*n* ubnd * v * ds(definedon=mesh.Boundaries("bottom"),skeleton=True)
+    f += -eps*grad(v)[0]*n[0] * ubnd * ds(definedon=mesh.Boundaries("left|right"),skeleton=True)
+    f += eps*lambd*(order*n[0])**2/h*ubnd*v*ds(definedon=mesh.Boundaries("left|right"),skeleton=True)
+    f.Assemble()
+
+    gfu = GridFunction(fes)
+    gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs(), inverse="umfpack") * f.vec
+
+    return sqrt(Integrate((gfu-ubnd)**2, mesh))
+
+
+
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
