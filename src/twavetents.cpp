@@ -382,21 +382,7 @@ namespace ngcomp
     int nsimd = SIMD<double>::Size ();
     size_t snip = sir.Size () * nsimd;
 
-    Array<int> fnums;
-    Array<int> orient;
-    switch (D)
-      {
-      case 1:
-        fnums.Append (fnr);
-        orient.Append (1);
-        break;
-      case 2:
-        ma->GetElEdges (elnums[0], fnums, orient);
-        break;
-      case 3:
-        ma->GetElFaces (elnums[0], fnums, orient);
-        break;
-      }
+    // Array<int> fnums;
 
     // get vertices of tent face
     // Mat<D+1> vert = TentFaceVerts(tent, surfel, 0);
@@ -418,7 +404,31 @@ namespace ngcomp
 
     // build normal vector
     Vec<D + 1> n;
-    n = -orient[fnums.Pos (fnr)] * TentFaceNormal (vert, 0);
+    int orient = FacetOrientation (ma, fnr, elnums[0]);
+    n = orient * TentFaceNormal (vert, 0);
+
+    SIMD_MappedIntegrationRule<D, D> smir_fix (
+        sir, ma->GetTrafo (elnums[0], slh), slh);
+    const ELEMENT_TYPE eltyp
+        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
+    SIMD<MappedIntegrationPoint<D, D>> smip = smir_fix[0];
+
+    IntegrationRule ir (eltyp, order * 2);
+    MappedIntegrationRule<D, D> mir_fix (ir, ma->GetTrafo (elnums[0], slh),
+                                         slh);
+    auto fnums = ma->GetElFacets (elnums[0]);
+    mir_fix.ComputeNormalsAndMeasure (eltyp, fnums.Pos (fnr));
+    auto NV = mir_fix[0].GetNV ();
+
+    // MappedIntegrationPoint<D,D> mip = smip[0];
+    // smir_fix[0].Get<0>().ComputeNormalsAndMeasure (eltyp, fnr);
+    cout << fnr << endl;
+    cout << fnums << endl;
+    cout << fnums.Pos (fnr) << endl;
+    cout << "my normal" << n << endl;
+    // auto NV = smir_fix[0][0].GetNV();
+    cout << "ngs normal" << NV << endl << endl;
+
     if (D == 1) // D=1 special case
       {
         n[0] = sgn_nozero<int> (tent->vertex - tent->nbv[0]);
@@ -487,6 +497,42 @@ namespace ngcomp
             .Rows (in * nbasis, (in + 1) * nbasis)
             += *bbmat[el / 2] * (*bdbmat[el]);
       }
+  }
+
+  template <int D>
+  int TWaveTents<D>::FacetOrientation (shared_ptr<MeshAccess> ma, int fnr,
+                                       int elnr)
+  {
+    // orientation of the facet fnr wrt. the element elnr, return -1 or +1
+    int orient = 1;
+    Array<int> sel_verts (D);
+    ma->GetFacetPNums (fnr, sel_verts);
+    auto elv = ma->GetElVertices (ElementId (elnr));
+    if (D == 1)
+      {
+      }
+    if (D == 2)
+      {
+        if ((elv.Pos (sel_verts[0]) - elv.Pos (sel_verts[1])) == 1
+            || (elv.Pos (sel_verts[0]) - elv.Pos (sel_verts[1])) == -2)
+          orient = 1;
+        else
+          orient = -1;
+      }
+    if (D == 3)
+      {
+        // TODO
+        // cout << "facet" << fnr << endl;
+        // cout << "elements:" << endl;
+        // cout << "orientation" << endl;
+        // cout << orient << endl;
+        ////auto bla = ma->GetEdgePNums(fnr);
+        ////cout << "edge pnums:" << endl << bla << endl;
+        // cout << "face vert:" << endl << sel_verts << endl;
+        // cout << "el vert:" << endl <<
+        // ma->GetElVertices(ElementId(elnums[0])) << endl; cout << endl;
+      }
+    return orient;
   }
 
   template <int D>

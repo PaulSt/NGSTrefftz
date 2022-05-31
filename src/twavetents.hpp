@@ -75,6 +75,8 @@ namespace ngcomp
     inline int MakeMacroEl (const Array<int> &tentel,
                             std::unordered_map<int, int> &macroel);
 
+    int FacetOrientation (shared_ptr<MeshAccess> ma, int fnr, int elnr);
+
     void GetFacetSurfaceElement (shared_ptr<MeshAccess> ma, int fnr,
                                  Array<int> &selnums);
 
