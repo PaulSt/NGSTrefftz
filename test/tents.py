@@ -137,6 +137,13 @@ def TestQTrefftz(order, initmesh, t_step,qtrefftz=1):
     ...e-06
 
     Compare to standard Trefftz basis
+    >>> for h in [4,8,16,32]:
+    ...        initmesh = Mesh(SegMesh(h,0,math.pi))
+    ...        TestQTrefftz(order,initmesh,t_step,None) # doctest:+ELLIPSIS
+    0.2...
+    0.05...
+    0.01...
+    0.003...
     >>> initmesh = Mesh(unit_square.GenerateMesh(maxh = 0.5))
     >>> for h in range(4):
     ...        TestQTrefftz(order,initmesh,t_step,None) # doctest:+ELLIPSIS
