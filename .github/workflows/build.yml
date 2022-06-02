@@ -64,6 +64,8 @@ jobs:
              echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$NETGENDIR" >> $GITHUB_ENV
              echo "DYLD_FRAMEWORK_PATH=$DYLD_FRAMEWORK_PATH:$NETGENDIR/../Frameworks" >> $GITHUB_ENV
              echo "$NETGENDIR" >> $GITHUB_PATH
+      - name: ngsolve found?
+        run:  python3 -c "import ngsolve"
       - uses: actions/checkout@v2
         with:
           submodules: 'True'
