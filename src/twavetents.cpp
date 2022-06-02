@@ -25,8 +25,6 @@ namespace ngcomp
     // int nthreads = (task_manager) ? task_manager->GetNumThreads() : 1;
     LocalHeap lh (1000 * 1000 * 1000, "trefftz tents", 1);
 
-    const ELEMENT_TYPE eltyp
-        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     SIMD_IntegrationRule sir (eltyp, order * 2);
     // const int ndomains = ma->GetNDomains();
     double max_wavespeed = wavespeed[0];
@@ -142,10 +140,7 @@ namespace ngcomp
     static Timer tint3 ("tent top bilinearform");
 
     HeapReset hr (slh);
-    const ELEMENT_TYPE eltyp
-        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     // double wavespeed = tel.GetWavespeed();
-    int nsimd = SIMD<double>::Size ();
     size_t snip = sir.Size () * nsimd;
     ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
 
@@ -275,7 +270,6 @@ namespace ngcomp
                                      SliceMatrix<> elmat, SliceVector<> elvec)
   {
     HeapReset hr (slh);
-    int nsimd = SIMD<double>::Size ();
     size_t snip = sir.Size () * nsimd;
 
     // get vertices of tent face
@@ -379,7 +373,7 @@ namespace ngcomp
                                   SIMD_IntegrationRule &sir, LocalHeap &slh,
                                   SliceMatrix<> elmat, SliceVector<> elvec)
   {
-    int nsimd = SIMD<double>::Size ();
+    HeapReset hr (slh);
     size_t snip = sir.Size () * nsimd;
 
     // Array<int> fnums;
@@ -403,8 +397,6 @@ namespace ngcomp
       }
 
     // build normal vector
-    const ELEMENT_TYPE eltyp
-        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     IntegrationRule ir (eltyp, order * 2);
     MappedIntegrationRule<D, D> mir_fix (ir, ma->GetTrafo (elnums[0], slh),
                                          slh);
@@ -485,9 +477,6 @@ namespace ngcomp
                                       SliceMatrix<SIMD<double>> simddshapes)
   {
     HeapReset hr (slh);
-    const ELEMENT_TYPE eltyp
-        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
-    int nsimd = SIMD<double>::Size ();
     size_t snip = sir.Size () * nsimd;
     ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
 
@@ -666,10 +655,7 @@ namespace ngcomp
                                          double time)
   {
     LocalHeap lh (1000 * 1000 * 1000, "make wavefront", 1);
-    const ELEMENT_TYPE eltyp
-        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     SIMD_IntegrationRule sir (eltyp, order * 2);
-    int nsimd = SIMD<double>::Size ();
     size_t snip = sir.Size () * nsimd;
     Matrix<> wf (ma->GetNE (), snip * cf->Dimension ());
     for (size_t elnr = 0; elnr < ma->GetNE (); elnr++)
@@ -701,10 +687,7 @@ namespace ngcomp
   {
     LocalHeap lh (1000 * 1000 * 1000, "error", 1);
     double error = 0;
-    const ELEMENT_TYPE eltyp
-        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     SIMD_IntegrationRule sir (eltyp, order * 2);
-    int nsimd = SIMD<double>::Size ();
     size_t snip = sir.Size () * nsimd;
     for (size_t elnr = 0; elnr < ma->GetNE (); elnr++)
       {
@@ -740,10 +723,7 @@ namespace ngcomp
   {
     LocalHeap lh (1000 * 1000 * 1000, "l2error", 1);
     double l2error = 0;
-    const ELEMENT_TYPE eltyp
-        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     SIMD_IntegrationRule sir (eltyp, order * 2);
-    int nsimd = SIMD<double>::Size ();
     size_t snip = sir.Size () * nsimd;
     for (size_t elnr = 0; elnr < ma->GetNE (); elnr++)
       {
@@ -764,10 +744,7 @@ namespace ngcomp
   {
     double energy = 0;
     LocalHeap lh (1000 * 1000 * 1000, "energy", 1);
-    const ELEMENT_TYPE eltyp
-        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
     SIMD_IntegrationRule sir (eltyp, order * 2);
-    int nsimd = SIMD<double>::Size ();
     size_t snip = sir.Size () * nsimd;
     for (size_t elnr = 0; elnr < ma->GetNE (); elnr++)
       {
@@ -911,9 +888,6 @@ namespace ngcomp
     LocalHeap lh (1000 * 1000 * 1000, "QT tents", 1);
 
     shared_ptr<MeshAccess> ma = this->ma;
-    const ELEMENT_TYPE eltyp
-        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
-    const int nsimd = SIMD<double>::Size ();
     SIMD_IntegrationRule sir (eltyp, this->order * 2);
 
     QTWaveBasis<D> basis;
@@ -985,8 +959,8 @@ namespace ngcomp
               // if(tent->nbtime[elnr]==(part<0?tent->tbot:tent->ttop))
               // continue;
               HeapReset hr (slh);
-              const ELEMENT_TYPE eltyp = (D == 2) ? ET_TET : ET_TRIG;
-              SIMD_IntegrationRule vsir (eltyp, this->order * 2);
+              const ELEMENT_TYPE vol_eltyp = (D == 2) ? ET_TET : ET_TRIG;
+              SIMD_IntegrationRule vsir (vol_eltyp, this->order * 2);
 
               Vec<D + 1> shift;
               shift.Range (0, D) = ma->GetPoint<D> (tent->vertex);
