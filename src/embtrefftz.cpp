@@ -133,6 +133,7 @@ namespace ngcomp
     Table<int> table, table2;
 
     Array<Vector<SCAL>> singular_values (ma->GetNE ());
+    size_t active_elements = 0;
 
     ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
       HeapReset hr (mlh);
@@ -151,6 +152,7 @@ namespace ngcomp
         }
       if (!definedhere)
         return; // escape lambda
+      active_elements += 1;
 
       auto &trafo = ma->GetTrafo (ei, mlh);
 
@@ -287,22 +289,26 @@ namespace ngcomp
     if (stats)
       {
         // Singular value avg
-        Vector<SCAL> sing_val_avg (singular_values[0].Size ());
+        size_t maxdofs = 0;
+        for (auto v : singular_values)
+          maxdofs = max (maxdofs, v.Size ());
+        Vector<SCAL> sing_val_avg (maxdofs);
         sing_val_avg = 0;
-        for (auto i : singular_values)
-          sing_val_avg += i;
-        sing_val_avg /= ma->GetNE ();
+        for (auto v : singular_values)
+          if (v.Size () > 0)
+            sing_val_avg += v;
+        sing_val_avg /= active_elements;
         (*stats)["singavg"] = Vector<SCAL> (sing_val_avg);
 
         // Singular value variance
-        Vector<SCAL> sing_val_var (singular_values[0].Size ());
+        Vector<SCAL> sing_val_var (maxdofs);
         sing_val_var = 0;
-        for (auto i : singular_values)
-          for (int j = 0; j < singular_values[0].Size (); j++)
-            sing_val_var[j] += pow (i[j] - sing_val_avg[j], 2);
-        sing_val_var /= ma->GetNE ();
-        for (auto &i : sing_val_var)
-          i = sqrt (i);
+        for (auto v : singular_values)
+          for (int j = 0; j < v.Size (); j++)
+            sing_val_var[j] += pow (v[j] - sing_val_avg[j], 2);
+        sing_val_var /= active_elements;
+        for (auto &v : sing_val_var)
+          v = sqrt (v);
         (*stats)["singvar"] = Vector<SCAL> (sing_val_var);
       }
 
@@ -367,7 +373,7 @@ void ExportEmbTrefftz (py::module m)
                 :param eps: Threshold for singular values to be considered zero, defaults to 0
                 :param test_fes: Used if test space differs from trial space, defaults to None
                 :param tndof: If known, local ndofs of the Trefftz space, also eps and/or test_fes are used to find the dimension, defaults to 0
-                :param stats_dict: A given dictionary will be filles with stats on the singular values.
+                :param stats_dict: Pass a dictionary to fill it with stats on the singular values.
 
                 :return: [Trefftz embeddint, particular solution]
             )mydelimiter",
