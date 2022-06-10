@@ -7,9 +7,9 @@
 #include <h1lofe.hpp>
 #include <regex>
 
-using namespace ngcomp;
 namespace ngfem
 {
+  using namespace ngcomp;
 
   class ClipCoefficientFunction : public CoefficientFunction
   {

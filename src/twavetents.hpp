@@ -35,6 +35,9 @@ namespace ngcomp
     int fosystem = 0;
     double timeshift = 0;
     int nbasis;
+    const int nsimd = SIMD<double>::Size ();
+    static constexpr ELEMENT_TYPE eltyp
+        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
 
     template <typename TFUNC>
     void
@@ -104,8 +107,8 @@ namespace ngcomp
       for (Ngs_Element el : ma->Elements (VOL))
         {
           ElementId ei = ElementId (el);
-          ELEMENT_TYPE eltype = ma->GetElType (ei);
-          IntegrationRule ir (eltype, 0);
+          // ELEMENT_TYPE eltype = ma->GetElType(ei);
+          IntegrationRule ir (eltyp, 0);
           ElementTransformation &trafo = ma->GetTrafo (ei, lh);
           MappedIntegrationPoint<D, D> mip (ir[0], trafo);
           wavespeed[el.Nr ()] = awavespeedcf->Evaluate (mip);
@@ -156,6 +159,9 @@ namespace ngcomp
     Matrix<shared_ptr<CoefficientFunction>> GGder;
     Matrix<shared_ptr<CoefficientFunction>> BBder;
     double TentXdiam (const Tent *tent);
+    const int nsimd = SIMD<double>::Size ();
+    static constexpr ELEMENT_TYPE eltyp
+        = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
 
     using TWaveTents<D>::Solve;
     using TWaveTents<D>::TentFaceVerts;

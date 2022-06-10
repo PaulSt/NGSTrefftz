@@ -4,10 +4,10 @@
 #include <h1lofe.hpp>
 #include <regex>
 #include <multigrid.hpp>
-using namespace ngcomp;
 
 namespace ngfem
 {
+  using namespace ngcomp;
 
   double ClipCoefficientFunction ::Evaluate (
       const BaseMappedIntegrationPoint &ip) const
@@ -206,12 +206,13 @@ namespace ngfem
 
 }
 
-typedef CoefficientFunction CF;
-typedef shared_ptr<CoefficientFunction> spCF;
-
 #ifdef NGS_PYTHON
 void ExportSpecialCoefficientFunction (py::module m)
 {
+  using namespace ngcomp;
+  typedef CoefficientFunction CF;
+  typedef shared_ptr<CoefficientFunction> spCF;
+
   m.def (
       "ClipCoefficientFunction",
       [] (spCF cf_x, int aclipdim,

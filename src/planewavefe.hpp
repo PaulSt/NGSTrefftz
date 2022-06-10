@@ -6,7 +6,6 @@
 
 namespace ngfem
 {
-
   template <int D> class PlaneWaveElement : public ScalarMappedElement<D>
   {
   private:
