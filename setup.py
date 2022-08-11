@@ -15,6 +15,7 @@ from os.path import dirname, isdir, join
 import os
 import re
 import subprocess
+
 def get_version():
     """
     Gets the current version number.
@@ -93,6 +94,11 @@ class CMakeBuild(build_ext):
         cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
                       '-DPYTHON_EXECUTABLE=' + sys.executable,
                       '-DCMAKE_CXX_COMPILER=ngscxx']
+        if 'PYDIR' in os.environ:
+            cmake_args += [f'-DCMAKE_PREFIX_PATH={os.environ["PYDIR"]}/..']
+            cmake_args += [f'-DPYTHON_EXECUTABLE={os.environ["PYDIR"]}/python3']
+            cmake_args += [f'-DPYTHON_LIBRARY={os.environ["PYDIR"]}/../lib']
+            cmake_args += [f'-DPYTHON_INCLUDE_DIR={os.environ["PYDIR"]}/../include']
         cfg = 'Debug' if self.debug else 'Release'
         build_args = ['--config', cfg]
         cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
@@ -110,26 +116,35 @@ class CMakeBuild(build_ext):
         # subprocess.check_call(['mkdir', 'ngstents'], cwd=self.build_lib)
         # subprocess.check_call(['mv', '_pytents.so', 'ngstents'], cwd=self.build_lib)
 
+import netgen.version
+import ngsolve
+netgen_name = netgen.config.NETGEN_PYTHON_PACKAGE_NAME
+avx2 = netgen_name.replace('netgen-mesher', '') # keep -avx2 suffix
+name = 'ngstrefftz' + avx2
+install_requires = [ 'ngsolve'+avx2+'>='+ngsolve.__version__ ]
+
+if sys.argv[1] == "sdist":
+    package_data= {"ngstrefftz": ["*"
+                                ,"../test/*"
+                                ,"../external_dependencies/ngstents/*"\
+                                ,"../external_dependencies/ngstents/src/*"\
+                                ,"../external_dependencies/ngstents/py/*"\
+                                ]}
+    name += "-src"
+
 setup(
-    name='ngstrefftz',
+    name=name,
     version=str(get_version()),
     author='Paul Stocker',
     author_email='p.stocker@math.uni-goettingen.de',
     description='NGSTrefftz is an add-on to NGSolve for Trefftz methods.',
     long_description='NGSTrefftz provides a framework to implement Trefftz finite element spaces for NGSolve, with several Trefftz spaces already implemented. Additionally, Trefftz-DG on tent-pitched meshes for the acoustic wave equation is implemented using meshes provided by ngstents. Furthermore, the package includes an implementation of the embedded Trefftz method.',
     url="https://github.com/PaulSt/ngstrefftz",
+    install_requires=install_requires,
     ext_modules=[CMakeExtension('ngstrefftz_py','src')],
     cmdclass=dict(build_ext=CMakeBuild),
     packages=["ngstrefftz"],
     package_dir={"ngstrefftz": "src"},
-    package_data={"ngstrefftz": ["*"
-                                ,"../test/*"
-                                ,"../external_dependencies/ngstents/*"\
-                                ,"../external_dependencies/ngstents/src/*"\
-                                ,"../external_dependencies/ngstents/py/*"\
-                                ]},
     python_requires='>=3.5',
-    # install_requires=[
-       # 'NGSolve>=6.2',
-    # ]
+    package_data=package_data,
 )
