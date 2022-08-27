@@ -2,24 +2,16 @@ FROM ubuntu:latest
 
 WORKDIR /home/app
 
-RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get -y install vim python3 python3-pip python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake git g++ libglu1-mesa-dev libblas-dev liblapack-dev
+RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get -y install vim python3 python3-pip python3-distutils git #python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake g++ libglu1-mesa-dev libblas-dev liblapack-dev
 
-#RUN pip install ngsolve ngstrefftz
+RUN pip install ngsolve 
+RUN pip install ngstrefftz 
 
-RUN apt-get update
-RUN apt-get update
-RUN apt-get install -y software-properties-common
-RUN add-apt-repository universe
-RUN add-apt-repository ppa:ngsolve/nightly -y
-RUN apt-get install ngsolve -y
-
-ENV PYTHONPATH=/usr/lib/python3/dist-packages/
-ENV NETGENDIR=/usr/bin/
+#ENV PYTHONPATH=/usr/lib/python3/dist-packages/
+#ENV NETGENDIR=/usr/bin/
+ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python3.10/site-packages/
 
 RUN git clone --recursive https://github.com/PaulSt/NGSTrefftz /home/app/ngstrefftz
-RUN cmake -B/home/app/ngstrefftz/make -S/home/app/ngstrefftz/src
-RUN make -C/home/app/ngstrefftz/make
-RUN make -C/home/app/ngstrefftz/make install
 
 RUN apt-get install npm nodejs -y
 RUN pip3 install jupyter_contrib_nbextensions
@@ -42,3 +34,12 @@ RUN cd /home/app/ngstrefftz/external_dependencies/ngstents/tentswebgui && ./buil
 RUN cd /home/app/ngstrefftz/external_dependencies/ngstents/tentswebgui && pip3 install .
 RUN jupyter nbextension install --py tentswebgui
 RUN jupyter nbextension enable --py tentswebgui
+
+##RUN pip3 install jupyter
+RUN pip3 install jupyter_contrib_nbextensions
+RUN pip3 install jupyter_nbextensions_configurator
+RUN pip3 install RISE
+RUN pip3 install ipywidgets
+RUN jupyter contrib nbextension install 
+#RUN cd /home/app/ngstents/tentswebgui && pip3 install --user .
+

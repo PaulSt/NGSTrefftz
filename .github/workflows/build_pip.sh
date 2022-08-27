@@ -15,19 +15,19 @@ for pyversion in 38 39 310
 do
     export PYDIR="/opt/python/cp${pyversion}-cp${pyversion}/bin"
     export PATH="$ORIGINAL_PATH:$PYDIR"
-    echo $PYDIR
+    #echo $PYDIR
     #$PYDIR/pip install -U pytest-check numpy wheel scikit-build mkl==2021.* mkl-devel==2021.*
     #$PYDIR/pip install netgen-mesher
     #NETGENDIR=/opt/_internal/cpython-3.9.13/bin
 
     #rm -rf /home/app/ngstrefftz/make
     rm -rf _skbuild
-    pip install ngsolve
+    $PYDIR/pip install ngsolve
 
-    pip wheel -vvv .
+    $PYDIR/pip wheel -vvv .
     auditwheel repair ngstrefftz*.whl
     rm -rf *.whl
-    pip uninstall -y ngsolve
+    $PYDIR/pip uninstall -y ngsolve
     $PYDIR/pip uninstall -y netgen-mesher
 
     # avx2 build:
@@ -40,5 +40,5 @@ do
     $PYDIR/pip uninstall -y netgen-mesher-avx2
 done
 
-pip install -U twine
+$PYDIR/pip install -U twine
 #$PYDIR/twine upload wheelhouse/*manylinux*.whl

@@ -124,13 +124,15 @@ name = 'ngstrefftz' + avx2
 install_requires = [ 'ngsolve'+avx2+'>='+ngsolve.__version__ ]
 
 if sys.argv[1] == "sdist":
-    package_data= {"ngstrefftz": ["*"
+    package_data = {"ngstrefftz": ["*"
                                 ,"../test/*"
                                 ,"../external_dependencies/ngstents/*"\
                                 ,"../external_dependencies/ngstents/src/*"\
                                 ,"../external_dependencies/ngstents/py/*"\
                                 ]}
     name += "-src"
+else:
+    package_data = {}
 
 setup(
     name=name,
