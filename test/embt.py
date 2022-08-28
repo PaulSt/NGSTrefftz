@@ -257,6 +257,84 @@ def testembtrefftzpoi_mixed(fes):
     return sqrt(Integrate((tpgfu-exactpoi)**2, mesh))
 
 
+########################################################################
+# Helmholtz
+########################################################################
+
+def dghelm(fes,fes2,bndc,omega):
+    mesh = fes.mesh
+    order = fes.globalorder
+    n = specialcf.normal(mesh.dim)
+    h = specialcf.mesh_size
+    alpha = 1/(omega*h)
+    beta = omega*h
+    delta = omega*h
+
+    u = fes.TrialFunction()
+    v = fes.TestFunction()
+    if fes2 is not None:
+        v = fes2.TestFunction()
+    jump_u = (u-u.Other())*n
+    jump_v = (v-v.Other())*n
+    jump_du = (grad(u)-grad(u.Other()))*n
+    jump_dv = (grad(v)-grad(v.Other()))*n
+    mean_u = 0.5 * ((u)+(u.Other()))
+    mean_du = 0.5 * (grad(u)+grad(u.Other()))
+    mean_dv = 0.5 * (grad(v)+grad(v.Other()))
+
+    a = BilinearForm(fes)
+    if fes2 is not None:
+        a = BilinearForm(fes,fes2)
+    a += mean_u*(jump_dv) * dx(skeleton=True)
+    a += 1/omega*1j*beta*jump_du*(jump_dv) * dx(skeleton=True)
+    a += -mean_du*(jump_v) * dx(skeleton=True)
+    a += omega*1j*alpha*jump_u*(jump_v) * dx(skeleton=True)
+
+    a += (1-delta)*u*(grad(v))*n * ds(skeleton=True)
+    a += 1/omega*1j*delta*(grad(u)*n)*((grad(v))*n) * ds(skeleton=True)
+    a += -delta*grad(u)*n*(v) * ds(skeleton=True)
+    a += omega*1j*(1-delta)*u*(v) * ds(skeleton=True)
+
+    f = LinearForm(fes)
+    if fes2 is not None:
+        f = LinearForm(fes2)
+    f += 1/omega*1j*delta*bndc*(grad(v))*n*ds(skeleton=True)
+    f += (1-delta)*bndc*(v)*ds(skeleton=True)
+
+    with TaskManager():
+        a.Assemble()
+        f.Assemble()
+    return a,f
+
+def testembtrefftzhelm(fes):
+    """
+    >>> fes = L2(mesh2d, order=order,  dgjumps=True, complex=True)
+    >>> testembtrefftzhelm(fes) # doctest:+ELLIPSIS
+    8...e-10
+    """
+    mesh = fes.mesh
+    omega=1
+    exact = exp(1j*sqrt(0.5)*(x+y))
+    n = specialcf.normal(mesh.dim)
+    bndc = CoefficientFunction((sqrt(0.5)*1j*exact, sqrt(0.5)*1j*exact))*n + 1j*omega*exact
+    # test_fes = L2(mesh2d, order=order-2,  dgjumps=True, complex=True)
+    u=fes.TrialFunction()
+    v=fes.TestFunction()
+    # v=test_fes.TestFunction()
+    op = (-Lap(u))*(Lap(v))*dx#+1j*(-Lap(u)-u)*(Lap(v))*dx
+    op += (-u)*(Lap(v))*dx#+1j*(-Lap(u)-u)*(Lap(v))*dx
+    # op = (-Lap(u)-u)*((v))*dx+1j*(-Lap(u)-u)*((v))*dx
+    with TaskManager():
+        PP = TrefftzEmbedding(op,fes,eps=10**-8)
+        # PP = TrefftzEmbedding(op,fes,test_fes=test_fes)
+    PPT = PP.CreateTranspose()
+    a,f = dghelm(fes,None,bndc,omega)
+    TA = PPT@a.mat@PP
+    TU = TA.Inverse()*(PPT*f.vec)
+    tpgfu = GridFunction(fes)
+    tpgfu.vec.data = PP*TU
+    return sqrt(Integrate(InnerProduct(tpgfu-exact,tpgfu-exact).real, mesh))
+
 
 if __name__ == "__main__":
     import doctest
