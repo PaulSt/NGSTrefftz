@@ -13,7 +13,7 @@ ARG NB_UID=1000
 ENV USER ${NB_USER}
 ENV NB_UID ${NB_UID}
 ENV HOME /home/${NB_USER}
-ENV mv /home/app/ngstrefftz /home/${NB_USER}/
+#ENV mv /home/app/ngstrefftz/* /home/${NB_USER}/
 
 RUN adduser --disabled-password \
     --gecos "Default user" \
@@ -28,6 +28,6 @@ RUN jupyter nbextension enable --user codefolding/main
 RUN jupyter nbextension enable --user --py tentswebgui
 
 WORKDIR /home/${NB_USER}
-#COPY . ${HOME}
+COPY . ${HOME}
 
 CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root" ]  

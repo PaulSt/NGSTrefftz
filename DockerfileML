@@ -1,5 +1,0 @@
-FROM quay.io/pypa/manylinux2014_x86_64
-USER root
-COPY . /home/app/ngstrefftz
-WORKDIR /home/app/ngstrefftz
-#RUN chmod +x build_pip.sh && ./build_pip.sh
