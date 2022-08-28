@@ -86,7 +86,8 @@ release = get_version()
 # extensions = [ "myst_nb" ]
 extensions = ["sphinx.ext.autodoc","sphinx.ext.mathjax","sphinx.ext.todo","sphinx.ext.githubpages",
               "IPython.sphinxext.ipython_console_highlighting", "IPython.sphinxext.ipython_directive",
-              "jupyter_sphinx.execute",
+              # "jupyter_sphinx.execute",
+              "jupyter_sphinx",
               "nbsphinx",
               "m2r2",
               "sphinxemoji.sphinxemoji",
