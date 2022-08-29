@@ -175,7 +175,7 @@ jobs:
           #labels: ${{ steps.meta.outputs.labels }}
 
   docs:
-    needs: [ubuntu]
+    needs: [ubuntu,pypi]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
