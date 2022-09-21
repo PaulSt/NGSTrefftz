@@ -162,28 +162,28 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'paper','env']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
-html_theme_options = {
-    'github_user': 'PaulSt',
-    'github_repo': 'NGSTrefftz',
-    # 'github_banner':True,
-    # 'travis_button':True,
-    'github_button':True,
-    'fixed_sidebar':True,
-    'font_size':10
-    # 'analytics_id': 'G-XXXXXXXXXX',  #  Provided by Google in your dashboard
-    # 'analytics_anonymize_ip': False,
-}
-html_sidebars = {
-   'index': [
-        'about.html',
-        'localtoc.html',
-        # 'relations.html',
-       ],
-   '**': ['about.html',
-          'localtoc.html',
-       ],
-}
+html_theme = 'sphinx_rtd_theme'
+# html_theme_options = {
+    # 'github_user': 'PaulSt',
+    # 'github_repo': 'NGSTrefftz',
+    # # 'github_banner':True,
+    # # 'travis_button':True,
+    # 'github_button':True,
+    # 'fixed_sidebar':True,
+    # 'font_size':10
+    # # 'analytics_id': 'G-XXXXXXXXXX',  #  Provided by Google in your dashboard
+    # # 'analytics_anonymize_ip': False,
+# }
+# html_sidebars = {
+   # 'index': [
+        # 'about.html',
+        # 'localtoc.html',
+        # # 'relations.html',
+       # ],
+   # '**': ['about.html',
+          # 'localtoc.html',
+       # ],
+# }
 
 
 # Add any paths that contain custom static files (such as style sheets) here,
