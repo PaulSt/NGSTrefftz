@@ -1,5 +1,4 @@
 #include "embtrefftz.hpp"
-#include <bla.hpp>
 namespace ngbla
 {
 
@@ -326,11 +325,18 @@ namespace ngcomp
                        shared_ptr<FESpace> test_fes, int tndof,
                        std::map<std::string, Vector<Complex>> *stats);
 
+  static RegisterFESpace<EmbTrefftzFESpace> initembt ("EmbTrefftzFESpace");
 }
 
 #ifdef NGS_PYTHON
 void ExportEmbTrefftz (py::module m)
 {
+
+  ngcomp::ExportFESpace<ngcomp::EmbTrefftzFESpace> (m, "EmbTrefftzFESpace")
+      .def ("SetOp", &ngcomp::EmbTrefftzFESpace::SetOp, py::arg ("bf"),
+            py::arg ("fes"), py::arg ("eps") = 0,
+            py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0);
+
   m.def (
       "TrefftzEmbedding",
       [] (shared_ptr<ngfem::SumOfIntegrals> bf,
