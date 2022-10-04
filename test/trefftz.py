@@ -199,6 +199,7 @@ def DGnormerror(fes,uh,gradtruesol,c,alpha,beta,BB=1):
     return sqrt(norm)
 
 
+
 import netgen.meshing as ngm
 def CartSquare(N,t_steps,xshift=0,bndc="dirichlet"):
 	ngmesh = ngm.Mesh()
@@ -494,16 +495,18 @@ def TestHeat():
     >>> TestHeat() # doctest:+ELLIPSIS
     4...e-11
     """
-    mesh = ngsm.MakeStructured2DMesh(nx=32, ny=32, periodic_x=False)  #y is time component
+    mesh = ngsm.MakeStructured2DMesh(nx=32, ny=32, periodic_x=False)  
+    diffusion_coefficient = 10#00
 
     order = 4
-    # fes = L2(mesh, order=order, dgjumps=True)
-    fes = trefftzfespace(mesh, order=2*order, dgjumps=True, eq="heat")
+    #fes = L2(mesh, order=order, dgjumps=True)
+    fes = trefftzfespace(mesh, order=2*order+1, dgjumps=True, eq="heat",wavespeed=diffusion_coefficient)
+    #fes.SetWavespeed(diffusion_coef)
     u, v = fes.TnT()
 
-    eps =  1
+    eps =  diffusion_coefficient
     b = CoefficientFunction((0, 1))
-    ubnd = exp(y)*exp(x)
+    ubnd = exp(y*diffusion_coefficient)*exp(x)
     lambd = 10
     h = specialcf.mesh_size
     n = specialcf.normal(mesh.dim)
@@ -540,7 +543,6 @@ def TestHeat():
     gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs(), inverse="umfpack") * f.vec
 
     return sqrt(Integrate((gfu-ubnd)**2, mesh))
-
 
 
 

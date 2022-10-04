@@ -129,7 +129,7 @@ namespace ngcomp
             }
           else if (eqtyp == "heat")
             {
-              basismat = THeatBasis<1>::Basis (order, 0);
+              basismat = THeatBasis<1>::Basis (order, 0, 0, c);
             }
           else
             {
@@ -152,7 +152,7 @@ namespace ngcomp
             }
           else if (eqtyp == "heat")
             {
-              basismat = THeatBasis<2>::Basis (order, 0);
+              basismat = THeatBasis<2>::Basis (order, 0, 0, c);
             }
           else
             {
@@ -300,7 +300,7 @@ namespace ngcomp
               else
                 return *(new (alloc) ScalarMappedElement<2> (
                     local_ndof, order, basismat, eltype, ElCenter<1> (ei),
-                    Adiam<1> (ei, c), c));
+                    Adiam<1> (ei, 1.0), 1.0));
               break;
             }
           case ET_HEX:
@@ -336,7 +336,7 @@ namespace ngcomp
               else
                 return *(new (alloc) ScalarMappedElement<3> (
                     local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                    Adiam<2> (ei, c), c));
+                    Adiam<2> (ei, 1.0), 1.0));
             }
             break;
           }
@@ -535,7 +535,8 @@ namespace ngcomp
   template class TWaveBasis<3>;
 
   template <int D>
-  CSR THeatBasis<D>::Basis (int ord, int basistype, int fowave)
+  CSR THeatBasis<D>::Basis (int ord, int basistype, int fowave,
+                            double diffusion_coefficient)
   {
     CSR tb;
     const int ndof = BinCoeff (D + ord, ord);
@@ -573,7 +574,7 @@ namespace ngcomp
                          * trefftzbasis (
                              basis, PolBasis::IndexMap2<D> (get_coeff, ord));
                 }
-              trefftzbasis (basis, indexmap) *= 1.0 / k;
+              trefftzbasis (basis, indexmap) *= diffusion_coefficient / k;
             }
         });
       }

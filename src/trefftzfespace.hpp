@@ -102,7 +102,8 @@ namespace ngcomp
   {
   public:
     THeatBasis () { ; }
-    static CSR Basis (int ord, int basistype = 0, int fowave = 0);
+    static CSR Basis (int ord, int basistype = 0, int fowave = 0,
+                      double diffusion_coefficient = 1.0);
   };
 
   template <int D> class TLapBasis : public PolBasis
