@@ -33,6 +33,9 @@ namespace ngcomp
     // shared_ptr<SumOfIntegrals> bf;
     // shared_ptr<FESpace> fesforet;
     Vector<shared_ptr<Matrix<double>>> ETmats;
+    Vector<shared_ptr<Vector<double>>> ETvecs;
+    // shared_ptr<BaseVector> uf;
+    shared_ptr<VVector<double>> uf;
 
   public:
     EmbTrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags,
@@ -42,15 +45,17 @@ namespace ngcomp
       name = "EmbTrefftzFESpace";
       type = "embt";
       needs_transform_vec = true;
+
       // cout << "DGJUMPS " << this->dgjumps << endl;
 
       // fesforet = make_shared<L2HighOrderFESpace>(ma,flags,true);
     }
 
-    void SetOp (shared_ptr<SumOfIntegrals> bf,
-                // shared_ptr<FESpace> fes,
-                double eps, shared_ptr<FESpace> test_fes, int tndof)
+    shared_ptr<BaseVector>
+    SetOp (shared_ptr<SumOfIntegrals> bf, shared_ptr<SumOfIntegrals> lf,
+           double eps, shared_ptr<FESpace> test_fes, int tndof)
     {
+      VVector<double> lfvec (this->GetNDof ());
       static Timer timer ("EmbTrefftz: SetOp");
       RegionTimer reg (timer);
       LocalHeap lh (1000 * 1000 * 1000);
@@ -72,6 +77,17 @@ namespace ngcomp
         {
           auto &dx = icf->dx;
           bfis[dx.vb] += icf->MakeBilinearFormIntegrator ();
+        }
+
+      Array<shared_ptr<LinearFormIntegrator>> lfis[4];
+      if (lf)
+        {
+          ETvecs.SetSize (ma->GetNE (VOL));
+          for (auto icf : lf->icfs)
+            {
+              auto &dx = icf->dx;
+              lfis[dx.vb] += icf->MakeLinearFormIntegrator ();
+            }
         }
 
       auto ma = this->GetMeshAccess ();
@@ -101,6 +117,44 @@ namespace ngcomp
         int nz = LocalTrefftzEmb (ei, elmat, U, Vt, bfis, use_as_l2, eps,
                                   test_fes, tndof, mlh);
 
+        Array<int> dnums;
+        this->GetDofNrs (ei, dnums);
+
+        if (lf)
+          {
+            int nnz = dofs.Size () - nz;
+            auto &test_fel = test_fes->GetFE (ei, mlh);
+            auto &trafo = ma->GetTrafo (ei, mlh);
+            FlatVector<double> elvec (test_dofs.Size (), mlh),
+                elveci (test_dofs.Size (), mlh);
+            elvec = 0.0;
+            for (auto &lfi : lfis[VOL])
+              {
+                if (lfi->DefinedOnElement (ei.Nr ()))
+                  {
+                    auto &mapped_trafo = trafo.AddDeformation (
+                        lfi->GetDeformation ().get (), mlh);
+                    lfi->CalcElementVector (test_fel, mapped_trafo, elveci,
+                                            mlh);
+                    elvec += elveci;
+                  }
+              }
+            Matrix<double> Ut = Trans (U).Rows (0, nnz);
+            Matrix<double> V = Trans (Vt).Cols (0, nnz);
+            Matrix<double> SigI (nnz, nnz);
+
+            SigI = static_cast<double> (0.0);
+            for (int i = 0; i < nnz; i++)
+              SigI (i, i) = 1.0 / elmat (i, i);
+            Matrix<double> elinverse = V * SigI * Ut;
+            Vector<double> elinv = elinverse * elvec;
+            ETvecs[ei.Nr ()] = make_shared<Vector<double>> (elinv);
+
+            for (int k = 0; k < dnums.Size (); k++)
+              if (IsRegularDof (dnums[k]))
+                lfvec (dnums[k]) = elinv (k);
+          }
+
         // for(int i=0;i<nz;i++) // permute rows such that zeros are on
         // bottom.. is there a better way? Vt.Row(i)=Vt.Row(i+1);
         // Vt.Rows(nz,dofs.Size()) = 0;
@@ -109,12 +163,14 @@ namespace ngcomp
         // cout << "Vt" << endl;
         // cout <<  Vt << endl;
 
-        Array<int> dnums;
-        this->GetDofNrs (ei, dnums);
         // cout << dnums << endl;
         for (int i = 0; i < dofs.Size () - nz; i++)
           free_dofs->Clear (dnums[i]);
       });
+
+      // return make_shared<VVector<double>>(lfvec);
+      uf = make_shared<VVector<double>> (lfvec);
+      return uf;
     }
 
     void VTransformMR (ElementId ei, const SliceMatrix<double> mat,
@@ -123,6 +179,7 @@ namespace ngcomp
       static Timer timer ("EmbTrefftz: MTransform");
       RegionTimer reg (timer);
 
+      cout << "mtrans " << type << endl;
       // Array<int> dnums, dnums1, dnums2, elnums, fnums, vnums1, vnums2;
       // this->GetDofNrs (ei, dnums1);
 
@@ -157,22 +214,39 @@ namespace ngcomp
       static Timer timer ("EmbTrefftz: VTransform");
       RegionTimer reg (timer);
 
+      cout << "vtrans " << type << endl;
       // cout << (*ETmats[ei.Nr()]).Height() << " x " <<
       // (*ETmats[ei.Nr()]).Width() << endl; cout << vec.Size() << endl;
       if (type == TRANSFORM_RHS)
         {
           Vector<double> new_vec (vec.Size ());
-          new_vec = (*ETmats[ei.Nr ()]) * vec;
-          vec = new_vec;
+          // cout << vec << endl;
+          // new_vec = (*ETmats[ei.Nr()]) * vec;
+          // vec = new_vec;
         }
-      else // if(type==TRANSFORM_SOL_INVERSE)
+      else if (type == TRANSFORM_SOL)
         {
+          // cout << vec << endl;
           Vector<double> new_vec (vec.Size ());
-          new_vec = Trans (*ETmats[ei.Nr ()]) * vec;
-          vec = new_vec;
+          // Vector<double> uf_loc(vec.Size());
+          // Array<int> dnums;
+          // this->GetDofNrs (ei, dnums);
+          // for (int k = 0; k < dnums.Size(); k++)
+          // uf_loc(k) = (*uf)(dnums[k]);
+          // uf_loc(k) = (*dynamic_pointer_cast<VVector<double>(uf))(dnums[k]);
+
+          // new_vec = Trans(*ETmats[ei.Nr()]) * vec + lfvec.Range();
+          // cout << "#######################" << endl;
+          // cout << (*ETmats[ei.Nr()]) << endl;
+          // cout << vec << endl;
+          // new_vec = Trans(*ETmats[ei.Nr()]) * vec;
+          // cout << new_vec << endl;
+          // new_vec += uf_loc;
+          // vec = new_vec;
+          // cout << vec << endl;
         }
-      // else
-      // cout << "some transform" << endl;
+      else
+        cout << "transform " << type << " nothing here" << endl;
     }
   };
 
