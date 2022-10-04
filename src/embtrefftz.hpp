@@ -1,9 +1,11 @@
 #ifndef FILE_SVDTREFFTZ_HPP
 #define FILE_SVDTREFFTZ_HPP
 #include <comp.hpp>
+#include <python_comp.hpp>
 #include <fem.hpp>
 #include <integratorcf.hpp>
 #include <variant>
+#include <bla.hpp>
 
 namespace ngcomp
 {
