@@ -177,7 +177,7 @@ namespace ngcomp
   std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
   EmbTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
               shared_ptr<SumOfIntegrals> lf, double eps,
-              shared_ptr<FESpace> test_fes, int tndof,
+              shared_ptr<FESpace> test_fes, int tndof, bool getrange,
               std::map<std::string, Vector<SCAL>> *stats)
   {
     static Timer svdtt ("svdtrefftz");
@@ -269,9 +269,10 @@ namespace ngcomp
                 // assumption here: Either all or no dof is regular
                 if (hasregdof)
                   {
-                    for (int d = 0; d < nz; d++)
+                    int add_dofs = getrange ? dofs.Size () - nz : nz;
+                    for (int d = 0; d < add_dofs; d++)
                       creator2.Add (ei.Nr (), d + prevdofs);
-                    prevdofs += nz;
+                    prevdofs += add_dofs;
                   }
               }
           }
@@ -284,7 +285,11 @@ namespace ngcomp
         P->SetZero ();
       });
 
-      Matrix<SCAL> PP = Trans (Vt.Rows (dofs.Size () - nz, dofs.Size ()));
+      Matrix<SCAL> PP;
+      if (getrange)
+        PP = U.Cols (0, dofs.Size () - nz);
+      else
+        PP = Trans (Vt.Rows (dofs.Size () - nz, dofs.Size ()));
       P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()], PP);
 
       if (lf)
@@ -351,12 +356,12 @@ namespace ngcomp
   template std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
   EmbTrefftz<double> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                       shared_ptr<SumOfIntegrals> lf, double eps,
-                      shared_ptr<FESpace> test_fes, int tndof,
+                      shared_ptr<FESpace> test_fes, int tndof, bool getrange,
                       std::map<std::string, Vector<double>> *stats);
   template std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
   EmbTrefftz<Complex> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                        shared_ptr<SumOfIntegrals> lf, double eps,
-                       shared_ptr<FESpace> test_fes, int tndof,
+                       shared_ptr<FESpace> test_fes, int tndof, bool getrange,
                        std::map<std::string, Vector<Complex>> *stats);
 }
 
@@ -369,7 +374,7 @@ void ExportEmbTrefftz (py::module m)
       [] (shared_ptr<ngfem::SumOfIntegrals> bf,
           shared_ptr<ngcomp::FESpace> fes,
           shared_ptr<ngfem::SumOfIntegrals> lf, double eps,
-          shared_ptr<ngcomp::FESpace> test_fes, int tndof,
+          shared_ptr<ngcomp::FESpace> test_fes, int tndof, bool getrange,
           py::object stats_dict) {
         py::extract<py::dict> stats_ (stats_dict);
         shared_ptr<py::dict> pystats = nullptr;
@@ -380,7 +385,7 @@ void ExportEmbTrefftz (py::module m)
           {
             std::map<std::string, ngcomp::Vector<Complex>> stats;
             auto P = ngcomp::EmbTrefftz<Complex> (bf, fes, lf, eps, test_fes,
-                                                  tndof, &stats);
+                                                  tndof, getrange, &stats);
             if (pystats)
               for (auto const &x : stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
@@ -390,7 +395,7 @@ void ExportEmbTrefftz (py::module m)
           {
             std::map<std::string, ngcomp::Vector<double>> stats;
             auto P = ngcomp::EmbTrefftz<double> (bf, fes, lf, eps, test_fes,
-                                                 tndof, &stats);
+                                                 tndof, getrange, &stats);
             if (pystats)
               for (auto const &x : stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
@@ -406,19 +411,20 @@ void ExportEmbTrefftz (py::module m)
                 :param eps: Threshold for singular values to be considered zero, defaults to 0
                 :param test_fes: Used if test space differs from trial space, defaults to None
                 :param tndof: If known, local ndofs of the Trefftz space, also eps and/or test_fes are used to find the dimension, defaults to 0
+                :param getrange: If True, extract the range instead of the kernel
                 :param stats_dict: Pass a dictionary to fill it with stats on the singular values.
 
                 :return: [Trefftz embeddint, particular solution]
             )mydelimiter",
       py::arg ("bf"), py::arg ("fes"), py::arg ("lf"), py::arg ("eps") = 0,
       py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0,
-      py::arg ("stats_dict") = py::none ());
+      py::arg ("getrange") = false, py::arg ("stats_dict") = py::none ());
 
   m.def (
       "TrefftzEmbedding",
       [] (shared_ptr<ngfem::SumOfIntegrals> bf,
           shared_ptr<ngcomp::FESpace> fes, double eps,
-          shared_ptr<ngcomp::FESpace> test_fes, int tndof,
+          shared_ptr<ngcomp::FESpace> test_fes, int tndof, bool getrange,
           py::object stats_dict) -> shared_ptr<ngcomp::BaseMatrix> {
         py::extract<py::dict> stats_ (stats_dict);
         shared_ptr<py::dict> pystats = nullptr;
@@ -429,7 +435,7 @@ void ExportEmbTrefftz (py::module m)
           {
             std::map<std::string, ngcomp::Vector<Complex>> stats;
             auto P = std::get<0> (ngcomp::EmbTrefftz<Complex> (
-                bf, fes, nullptr, eps, test_fes, tndof, &stats));
+                bf, fes, nullptr, eps, test_fes, tndof, getrange, &stats));
             if (pystats)
               for (auto const &x : stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
@@ -439,7 +445,7 @@ void ExportEmbTrefftz (py::module m)
           {
             std::map<std::string, ngcomp::Vector<double>> stats;
             auto P = std::get<0> (ngcomp::EmbTrefftz<double> (
-                bf, fes, nullptr, eps, test_fes, tndof, &stats));
+                bf, fes, nullptr, eps, test_fes, tndof, getrange, &stats));
             if (pystats)
               for (auto const &x : stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
@@ -453,6 +459,6 @@ void ExportEmbTrefftz (py::module m)
             )mydelimiter",
       py::arg ("bf"), py::arg ("fes"), py::arg ("eps") = 0,
       py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0,
-      py::arg ("stats_dict") = py::none ());
+      py::arg ("getrange") = false, py::arg ("stats_dict") = py::none ());
 }
 #endif // NGS_PYTHON
