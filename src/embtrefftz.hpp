@@ -179,7 +179,7 @@ namespace ngcomp
       static Timer timer ("EmbTrefftz: MTransform");
       RegionTimer reg (timer);
 
-      cout << "mtrans " << type << endl;
+      // cout << "mtrans " << type << endl;
       // Array<int> dnums, dnums1, dnums2, elnums, fnums, vnums1, vnums2;
       // this->GetDofNrs (ei, dnums1);
 
@@ -214,15 +214,15 @@ namespace ngcomp
       static Timer timer ("EmbTrefftz: VTransform");
       RegionTimer reg (timer);
 
-      cout << "vtrans " << type << endl;
+      // cout << "vtrans " << type << endl;
       // cout << (*ETmats[ei.Nr()]).Height() << " x " <<
       // (*ETmats[ei.Nr()]).Width() << endl; cout << vec.Size() << endl;
       if (type == TRANSFORM_RHS)
         {
           Vector<double> new_vec (vec.Size ());
           // cout << vec << endl;
-          // new_vec = (*ETmats[ei.Nr()]) * vec;
-          // vec = new_vec;
+          new_vec = (*ETmats[ei.Nr ()]) * vec;
+          vec = new_vec;
         }
       else if (type == TRANSFORM_SOL)
         {
@@ -239,10 +239,10 @@ namespace ngcomp
           // cout << "#######################" << endl;
           // cout << (*ETmats[ei.Nr()]) << endl;
           // cout << vec << endl;
-          // new_vec = Trans(*ETmats[ei.Nr()]) * vec;
+          new_vec = Trans (*ETmats[ei.Nr ()]) * vec;
           // cout << new_vec << endl;
           // new_vec += uf_loc;
-          // vec = new_vec;
+          vec = new_vec;
           // cout << vec << endl;
         }
       else
