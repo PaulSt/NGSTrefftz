@@ -433,7 +433,7 @@ def TestQTrefftz(order, mesh, t_step,qtrefftz=1):
     sig0=-bdd[1]
 
     fes = trefftzfespace(mesh, order=order, dgjumps=True, eq="qtwave")
-    fes.SetWavespeed(wavespeed)
+    fes.SetCoeff(wavespeed)
     [a,f] = DGwaveeqsys(fes,U0,v0,sig0,wavespeed,gD,True,False,alpha=0.5,beta=0.5,gamma=1,mu=0.5)
     gfu = GridFunction(fes, name="uDG")
     gfu.vec.data = a.mat.Inverse()*f.vec
@@ -476,7 +476,7 @@ def TestBessel(order, mesh, t_step):
     sig0=-bdd[1]
 
     fes = trefftzfespace(mesh, order=order, dgjumps=True, eq="qtwave")
-    fes.SetWavespeed(wavespeed,BB)
+    fes.SetCoeff(wavespeed,BB)
     [a,f] = DGwaveeqsys(fes,U0,v0,sig0,wavespeed,gD,True,False,alpha=0,beta=0,gamma=1,mu=0,BB=BB)
     gfu = GridFunction(fes, name="uDG")
     gfu.vec.data = a.mat.Inverse()*f.vec
@@ -494,20 +494,21 @@ def TestHeat():
     """
     Solve heat equation using Trefftz fcts
     >>> TestHeat() # doctest:+ELLIPSIS
-    4...e-11
+    0.0003...
     """
-    mesh = ngsm.MakeStructured2DMesh(nx=32, ny=32, periodic_x=False)  
-    diffusion_coefficient = 10#00
+    mesh = ngsm.MakeStructured2DMesh(nx=32, ny=32, periodic_x=False)
+    diffusion = 10
 
     order = 4
     #fes = L2(mesh, order=order, dgjumps=True)
-    fes = trefftzfespace(mesh, order=2*order+1, dgjumps=True, eq="heat",wavespeed=diffusion_coefficient)
-    #fes.SetWavespeed(diffusion_coef)
+    fes = trefftzfespace(mesh, order=2*order+1, dgjumps=True, eq="heat")
+    fes.SetCoeff(diffusion)
+    # import pdb; pdb.set_trace()
     u, v = fes.TnT()
 
-    eps =  diffusion_coefficient
+    eps = diffusion
     b = CoefficientFunction((0, 1))
-    ubnd = exp(y*diffusion_coefficient)*exp(x)
+    ubnd = exp(y*diffusion)*exp(x)
     lambd = 10
     h = specialcf.mesh_size
     n = specialcf.normal(mesh.dim)

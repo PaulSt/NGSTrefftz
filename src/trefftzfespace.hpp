@@ -36,12 +36,12 @@ namespace ngcomp
     size_t ndof;
     int nel;
     int local_ndof;
-    float c = 1;
+    float coeff_const = 1;
     string eqtyp = "wave";
     int useshift = 1;
     int usescale = 1;
     int basistype = 0;
-    shared_ptr<CoefficientFunction> wavespeedcf = nullptr;
+    shared_ptr<CoefficientFunction> coeff_cf = nullptr;
     Matrix<shared_ptr<CoefficientFunction>> GGder;
     Matrix<shared_ptr<CoefficientFunction>> BBder;
     CSR basismat;
@@ -50,9 +50,10 @@ namespace ngcomp
 
   public:
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
-    void SetWavespeed (shared_ptr<CoefficientFunction> awavespeedcf,
-                       shared_ptr<CoefficientFunction> aBBcf = nullptr,
-                       shared_ptr<CoefficientFunction> aGGcf = nullptr);
+    void SetCoeff (double acoeff_const);
+    void SetCoeff (shared_ptr<CoefficientFunction> acoeff_cf,
+                   shared_ptr<CoefficientFunction> aBBcf = nullptr,
+                   shared_ptr<CoefficientFunction> aGGcf = nullptr);
     string GetClassName () const override { return "trefftz"; }
     void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
     FiniteElement &GetFE (ElementId ei, Allocator &alloc) const override;
@@ -60,7 +61,7 @@ namespace ngcomp
     static DocInfo GetDocu ();
 
   protected:
-    template <int D> double Adiam (ElementId ei, double c) const
+    template <int D> double Adiam (ElementId ei, double coeff_const) const
     {
       double anisotropicdiam = 0.0;
       auto vertices_index = ma->GetElVertices (ei);
@@ -73,7 +74,7 @@ namespace ngcomp
               anisotropicdiam
                   = max (anisotropicdiam,
                          sqrt (L2Norm2 (v1.Range (0, D) - v2.Range (0, D))
-                               + pow (c * (v1 (D) - v2 (D)), 2)));
+                               + pow (coeff_const * (v1 (D) - v2 (D)), 2)));
             }
         }
       return anisotropicdiam * usescale + (usescale == 0);
@@ -102,8 +103,7 @@ namespace ngcomp
   {
   public:
     THeatBasis () { ; }
-    static CSR Basis (int ord, int basistype = 0, int fowave = 0,
-                      double diffusion_coefficient = 1.0);
+    static CSR Basis (int ord, int basistype = 0, int fowave = 0);
   };
 
   template <int D> class TLapBasis : public PolBasis
