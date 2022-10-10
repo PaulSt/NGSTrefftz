@@ -17,8 +17,8 @@ namespace ngcomp
 
     this->dgjumps = true;
     order = int (flags.GetNumFlag ("order", 1));
-    c = flags.GetNumFlag ("wavespeed", 1);
-    wavespeedcf = make_shared<ConstantCoefficientFunction> (c);
+    coeff_const = flags.GetNumFlag ("wavespeed", 1);
+    coeff_cf = nullptr;
     basistype = flags.GetNumFlag ("basistype", 0);
     useshift = flags.GetNumFlag ("useshift", 1);
     usescale = flags.GetNumFlag ("usescale", 1);
@@ -129,7 +129,7 @@ namespace ngcomp
             }
           else if (eqtyp == "heat")
             {
-              basismat = THeatBasis<1>::Basis (order, 0);
+              basismat = THeatBasis<1>::Basis (order, 0, 0);
             }
           else
             {
@@ -152,7 +152,7 @@ namespace ngcomp
             }
           else if (eqtyp == "heat")
             {
-              basismat = THeatBasis<2>::Basis (order, 0);
+              basismat = THeatBasis<2>::Basis (order, 0, 0);
             }
           else
             {
@@ -165,22 +165,25 @@ namespace ngcomp
       }
   }
 
-  void
-  TrefftzFESpace ::SetWavespeed (shared_ptr<CoefficientFunction> awavespeedcf,
-                                 shared_ptr<CoefficientFunction> aBBcf,
-                                 shared_ptr<CoefficientFunction> aGGcf)
+  void TrefftzFESpace ::SetCoeff (double acoeff_const)
   {
-    wavespeedcf = awavespeedcf;
+    coeff_const = acoeff_const;
+  }
+
+  void TrefftzFESpace ::SetCoeff (shared_ptr<CoefficientFunction> acoeff_cf,
+                                  shared_ptr<CoefficientFunction> aBBcf,
+                                  shared_ptr<CoefficientFunction> aGGcf)
+  {
+    coeff_cf = acoeff_cf;
     if (aBBcf || eqtyp == "qtwave" || eqtyp == "foqtwave")
       {
-        // wavespeedcf = UnaryOpCF(aBBcf/awavespeedcf,GenericSqrt());
-        cout << "started auto diff.... ";
+        // coeff_cf = UnaryOpCF(aBBcf/acoeff_cf,GenericSqrt());
         shared_ptr<CoefficientFunction> GGcf
             = make_shared<ConstantCoefficientFunction> (1)
-              / (awavespeedcf * awavespeedcf);
+              / (acoeff_cf * acoeff_cf);
         shared_ptr<CoefficientFunction> GGcfx
             = make_shared<ConstantCoefficientFunction> (1)
-              / (awavespeedcf * awavespeedcf);
+              / (acoeff_cf * acoeff_cf);
         if (aGGcf)
           {
             GGcf = aGGcf;
@@ -212,7 +215,6 @@ namespace ngcomp
         if (!aBBcf)
           {
             aBBcf = make_shared<ConstantCoefficientFunction> (1);
-            cout << "SETTING BB TO 1" << endl;
           }
         static Timer timerbb ("QTrefftzBB");
         timerbb.Start ();
@@ -233,7 +235,6 @@ namespace ngcomp
             BBcfx = BBcf;
           }
         timerbb.Stop ();
-        cout << "finish" << endl;
       }
   }
 
@@ -288,19 +289,20 @@ namespace ngcomp
                 {
                   return *(new (alloc) BlockMappedElement<2> (
                       local_ndof, order, basismats, eltype, ElCenter<1> (ei),
-                      Adiam<1> (ei, c), c));
+                      Adiam<1> (ei, coeff_const), coeff_const));
                 }
               else if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
                 {
 
                   return *(new (alloc) PlaneWaveElement<2> (
                       local_ndof, order, eltype, ElCenter<1> (ei),
-                      Adiam<1> (ei, c), c, (eqtyp == "helmholtz" ? 1 : -1)));
+                      Adiam<1> (ei, coeff_const), coeff_const,
+                      (eqtyp == "helmholtz" ? 1 : -1)));
                 }
               else
                 return *(new (alloc) ScalarMappedElement<2> (
                     local_ndof, order, basismat, eltype, ElCenter<1> (ei),
-                    Adiam<1> (ei, c), c));
+                    Adiam<1> (ei, coeff_const), coeff_const));
               break;
             }
           case ET_HEX:
@@ -331,12 +333,12 @@ namespace ngcomp
                 {
                   return *(new (alloc) BlockMappedElement<3> (
                       local_ndof, order, basismats, eltype, ElCenter<2> (ei),
-                      Adiam<2> (ei, c), c));
+                      Adiam<2> (ei, coeff_const), coeff_const));
                 }
               else
                 return *(new (alloc) ScalarMappedElement<3> (
                     local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                    Adiam<2> (ei, c), c));
+                    Adiam<2> (ei, coeff_const), coeff_const));
             }
             break;
           }
@@ -1001,9 +1003,17 @@ void ExportTrefftzFESpace (py::module m)
   ExportFESpace<TrefftzFESpace> (m, "trefftzfespace")
       .def ("GetDocu", &TrefftzFESpace::GetDocu)
       .def ("GetNDof", &TrefftzFESpace::GetNDof)
-      .def ("SetWavespeed", &TrefftzFESpace::SetWavespeed,
-            py::arg ("Wavespeed"), py::arg ("BBcf") = nullptr,
-            py::arg ("GGcf") = nullptr);
+      .def ("SetCoeff",
+            static_cast<void (TrefftzFESpace::*) (double)> (
+                &TrefftzFESpace::SetCoeff),
+            py::arg ("coeff_const"))
+      .def (
+          "SetCoeff",
+          static_cast<void (TrefftzFESpace::*) (
+              shared_ptr<CoefficientFunction>, shared_ptr<CoefficientFunction>,
+              shared_ptr<CoefficientFunction>)> (&TrefftzFESpace::SetCoeff),
+          py::arg ("coeff_cf"), py::arg ("BBcf") = nullptr,
+          py::arg ("GGcf") = nullptr);
 
   // ExportFESpace<FOTWaveFESpace, CompoundFESpace> (m, "FOTWave");
 }
