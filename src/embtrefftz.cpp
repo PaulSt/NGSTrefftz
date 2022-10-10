@@ -358,8 +358,6 @@ namespace ngcomp
                        shared_ptr<SumOfIntegrals> lf, double eps,
                        shared_ptr<FESpace> test_fes, int tndof,
                        std::map<std::string, Vector<Complex>> *stats);
-
-  static RegisterFESpace<EmbTrefftzFESpace> initembt ("EmbTrefftzFESpace");
 }
 
 #ifdef NGS_PYTHON
