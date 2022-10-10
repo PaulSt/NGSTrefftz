@@ -19,7 +19,7 @@ Lap = lambda u : sum(Trace(u.Operator('hesse')))
 ########################################################################
 # L2
 ########################################################################
-def dglap(fes,bndc,rhs=0):
+def dglap(fes,bndc,rhs=0,uf=0):
     """
     >>> fes = L2(mesh2d, order=order,  dgjumps=True)#,all_dofs_together=True)
     >>> a,f = dglap(fes,exactlap)
@@ -54,8 +54,26 @@ def dglap(fes,bndc,rhs=0):
          +(-n*grad(v)*bndc)* ds(skeleton=True) \
          +rhs*v*dx
     f.Assemble()
-    return a,f
 
+    if uf:
+        fes2 = L2(fes.mesh, order=fes.globalorder, dgjumps=True)
+        u = fes2.TrialFunction()
+
+        jump_u = (u-u.Other())*n
+        jump_v = (v-v.Other())*n
+        mean_dudn = 0.5 * (grad(u)+grad(u.Other()))
+        mean_dvdn = 0.5 * (grad(v)+grad(v.Other()))
+
+        a2 = BilinearForm(fes2,fes,nonassemble=True)
+        a2 += grad(u)*grad(v) * dx \
+            +alpha*order**2/h*jump_u*jump_v * dx(skeleton=True) \
+            +(-mean_dudn*jump_v-mean_dvdn*jump_u) * dx(skeleton=True) \
+            +alpha*order**2/h*u*v * ds(skeleton=True) \
+            +(-n*grad(u)*v-n*grad(v)*u)* ds(skeleton=True)
+        auf = f.vec.CreateVector()
+        a2.Apply(uf.vec,auf)
+        f.vec.data = f.vec - auf
+    return a,f
 
 ########################################################################
 # PySVDTrefftz
@@ -334,6 +352,43 @@ def testembtrefftzhelm(fes):
     tpgfu = GridFunction(fes)
     tpgfu.vec.data = PP*TU
     return sqrt(Integrate(InnerProduct(tpgfu-exact,tpgfu-exact).real, mesh))
+
+
+########################################################################
+# EmbTrefftzFESpace
+########################################################################
+
+
+def testembtrefftzfes(mesh,order):
+    """
+    >>> testembtrefftzfes(mesh2d,order) # doctest:+ELLIPSIS
+    3...e-09
+    """
+    # exact = sin(10*x)*sin(10*y)
+    # rhs = 200*sin(10*x)*sin(10*y)
+    rhs = -exactpoi.Diff(x).Diff(x)-exactpoi.Diff(y).Diff(y)
+    eps = 10**-7
+
+    fes = EmbTrefftzFESpace(mesh,order=order,dgjumps=True)
+    fes2 = L2(fes.mesh, order=fes.globalorder, dgjumps=True)
+
+    u,v = fes.TnT()
+    op = Lap(u)*Lap(v)*dx
+    lop = -rhs*Lap(v)*dx
+
+    uf = GridFunction(fes2)
+    uf.vec.data = fes.SetOp(op,lf=lop,eps=eps)
+
+    fes = Compress(fes, fes.FreeDofs())
+    a,f = dglap(fes,exactpoi,rhs,uf)
+
+    inv = a.mat.Inverse(inverse="sparsecholesky")
+    gfu = GridFunction(fes)
+    gfu.vec.data = inv * f.vec
+    nsol = gfu + uf
+
+    return sqrt(Integrate((nsol-exactpoi)**2, mesh))
+
 
 
 if __name__ == "__main__":

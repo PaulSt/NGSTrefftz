@@ -1,4 +1,5 @@
 #include "embtrefftz.hpp"
+
 namespace ngbla
 {
 
@@ -88,93 +89,7 @@ namespace ngcomp
 {
 
   template <class SCAL>
-  int LocalTrefftzEmb (Ngs_Element ei, FlatMatrix<SCAL> elmat,
-                       FlatMatrix<SCAL, ColMajor> U,
-                       FlatMatrix<SCAL, ColMajor> Vt,
-                       Array<shared_ptr<BilinearFormIntegrator>> *bfis,
-                       shared_ptr<FESpace> fes, double eps,
-                       shared_ptr<FESpace> test_fes, int tndof, LocalHeap &mlh)
-  {
-    HeapReset hr (mlh);
-    bool mixed_mode = fes != test_fes;
-    auto ma = fes->GetMeshAccess ();
-
-    auto &trafo = ma->GetTrafo (ei, mlh);
-
-    auto &test_fel = test_fes->GetFE (ei, mlh);
-    auto &trial_fel = fes->GetFE (ei, mlh);
-
-    elmat = 0.0;
-    bool symmetric_so_far = true;
-    int bfi_ind = 0;
-    while (bfi_ind < bfis[VOL].Size ())
-      {
-        auto &bfi = bfis[VOL][bfi_ind];
-        bfi_ind++;
-        if (bfi->DefinedOnElement (ei.Nr ()))
-          {
-            auto &mapped_trafo
-                = trafo.AddDeformation (bfi->GetDeformation ().get (), mlh);
-            try
-              {
-                if (mixed_mode)
-                  {
-                    const auto &mixed_fel
-                        = MixedFiniteElement (trial_fel, test_fel);
-                    bfi->CalcElementMatrixAdd (mixed_fel, mapped_trafo, elmat,
-                                               symmetric_so_far, mlh);
-                  }
-                else
-                  {
-                    bfi->CalcElementMatrixAdd (test_fel, mapped_trafo, elmat,
-                                               symmetric_so_far, mlh);
-                  }
-              }
-            catch (ExceptionNOSIMD e)
-              {
-                elmat = 0.0;
-                cout << IM (6) << "ExceptionNOSIMD " << e.What () << endl
-                     << "switching to scalar evaluation" << endl;
-                bfi->SetSimdEvaluate (false);
-                bfi_ind = 0;
-              }
-          }
-      }
-    ngbla::GetSVD<SCAL> (elmat, U, Vt);
-
-    // assumption here: all (active) elements have the same number of (weak)
-    // Trefftz fcts.
-    int nz = 0;
-    if (tndof)
-      nz = tndof;
-    else
-      {
-        nz = trial_fel.GetNDof () - test_fel.GetNDof ();
-        for (int i = 0; i < min (elmat.Width (), elmat.Height ()); i++)
-          if (abs (elmat (i, i)) < eps)
-            nz++;
-      }
-
-    return nz;
-  }
-
-  template int
-  LocalTrefftzEmb (Ngs_Element ei, FlatMatrix<double> elmat,
-                   FlatMatrix<double, ColMajor> U,
-                   FlatMatrix<double, ColMajor> Vt,
-                   Array<shared_ptr<BilinearFormIntegrator>> *bfis,
-                   shared_ptr<FESpace> fes, double eps,
-                   shared_ptr<FESpace> test_fes, int tndof, LocalHeap &mlh);
-  template int
-  LocalTrefftzEmb (Ngs_Element ei, FlatMatrix<Complex> elmat,
-                   FlatMatrix<Complex, ColMajor> U,
-                   FlatMatrix<Complex, ColMajor> Vt,
-                   Array<shared_ptr<BilinearFormIntegrator>> *bfis,
-                   shared_ptr<FESpace> fes, double eps,
-                   shared_ptr<FESpace> test_fes, int tndof, LocalHeap &mlh);
-
-  template <class SCAL>
-  std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
+  std::tuple<shared_ptr<Array<Matrix<SCAL>>>, shared_ptr<BaseVector>>
   EmbTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
               shared_ptr<SumOfIntegrals> lf, double eps,
               shared_ptr<FESpace> test_fes, int tndof, bool getrange,
@@ -195,6 +110,9 @@ namespace ngcomp
       }
 
     auto ma = fes->GetMeshAccess ();
+    size_t ne = ma->GetNE (VOL);
+    size_t ndof = fes->GetNDof ();
+    size_t dim = fes->GetDimension ();
 
     Array<shared_ptr<BilinearFormIntegrator>> bfis[4]; // VOL, BND, ...
     for (auto icf : bf->icfs)
@@ -211,11 +129,13 @@ namespace ngcomp
           lfis[dx.vb] += icf->MakeLinearFormIntegrator ();
         }
 
-    shared_ptr<SparseMatrix<SCAL>> P;
-    VVector<SCAL> lfvec (fes->GetNDof ());
+    // shared_ptr<SparseMatrix<SCAL>> P;
 
-    std::once_flag init_flag;
-    Table<int> table, table2;
+    Array<Matrix<SCAL>> ETmats (ne);
+    VVector<SCAL> lfvec (ndof);
+
+    // std::once_flag init_flag;
+    // Table<int> table,table2;
 
     Array<Vector<SCAL>> singular_values (ma->GetNE ());
     size_t active_elements = 0;
@@ -242,55 +162,71 @@ namespace ngcomp
       FlatMatrix<SCAL, ColMajor> U (test_dofs.Size (), mlh),
           Vt (dofs.Size (), mlh);
 
-      int nz = LocalTrefftzEmb (ei, elmat, U, Vt, bfis, fes, eps, test_fes,
-                                tndof, mlh);
+      auto &trafo = ma->GetTrafo (ei, mlh);
+
+      auto &test_fel = test_fes->GetFE (ei, mlh);
+      auto &trial_fel = fes->GetFE (ei, mlh);
+
+      elmat = 0.0;
+      bool symmetric_so_far = true;
+      int bfi_ind = 0;
+      while (bfi_ind < bfis[VOL].Size ())
+        {
+          auto &bfi = bfis[VOL][bfi_ind];
+          bfi_ind++;
+          if (bfi->DefinedOnElement (ei.Nr ()))
+            {
+              auto &mapped_trafo
+                  = trafo.AddDeformation (bfi->GetDeformation ().get (), mlh);
+              try
+                {
+                  if (mixed_mode)
+                    {
+                      const auto &mixed_fel
+                          = MixedFiniteElement (trial_fel, test_fel);
+                      bfi->CalcElementMatrixAdd (mixed_fel, mapped_trafo,
+                                                 elmat, symmetric_so_far, mlh);
+                    }
+                  else
+                    {
+                      bfi->CalcElementMatrixAdd (test_fel, mapped_trafo, elmat,
+                                                 symmetric_so_far, mlh);
+                    }
+                }
+              catch (ExceptionNOSIMD e)
+                {
+                  elmat = 0.0;
+                  cout << IM (6) << "ExceptionNOSIMD " << e.What () << endl
+                       << "switching to scalar evaluation" << endl;
+                  bfi->SetSimdEvaluate (false);
+                  bfi_ind = 0;
+                }
+            }
+        }
+      ngbla::GetSVD<SCAL> (elmat, U, Vt);
+
+      // assumption here: all (active) elements have the same number of (weak)
+      // Trefftz fcts.
+      int nz = 0;
+      if (tndof)
+        nz = tndof;
+      else
+        {
+          nz = trial_fel.GetNDof () - test_fel.GetNDof ();
+          for (int i = 0; i < min (elmat.Width (), elmat.Height ()); i++)
+            if (abs (elmat (i, i)) < eps)
+              nz++;
+        }
 
       if (stats)
         singular_values[ei.Nr ()] = Vector<SCAL> (elmat.Diag ());
 
-      std::call_once (init_flag, [&] () {
-        TableCreator<int> creator (ma->GetNE (VOL));
-        TableCreator<int> creator2 (ma->GetNE (VOL));
-        int prevdofs = 0;
-        for (; !creator.Done (); creator++, creator2++)
-          {
-            prevdofs = 0;
-            for (auto ei : ma->Elements (VOL))
-              {
-                Array<DofId> dnums;
-                fes->GetDofNrs (ei, dnums);
-                bool hasregdof = false;
-                for (DofId d : dnums)
-                  if (IsRegularDof (d))
-                    {
-                      creator.Add (ei.Nr (), d);
-                      hasregdof = true;
-                    }
-                // assumption here: Either all or no dof is regular
-                if (hasregdof)
-                  {
-                    int add_dofs = getrange ? dofs.Size () - nz : nz;
-                    for (int d = 0; d < add_dofs; d++)
-                      creator2.Add (ei.Nr (), d + prevdofs);
-                    prevdofs += add_dofs;
-                  }
-              }
-          }
-        table = creator.MoveTable ();
-        table2 = creator2.MoveTable ();
-
-        SparseMatrix<SCAL> PP (fes->GetNDof (), prevdofs, table, table2,
-                               false);
-        P = make_shared<SparseMatrix<SCAL>> (PP);
-        P->SetZero ();
-      });
-
-      Matrix<SCAL> PP;
+      // Matrix<SCAL> PP;
       if (getrange)
-        PP = U.Cols (0, dofs.Size () - nz);
+        ETmats[ei.Nr ()] = U.Cols (0, dofs.Size () - nz);
       else
-        PP = Trans (Vt.Rows (dofs.Size () - nz, dofs.Size ()));
-      P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()], PP);
+        ETmats[ei.Nr ()] = Trans (Vt.Rows (dofs.Size () - nz, dofs.Size ()));
+      // P->AddElementMatrix(table[ei.Nr()],table2[ei.Nr()], PP);
 
       if (lf)
         {
@@ -320,7 +256,8 @@ namespace ngcomp
           for (int i = 0; i < nnz; i++)
             SigI (i, i) = 1.0 / elmat (i, i);
           Matrix<SCAL> elinverse = V * SigI * Ut;
-          lfvec.FV () (table[ei.Nr ()]) = elinverse * elvec;
+
+          lfvec.FV () (dofs) = elinverse * elvec;
         }
     });
 
@@ -350,19 +287,102 @@ namespace ngcomp
         (*stats)["singvar"] = Vector<SCAL> (sing_val_var);
       }
 
-    return std::make_tuple (P, make_shared<VVector<SCAL>> (lfvec));
+    return std::make_tuple (make_shared<Array<Matrix<SCAL>>> (ETmats),
+                            make_shared<VVector<SCAL>> (lfvec));
   }
 
-  template std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
+  template std::tuple<shared_ptr<Array<Matrix<double>>>,
+                      shared_ptr<BaseVector>>
   EmbTrefftz<double> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                       shared_ptr<SumOfIntegrals> lf, double eps,
                       shared_ptr<FESpace> test_fes, int tndof, bool getrange,
                       std::map<std::string, Vector<double>> *stats);
-  template std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
+  template std::tuple<shared_ptr<Array<Matrix<Complex>>>,
+                      shared_ptr<BaseVector>>
   EmbTrefftz<Complex> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                        shared_ptr<SumOfIntegrals> lf, double eps,
                        shared_ptr<FESpace> test_fes, int tndof, bool getrange,
                        std::map<std::string, Vector<Complex>> *stats);
+
+  template <class SCAL>
+  shared_ptr<BaseMatrix> Elmats2Sparse (shared_ptr<Array<Matrix<SCAL>>> ETmats,
+                                        shared_ptr<FESpace> fes)
+  {
+    auto ma = fes->GetMeshAccess ();
+    size_t ne = ma->GetNE (VOL);
+    size_t ndof = fes->GetNDof ();
+    size_t dim = fes->GetDimension ();
+
+    Table<int> table, table2;
+    TableCreator<int> creator (ne);
+    TableCreator<int> creator2 (ne);
+    int prevdofs = 0;
+    for (; !creator.Done (); creator++, creator2++)
+      {
+        prevdofs = 0;
+        for (auto ei : ma->Elements (VOL))
+          {
+            int nz = (*ETmats)[ei.Nr ()].Width ();
+            Array<DofId> dnums;
+            fes->GetDofNrs (ei, dnums);
+            bool hasregdof = false;
+            for (DofId d : dnums)
+              if (IsRegularDof (d))
+                {
+                  creator.Add (ei.Nr (), d);
+                  hasregdof = true;
+                }
+            // assumption here: Either all or no dof is regular
+            if (hasregdof)
+              {
+                for (int d = 0; d < nz; d++)
+                  creator2.Add (ei.Nr (), d + prevdofs);
+                prevdofs += nz;
+              }
+          }
+      }
+    table = creator.MoveTable ();
+    table2 = creator2.MoveTable ();
+
+    SparseMatrix<SCAL> PP (fes->GetNDof (), prevdofs, table, table2, false);
+    auto P = make_shared<SparseMatrix<SCAL>> (PP);
+    P->SetZero ();
+    for (auto ei : ma->Elements (VOL))
+      P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()],
+                           (*embtmats)[ei.Nr ()]);
+    return P;
+  }
+
+  ////////////////////////// EmbTrefftzFESpace ///////////////////////////
+
+  shared_ptr<BaseVector>
+  EmbTrefftzFESpace ::SetOp (shared_ptr<SumOfIntegrals> bf,
+                             shared_ptr<SumOfIntegrals> lf, double eps,
+                             shared_ptr<FESpace> test_fes, int tndof)
+  {
+    static Timer timer ("EmbTrefftz: SetOp");
+
+    shared_ptr<FESpace> use_as_l2 = dynamic_pointer_cast<FESpace> (
+        const_cast<EmbTrefftzFESpace *> (this)->shared_from_this ());
+
+    auto embtr = EmbTrefftz<double> (bf, use_as_l2, lf, eps, test_fes, tndof,
+                                     false, nullptr);
+    this->ETmats = std::get<0> (embtr);
+
+    for (auto ei : ma->Elements (VOL))
+      {
+        int nz = (*ETmats)[ei.Nr ()].Width ();
+        Array<DofId> dofs;
+        this->GetDofNrs (ei, dofs);
+        // for(int i=0;i<dofs.Size()-nz;i++)
+        for (int i = nz; i < dofs.Size (); i++)
+          free_dofs->Clear (dofs[i]);
+      }
+
+    return std::get<1> (embtr);
+  }
+
+  static RegisterFESpace<EmbTrefftzFESpace> initembt ("EmbTrefftzFESpace");
 }
 
 #ifdef NGS_PYTHON
@@ -394,7 +414,9 @@ void ExportEmbTrefftz (py::module m)
             if (pystats)
               for (auto const &x : stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
-            return P;
+            return std::make_tuple (
+                ngcomp::Elmats2Sparse<Complex> (std::get<0> (P), fes),
+                std::get<1> (P));
           }
         else
           {
@@ -404,7 +426,9 @@ void ExportEmbTrefftz (py::module m)
             if (pystats)
               for (auto const &x : stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
-            return P;
+            return std::make_tuple (
+                ngcomp::Elmats2Sparse<double> (std::get<0> (P), fes),
+                std::get<1> (P));
           }
       },
       R"mydelimiter(
@@ -444,7 +468,7 @@ void ExportEmbTrefftz (py::module m)
             if (pystats)
               for (auto const &x : stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
-            return P;
+            return ngcomp::Elmats2Sparse<Complex> (P, fes);
           }
         else
           {
@@ -454,7 +478,7 @@ void ExportEmbTrefftz (py::module m)
             if (pystats)
               for (auto const &x : stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
-            return P;
+            return ngcomp::Elmats2Sparse<double> (P, fes);
           }
       },
       R"mydelimiter(
