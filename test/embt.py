@@ -369,21 +369,22 @@ def testembtrefftzfes(mesh,order):
     rhs = -exactpoi.Diff(x).Diff(x)-exactpoi.Diff(y).Diff(y)
     eps = 10**-7
 
-    fes = EmbTrefftzFESpace(mesh,order=order,dgjumps=True)
-    fes2 = L2(fes.mesh, order=fes.globalorder, dgjumps=True)
+    fes = L2(mesh, order=order, dgjumps=True)
+    etfes = EmbTrefftzFESpace(fes)
 
     u,v = fes.TnT()
     op = Lap(u)*Lap(v)*dx
     lop = -rhs*Lap(v)*dx
 
-    uf = GridFunction(fes2)
-    uf.vec.data = fes.SetOp(op,lf=lop,eps=eps)
+    uf = GridFunction(fes)
+    uf.vec.data = etfes.SetOp(op,lf=lop,eps=eps)
 
-    fes = Compress(fes, fes.FreeDofs())
-    a,f = dglap(fes,exactpoi,rhs,uf)
+    # etfes = Compress(etfes, etfes.FreeDofs())
+    a,f = dglap(etfes,exactpoi,rhs,uf)
+    # import pdb; pdb.set_trace()
 
     inv = a.mat.Inverse(inverse="sparsecholesky")
-    gfu = GridFunction(fes)
+    gfu = GridFunction(etfes)
     gfu.vec.data = inv * f.vec
     nsol = gfu + uf
 

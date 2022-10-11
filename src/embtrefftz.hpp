@@ -16,25 +16,46 @@ namespace ngcomp
               shared_ptr<FESpace> fes_test, int tndof,
               std::map<std::string, Vector<SCAL>> *stats = nullptr);
 
+  template <typename T, typename shrdT>
   class EmbTrefftzFESpace
-      : public L2HighOrderFESpace //, public
-                                  //std::enable_shared_from_this<EmbTrefftzFESpace>
+      : public T //, public std::enable_shared_from_this<EmbTrefftzFESpace>
   {
     shared_ptr<Array<Matrix<double>>> ETmats;
+    shrdT fes;
+    Array<DofId> all2comp;
 
   public:
     EmbTrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags,
                        bool parseflags = false)
-        : L2HighOrderFESpace (ama, flags, parseflags)
+        : T (ama, flags, parseflags)
     {
-      name = "EmbTrefftzFESpace";
-      type = "embt";
-      needs_transform_vec = true;
+      throw Exception ("Please provide a base fes for the embedding");
+    }
+
+    EmbTrefftzFESpace (shrdT afes)
+        : T (afes->GetMeshAccess (), afes->GetFlags (), false), fes (afes)
+    {
+      this->name = "EmbTrefftzFESpace";
+      this->type = "embt";
+      this->needs_transform_vec = true;
+      // this->Update();
+      // this->UpdateDofTables();
+      // this->UpdateCouplingDofArray();
+      // this->FinalizeUpdate();
     }
 
     shared_ptr<BaseVector>
     SetOp (shared_ptr<SumOfIntegrals> bf, shared_ptr<SumOfIntegrals> lf,
            double eps, shared_ptr<FESpace> test_fes, int tndof);
+
+    void GetDofNrs (ElementId ei, Array<int> &dnums) const override
+    {
+      T::GetDofNrs (ei, dnums);
+      if (all2comp.Size () == fes->GetNDof ())
+        for (DofId &d : dnums)
+          if (IsRegularDof (d))
+            d = all2comp[d];
+    }
 
     void VTransformMR (ElementId ei, const SliceMatrix<double> mat,
                        TRANSFORM_TYPE type) const

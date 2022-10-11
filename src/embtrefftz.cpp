@@ -349,50 +349,130 @@ namespace ngcomp
     P->SetZero ();
     for (auto ei : ma->Elements (VOL))
       P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()],
-                           (*embtmats)[ei.Nr ()]);
+                           (*ETmats)[ei.Nr ()]);
     return P;
   }
 
   ////////////////////////// EmbTrefftzFESpace ///////////////////////////
 
+  template <typename T, typename shrdT>
   shared_ptr<BaseVector>
-  EmbTrefftzFESpace ::SetOp (shared_ptr<SumOfIntegrals> bf,
-                             shared_ptr<SumOfIntegrals> lf, double eps,
-                             shared_ptr<FESpace> test_fes, int tndof)
+  EmbTrefftzFESpace<T, shrdT>::SetOp (shared_ptr<SumOfIntegrals> bf,
+                                      shared_ptr<SumOfIntegrals> lf,
+                                      double eps, shared_ptr<FESpace> test_fes,
+                                      int tndof)
   {
     static Timer timer ("EmbTrefftz: SetOp");
 
-    shared_ptr<FESpace> use_as_l2 = dynamic_pointer_cast<FESpace> (
-        const_cast<EmbTrefftzFESpace *> (this)->shared_from_this ());
+    // shared_ptr<FESpace> use_as_l2 =
+    // dynamic_pointer_cast<FESpace>(const_cast<EmbTrefftzFESpace*>(this)->shared_from_this());
 
-    auto embtr = EmbTrefftz<double> (bf, use_as_l2, lf, eps, test_fes, tndof,
-                                     false, nullptr);
+    auto embtr = EmbTrefftz<double> (bf, fes, lf, eps, test_fes, tndof, false,
+                                     nullptr);
     this->ETmats = std::get<0> (embtr);
 
-    for (auto ei : ma->Elements (VOL))
+    T::Update ();
+    int ndof = fes->GetNDof ();
+    all2comp.SetSize (ndof);
+    all2comp = 0;
+
+    for (auto ei : this->ma->Elements (VOL))
       {
         int nz = (*ETmats)[ei.Nr ()].Width ();
         Array<DofId> dofs;
-        this->GetDofNrs (ei, dofs);
-        // for(int i=0;i<dofs.Size()-nz;i++)
+        T::GetDofNrs (ei, dofs);
         for (int i = nz; i < dofs.Size (); i++)
-          free_dofs->Clear (dofs[i]);
+          all2comp[dofs[i]] = NO_DOF_NR_CONDENSE;
+        ////for(int i=0;i<dofs.Size()-nz;i++)
+        // for(int i=nz;i<dofs.Size();i++)
+        ////this->free_dofs->Clear(dofs[i]);
+        ////this->SetDofCouplingType(dofs[i],UNUSED_DOF );
+        // this->SetDofCouplingType(dofs[i],HIDDEN_DOF );
       }
 
+    int newndof = 0;
+    for (DofId &d : all2comp)
+      if (d == 0)
+        d = newndof++;
+
+    this->SetNDof (newndof);
+
+    // this->UpdateDofTables();
+    // this->UpdateCouplingDofArray();
+
+    this->ctofdof.SetSize (newndof);
+    for (int i = 0; i < ndof; i++)
+      if (all2comp[i] >= 0)
+        this->ctofdof[all2comp[i]] = T::GetDofCouplingType (i);
+
+    T::FinalizeUpdate ();
     return std::get<1> (embtr);
   }
 
-  static RegisterFESpace<EmbTrefftzFESpace> initembt ("EmbTrefftzFESpace");
+  template class EmbTrefftzFESpace<L2HighOrderFESpace,
+                                   shared_ptr<L2HighOrderFESpace>>;
+  static RegisterFESpace<
+      EmbTrefftzFESpace<L2HighOrderFESpace, shared_ptr<L2HighOrderFESpace>>>
+      initembt ("L2EmbTrefftzFESpace");
+  template class EmbTrefftzFESpace<VectorL2FESpace,
+                                   shared_ptr<VectorL2FESpace>>;
+  static RegisterFESpace<
+      EmbTrefftzFESpace<VectorL2FESpace, shared_ptr<VectorL2FESpace>>>
+      initembt2 ("VL2EmbTrefftzFESpace");
 }
 
 #ifdef NGS_PYTHON
+
+template <typename T, typename shrdT>
+void ExportETSpace (py::module m, string label)
+{
+  auto pyspace
+      = ngcomp::ExportFESpace<ngcomp::EmbTrefftzFESpace<T, shrdT>> (m, label);
+
+  pyspace.def (py::init ([pyspace] (shrdT fes) {
+                 py::list info;
+                 auto ma = fes->GetMeshAccess ();
+                 info.append (ma);
+                 auto nfes
+                     = make_shared<ngcomp::EmbTrefftzFESpace<T, shrdT>> (fes);
+                 nfes->Update ();
+                 nfes->FinalizeUpdate ();
+                 connect_auto_update (nfes.get ());
+                 return nfes;
+               }),
+               py::arg ("fes"));
+
+  pyspace.def ("SetOp", &ngcomp::EmbTrefftzFESpace<T, shrdT>::SetOp,
+               py::arg ("bf"), py::arg ("lf") = nullptr, py::arg ("eps") = 0,
+               py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0);
+}
+
 void ExportEmbTrefftz (py::module m)
 {
+  ExportETSpace<ngcomp::L2HighOrderFESpace,
+                shared_ptr<ngcomp::L2HighOrderFESpace>> (
+      m, "L2EmbTrefftzFESpace");
+  ExportETSpace<ngcomp::VectorL2FESpace, shared_ptr<ngcomp::VectorL2FESpace>> (
+      m, "VL2EmbTrefftzFESpace");
 
-  ngcomp::ExportFESpace<ngcomp::EmbTrefftzFESpace> (m, "EmbTrefftzFESpace")
-      .def ("SetOp", &ngcomp::EmbTrefftzFESpace::SetOp, py::arg ("bf"),
-            py::arg ("lf") = nullptr, py::arg ("eps") = 0,
-            py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0);
+  m.def (
+      "EmbTrefftzFESpace",
+      [] (shared_ptr<ngcomp::FESpace> fes) {
+        shared_ptr<ngcomp::FESpace> nfes;
+        if (dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes))
+          nfes = make_shared<ngcomp::EmbTrefftzFESpace<
+              ngcomp::L2HighOrderFESpace,
+              shared_ptr<ngcomp::L2HighOrderFESpace>>> (
+              dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes));
+        else if (dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes))
+          nfes = make_shared<ngcomp::EmbTrefftzFESpace<
+              ngcomp::VectorL2FESpace, shared_ptr<ngcomp::VectorL2FESpace>>> (
+              dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes));
+        else
+          throw Exception ("Unknown base fes");
+        return nfes;
+      },
+      py::arg ("fes"));
 
   m.def (
       "TrefftzEmbedding",
