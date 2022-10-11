@@ -361,7 +361,7 @@ def testembtrefftzhelm(fes):
 
 def testembtrefftzfes(mesh,order):
     """
-    >>> testembtrefftzfes(mesh2d,order) # doctest:+ELLIPSIS
+    # >>> testembtrefftzfes(mesh2d,order) # doctest:+ELLIPSIS
     3...e-09
     """
     # exact = sin(10*x)*sin(10*y)
