@@ -12,27 +12,29 @@ env:
   BUILD_TYPE: Debug
 
 jobs:
-  ubuntu:
+  tests:
     runs-on: ubuntu-latest
+    container:
+      image: quay.io/pypa/manylinux2014_x86_64:latest
     steps:     
       - name: install pkgs
-        run: |
-             sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install vim python3 python3-pip python3-distutils python3-tk libpython3-dev # libxmu-dev tk-dev tcl-dev cmake git g++ libglu1-mesa-dev libblas-dev liblapack-dev
-             #sudo apt-get install -y software-properties-common
-             #sudo add-apt-repository universe
-             #sudo add-apt-repository ppa:ngsolve/nightly -y
-             #sudo apt-get install ngsolve -y
-             pip install ngsolve --pre
+        run: yum -y update && yum -y install git ninja-build fontconfig-devel tk-devel tcl-devel libXmu-devel mesa-libGLU-devel ccache python-devel lapack blas suitesparse 
       - name: set path
         run: |
-             echo "PYTHONPATH=/usr/lib/python3/dist-packages/" >> $GITHUB_ENV
+             echo "PYDIR=/opt/python/cp310-cp310/bin" >> $GITHUB_ENV
              echo "NETGENDIR=/usr/bin/" >> $GITHUB_ENV
       - uses: actions/checkout@v2
         with:
           submodules: 'True'
           path: 'NGSTrefftz'
       - name: cmake NGSTrefftz
-        run: cmake -B $GITHUB_WORKSPACE/NGSTrefftz/make -S $GITHUB_WORKSPACE/NGSTrefftz/src/
+        run: cmake \
+          -DCMAKE_CXX_COMPILER=ngscxx  \
+          -DCMAKE_PREFIX_PATH=$PYDIR/.. \
+          -DPYTHON_EXECUTABLE=$PYDIR/python3 \
+          -DPYTHON_LIBRARY=$PYDIR/../lib \
+          -DPYTHON_INCLUDE_DIR=$PYDIR/../include \
+          -B $GITHUB_WORKSPACE/NGSTrefftz/make -S $GITHUB_WORKSPACE/NGSTrefftz/src/
       - name: compile NGSTrefftz
         run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make
       - name: test NGSTrefftz
@@ -42,55 +44,6 @@ jobs:
       - name: Debugging with tmate
         if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3
-
-    ### missing externalprojects...? 
-  #macos:
-    #runs-on: macos-latest
-    #steps:     
-      #- name: install pkgs
-        #run: |
-             #brew install python@3.8
-             #brew install openblas
-             #brew install lapack
-             #brew install zlib-ng
-             #brew install zlib bzip2
-             #echo "LDFLAGS=-L/usr/local/opt/openblas/lib -L/usr/local/opt/lapack/lib" >> $GITHUB_ENV
-             #echo "CPPFLAGS=-I/usr/local/opt/openblas/include -I/usr/local/opt/lapack/include" >> $GITHUB_ENV
-             #echo "PKG_CONFIG_PATH=/usr/local/opt/openblas/lib/pkgconfig:/usr/local/opt/lapack/lib/pkgconfig" >> $GITHUB_ENV
-      #- name: install ngsolve
-        #run: |
-             #wget https://www.asc.tuwien.ac.at/~mhochsteger/ngsolve/macos/NGSolve_nightly.dmg
-             #hdiutil attach NGSolve_nightly.dmg
-             #cp -R /Volumes/NGSolve/* /Applications
-      #- name: set path
-        #run: |
-             #echo "PYTHONPATH=${{ env.PYTHONPATH }}:/Applications/Netgen.app/Contents/Resources/lib/python3.8/site-packages:." >> $GITHUB_ENV
-             #echo "NETGENDIR=/Applications/Netgen.app/Contents/MacOS" >> $GITHUB_ENV
-      #- name: set path II 
-        #run: |
-             #echo "DYLD_LIBRARY_PATH=${{ env.DYLD_LIBRARY_PATH }}:${{ env.NETGENDIR }}" >> $GITHUB_ENV
-             #echo "DYLD_FRAMEWORK_PATH=${{ env.DYLD_FRAMEWORK_PATH }}:${{ env.NETGENDIR }}/../Frameworks" >> $GITHUB_ENV
-             #echo "${{ env.NETGENDIR }}" >> $GITHUB_PATH
-      ##- uses: actions/setup-python@v3
-        ##with:
-          ##python-version: '3.8'
-      ##- name: ngsolve found?
-        ##run:  python3 -c "import ngsolve"
-      #- uses: actions/checkout@v2
-        #with:
-          #submodules: 'True'
-          #path: 'NGSTrefftz'
-      #- name: cmake NGSTrefftz
-        #run: cmake -B $GITHUB_WORKSPACE/NGSTrefftz/make -S $GITHUB_WORKSPACE/NGSTrefftz/src/
-      #- name: compile NGSTrefftz
-        #run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make
-      ##- name: test NGSTrefftz
-        ##run: env CTEST_OUTPUT_ON_FAILURE=1 make -C $GITHUB_WORKSPACE/NGSTrefftz/make test
-      ##- name: install NGSTrefftz
-        ##run: sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
-      #- name: Debugging with tmate
-        #if: ${{ failure() }}
-        #uses: mxschmitt/action-tmate@v3
 
   pypi:
     needs: [ubuntu]
@@ -102,7 +55,7 @@ jobs:
         with:
           submodules: 'True'
           path: 'NGSTrefftz'
-          fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
+          fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
       - name: build pip
         run: cd NGSTrefftz/.github/workflows && sh build_pip.sh
       - name: Publish source distribution to PyPI
@@ -152,11 +105,9 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           # list of Docker images to use as base name for tags
-          images: |
-            paulstdocker/ngstrefftz
+          images: paulstdocker/ngstrefftz
           # generate Docker tags based on the following events/attributes
-          tags: |
-            type=semver,pattern={{version}}
+          tags: type=semver,pattern={{version}}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -185,28 +136,23 @@ jobs:
           submodules: 'True'
           path: 'NGSTrefftz'
       - name: install pkgs
-        run: |
-             sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install libxmu-dev tk-dev tcl-dev git libglu1-mesa-dev libblas-dev liblapack-dev python3 python3-pip python3-distutils python3-tk libpython3-dev python3-testresources
-             #sudo apt-get install -y software-properties-common
-             #sudo add-apt-repository universe
-             sudo apt-get install npm nodejs pandoc -y
-      - name: pip pkgs
-        run: python3 -m pip list
+        run: sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install libxmu-dev tk-dev tcl-dev git libglu1-mesa-dev libblas-dev liblapack-dev python3 python3-pip python3-distutils python3-tk libpython3-dev python3-testresources npm nodejs pandoc -y
+      #- name: pip pkgs
+        #run: python3 -m pip list
       - name: set path
-        run: |
-             echo "NETGENDIR=/usr/bin/" >> $GITHUB_ENV
+        run: echo "NETGENDIR=/usr/bin/" >> $GITHUB_ENV
       - run: pip install --user -r $GITHUB_WORKSPACE/NGSTrefftz/docs/requirements.txt
-      - name: test ngsolve
-        run: python3 -c "import ngsolve"
-      - name: test ngsolve
-        run: python3 -c "import ngstrefftz"
+      #- name: test ngsolve
+        #run: python3 -c "import ngsolve"
+      #- name: test ngsolve
+        #run: python3 -c "import ngstrefftz"
       - name: webgui
         run: |
              jupyter nbextension install --user --py widgetsnbextension
              jupyter nbextension enable --user --py widgetsnbextension
              jupyter nbextension install --user --py webgui_jupyter_widgets
              jupyter nbextension enable --user --py webgui_jupyter_widgets            
-      - run: python3 -c "import sys; print(sys.path)"
+      #- run: python3 -c "import sys; print(sys.path)"
       #- name: cmake NGSTrefftz
         #run: |
              #cmake -B $GITHUB_WORKSPACE/NGSTrefftz/make -S $GITHUB_WORKSPACE/NGSTrefftz/src/
