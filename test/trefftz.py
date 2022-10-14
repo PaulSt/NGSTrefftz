@@ -542,7 +542,7 @@ def TestHeat():
     f.Assemble()
 
     gfu = GridFunction(fes)
-    gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs(), inverse="umfpack") * f.vec
+    gfu.vec.data = a.mat.Inverse() * f.vec
 
     return sqrt(Integrate((gfu-ubnd)**2, mesh))
 
