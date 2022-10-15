@@ -1,9 +1,11 @@
 #ifndef FILE_SVDTREFFTZ_HPP
 #define FILE_SVDTREFFTZ_HPP
 #include <comp.hpp>
+#include <python_comp.hpp>
 #include <fem.hpp>
 #include <integratorcf.hpp>
 #include <variant>
+#include <bla.hpp>
 
 namespace ngcomp
 {
@@ -11,7 +13,7 @@ namespace ngcomp
   std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
   EmbTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
               shared_ptr<SumOfIntegrals> lf, double eps,
-              shared_ptr<FESpace> fes_test, int tndof,
+              shared_ptr<FESpace> fes_test, int tndof, bool getrange,
               std::map<std::string, Vector<SCAL>> *stats = nullptr);
 }
 

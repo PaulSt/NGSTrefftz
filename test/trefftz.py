@@ -1,6 +1,7 @@
 # import sys, os
 # sys.path.append(os.path.join(os.path.dirname(sys.path[0])))
 from ngstrefftz import *
+from embt import dglap
 # from ngstents import TentSlab
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
@@ -197,6 +198,7 @@ def DGnormerror(fes,uh,gradtruesol,c,alpha,beta,BB=1):
     norm += Integrate(alpha * (BoundaryFromVolumeCF(grad(uh)[D]) - gradtruesol[D])**2 , fes.mesh, definedon=fes.mesh.Boundaries("dirichlet"))
 
     return sqrt(norm)
+
 
 
 import netgen.meshing as ngm
@@ -431,7 +433,7 @@ def TestQTrefftz(order, mesh, t_step,qtrefftz=1):
     sig0=-bdd[1]
 
     fes = trefftzfespace(mesh, order=order, dgjumps=True, eq="qtwave")
-    fes.SetWavespeed(wavespeed)
+    fes.SetCoeff(wavespeed)
     [a,f] = DGwaveeqsys(fes,U0,v0,sig0,wavespeed,gD,True,False,alpha=0.5,beta=0.5,gamma=1,mu=0.5)
     gfu = GridFunction(fes, name="uDG")
     gfu.vec.data = a.mat.Inverse()*f.vec
@@ -474,7 +476,7 @@ def TestBessel(order, mesh, t_step):
     sig0=-bdd[1]
 
     fes = trefftzfespace(mesh, order=order, dgjumps=True, eq="qtwave")
-    fes.SetWavespeed(wavespeed,BB)
+    fes.SetCoeff(wavespeed,BB)
     [a,f] = DGwaveeqsys(fes,U0,v0,sig0,wavespeed,gD,True,False,alpha=0,beta=0,gamma=1,mu=0,BB=BB)
     gfu = GridFunction(fes, name="uDG")
     gfu.vec.data = a.mat.Inverse()*f.vec
@@ -492,18 +494,21 @@ def TestHeat():
     """
     Solve heat equation using Trefftz fcts
     >>> TestHeat() # doctest:+ELLIPSIS
-    4...e-11
+    0.0003...
     """
-    mesh = ngsm.MakeStructured2DMesh(nx=32, ny=32, periodic_x=False)  #y is time component
+    mesh = ngsm.MakeStructured2DMesh(nx=32, ny=32, periodic_x=False)
+    diffusion = 10
 
     order = 4
-    # fes = L2(mesh, order=order, dgjumps=True)
-    fes = trefftzfespace(mesh, order=2*order, dgjumps=True, eq="heat")
+    #fes = L2(mesh, order=order, dgjumps=True)
+    fes = trefftzfespace(mesh, order=2*order+1, dgjumps=True, eq="heat")
+    fes.SetCoeff(diffusion)
+    # import pdb; pdb.set_trace()
     u, v = fes.TnT()
 
-    eps =  1
+    eps = diffusion
     b = CoefficientFunction((0, 1))
-    ubnd = exp(y)*exp(x)
+    ubnd = exp(y*diffusion)*exp(x)
     lambd = 10
     h = specialcf.mesh_size
     n = specialcf.normal(mesh.dim)
@@ -537,10 +542,9 @@ def TestHeat():
     f.Assemble()
 
     gfu = GridFunction(fes)
-    gfu.vec.data = a.mat.Inverse(freedofs=fes.FreeDofs(), inverse="umfpack") * f.vec
+    gfu.vec.data = a.mat.Inverse() * f.vec
 
     return sqrt(Integrate((gfu-ubnd)**2, mesh))
-
 
 
 
