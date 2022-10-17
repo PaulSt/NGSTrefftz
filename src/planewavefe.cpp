@@ -9,6 +9,20 @@ namespace ngfem
              sin (2.0 * M_PI * i / this->ndof) };
   }
 
+  // template<>
+  // Matrix<Complex> PlaneWaveElement<2> :: StableMat() const
+  //{
+  // Matrix<Complex> M(this->ndof);
+  // for (int i=0; i<this->ndof; ++i)
+  // for (int j=0; j<this->ndof; ++j)
+  //{
+  // M(i,j)=exp(-1i*(2.0*M_PI*i/this->ndof)*(j-this->ndof/2.0)*conj);
+  //}
+
+  // CalcInverse(M,INVERSE_LIB::INV_LAPACK);
+  // return M;
+  //}
+
   template <>
   void PlaneWaveElement<2>::CalcShape (const BaseMappedIntegrationPoint &mip,
                                        BareSliceVector<Complex> shape) const
