@@ -32,8 +32,6 @@ namespace ngcomp
   class TrefftzFESpace : public FESpace
   {
     int D;
-    int order;
-    size_t ndof;
     int nel;
     int local_ndof;
     float coeff_const = 1;

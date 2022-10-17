@@ -1146,9 +1146,8 @@ namespace ngfem
           {
             dshape (i, d) = 0.0;
             for (int j = (localmat)[0][i]; j < (localmat)[0][i + 1]; ++j)
-              dshape (i, d) += (localmat)[2][j]
-                               * pol[(localmat)[1][j]]; // * (d==1 ? c : 1) *
-                                                        // (1.0/elsize);
+              dshape (i, d) += (localmat)[2][j] * pol[(localmat)[1][j]]
+                               * (d == 1 ? c : 1); // * (1.0/elsize);
           }
       }
   }
@@ -1186,9 +1185,8 @@ namespace ngfem
           {
             dshape (i, d) = 0.0;
             for (int j = (localmat)[0][i]; j < (localmat)[0][i + 1]; ++j)
-              dshape (i, d) += (localmat)[2][j]
-                               * pol[(localmat)[1][j]]; // * (d==2 ? c : 1) *
-                                                        // (1.0/elsize);
+              dshape (i, d) += (localmat)[2][j] * pol[(localmat)[1][j]]
+                               * (d == 2 ? c : 1); // * (1.0/elsize);
           }
       }
   }
@@ -1241,9 +1239,8 @@ namespace ngfem
                 dshape (i * 2 + d, imip) = 0.0;
                 for (int j = (localmat)[0][i]; j < (localmat)[0][i + 1]; ++j)
                   dshape (i * 2 + d, imip)
-                      += (localmat)[2][j]
-                         * pol[(localmat)[1][j]]; // * (d==1 ? c : 1) *
-                                                  // (2.0/elsize);
+                      += (localmat)[2][j] * pol[(localmat)[1][j]]
+                         * (d == 1 ? c : 1); // * (2.0/elsize);
               }
           }
       }
@@ -1285,9 +1282,8 @@ namespace ngfem
                 dshape (i * 3 + d, imip) = 0.0;
                 for (int j = (localmat)[0][i]; j < (localmat)[0][i + 1]; ++j)
                   dshape (i * 3 + d, imip)
-                      += (localmat)[2][j]
-                         * pol[(localmat)[1][j]]; // * (d==2 ? c : 1) *
-                                                  // (2.0/elsize);
+                      += (localmat)[2][j] * pol[(localmat)[1][j]]
+                         * (d == 2 ? c : 1); // * (2.0/elsize);
               }
           }
       }
@@ -1331,9 +1327,8 @@ namespace ngfem
                 dshape (i * 4 + d, imip) = 0.0;
                 for (int j = (localmat)[0][i]; j < (localmat)[0][i + 1]; ++j)
                   dshape (i * 4 + d, imip)
-                      += (localmat)[2][j]
-                         * pol[(localmat)[1][j]]; // * (d==3 ? c : 1) *
-                                                  // (2.0/elsize);
+                      += (localmat)[2][j] * pol[(localmat)[1][j]]
+                         * (d == 3 ? c : 1); // * (2.0/elsize);
               }
           }
       }

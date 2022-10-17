@@ -456,8 +456,8 @@ void ExportEmbTrefftz (py::module m)
       m, "VL2EmbTrefftzFESpace");
 
   m.def (
-      "EmbTrefftzFESpace",
-      [] (shared_ptr<ngcomp::FESpace> fes) {
+      "EmbeddedTrefftzFES",
+      [] (shared_ptr<ngcomp::FESpace> fes) -> shared_ptr<ngcomp::FESpace> {
         shared_ptr<ngcomp::FESpace> nfes;
         if (dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes))
           nfes = make_shared<ngcomp::EmbTrefftzFESpace<
@@ -472,6 +472,13 @@ void ExportEmbTrefftz (py::module m)
           throw Exception ("Unknown base fes");
         return nfes;
       },
+      R"mydelimiter( 
+                        Given a FESpace this wrapper produces a Trefftz FESpace using local projections, following the Embedded Trefftz-DG methodology. Use EmbTrefftzFES.SetOp() to set the operator used to construct the embedding.
+
+                        :param fes: FESpace to be wrapped.
+
+                        :return: EmbTrefftzFES
+                        )mydelimiter",
       py::arg ("fes"));
 
   m.def (
@@ -480,7 +487,9 @@ void ExportEmbTrefftz (py::module m)
           shared_ptr<ngcomp::FESpace> fes,
           shared_ptr<ngfem::SumOfIntegrals> lf, double eps,
           shared_ptr<ngcomp::FESpace> test_fes, int tndof, bool getrange,
-          py::object stats_dict) {
+          py::object stats_dict)
+          -> std::tuple<shared_ptr<ngcomp::BaseMatrix>,
+                        shared_ptr<ngcomp::BaseVector>> {
         py::extract<py::dict> stats_ (stats_dict);
         shared_ptr<py::dict> pystats = nullptr;
         if (stats_.check ())

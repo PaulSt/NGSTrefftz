@@ -89,7 +89,8 @@ extensions = ["sphinx.ext.autodoc","sphinx.ext.mathjax","sphinx.ext.todo","sphin
               # "jupyter_sphinx.execute",
               "jupyter_sphinx",
               "nbsphinx",
-              "m2r2",
+              # "m2r2",
+              "myst_parser",
               "sphinxemoji.sphinxemoji",
               ]
 # source_suffix = ['.rst', '.md']
@@ -154,7 +155,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'paper','env']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'paper', 'env', 'jupyter_execute']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -162,28 +163,28 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'paper','env']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
-html_theme_options = {
-    'github_user': 'PaulSt',
-    'github_repo': 'NGSTrefftz',
-    # 'github_banner':True,
-    # 'travis_button':True,
-    'github_button':True,
-    'fixed_sidebar':True,
-    'font_size':10
-    # 'analytics_id': 'G-XXXXXXXXXX',  #  Provided by Google in your dashboard
-    # 'analytics_anonymize_ip': False,
-}
-html_sidebars = {
-   'index': [
-        'about.html',
-        'localtoc.html',
-        # 'relations.html',
-       ],
-   '**': ['about.html',
-          'localtoc.html',
-       ],
-}
+html_theme = 'sphinx_rtd_theme'
+# html_theme_options = {
+    # 'github_user': 'PaulSt',
+    # 'github_repo': 'NGSTrefftz',
+    # # 'github_banner':True,
+    # # 'travis_button':True,
+    # 'github_button':True,
+    # 'fixed_sidebar':True,
+    # 'font_size':10
+    # # 'analytics_id': 'G-XXXXXXXXXX',  #  Provided by Google in your dashboard
+    # # 'analytics_anonymize_ip': False,
+# }
+# html_sidebars = {
+   # 'index': [
+        # 'about.html',
+        # 'localtoc.html',
+        # # 'relations.html',
+       # ],
+   # '**': ['about.html',
+          # 'localtoc.html',
+       # ],
+# }
 
 
 # Add any paths that contain custom static files (such as style sheets) here,

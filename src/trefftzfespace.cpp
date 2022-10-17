@@ -16,8 +16,7 @@ namespace ngcomp
     D = ma->GetDimension ();
 
     this->dgjumps = true;
-    order = int (flags.GetNumFlag ("order", 1));
-    coeff_const = flags.GetNumFlag ("wavespeed", 1);
+    // coeff_const = flags.GetNumFlag ("wavespeed", 1);
     coeff_cf = nullptr;
     basistype = flags.GetNumFlag ("basistype", 0);
     useshift = flags.GetNumFlag ("useshift", 1);
@@ -984,21 +983,6 @@ namespace ngcomp
 void ExportTrefftzFESpace (py::module m)
 {
   using namespace ngcomp;
-  // using namespace ngfem;
-  //[>
-  // We just export the class here and use the FESpace constructor to create
-  // our space. This has the advantage, that we do not need to specify all the
-  // flags to parse (like dirichlet, definedon,...), but we can still append
-  // new functions only for that space.
-  //*/
-  // py::class_<TrefftzFESpace, shared_ptr<TrefftzFESpace>, FESpace>
-  //(m, "TrefftzFESpace", "FESpace with first order and second order trigs on
-  //2d mesh") .def("GetNDof", &TrefftzFESpace::GetNDof)
-  //;
-  // m.def("GetNDof", [](shared_ptr<FESpace> fes) {
-  // cout << typeid(*fes).name() << endl;
-  ////fes->GetNDof();
-  //});
 
   ExportFESpace<TrefftzFESpace> (m, "trefftzfespace")
       .def ("GetDocu", &TrefftzFESpace::GetDocu)
