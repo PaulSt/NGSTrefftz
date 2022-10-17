@@ -229,6 +229,8 @@ How to get started?
 If you are implementing a new method using NGSTrefftz consider `contributing`_.
 
 .. _notebooks: notebooks/index.html
+.. _contributing: contrib.html
+.. _documentation: docu.html
 .. _embedded Trefftz method: notebooks/embTrefftz.html
 
 

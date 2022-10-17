@@ -89,7 +89,8 @@ extensions = ["sphinx.ext.autodoc","sphinx.ext.mathjax","sphinx.ext.todo","sphin
               # "jupyter_sphinx.execute",
               "jupyter_sphinx",
               "nbsphinx",
-              "m2r2",
+              # "m2r2",
+              "myst_parser",
               "sphinxemoji.sphinxemoji",
               ]
 # source_suffix = ['.rst', '.md']
@@ -154,7 +155,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'paper','env']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'paper', 'env', 'jupyter_execute']
 
 
 # -- Options for HTML output -------------------------------------------------

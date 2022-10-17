@@ -30,11 +30,6 @@
 Welcome 
 ===========================
 NGSTrefftz is an add-On to NGSolve for Trefftz methods.
-Take a look at the notebooks! 
-You can run them online `here`_. 
-
-.. _here: https://mybinder.org/v2/gh/PaulSt/NGSTrefftz/HEAD?filepath=doc%2Fnotebooks%2Findex.ipynb
-
 
 .. toctree::
    :caption: Introduction
@@ -42,9 +37,11 @@ You can run them online `here`_.
 
    readme
    contrib
+   intro
 
 .. toctree::
    :caption: Documentation
+   :maxdepth: 1
 
    docu
 
@@ -54,6 +51,7 @@ You can run them online `here`_.
    :caption: Notebooks
    :maxdepth: 1
 
+   notebooks/index.ipynb
    notebooks/laplace.ipynb
    notebooks/helmholtz.ipynb
    notebooks/twave.ipynb
