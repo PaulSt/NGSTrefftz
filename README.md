@@ -47,15 +47,17 @@ To build the package the following software needs to be installed
 To access the newest features the nightly version of NGSolve works best and [lapack](http://www.netlib.org/lapack/) >= 3.9 is required.
 
 ## News
-Aug, 2022: Three different [pip](https://pypi.org/search/?q=ngstrefftz)-installer available, now using wheels! 
+🚀 Oct, 2022: New and improved implementation of the embedded Trefftz method via `EmbeddedTrefftzFES`!
 
-Mar, 2022: NGSTrefftz now has a [website](https://paulst.github.io/NGSTrefftz/)! 🚀
+🚀 Aug, 2022: Three different [pip](https://pypi.org/search/?q=ngstrefftz)-installer available, now using wheels! 
 
-Feb, 2022: If you are using NGSolve nightly releases: [NGSolve@eda758d](https://github.com/NGSolve/ngsolve/commit/eda758d99483888851913d8a5c9aff4d0cbc9cc2) breaks a dependency and [NGSolve@3d52ecd](https://github.com/NGSolve/ngsolve/commit/3d52ecd615f2b7c409219eebaba99288ea19c1bc) produces import issue. Make sure to update ngstrefftz submodules and move to newest ngsolve version, at least [NGSolve@5839a09](https://github.com/NGSolve/ngsolve/commit/5839a09810235a938bd85807d8e638d3a0b6c69d).
+🚀 Mar, 2022: NGSTrefftz now has a [website](https://paulst.github.io/NGSTrefftz/)! 
 
-Jan, 2022: NGSTrefftz is now available via pip! 🚀
+🚀 Feb, 2022: If you are using NGSolve nightly releases: [NGSolve@eda758d](https://github.com/NGSolve/ngsolve/commit/eda758d99483888851913d8a5c9aff4d0cbc9cc2) breaks a dependency and [NGSolve@3d52ecd](https://github.com/NGSolve/ngsolve/commit/3d52ecd615f2b7c409219eebaba99288ea19c1bc) produces import issue. Make sure to update ngstrefftz submodules and move to newest ngsolve version, at least [NGSolve@5839a09](https://github.com/NGSolve/ngsolve/commit/5839a09810235a938bd85807d8e638d3a0b6c69d).
 
-Nov, 2021: NGSTrefftz now comes in a docker and with binder notebooks! 🚀
+🚀 Jan, 2022: NGSTrefftz is now available via pip! 
+
+🚀 Nov, 2021: NGSTrefftz now comes in a docker and with binder notebooks! 
 
 ## Papers using the code
 * Tent pitching and Trefftz-DG method for the acoustic wave equation  
