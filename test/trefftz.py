@@ -263,7 +263,7 @@ def testlaptrefftz(order,mesh):
     >>> testlaptrefftz(order,mesh) # doctest:+ELLIPSIS
     2...e-06
     """
-    fes = FESpace("trefftzfespace",mesh,order=order,eq="laplace")
+    fes = trefftzfespace(mesh,order=order,eq="laplace")
     a,f = dglap(fes,exactlap)
     gfu = GridFunction(fes)
     gfu.vec.data = a.mat.Inverse() * f.vec
@@ -331,7 +331,6 @@ def testhelmtrefftz(order,mesh):
     n = specialcf.normal(mesh.dim)
     bndc = CoefficientFunction((sqrt(0.5)*1j*exact, sqrt(0.5)*1j*exact))*n + 1j*omega*exact
 
-    fes = FESpace("trefftzfespace",mesh,order=order,eq="laplace")
     fes = trefftzfespace(mesh,order=order,eq="helmholtz",complex=True,dgjumps=True)
     fes2 = trefftzfespace(mesh,order=order,eq="helmholtzconj",complex=True,dgjumps=True)
     a,f = dghelm(fes,fes2,bndc,omega)
@@ -374,7 +373,8 @@ def Cartsolve2D(fes,c,fullsys=False,inputsol=None):
     >>> mesh = CartSquare(N,c*N)
 
     using Trefftz basis
-    >>> fes = FESpace("trefftzfespace", mesh, order = order, wavespeed = c, dgjumps=True)
+    >>> fes = trefftzfespace(mesh, order = order, dgjumps=True)
+    >>> fes.SetCoeff(c)
     >>> Cartsolve2D(fes,c) # doctest:+ELLIPSIS
     [17.0, ..., ...e-09, ...e-08]
 

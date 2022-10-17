@@ -370,7 +370,7 @@ def testembtrefftzfes(mesh,order):
     eps = 10**-7
 
     fes = L2(mesh, order=order, dgjumps=True)
-    etfes = EmbTrefftzFESpace(fes)
+    etfes = EmbeddedTrefftzFES(fes)
 
     u,v = fes.TnT()
     op = Lap(u)*Lap(v)*dx
