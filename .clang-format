@@ -1,0 +1,10 @@
+---
+Language: Cpp
+BasedOnStyle: GNU
+Standard: Latest
+NamespaceIndentation: All
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+PenaltyReturnTypeOnItsOwnLine: 0
+SortIncludes: false
+---
