@@ -25,7 +25,7 @@ do
 
     #rm -rf /home/app/ngstrefftz/make
     rm -rf _skbuild
-    $PYDIR/pip install setuptool
+    $PYDIR/pip install setuptools
     $PYDIR/pip install ngsolve --pre
 
     $PYDIR/pip wheel -vvv .
@@ -35,7 +35,7 @@ do
     rm -rf *.whl
     $PYDIR/pip uninstall -y ngsolve
     $PYDIR/pip uninstall -y netgen-mesher
-    $PYDIR/pip uninstall -y setuptool
+    $PYDIR/pip uninstall -y setuptools
 
     # avx2 build:
     #rm -rf _skbuild
