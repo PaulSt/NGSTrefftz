@@ -7,6 +7,9 @@ py=/opt/python/cp39-cp39/bin/python
 $py fix_auditwheel_policy.py
 cd ../..
 
+rm -rf wheelhouse
+mkdir wheelhouse
+
 git config --global --add safe.directory '*'
 
 export ORIGINAL_PATH="$PATH"
@@ -22,23 +25,28 @@ do
 
     #rm -rf /home/app/ngstrefftz/make
     rm -rf _skbuild
-    $PYDIR/pip install ngsolve
+    $PYDIR/pip install setuptool
+    $PYDIR/pip install ngsolve --pre
 
     $PYDIR/pip wheel -vvv .
-    auditwheel repair ngstrefftz*.whl
+    #auditwheel repair ngstrefftz*.whl
+    rename linux_ manylinux_2_17_x86_64.manylinux2014_ ngstrefftz*.whl
+    mv ngstrefftz*.whl wheelhouse/
     rm -rf *.whl
     $PYDIR/pip uninstall -y ngsolve
     $PYDIR/pip uninstall -y netgen-mesher
+    $PYDIR/pip uninstall -y setuptool
 
     # avx2 build:
-    rm -rf _skbuild
-    $PYDIR/pip install ngsolve-avx2
-    NETGEN_ARCH=avx2 $PYDIR/pip wheel -vvv .
-    auditwheel repair ngstrefftz*.whl
-    rm -rf *.whl
-    $PYDIR/pip uninstall -y ngsolve-avx2
-    $PYDIR/pip uninstall -y netgen-mesher-avx2
+    #rm -rf _skbuild
+    #$PYDIR/pip install ngsolve-avx2 --pre
+    #NETGEN_ARCH=avx2 $PYDIR/pip wheel -vvv .
+    #auditwheel repair ngstrefftz*.whl
+    #rm -rf *.whl
+    #$PYDIR/pip uninstall -y ngsolve-avx2
+    #$PYDIR/pip uninstall -y netgen-mesher-avx2
 done
 
 $PYDIR/pip install -U twine
 #$PYDIR/twine upload wheelhouse/*manylinux*.whl
+#$PYDIR/twine upload --repository testpypi wheelhouse/*manylinux*.whl

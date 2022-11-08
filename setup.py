@@ -118,10 +118,12 @@ class CMakeBuild(build_ext):
 
 import netgen.version
 import ngsolve
+import pkg_resources
 netgen_name = netgen.config.NETGEN_PYTHON_PACKAGE_NAME
 avx2 = netgen_name.replace('netgen-mesher', '') # keep -avx2 suffix
 name = 'ngstrefftz' + avx2
-install_requires = [ 'ngsolve'+avx2+'>='+ngsolve.__version__ ]
+ngsolve_version = pkg_resources.get_distribution("ngsolve").version
+install_requires = [ 'ngsolve'+avx2+'>='+ngsolve_version ]
 
 if sys.argv[1] == "sdist":
     package_data = {"ngstrefftz": ["*"
@@ -147,6 +149,6 @@ setup(
     cmdclass=dict(build_ext=CMakeBuild),
     packages=["ngstrefftz"],
     package_dir={"ngstrefftz": "src"},
-    python_requires='>=3.5',
+    python_requires='>=3.8',
     package_data=package_data,
 )
