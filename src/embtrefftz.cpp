@@ -487,13 +487,13 @@ void ExportEmbTrefftz (py::module m)
           shared_ptr<ngcomp::FESpace> fes,
           shared_ptr<ngfem::SumOfIntegrals> lf, double eps,
           shared_ptr<ngcomp::FESpace> test_fes, int tndof, bool getrange,
-          py::object stats_dict)
+          optional<py::dict> stats_dict)
           -> std::tuple<shared_ptr<ngcomp::BaseMatrix>,
                         shared_ptr<ngcomp::BaseVector>> {
-        py::extract<py::dict> stats_ (stats_dict);
+
         shared_ptr<py::dict> pystats = nullptr;
-        if (stats_.check ())
-          pystats = make_shared<py::dict> (stats_ ());
+        if (stats_dict)
+          pystats = make_shared<py::dict> (*stats_dict);
 
         if (fes->IsComplex ())
           {
@@ -536,18 +536,18 @@ void ExportEmbTrefftz (py::module m)
             )mydelimiter",
       py::arg ("bf"), py::arg ("fes"), py::arg ("lf"), py::arg ("eps") = 0,
       py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0,
-      py::arg ("getrange") = false, py::arg ("stats_dict") = py::none ());
+      py::arg ("getrange") = false, py::arg ("stats_dict") = nullopt);
 
   m.def (
       "TrefftzEmbedding",
       [] (shared_ptr<ngfem::SumOfIntegrals> bf,
           shared_ptr<ngcomp::FESpace> fes, double eps,
           shared_ptr<ngcomp::FESpace> test_fes, int tndof, bool getrange,
-          py::object stats_dict) -> shared_ptr<ngcomp::BaseMatrix> {
-        py::extract<py::dict> stats_ (stats_dict);
+          optional<py::dict> stats_dict) -> shared_ptr<ngcomp::BaseMatrix> {
+
         shared_ptr<py::dict> pystats = nullptr;
-        if (stats_.check ())
-          pystats = make_shared<py::dict> (stats_ ());
+        if (stats_dict)
+          pystats = make_shared<py::dict> (*stats_dict);
 
         if (fes->IsComplex ())
           {
