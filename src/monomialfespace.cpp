@@ -79,8 +79,8 @@ namespace ngcomp
           case ET_TRIG:
             {
               return *(new (alloc) ScalarMappedElement<2> (
-                  local_ndof, order, basismat, eltype, ElCenter<1> (ei),
-                  Adiam<1> (ei)));
+                  local_ndof, order, basismat, eltype, ElCenter<2> (ei),
+                  Adiam<2> (ei)));
               break;
             }
           case ET_HEX:
@@ -89,8 +89,8 @@ namespace ngcomp
           case ET_TET:
             {
               return *(new (alloc) ScalarMappedElement<3> (
-                  local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                  Adiam<2> (ei)));
+                  local_ndof, order, basismat, eltype, ElCenter<3> (ei),
+                  Adiam<3> (ei)));
               break;
             }
           }
@@ -112,15 +112,6 @@ namespace ngcomp
   {
     auto docu = FESpace::GetDocu ();
     docu.Arg ("useshift")
-        = "bool = True\n"
-          "  use shift of basis functins to element center and scale them";
-    docu.Arg ("gamma")
-        = "bool = True\n"
-          "  use shift of basis functins to element center and scale them";
-    docu.Arg ("basistype")
-        = "bool = True\n"
-          "  use shift of basis functins to element center and scale them";
-    docu.Arg ("wavespeed")
         = "bool = True\n"
           "  use shift of basis functins to element center and scale them";
     return docu;

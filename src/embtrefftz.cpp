@@ -490,7 +490,6 @@ void ExportEmbTrefftz (py::module m)
           optional<py::dict> stats_dict)
           -> std::tuple<shared_ptr<ngcomp::BaseMatrix>,
                         shared_ptr<ngcomp::BaseVector>> {
-
         shared_ptr<py::dict> pystats = nullptr;
         if (stats_dict)
           pystats = make_shared<py::dict> (*stats_dict);
@@ -544,7 +543,6 @@ void ExportEmbTrefftz (py::module m)
           shared_ptr<ngcomp::FESpace> fes, double eps,
           shared_ptr<ngcomp::FESpace> test_fes, int tndof, bool getrange,
           optional<py::dict> stats_dict) -> shared_ptr<ngcomp::BaseMatrix> {
-
         shared_ptr<py::dict> pystats = nullptr;
         if (stats_dict)
           pystats = make_shared<py::dict> (*stats_dict);
