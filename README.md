@@ -4,7 +4,7 @@
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/PaulSt/NGSTrefftz/HEAD?filepath=docs%2Fnotebooks%2Findex.ipynb)
 [![Docker Image Version (latest semver)](https://img.shields.io/docker/v/paulstdocker/ngstrefftz?label=docker&logo=docker&sort=semver)](https://hub.docker.com/r/paulstdocker/ngstrefftz)
 [![PyPI](https://img.shields.io/pypi/v/ngstrefftz?color=blue&logo=pypi)](https://pypi.org/project/ngstrefftz/)
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/PaulSt/NGSTrefftz/build?logo=github)](https://github.com/PaulSt/NGSTrefftz/actions)
+[![GitHub Workflow Status](https://github.com/PaulSt/NGSTrefftz/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/PaulSt/NGSTrefftz/actions/workflows/build.yml)
 [![status](https://joss.theoj.org/papers/c2f4e85b118c22b81aa27d7799265409/status.svg)](https://joss.theoj.org/papers/c2f4e85b118c22b81aa27d7799265409)
 [![docs](https://img.shields.io/badge/docs-NGSTrefftz-blue?logo=readthedocs)](https://paulst.github.io/NGSTrefftz/)
 
@@ -62,10 +62,16 @@ To access the newest features the nightly version of NGSolve works best and [lap
 🚀 Nov, 2021: NGSTrefftz now comes in a docker and with binder notebooks! 
 
 ## Papers using the code
-* Tent pitching and Trefftz-DG method for the acoustic wave equation  
-[![arXiv](https://img.shields.io/badge/arXiv-1907.02367-b31b1b.svg)](https://arxiv.org/abs/1907.02367)
-* A space-time quasi-Trefftz DG method for the wave equation with piecewise-smooth coefficients  
-[![arXiv](https://img.shields.io/badge/arXiv-2011.04617-b31b1b.svg)](https://arxiv.org/abs/2011.04617)
-* Embedded Trefftz discontinuous Galerkin methods  
+* *Unfitted Trefftz discontinuous Galerkin methods for elliptic boundary value problems*  
+Fabian Heimann, Christoph Lehrenfeld, Paul Stocker, Henry von Wahl  
+[![arXiv](https://img.shields.io/badge/arXiv-2212.12236-b31b1b.svg)](https://arxiv.org/abs/2212.12236)
+* *Embedded Trefftz discontinuous Galerkin methods*  
+Christoph Lehrenfeld, Paul Stocker   
 [![arXiv](https://img.shields.io/badge/arXiv-2201.07041-b31b1b.svg)](https://arxiv.org/abs/2201.07041)
+* *A space-time quasi-Trefftz DG method for the wave equation with piecewise-smooth coefficients*   
+Lise-Marie Imbert-Gérard, Andrea Moiola, Paul Stocker  
+[![arXiv](https://img.shields.io/badge/arXiv-2011.04617-b31b1b.svg)](https://arxiv.org/abs/2011.04617)
+* *Tent pitching and Trefftz-DG method for the acoustic wave equation*  
+Ilaria Perugia, Joachim Schöberl, Paul Stocker, Christoph Wintersteiger   
+[![arXiv](https://img.shields.io/badge/arXiv-1907.02367-b31b1b.svg)](https://arxiv.org/abs/1907.02367)
 
