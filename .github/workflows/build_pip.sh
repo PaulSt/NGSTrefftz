@@ -25,7 +25,7 @@ do
 
     #rm -rf /home/app/ngstrefftz/make
     rm -rf _skbuild
-    $PYDIR/pip install setuptools
+    $PYDIR/pip install -U pytest-check numpy wheel scikit-build mkl==2021.* mkl-devel==2021.* setuptools
     $PYDIR/pip install ngsolve --pre
 
     $PYDIR/pip wheel -vvv .
