@@ -10,7 +10,6 @@ namespace ngcomp
   {
     int D;
     int order;
-    size_t ndof;
     int nel;
     int local_ndof;
     int useshift = 1;
@@ -18,7 +17,8 @@ namespace ngcomp
     CSR basismat;
 
   public:
-    MonomialFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
+    MonomialFESpace (shared_ptr<MeshAccess> ama, const Flags &flags,
+                     bool checkflags = false);
 
     void SetWavespeed (shared_ptr<CoefficientFunction> awavespeedcf)
     {
@@ -27,11 +27,13 @@ namespace ngcomp
 
     string GetClassName () const override { return "monomialfespace"; }
 
+    void Update () override;
+
     void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
 
-    FiniteElement &GetFE (ElementId ei, Allocator &alloc) const override;
+    virtual void UpdateCouplingDofArray () override;
 
-    size_t GetNDof () const override { return this->ndof; }
+    FiniteElement &GetFE (ElementId ei, Allocator &alloc) const override;
 
     static DocInfo GetDocu ();
 
