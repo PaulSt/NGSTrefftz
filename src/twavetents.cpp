@@ -870,8 +870,8 @@ namespace ngcomp
               auto sel = ElementId (BND, i); //<-- ist das Oberflächenelement
               auto fnums = ma->GetElFacets (sel);
               if (fnr == fnums[0]) //<-- das ist dann die Facet-Nr., also unter
-                                   //allen Facets im Mesh, kannst du dir wo
-                                   //speichern
+                                   // allen Facets im Mesh, kannst du dir wo
+                                   // speichern
                 {
                   selnums.Append (i);
                   break;
