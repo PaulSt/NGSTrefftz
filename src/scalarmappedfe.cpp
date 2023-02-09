@@ -282,10 +282,10 @@ namespace ngfem
   // void ScalarMappedElement<D> ::
   // GetPolOrders (FlatArray<PolOrder<D> > orders) const
   //{
-  //#ifndef __CUDA_ARCH__
+  // #ifndef __CUDA_ARCH__
   // throw Exception (string ("GetPolOrders not implemnted for element") +
   // ClassName());
-  //#endif
+  // #endif
   //}
 
   // template<int D>

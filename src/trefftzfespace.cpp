@@ -41,9 +41,6 @@ namespace ngcomp
       local_ndof = BinCoeff (D - 1 + order, order)
                    + BinCoeff (D - 1 + order - 1, order - 1);
 
-    if (eqtyp == "heat")
-      usescale = 0;
-
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
 
@@ -292,16 +289,24 @@ namespace ngcomp
                 }
               else if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
                 {
-
                   return *(new (alloc) PlaneWaveElement<2> (
                       local_ndof, order, eltype, ElCenter<1> (ei),
                       Adiam<1> (ei, coeff_const), coeff_const,
                       (eqtyp == "helmholtz" ? 1 : -1)));
                 }
+              else if (eqtyp == "heat")
+                {
+                  return *(new (alloc) ScalarMappedElement<2> (
+                      local_ndof, order, basismat, eltype, ElCenter<1> (ei),
+                      Adiam<1> (ei, coeff_const),
+                      coeff_const / Adiam<1> (ei, coeff_const)));
+                }
               else
-                return *(new (alloc) ScalarMappedElement<2> (
-                    local_ndof, order, basismat, eltype, ElCenter<1> (ei),
-                    Adiam<1> (ei, coeff_const), coeff_const));
+                {
+                  return *(new (alloc) ScalarMappedElement<2> (
+                      local_ndof, order, basismat, eltype, ElCenter<1> (ei),
+                      Adiam<1> (ei, coeff_const), coeff_const));
+                }
               break;
             }
           case ET_HEX:
@@ -333,6 +338,13 @@ namespace ngcomp
                   return *(new (alloc) BlockMappedElement<3> (
                       local_ndof, order, basismats, eltype, ElCenter<2> (ei),
                       Adiam<2> (ei, coeff_const), coeff_const));
+                }
+              else if (eqtyp == "heat")
+                {
+                  return *(new (alloc) ScalarMappedElement<3> (
+                      local_ndof, order, basismat, eltype, ElCenter<2> (ei),
+                      Adiam<2> (ei, coeff_const),
+                      coeff_const / Adiam<2> (ei, coeff_const)));
                 }
               else
                 return *(new (alloc) ScalarMappedElement<3> (
@@ -547,22 +559,20 @@ namespace ngcomp
       {
         int tracker = 0;
         TraversePol<D + 1> (ord, [&] (int i, Vec<D + 1, int> coeff) {
-          if (tracker >= 0)
-            tracker++;
           int indexmap = PolBasis::IndexMap2<D> (coeff, ord);
-          int k = coeff (D);
           int sum = 0;
           for (int m = 0; m <= D; m++)
             sum += coeff[m];
-          if (k == 0)
+          if (coeff[D] == 0 && tracker >= basis)
             {
-              if (tracker > basis)
-                {
-                  trefftzbasis (basis, indexmap) = 1;
-                  tracker = -1;
-                }
+              trefftzbasis (basis, indexmap) = 1;
+              tracker = -1;
             }
-          else if (coeff (D) > 0 && sum != ord)
+          else if (coeff[D] == 0 && tracker >= 0)
+            {
+              tracker++;
+            }
+          else if (coeff[D] > 0 && coeff[D] <= ord / 2.0 && sum < ord)
             {
               for (int m = 0; m < D; m++) // rekursive sum
                 {
@@ -570,11 +580,11 @@ namespace ngcomp
                   get_coeff[D] = get_coeff[D] - 1;
                   get_coeff[m] = get_coeff[m] + 2;
                   trefftzbasis (basis, indexmap)
-                      += (coeff (m) + 1) * (coeff (m) + 2)
+                      += (coeff[m] + 1) * (coeff[m] + 2)
                          * trefftzbasis (
                              basis, PolBasis::IndexMap2<D> (get_coeff, ord));
                 }
-              trefftzbasis (basis, indexmap) *= 1.0 / k;
+              trefftzbasis (basis, indexmap) *= 1.0 / coeff[D];
             }
         });
       }

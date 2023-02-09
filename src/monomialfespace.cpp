@@ -7,7 +7,7 @@
 namespace ngcomp
 {
   MonomialFESpace ::MonomialFESpace (shared_ptr<MeshAccess> ama,
-                                     const Flags &flags)
+                                     const Flags &flags, bool checkflags)
       : FESpace (ama, flags)
   {
     type = "monomialfespace";
@@ -50,6 +50,12 @@ namespace ngcomp
       }
   }
 
+  void MonomialFESpace ::Update ()
+  {
+    FESpace::Update ();
+    UpdateCouplingDofArray ();
+  }
+
   void MonomialFESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
   {
     dnums.SetSize (0);
@@ -58,6 +64,19 @@ namespace ngcomp
     for (size_t j = ei.Nr () * local_ndof; j < local_ndof * (ei.Nr () + 1);
          j++)
       dnums.Append (j);
+  }
+
+  void MonomialFESpace ::UpdateCouplingDofArray ()
+  {
+    ctofdof.SetSize (ndof);
+    for (auto i : Range (ma->GetNE ()))
+      {
+        bool definedon = DefinedOn (ElementId (VOL, i));
+        Array<DofId> dofs;
+        GetDofNrs (i, dofs);
+        for (auto r : dofs)
+          ctofdof[r] = definedon ? LOCAL_DOF : UNUSED_DOF;
+      }
   }
 
   FiniteElement &MonomialFESpace ::GetFE (ElementId ei, Allocator &alloc) const
@@ -123,7 +142,6 @@ namespace ngcomp
      "define fespace v -type=Monomialfespace"
      */
   static RegisterFESpace<MonomialFESpace> initi_monomial ("monomialfespace");
-
 }
 
 #ifdef NGS_PYTHON
@@ -133,7 +151,6 @@ void ExportMonomialFESpace (py::module m)
 
   ExportFESpace<MonomialFESpace> (m, "monomialfespace")
       .def ("GetDocu", &MonomialFESpace::GetDocu)
-      .def ("GetNDof", &MonomialFESpace::GetNDof)
       .def ("SetWavespeed", &MonomialFESpace::SetWavespeed);
 }
 #endif // NGS_PYTHON

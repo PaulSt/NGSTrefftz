@@ -1,4 +1,5 @@
 #include "embtrefftz.hpp"
+#include "monomialfespace.hpp"
 
 namespace ngbla
 {
@@ -414,11 +415,18 @@ namespace ngcomp
   static RegisterFESpace<
       EmbTrefftzFESpace<L2HighOrderFESpace, shared_ptr<L2HighOrderFESpace>>>
       initembt ("L2EmbTrefftzFESpace");
+
   template class EmbTrefftzFESpace<VectorL2FESpace,
                                    shared_ptr<VectorL2FESpace>>;
   static RegisterFESpace<
       EmbTrefftzFESpace<VectorL2FESpace, shared_ptr<VectorL2FESpace>>>
       initembt2 ("VL2EmbTrefftzFESpace");
+
+  template class EmbTrefftzFESpace<MonomialFESpace,
+                                   shared_ptr<MonomialFESpace>>;
+  static RegisterFESpace<
+      EmbTrefftzFESpace<MonomialFESpace, shared_ptr<MonomialFESpace>>>
+      initembt3 ("MonomialEmbTrefftzFESpace");
 }
 
 #ifdef NGS_PYTHON
@@ -454,6 +462,8 @@ void ExportEmbTrefftz (py::module m)
       m, "L2EmbTrefftzFESpace");
   ExportETSpace<ngcomp::VectorL2FESpace, shared_ptr<ngcomp::VectorL2FESpace>> (
       m, "VL2EmbTrefftzFESpace");
+  ExportETSpace<ngcomp::MonomialFESpace, shared_ptr<ngcomp::MonomialFESpace>> (
+      m, "MonomialEmbTrefftzFESpace");
 
   m.def (
       "EmbeddedTrefftzFES",
@@ -468,6 +478,10 @@ void ExportEmbTrefftz (py::module m)
           nfes = make_shared<ngcomp::EmbTrefftzFESpace<
               ngcomp::VectorL2FESpace, shared_ptr<ngcomp::VectorL2FESpace>>> (
               dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes));
+        else if (dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes))
+          nfes = make_shared<ngcomp::EmbTrefftzFESpace<
+              ngcomp::MonomialFESpace, shared_ptr<ngcomp::MonomialFESpace>>> (
+              dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes));
         else
           throw Exception ("Unknown base fes");
         return nfes;

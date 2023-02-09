@@ -21,7 +21,8 @@ namespace ngfem
     // compute shape
     HD NGS_DLL_HEADER virtual void
     CalcShape (const BaseMappedIntegrationPoint &mip,
-               BareSliceVector<> shape) const = 0;
+               BareSliceVector<> shape) const
+        = 0;
 
     HD NGS_DLL_HEADER virtual void
     CalcShape (const BaseMappedIntegrationPoint &mip,
@@ -30,7 +31,8 @@ namespace ngfem
     // compute dshape, matrix: ndof x spacedim
     HD NGS_DLL_HEADER virtual void
     CalcDShape (const BaseMappedIntegrationPoint &mip,
-                BareSliceMatrix<> dshape) const = 0;
+                BareSliceMatrix<> dshape) const
+        = 0;
 
     // returns shape functions in point ip.
     INLINE FlatVector<>

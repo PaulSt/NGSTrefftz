@@ -3,14 +3,14 @@
 #include <fem.hpp>
 #include <comp.hpp>
 // using namespace ngsolve;
-//#include <tents.hpp>
+// #include <tents.hpp>
 #include "trefftzfespace.hpp"
 #include "specialcoefficientfunction.hpp"
 #include "twavetents.hpp"
 #include "embtrefftz.hpp"
 #include "mesh1dtents.hpp"
 #include "monomialfespace.hpp"
-//#include "airy.cpp"
+// #include "airy.cpp"
 
 PYBIND11_MODULE (_trefftz, m)
 {
