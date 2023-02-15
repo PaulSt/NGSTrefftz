@@ -39,12 +39,15 @@ cmake ../src && make install
 ```
 
 ### Dependencies
-To build the package the following software needs to be installed
- * [cmake](https://cmake.org/) >= 3.1
- * [gcc](https://gcc.gnu.org/) >= 9 or [clang](https://clang.llvm.org/) >= 10
- * [ngsolve](https://www.ngsolve.org) >= 6.2
-
-To access the newest features the nightly version of NGSolve works best and [lapack](http://www.netlib.org/lapack/) >= 3.9 is required.
+ * if you are using pip to install the package you can install the newest ngsolve and other dependencies using
+```bash
+pip install ngsolve --pre
+```
+ * if you build the package from source the following software needs to be installed
+   * [cmake](https://cmake.org/) >= 3.1
+   * [gcc](https://gcc.gnu.org/) >= 9 or [clang](https://clang.llvm.org/) >= 10
+   * [lapack](http://www.netlib.org/lapack/) >= 3.9 (required to access the newest features)
+   * [ngsolve](https://www.ngsolve.org) >= 6.2  (to access the newest features the nightly version of NGSolve works best)
 
 ## News
 ⚠️ Oct, 2022: With v0.2.0 the git history has undergone a major cleanup, please make sure to clone the repo anew.
@@ -75,3 +78,8 @@ Lise-Marie Imbert-Gérard, Andrea Moiola, Paul Stocker
 Ilaria Perugia, Joachim Schöberl, Paul Stocker, Christoph Wintersteiger   
 [![arXiv](https://img.shields.io/badge/arXiv-1907.02367-b31b1b.svg)](https://arxiv.org/abs/1907.02367)
 
+If you are using `ngstrefftz` in your academic work, please consider citing 
+```
+Stocker, P., (2022). NGSTrefftz: Add-on to NGSolve for Trefftz methods. 
+Journal of Open Source Software, 7(71), 4135, https://doi.org/10.21105/joss.04135
+```
