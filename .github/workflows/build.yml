@@ -71,6 +71,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: 'True'
+          fetch-depth: 0
       - name: install pkgs
         run: |
              sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install vim python3 python3-pip python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake git g++ libglu1-mesa-dev libblas-dev liblapack-dev

@@ -1,5 +1,6 @@
 #include "embtrefftz.hpp"
 #include "monomialfespace.hpp"
+#include <cfloat>
 
 namespace ngbla
 {
@@ -130,16 +131,17 @@ namespace ngcomp
           lfis[dx.vb] += icf->MakeLinearFormIntegrator ();
         }
 
-    // shared_ptr<SparseMatrix<SCAL>> P;
-
     Array<Matrix<SCAL>> ETmats (ne);
     VVector<SCAL> lfvec (ndof);
 
-    // std::once_flag init_flag;
-    // Table<int> table,table2;
-
-    Array<Vector<SCAL>> singular_values (ma->GetNE ());
     size_t active_elements = 0;
+    size_t test_local_ndof = test_fes->GetNDof () / ne;
+    Vector<SCAL> sing_val_avg (test_local_ndof);
+    sing_val_avg = 0;
+    Vector<double> sing_val_max (test_local_ndof);
+    sing_val_max = 0;
+    Vector<double> sing_val_min (test_local_ndof);
+    sing_val_min = DBL_MAX;
 
     ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
       bool definedhere = false;
@@ -152,7 +154,6 @@ namespace ngcomp
         }
       if (!definedhere)
         return; // escape lambda
-      active_elements += 1;
 
       Array<DofId> test_dofs;
       test_fes->GetDofNrs (ei, test_dofs);
@@ -206,28 +207,36 @@ namespace ngcomp
         }
       ngbla::GetSVD<SCAL> (elmat, U, Vt);
 
-      // assumption here: all (active) elements have the same number of (weak)
-      // Trefftz fcts.
+      // either tndof is given, or try to determine local size of trefftz
+      // space, must be at least dim(trefftz)>=dim(trial)-dim(test)
       int nz = 0;
       if (tndof)
         nz = tndof;
       else
         {
-          nz = trial_fel.GetNDof () - test_fel.GetNDof ();
+          nz = max (trial_fel.GetNDof () - test_fel.GetNDof (), 0);
           for (int i = 0; i < min (elmat.Width (), elmat.Height ()); i++)
             if (abs (elmat (i, i)) < eps)
               nz++;
         }
+      if (trial_fel.GetNDof () - test_fel.GetNDof () > nz)
+        throw Exception ("test fes not large enough for given tndof");
 
-      if (stats)
-        singular_values[ei.Nr ()] = Vector<SCAL> (elmat.Diag ());
-
-      // Matrix<SCAL> PP;
       if (getrange)
         ETmats[ei.Nr ()] = U.Cols (0, dofs.Size () - nz);
       else
         ETmats[ei.Nr ()] = Trans (Vt.Rows (dofs.Size () - nz, dofs.Size ()));
-      // P->AddElementMatrix(table[ei.Nr()],table2[ei.Nr()], PP);
+
+      if (stats)
+        {
+          active_elements += 1;
+          for (size_t i = 0; i < elmat.Height (); i++)
+            {
+              sing_val_avg[i] += elmat (i, i);
+              sing_val_max[i] = max (sing_val_max[i], abs (elmat (i, i)));
+              sing_val_min[i] = min (sing_val_min[i], abs (elmat (i, i)));
+            }
+        }
 
       if (lf)
         {
@@ -264,28 +273,10 @@ namespace ngcomp
 
     if (stats)
       {
-        // Singular value avg
-        size_t maxdofs = 0;
-        for (auto v : singular_values)
-          maxdofs = max (maxdofs, v.Size ());
-        Vector<SCAL> sing_val_avg (maxdofs);
-        sing_val_avg = 0;
-        for (auto v : singular_values)
-          if (v.Size () > 0)
-            sing_val_avg += v;
         sing_val_avg /= active_elements;
         (*stats)["singavg"] = Vector<SCAL> (sing_val_avg);
-
-        // Singular value variance
-        Vector<SCAL> sing_val_var (maxdofs);
-        sing_val_var = 0;
-        for (auto v : singular_values)
-          for (int j = 0; j < v.Size (); j++)
-            sing_val_var[j] += pow (v[j] - sing_val_avg[j], 2);
-        sing_val_var /= active_elements;
-        for (auto &v : sing_val_var)
-          v = sqrt (v);
-        (*stats)["singvar"] = Vector<SCAL> (sing_val_var);
+        (*stats)["singmax"] = Vector<double> (sing_val_max);
+        (*stats)["singmin"] = Vector<double> (sing_val_min);
       }
 
     return std::make_tuple (make_shared<Array<Matrix<SCAL>>> (ETmats),
@@ -541,7 +532,7 @@ void ExportEmbTrefftz (py::module m)
                 :param lf: Rhs used to compute the particular solution.
                 :param eps: Threshold for singular values to be considered zero, defaults to 0
                 :param test_fes: Used if test space differs from trial space, defaults to None
-                :param tndof: If known, local ndofs of the Trefftz space, also eps and/or test_fes are used to find the dimension, defaults to 0
+                :param tndof: If known, local ndofs of the Trefftz space, else eps and/or test_fes are used to find the dimension
                 :param getrange: If True, extract the range instead of the kernel
                 :param stats_dict: Pass a dictionary to fill it with stats on the singular values.
 
