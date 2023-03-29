@@ -120,9 +120,11 @@ import netgen.version
 import ngsolve
 import pkg_resources
 netgen_name = netgen.config.NETGEN_PYTHON_PACKAGE_NAME
-avx2 = netgen_name.replace('netgen-mesher', '') # keep -avx2 suffix
+# avx2 = netgen_name.replace('netgen-mesher', '') # keep -avx2 suffix
+avx2 = ''
 name = 'ngstrefftz' + avx2
-ngsolve_version = pkg_resources.get_distribution("ngsolve").version
+# ngsolve_version = pkg_resources.get_distribution("ngsolve").version
+ngsolve_version = '6.2.2301'
 install_requires = [ 'ngsolve'+avx2+'>='+ngsolve_version ]
 
 if sys.argv[1] == "sdist":

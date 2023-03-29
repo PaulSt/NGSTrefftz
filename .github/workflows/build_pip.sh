@@ -14,7 +14,7 @@ git config --global --add safe.directory '*'
 
 export ORIGINAL_PATH="$PATH"
 
-for pyversion in 38 39 310
+for pyversion in 38 39 310 311
 do
     export PYDIR="/opt/python/cp${pyversion}-cp${pyversion}/bin"
     export PATH="$ORIGINAL_PATH:$PYDIR"
@@ -26,7 +26,7 @@ do
     #rm -rf /home/app/ngstrefftz/make
     rm -rf _skbuild
     $PYDIR/pip install -U pytest-check numpy wheel scikit-build mkl==2022.* mkl-devel==2022.* setuptools
-    $PYDIR/pip install ngsolve --pre
+    $PYDIR/pip install ngsolve 
 
     $PYDIR/pip wheel -vvv .
     #auditwheel repair ngstrefftz*.whl
