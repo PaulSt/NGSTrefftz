@@ -401,6 +401,71 @@ namespace ngcomp
     return std::get<1> (embtr);
   }
 
+  template <typename T, typename shrdT>
+  void EmbTrefftzFESpace<T, shrdT>::GetDofNrs (ElementId ei,
+                                               Array<int> &dnums) const
+  {
+    T::GetDofNrs (ei, dnums);
+    if (all2comp.Size () == fes->GetNDof ())
+      for (DofId &d : dnums)
+        if (IsRegularDof (d))
+          d = all2comp[d];
+  }
+
+  template <typename T, typename shrdT>
+  void
+  EmbTrefftzFESpace<T, shrdT>::VTransformMR (ElementId ei,
+                                             const SliceMatrix<double> mat,
+                                             TRANSFORM_TYPE type) const
+  {
+    static Timer timer ("EmbTrefftz: MTransform");
+    RegionTimer reg (timer);
+
+    size_t nz = ((*ETmats)[ei.Nr ()]).Width ();
+    Matrix<double> temp_mat (mat.Height (), mat.Width ());
+
+    if (type == TRANSFORM_MAT_LEFT)
+      {
+        temp_mat.Rows (0, nz) = Trans ((*ETmats)[ei.Nr ()]) * mat;
+        mat = temp_mat;
+      }
+    if (type == TRANSFORM_MAT_RIGHT)
+      {
+        temp_mat.Cols (0, nz) = mat * ((*ETmats)[ei.Nr ()]);
+        mat = temp_mat;
+      }
+    if (type == TRANSFORM_MAT_LEFT_RIGHT)
+      {
+        temp_mat.Cols (0, nz) = mat * ((*ETmats)[ei.Nr ()]);
+        mat.Rows (0, nz) = Trans ((*ETmats)[ei.Nr ()]) * temp_mat;
+      }
+  }
+
+  template <typename T, typename shrdT>
+  void
+  EmbTrefftzFESpace<T, shrdT>::VTransformVR (ElementId ei,
+                                             const SliceVector<double> vec,
+                                             TRANSFORM_TYPE type) const
+  {
+    static Timer timer ("EmbTrefftz: VTransform");
+    RegionTimer reg (timer);
+
+    size_t nz = ((*ETmats)[ei.Nr ()]).Width ();
+
+    if (type == TRANSFORM_RHS)
+      {
+        Vector<double> new_vec (vec.Size ());
+        new_vec = Trans ((*ETmats)[ei.Nr ()]) * vec;
+        vec = new_vec;
+      }
+    else if (type == TRANSFORM_SOL)
+      {
+        Vector<double> new_vec (vec.Size ());
+        new_vec = ((*ETmats)[ei.Nr ()]) * vec;
+        vec = new_vec;
+      }
+  }
+
   template class EmbTrefftzFESpace<L2HighOrderFESpace,
                                    shared_ptr<L2HighOrderFESpace>>;
   static RegisterFESpace<
@@ -420,8 +485,9 @@ namespace ngcomp
       initembt3 ("MonomialEmbTrefftzFESpace");
 }
 
-#ifdef NGS_PYTHON
+////////////////////////// python interface ///////////////////////////
 
+#ifdef NGS_PYTHON
 template <typename T, typename shrdT>
 void ExportETSpace (py::module m, string label)
 {

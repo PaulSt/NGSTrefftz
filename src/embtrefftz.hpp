@@ -48,66 +48,14 @@ namespace ngcomp
     SetOp (shared_ptr<SumOfIntegrals> bf, shared_ptr<SumOfIntegrals> lf,
            double eps, shared_ptr<FESpace> test_fes, int tndof);
 
-    void GetDofNrs (ElementId ei, Array<int> &dnums) const override
-    {
-      T::GetDofNrs (ei, dnums);
-      if (all2comp.Size () == fes->GetNDof ())
-        for (DofId &d : dnums)
-          if (IsRegularDof (d))
-            d = all2comp[d];
-    }
+    void GetDofNrs (ElementId ei, Array<int> &dnums) const override;
 
-    void VTransformMR (ElementId ei, const SliceMatrix<double> mat,
-                       TRANSFORM_TYPE type) const
-    {
-      static Timer timer ("EmbTrefftz: MTransform");
-      RegionTimer reg (timer);
-
-      size_t nz = ((*ETmats)[ei.Nr ()]).Width ();
-      Matrix<double> bla (mat.Height (), mat.Width ());
-
-      if (type == TRANSFORM_MAT_LEFT)
-        {
-          bla.Rows (0, nz) = Trans ((*ETmats)[ei.Nr ()]) * mat;
-          mat = bla;
-        }
-      if (type == TRANSFORM_MAT_RIGHT)
-        {
-          bla.Cols (0, nz) = mat * ((*ETmats)[ei.Nr ()]);
-          mat = bla;
-        }
-      if (type == TRANSFORM_MAT_LEFT_RIGHT)
-        {
-          // mat = mat * Trans(*ETmats[ei.Nr()]);
-          // mat = (*ETmats[ei.Nr()]) * mat;
-          bla.Cols (0, nz) = mat * ((*ETmats)[ei.Nr ()]);
-          mat.Rows (0, nz) = Trans ((*ETmats)[ei.Nr ()]) * bla;
-        }
-    }
+    virtual void VTransformMR (ElementId ei, const SliceMatrix<double> mat,
+                               TRANSFORM_TYPE type) const override;
 
     virtual void VTransformVR (ElementId ei, const SliceVector<double> vec,
-                               TRANSFORM_TYPE type) const
-    {
-      static Timer timer ("EmbTrefftz: VTransform");
-      RegionTimer reg (timer);
-      size_t nz = ((*ETmats)[ei.Nr ()]).Width ();
-      if (type == TRANSFORM_RHS)
-        {
-          Vector<double> new_vec (vec.Size ());
-          new_vec = Trans ((*ETmats)[ei.Nr ()]) * vec;
-          vec = new_vec;
-        }
-      else if (type == TRANSFORM_SOL)
-        {
-          Vector<double> new_vec (vec.Size ());
-          new_vec = ((*ETmats)[ei.Nr ()]) * vec;
-          vec = new_vec;
-        }
-      else
-        cout << "transform " << type << " nothing here" << endl;
-    }
+                               TRANSFORM_TYPE type) const override;
   };
-
 }
 
 #ifdef NGS_PYTHON
