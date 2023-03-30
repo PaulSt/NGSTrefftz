@@ -133,6 +133,7 @@ namespace ngcomp
 
     Array<Matrix<SCAL>> ETmats (ne);
     VVector<SCAL> lfvec (ndof);
+    lfvec = 0.0;
 
     size_t active_elements = 0;
     size_t test_local_ndof = test_fes->GetNDof () / ne;
@@ -142,6 +143,11 @@ namespace ngcomp
     sing_val_max = 0;
     Vector<double> sing_val_min (test_local_ndof);
     sing_val_min = DBL_MAX;
+
+    bool has_hidden_dofs = false;
+    for (DofId d = 0; d < ndof || !has_hidden_dofs; d++)
+      if (HIDDEN_DOF == fes->GetDofCouplingType (d))
+        has_hidden_dofs = true;
 
     ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
       bool definedhere = false;
@@ -155,14 +161,11 @@ namespace ngcomp
       if (!definedhere)
         return; // escape lambda
 
-      Array<DofId> test_dofs;
+      Array<DofId> dofs, test_dofs;
       test_fes->GetDofNrs (ei, test_dofs);
-      Array<DofId> dofs;
       fes->GetDofNrs (ei, dofs);
 
       FlatMatrix<SCAL> elmat (test_dofs.Size (), dofs.Size (), mlh);
-      FlatMatrix<SCAL, ColMajor> U (test_dofs.Size (), mlh),
-          Vt (dofs.Size (), mlh);
 
       auto &trafo = ma->GetTrafo (ei, mlh);
 
@@ -205,6 +208,28 @@ namespace ngcomp
                 }
             }
         }
+
+      if (has_hidden_dofs) // extract visible dofs, if needed
+        {
+          Array<DofId> vdofs, vtest_dofs;
+          fes->GetDofNrs (ei, vdofs, VISIBLE_DOF);
+          test_fes->GetDofNrs (ei, vtest_dofs, VISIBLE_DOF);
+          FlatMatrix<SCAL> velmat (vtest_dofs.Size (), vdofs.Size (), mlh);
+          for (int jj = 0; jj < dofs.Size (); jj++)
+            for (int ii = 0; ii < test_dofs.Size (); ii++)
+              {
+                auto j = vdofs.Pos (dofs[jj]);
+                auto i = vtest_dofs.Pos (test_dofs[ii]);
+                if (i != size_t (-1) && j != size_t (-1))
+                  velmat (i, j) = elmat (ii, jj);
+              }
+          dofs = std::move (vdofs);
+          test_dofs = std::move (vtest_dofs);
+          elmat.Assign (velmat);
+        }
+
+      FlatMatrix<SCAL, ColMajor> U (test_dofs.Size (), mlh),
+          Vt (dofs.Size (), mlh);
       ngbla::GetSVD<SCAL> (elmat, U, Vt);
 
       // either tndof is given, or try to determine local size of trefftz
@@ -214,12 +239,13 @@ namespace ngcomp
         nz = tndof;
       else
         {
-          nz = max (trial_fel.GetNDof () - test_fel.GetNDof (), 0);
+          nz = dofs.Size () - test_dofs.Size ();
+          nz = max (nz, 0);
           for (int i = 0; i < min (elmat.Width (), elmat.Height ()); i++)
             if (abs (elmat (i, i)) < eps)
               nz++;
         }
-      if (trial_fel.GetNDof () - test_fel.GetNDof () > nz)
+      if (dofs.Size () - test_dofs.Size () > nz)
         throw Exception ("test fes not large enough for given tndof");
 
       if (getrange)
@@ -305,10 +331,16 @@ namespace ngcomp
     size_t ndof = fes->GetNDof ();
     size_t dim = fes->GetDimension ();
 
+    int hidden_dofs = 0;
+    for (DofId d : Range (ndof))
+      if (HIDDEN_DOF == fes->GetDofCouplingType (d))
+        hidden_dofs++;
+
     Table<int> table, table2;
-    TableCreator<int> creator (ne);
-    TableCreator<int> creator2 (ne);
+    TableCreator<int> creator (ne + hidden_dofs);
+    TableCreator<int> creator2 (ne + hidden_dofs);
     int prevdofs = 0;
+
     for (; !creator.Done (); creator++, creator2++)
       {
         prevdofs = 0;
@@ -316,7 +348,7 @@ namespace ngcomp
           {
             int nz = (*ETmats)[ei.Nr ()].Width ();
             Array<DofId> dnums;
-            fes->GetDofNrs (ei, dnums);
+            fes->GetDofNrs (ei, dnums, VISIBLE_DOF);
             bool hasregdof = false;
             for (DofId d : dnums)
               if (IsRegularDof (d))
@@ -328,10 +360,16 @@ namespace ngcomp
             if (hasregdof)
               {
                 for (int d = 0; d < nz; d++)
-                  creator2.Add (ei.Nr (), d + prevdofs);
-                prevdofs += nz;
+                  creator2.Add (ei.Nr (), prevdofs++);
               }
           }
+
+        for (int d = 0, hcnt = 0; d < ndof; d++)
+          if (HIDDEN_DOF == fes->GetDofCouplingType (d))
+            {
+              creator.Add (ne + hcnt, d);
+              creator2.Add (ne + hcnt++, prevdofs++);
+            }
       }
     table = creator.MoveTable ();
     table2 = creator2.MoveTable ();
@@ -342,6 +380,12 @@ namespace ngcomp
     for (auto ei : ma->Elements (VOL))
       P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()],
                            (*ETmats)[ei.Nr ()]);
+
+    SCAL one = 1;
+    FlatMatrix<SCAL> I (1, 1, &one);
+    for (int hd = 0; hd < hidden_dofs; hd++)
+      P->AddElementMatrix (table[ne + hd], table2[ne + hd], I);
+
     return P;
   }
 
