@@ -611,11 +611,13 @@ void ExportEmbTrefftz (py::module m)
 
         if (fes->IsComplex ())
           {
-            std::map<std::string, ngcomp::Vector<Complex>> stats;
-            auto P = ngcomp::EmbTrefftz<Complex> (bf, fes, lf, eps, test_fes,
-                                                  tndof, getrange, &stats);
+            std::map<std::string, ngcomp::Vector<Complex>> *stats = nullptr;
             if (pystats)
-              for (auto const &x : stats)
+              stats = new std::map<std::string, ngcomp::Vector<Complex>>;
+            auto P = ngcomp::EmbTrefftz<Complex> (bf, fes, lf, eps, test_fes,
+                                                  tndof, getrange, stats);
+            if (pystats)
+              for (auto const &x : *stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
             return std::make_tuple (
                 ngcomp::Elmats2Sparse<Complex> (std::get<0> (P), fes),
@@ -623,11 +625,13 @@ void ExportEmbTrefftz (py::module m)
           }
         else
           {
-            std::map<std::string, ngcomp::Vector<double>> stats;
-            auto P = ngcomp::EmbTrefftz<double> (bf, fes, lf, eps, test_fes,
-                                                 tndof, getrange, &stats);
+            std::map<std::string, ngcomp::Vector<double>> *stats = nullptr;
             if (pystats)
-              for (auto const &x : stats)
+              stats = new std::map<std::string, ngcomp::Vector<double>>;
+            auto P = ngcomp::EmbTrefftz<double> (bf, fes, lf, eps, test_fes,
+                                                 tndof, getrange, stats);
+            if (pystats)
+              for (auto const &x : *stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
             return std::make_tuple (
                 ngcomp::Elmats2Sparse<double> (std::get<0> (P), fes),
@@ -664,21 +668,25 @@ void ExportEmbTrefftz (py::module m)
 
         if (fes->IsComplex ())
           {
-            std::map<std::string, ngcomp::Vector<Complex>> stats;
-            auto P = std::get<0> (ngcomp::EmbTrefftz<Complex> (
-                bf, fes, nullptr, eps, test_fes, tndof, getrange, &stats));
+            std::map<std::string, ngcomp::Vector<Complex>> *stats = nullptr;
             if (pystats)
-              for (auto const &x : stats)
+              stats = new std::map<std::string, ngcomp::Vector<Complex>>;
+            auto P = std::get<0> (ngcomp::EmbTrefftz<Complex> (
+                bf, fes, nullptr, eps, test_fes, tndof, getrange, stats));
+            if (pystats)
+              for (auto const &x : *stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
             return ngcomp::Elmats2Sparse<Complex> (P, fes);
           }
         else
           {
-            std::map<std::string, ngcomp::Vector<double>> stats;
-            auto P = std::get<0> (ngcomp::EmbTrefftz<double> (
-                bf, fes, nullptr, eps, test_fes, tndof, getrange, &stats));
+            std::map<std::string, ngcomp::Vector<double>> *stats = nullptr;
             if (pystats)
-              for (auto const &x : stats)
+              stats = new std::map<std::string, ngcomp::Vector<double>>;
+            auto P = std::get<0> (ngcomp::EmbTrefftz<double> (
+                bf, fes, nullptr, eps, test_fes, tndof, getrange, stats));
+            if (pystats)
+              for (auto const &x : *stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
             return ngcomp::Elmats2Sparse<double> (P, fes);
           }
