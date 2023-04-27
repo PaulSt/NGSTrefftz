@@ -9,18 +9,19 @@
 
 namespace ngcomp
 {
+
   template <class SCAL>
-  std::tuple<shared_ptr<BaseMatrix>, shared_ptr<BaseVector>>
+  std::tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<BaseVector>>
   EmbTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
               shared_ptr<SumOfIntegrals> lf, double eps,
-              shared_ptr<FESpace> fes_test, int tndof,
+              shared_ptr<FESpace> test_fes, int tndof, bool getrange,
               std::map<std::string, Vector<SCAL>> *stats = nullptr);
 
   template <typename T, typename shrdT>
   class EmbTrefftzFESpace
       : public T //, public std::enable_shared_from_this<EmbTrefftzFESpace>
   {
-    shared_ptr<Array<Matrix<double>>> ETmats;
+    vector<shared_ptr<Matrix<double>>> ETmats;
     shrdT fes;
     Array<DofId> all2comp;
 
