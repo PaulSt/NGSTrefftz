@@ -25,6 +25,6 @@ USER ${NB_USER}
 
 WORKDIR /home/${NB_USER}
 #RUN git clone https://github.com/PaulSt/NGSTrefftz ${HOME}/ngstrefftz
-COPY ./docs/notebooks ${HOME}
+COPY ./docs/notebooks ${HOME}/docs/notebooks
 
-CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root" ]  
+CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root", "docs/notebooks" ]  
