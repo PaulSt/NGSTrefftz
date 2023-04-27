@@ -105,5 +105,4 @@ webgui-jupyter-widgets==0.2.14
 websocket-client==1.4.1
 widgetsnbextension==4.0.3
 
-ngsolve>=6.2.2204.post110.dev0
-ngstrefftz>=0.1.3
+ngstrefftz>=0.2.3

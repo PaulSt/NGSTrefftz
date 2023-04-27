@@ -143,38 +143,12 @@ jobs:
       - run: pip install --user -r $GITHUB_WORKSPACE/NGSTrefftz/docs/requirements.txt
       - name: webgui
         run: |
+             pip install jupyter_contrib_nbextensions 
+             jupyter contrib nbextension install --user
              jupyter nbextension install --user --py widgetsnbextension
              jupyter nbextension enable --user --py widgetsnbextension
              jupyter nbextension install --user --py webgui_jupyter_widgets
              jupyter nbextension enable --user --py webgui_jupyter_widgets            
-      #- run: python3 -c "import sys; print(sys.path)"
-      #- name: cmake NGSTrefftz
-        #run: |
-             #cmake -B $GITHUB_WORKSPACE/NGSTrefftz/make -S $GITHUB_WORKSPACE/NGSTrefftz/src/
-             #make -C $GITHUB_WORKSPACE/NGSTrefftz/make
-             #sudo make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
-             #python3 -c "import sys; print(sys.path)"
-             #python3 -c "import ngstrefftz"
-             #ln -s /usr/lib/python3/dist-packages/ngsolve /opt/hostedtoolcache/Python/3.10.2/x64/lib/python3.10/site-packages/
-             #ln -s /usr/lib/python3/dist-packages/ngstrefftz /opt/hostedtoolcache/Python/3.10.2/x64/lib/python3.10/site-packages/
-             #ln -s /usr/lib/python3/dist-packages/ngstents /opt/hostedtoolcache/Python/3.10.2/x64/lib/python3.10/site-packages/
-      - name: jupyter stuff
-        run: |
-             pip install jupyter_contrib_nbextensions 
-             #pip install jupyter_nbextensions_configurator 
-             jupyter contrib nbextension install --user
-             jupyter nbextension install --user --py widgetsnbextension
-             jupyter nbextension enable --user --py widgetsnbextension
-      - name: build tentswebgui
-        run: |
-             cd $GITHUB_WORKSPACE/NGSTrefftz/external_dependencies/ngstents/tentswebgui/ && bash build.sh
-      - name: install tentswebgui
-        run: |
-             cd $GITHUB_WORKSPACE/NGSTrefftz/external_dependencies/ngstents/tentswebgui/ && pip install --user .
-      - name: jupyter tentswebgui
-        run: |
-             jupyter nbextension install --user --py tentswebgui
-             jupyter nbextension enable --user --py tentswebgui
       - name: Build and Commit
         uses: sphinx-notes/pages@v2
         with:
