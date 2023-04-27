@@ -91,7 +91,7 @@ namespace ngcomp
 {
 
   template <class SCAL>
-  std::tuple<shared_ptr<Array<Matrix<SCAL>>>, shared_ptr<BaseVector>>
+  std::tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<BaseVector>>
   EmbTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
               shared_ptr<SumOfIntegrals> lf, double eps,
               shared_ptr<FESpace> test_fes, int tndof, bool getrange,
@@ -131,7 +131,7 @@ namespace ngcomp
           lfis[dx.vb] += icf->MakeLinearFormIntegrator ();
         }
 
-    Array<Matrix<SCAL>> ETmats (ne);
+    vector<shared_ptr<Matrix<SCAL>>> ETmats (ne);
     VVector<SCAL> lfvec (ndof);
     lfvec = 0.0;
 
@@ -249,9 +249,11 @@ namespace ngcomp
         throw Exception ("test fes not large enough for given tndof");
 
       if (getrange)
-        ETmats[ei.Nr ()] = U.Cols (0, dofs.Size () - nz);
+        ETmats[ei.Nr ()]
+            = make_shared<Matrix<SCAL>> (U.Cols (0, dofs.Size () - nz));
       else
-        ETmats[ei.Nr ()] = Trans (Vt.Rows (dofs.Size () - nz, dofs.Size ()));
+        ETmats[ei.Nr ()] = make_shared<Matrix<SCAL>> (
+            Trans (Vt.Rows (dofs.Size () - nz, dofs.Size ())));
 
       if (stats)
         {
@@ -305,17 +307,16 @@ namespace ngcomp
         (*stats)["singmin"] = Vector<double> (sing_val_min);
       }
 
-    return std::make_tuple (make_shared<Array<Matrix<SCAL>>> (ETmats),
-                            make_shared<VVector<SCAL>> (lfvec));
+    return std::make_tuple (ETmats, make_shared<VVector<SCAL>> (lfvec));
   }
 
-  template std::tuple<shared_ptr<Array<Matrix<double>>>,
+  template std::tuple<vector<shared_ptr<Matrix<double>>>,
                       shared_ptr<BaseVector>>
   EmbTrefftz<double> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                       shared_ptr<SumOfIntegrals> lf, double eps,
                       shared_ptr<FESpace> test_fes, int tndof, bool getrange,
                       std::map<std::string, Vector<double>> *stats);
-  template std::tuple<shared_ptr<Array<Matrix<Complex>>>,
+  template std::tuple<vector<shared_ptr<Matrix<Complex>>>,
                       shared_ptr<BaseVector>>
   EmbTrefftz<Complex> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                        shared_ptr<SumOfIntegrals> lf, double eps,
@@ -323,8 +324,9 @@ namespace ngcomp
                        std::map<std::string, Vector<Complex>> *stats);
 
   template <class SCAL>
-  shared_ptr<BaseMatrix> Elmats2Sparse (shared_ptr<Array<Matrix<SCAL>>> ETmats,
-                                        shared_ptr<FESpace> fes)
+  shared_ptr<BaseMatrix>
+  Elmats2Sparse (vector<shared_ptr<Matrix<SCAL>>> ETmats,
+                 shared_ptr<FESpace> fes)
   {
     auto ma = fes->GetMeshAccess ();
     size_t ne = ma->GetNE (VOL);
@@ -346,7 +348,7 @@ namespace ngcomp
         prevdofs = 0;
         for (auto ei : ma->Elements (VOL))
           {
-            int nz = (*ETmats)[ei.Nr ()].Width ();
+            int nz = (ETmats[ei.Nr ()])->Width ();
             Array<DofId> dnums;
             fes->GetDofNrs (ei, dnums, VISIBLE_DOF);
             bool hasregdof = false;
@@ -379,7 +381,7 @@ namespace ngcomp
     P->SetZero ();
     for (auto ei : ma->Elements (VOL))
       P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()],
-                           (*ETmats)[ei.Nr ()]);
+                           *(ETmats[ei.Nr ()]));
 
     SCAL one = 1;
     FlatMatrix<SCAL> I (1, 1, &one);
@@ -414,7 +416,7 @@ namespace ngcomp
 
     for (auto ei : this->ma->Elements (VOL))
       {
-        int nz = (*ETmats)[ei.Nr ()].Width ();
+        int nz = (ETmats[ei.Nr ()])->Width ();
         Array<DofId> dofs;
         T::GetDofNrs (ei, dofs);
         for (int i = nz; i < dofs.Size (); i++)
@@ -465,23 +467,23 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: MTransform");
     RegionTimer reg (timer);
 
-    size_t nz = ((*ETmats)[ei.Nr ()]).Width ();
+    size_t nz = (ETmats[ei.Nr ()])->Width ();
     Matrix<double> temp_mat (mat.Height (), mat.Width ());
 
     if (type == TRANSFORM_MAT_LEFT)
       {
-        temp_mat.Rows (0, nz) = Trans ((*ETmats)[ei.Nr ()]) * mat;
+        temp_mat.Rows (0, nz) = Trans (*(ETmats[ei.Nr ()])) * mat;
         mat = temp_mat;
       }
     if (type == TRANSFORM_MAT_RIGHT)
       {
-        temp_mat.Cols (0, nz) = mat * ((*ETmats)[ei.Nr ()]);
+        temp_mat.Cols (0, nz) = mat * (*(ETmats[ei.Nr ()]));
         mat = temp_mat;
       }
     if (type == TRANSFORM_MAT_LEFT_RIGHT)
       {
-        temp_mat.Cols (0, nz) = mat * ((*ETmats)[ei.Nr ()]);
-        mat.Rows (0, nz) = Trans ((*ETmats)[ei.Nr ()]) * temp_mat;
+        temp_mat.Cols (0, nz) = mat * (*(ETmats[ei.Nr ()]));
+        mat.Rows (0, nz) = Trans (*(ETmats[ei.Nr ()])) * temp_mat;
       }
   }
 
@@ -494,18 +496,18 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    size_t nz = ((*ETmats)[ei.Nr ()]).Width ();
+    size_t nz = (ETmats[ei.Nr ()])->Width ();
 
     if (type == TRANSFORM_RHS)
       {
         Vector<double> new_vec (vec.Size ());
-        new_vec = Trans ((*ETmats)[ei.Nr ()]) * vec;
+        new_vec = Trans (*(ETmats[ei.Nr ()])) * vec;
         vec = new_vec;
       }
     else if (type == TRANSFORM_SOL)
       {
         Vector<double> new_vec (vec.Size ());
-        new_vec = ((*ETmats)[ei.Nr ()]) * vec;
+        new_vec = (*(ETmats[ei.Nr ()])) * vec;
         vec = new_vec;
       }
   }
