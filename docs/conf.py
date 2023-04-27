@@ -133,6 +133,8 @@ nbsphinx_prolog = r"""
         div.p-Widget div div div div.dg ul li div.dg {
             margin-bottom: 0px;
         }
+
+        .MathJax { font-size: 0.9em !important; }
     </style>
 
 .. only:: html
@@ -191,5 +193,8 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+html_css_files = [ 'css/mytheme.css' ]
+html_style = 'css/mytheme.css'
+
 
 # html_js_files = ['webgui_jupyter_widgets.js', 'webgui.js', 'tentswebgui.js']

@@ -1,12 +1,13 @@
-FROM paulstdocker/ngstrefftz:latest
+FROM python:3.10-slim-bullseye
 
-##RUN pip3 install jupyter
-#RUN pip3 install jupyter_contrib_nbextensions
-#RUN pip3 install jupyter_nbextensions_configurator
-#RUN pip3 install RISE
-#RUN pip3 install ipywidgets
-#RUN jupyter contrib nbextension install 
-##RUN cd /home/app/ngstents/tentswebgui && pip3 install --user .
+WORKDIR /home/app
+
+RUN pip install ngstrefftz 
+ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python3.10/site-packages/
+
+RUN pip3 install numpy jupyter_contrib_nbextensions webgui_jupyter_widgets
+RUN jupyter nbextension enable --py widgetsnbextension
+RUN jupyter nbextension enable --py webgui_jupyter_widgets
 
 ARG NB_USER=jovyan
 ARG NB_UID=1000
@@ -22,12 +23,8 @@ RUN adduser --disabled-password \
 
 USER ${NB_USER}
 
-
-RUN jupyter nbextensions_configurator enable --user
-RUN jupyter nbextension enable --user codefolding/main 
-RUN jupyter nbextension enable --user --py tentswebgui
-
 WORKDIR /home/${NB_USER}
-COPY . ${HOME}
+#RUN git clone https://github.com/PaulSt/NGSTrefftz ${HOME}/ngstrefftz
+COPY ./docs/notebooks ${HOME}
 
 CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root" ]  
