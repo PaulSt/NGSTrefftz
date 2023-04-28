@@ -13,16 +13,16 @@ namespace ngcomp
     int nel;
     int local_ndof;
     int useshift = 1;
-    shared_ptr<CoefficientFunction> wavespeedcf;
+    shared_ptr<CoefficientFunction> coeff_cf = nullptr;
     CSR basismat;
 
   public:
     MonomialFESpace (shared_ptr<MeshAccess> ama, const Flags &flags,
                      bool checkflags = false);
 
-    void SetWavespeed (shared_ptr<CoefficientFunction> awavespeedcf)
+    void SetCoeff (shared_ptr<CoefficientFunction> acoeff_cf)
     {
-      wavespeedcf = awavespeedcf;
+      coeff_cf = acoeff_cf;
     }
 
     string GetClassName () const override { return "monomialfespace"; }
@@ -69,9 +69,9 @@ namespace ngcomp
               ElementTransformation &trafo = ma->GetTrafo (ei, lh);
               MappedIntegrationPoint<D, D> mip (ir[0], trafo);
               mip.Point () = v1;
-              double c1 = wavespeedcf ? wavespeedcf->Evaluate (mip) : 1.0;
+              double c1 = coeff_cf ? coeff_cf->Evaluate (mip) : 1.0;
               mip.Point () = v2;
-              double c2 = wavespeedcf ? wavespeedcf->Evaluate (mip) : 1.0;
+              double c2 = coeff_cf ? coeff_cf->Evaluate (mip) : 1.0;
 
               anisotropicdiam = max (
                   anisotropicdiam,

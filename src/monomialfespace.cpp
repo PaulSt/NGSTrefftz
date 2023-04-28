@@ -151,6 +151,6 @@ void ExportMonomialFESpace (py::module m)
 
   ExportFESpace<MonomialFESpace> (m, "monomialfespace")
       .def ("GetDocu", &MonomialFESpace::GetDocu)
-      .def ("SetWavespeed", &MonomialFESpace::SetWavespeed);
+      .def ("SetCoeff", &MonomialFESpace::SetCoeff);
 }
 #endif // NGS_PYTHON
