@@ -348,6 +348,9 @@ namespace ngcomp
         prevdofs = 0;
         for (auto ei : ma->Elements (VOL))
           {
+            if (!ETmats[ei.Nr ()])
+              continue;
+
             int nz = (ETmats[ei.Nr ()])->Width ();
             Array<DofId> dnums;
             fes->GetDofNrs (ei, dnums, VISIBLE_DOF);
@@ -380,8 +383,9 @@ namespace ngcomp
     auto P = make_shared<SparseMatrix<SCAL>> (PP);
     P->SetZero ();
     for (auto ei : ma->Elements (VOL))
-      P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()],
-                           *(ETmats[ei.Nr ()]));
+      if (ETmats[ei.Nr ()])
+        P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()],
+                             *(ETmats[ei.Nr ()]));
 
     SCAL one = 1;
     FlatMatrix<SCAL> I (1, 1, &one);
