@@ -1,0 +1,11 @@
+{%- extends "sphinx_rtd_theme/breadcrumbs.html" %}
+{% block breadcrumbs_aside %}
+      <li class="wy-breadcrumbs-aside">
+        {%- if hasdoc(pagename) and display_vcs_links %}
+          {%- if display_github %}
+              <a href="https://{{ github_host|default("github.com") }}/{{ github_user }}/{{ github_repo }}" class="fa fa-github"> {{ _('Code on GitHub') }}</a>
+          {%- endif %}
+        {%- endif %}
+      </li>
+{% endblock %}
+

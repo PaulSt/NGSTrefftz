@@ -152,7 +152,7 @@ pygments_style = 'sphinx'
 todo_include_todos = False
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ['_static']
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -166,6 +166,13 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'paper', 'env', 'jupyter
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
+
+html_context = {
+  'display_github': True,
+  'github_user': 'PaulSt',
+  'github_repo': 'NGSTrefftz',
+  # 'github_version': 'main/docs/',
+}
 # html_theme_options = {
     # 'github_user': 'PaulSt',
     # 'github_repo': 'NGSTrefftz',
