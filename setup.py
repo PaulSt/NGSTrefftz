@@ -4,7 +4,7 @@
 import glob
 import os
 import sys
-import netgen.version
+# import netgen.version
 import site
 
 from skbuild import setup

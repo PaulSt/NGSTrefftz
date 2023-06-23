@@ -12,6 +12,7 @@ env:
   BUILD_TYPE: Debug
 
 jobs:
+
   maketest:
     runs-on: ubuntu-latest
     container:
@@ -64,6 +65,53 @@ jobs:
           password: ${{ secrets.PYPI_API_TOKEN }}
           packages_dir: NGSTrefftz/wheelhouse/
           #repository_url: https://test.pypi.org/legacy/
+
+
+  pypi-mac:
+    name: Build wheels for macOS
+    needs: [maketest]
+    if: github.event_name == 'release' && github.event.action == 'created' 
+    strategy:
+      matrix:
+        py: ['3.8', '3.9', '3.10', '3.11']
+    runs-on: macos-11
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '10.15'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          path: 'NGSTrefftz'
+      - name: Get Python ${{ matrix.py }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py }}
+      - name: Run build script
+        run: cd NGSTrefftz/.github/workflows && bash build_pip_mac.sh ${{ matrix.py }}
+      - name: Store the binary wheel
+        uses: actions/upload-artifact@v2
+        with:
+          name: python-package-distributions
+          path: NGSTrefftz/dist
+  publish-pypi-mac:
+    name: Publish to PyPI
+    needs: pypi-mac
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v2
+      with:
+        name: python-package-distributions
+        path: NGSTrefftz/dist/
+    - name: Publish binary distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        skip_existing: true
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        packages_dir: NGSTrefftz/dist/
+        #repository_url: https://test.pypi.org/legacy/
 
   docker:
     needs: [maketest,pypi]
