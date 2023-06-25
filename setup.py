@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import glob
 import os
-import re
 import sys
-import platform
-import subprocess
-import warnings
-from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext
-from distutils.version import LooseVersion
+# import netgen.version
+import site
+
+from skbuild import setup
+import skbuild.cmaker
+from subprocess import check_output
+from distutils.sysconfig import get_python_lib
+import pkg_resources
 
 from os.path import dirname, isdir, join
 import os
@@ -66,91 +68,68 @@ def get_version():
     return version
 
 
-class CMakeExtension(Extension):
-    def __init__(self, name, sourcedir=''):
-        Extension.__init__(self, name, sources=[])
-        self.sourcedir = os.path.abspath(sourcedir)
-class CMakeBuild(build_ext):
-    def run(self):
-        try:
-            out = subprocess.check_output(['cmake', '--version'])
-        except OSError:
-            raise RuntimeError("CMake must be installed to build the following extensions: " +
-                               ", ".join(e.name for e in self.extensions))
-        if "NETGENDIR" not in os.environ:
-            warnings.warn("Could not find NETGENDIR")
-        try:
-            import ngsolve
-        except:
-            raise RuntimeError("Could not run NGSolve, is it installed? Did you set pythonpath correctly?")
-
-        for ext in self.extensions:
-            self.build_extension(ext)
-    def build_extension(self, ext):
-        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
-        # required for auto-detection of auxiliary "native" libs
-        if not extdir.endswith(os.path.sep):
-            extdir += os.path.sep
-        cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
-                      '-DPYTHON_EXECUTABLE=' + sys.executable,
-                      '-DCMAKE_CXX_COMPILER=ngscxx']
-        if 'PYDIR' in os.environ:
-            cmake_args += [f'-DCMAKE_PREFIX_PATH={os.environ["PYDIR"]}/..']
-            cmake_args += [f'-DPYTHON_EXECUTABLE={os.environ["PYDIR"]}/python3']
-            cmake_args += [f'-DPYTHON_LIBRARY={os.environ["PYDIR"]}/../lib']
-            cmake_args += [f'-DPYTHON_INCLUDE_DIR={os.environ["PYDIR"]}/../include']
-        cfg = 'Debug' if self.debug else 'Release'
-        build_args = ['--config', cfg]
-        cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
-        build_args += ['--', '-j2']
-        env = os.environ.copy()
-        env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
-                                                              self.distribution.get_version())
-        if not os.path.exists(self.build_temp):
-            os.makedirs(self.build_temp)
-
-        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
-        subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
-
-        # subprocess.check_call(['mv', '_trefftz.so', 'ngstrefftz'], cwd=self.build_lib)
-        # subprocess.check_call(['mkdir', 'ngstents'], cwd=self.build_lib)
-        # subprocess.check_call(['mv', '_pytents.so', 'ngstents'], cwd=self.build_lib)
-
-import netgen.version
-import ngsolve
-import pkg_resources
-netgen_name = netgen.config.NETGEN_PYTHON_PACKAGE_NAME
-# avx2 = netgen_name.replace('netgen-mesher', '') # keep -avx2 suffix
-avx2 = ''
-name = 'ngstrefftz' + avx2
-# ngsolve_version = pkg_resources.get_distribution("ngsolve").version
+# import netgen.version
+# import ngsolve
+# import pkg_resources
+# netgen_name = netgen.config.NETGEN_PYTHON_PACKAGE_NAME
+# # avx2 = netgen_name.replace('netgen-mesher', '') # keep -avx2 suffix
+# avx2 = ''
+# name = 'ngstrefftz' + avx2
+# # ngsolve_version = pkg_resources.get_distribution("ngsolve").version
 ngsolve_version = '6.2.2301'
-install_requires = [ 'ngsolve'+avx2+'>='+ngsolve_version ]
+install_requires = [ 'ngsolve >= '+ngsolve_version ]
 
-if sys.argv[1] == "sdist":
-    package_data = {"ngstrefftz": ["*"
-                                ,"../test/*"
-                                ,"../external_dependencies/ngstents/*"\
-                                ,"../external_dependencies/ngstents/src/*"\
-                                ,"../external_dependencies/ngstents/py/*"\
-                                ]}
-    name += "-src"
-else:
-    package_data = {}
+
+# def install_filter(cmake_manifest):
+    # return cmake_manifest
+
+# def _patched_parse_manifests(self):
+    # paths = \
+        # glob.glob(os.path.join(skbuild.cmaker.CMAKE_BUILD_DIR(), "ngstrefftz", "install_manifest*.txt"))
+    # try:
+        # return [self._parse_manifest(path) for path in paths][0]
+    # except IndexError:
+        # return []
+   
+# # we are using the ngsolve superbuild (to download and build some dependencies)
+# # patch the parse_manifests function to point to the actual ngsolve cmake project within the superbuild
+# skbuild.cmaker.CMaker._parse_manifests = _patched_parse_manifests
+
+py_install_dir = get_python_lib(1,0,'').replace('\\','/')
+
+# root_dir = os.path.abspath(os.path.join(netgen.__file__, '../'*(len(py_install_dir.split('/'))+2)))
+
+_cmake_args = ['-DCMAKE_CXX_COMPILER=ngscxx']
+
+packages=["ngstrefftz"]
+
+if 'darwin' in sys.platform:
+    pass
+elif 'linux' in sys.platform:
+    install_requires.append('mkl')
+    # packages = []
+elif 'win' in sys.platform:
+    install_requires.append('mkl')
+
+if 'PYDIR' in os.environ:
+    _cmake_args += [f'-DCMAKE_PREFIX_PATH={os.environ["PYDIR"]}']
+    _cmake_args += [f'-DPYTHON_EXECUTABLE={os.environ["PYDIR"]}/python3']
+    _cmake_args += [f'-DPYTHON_LIBRARY={os.environ["PYDIR"]}/../lib']
+    _cmake_args += [f'-DPYTHON_INCLUDE_DIR={os.environ["PYDIR"]}/../include']
 
 setup(
-    name=name,
+    name='ngstrefftz',
     version=str(get_version()),
     author='Paul Stocker',
     author_email='p.stocker@math.uni-goettingen.de',
     description='NGSTrefftz is an add-on to NGSolve for Trefftz methods.',
     long_description='NGSTrefftz provides a framework to implement Trefftz finite element spaces for NGSolve, with several Trefftz spaces already implemented. Additionally, Trefftz-DG on tent-pitched meshes for the acoustic wave equation is implemented using meshes provided by ngstents. Furthermore, the package includes an implementation of the embedded Trefftz method.',
     url="https://github.com/PaulSt/ngstrefftz",
+    license="LGPL2.1",
     install_requires=install_requires,
-    ext_modules=[CMakeExtension('ngstrefftz_py','src')],
-    cmdclass=dict(build_ext=CMakeBuild),
-    packages=["ngstrefftz"],
+    packages=packages,
     package_dir={"ngstrefftz": "src"},
-    python_requires='>=3.8',
-    package_data=package_data,
+    # cmake_process_manifest_hook=install_filter,
+    cmake_args=_cmake_args,
+    cmake_source_dir='src',
 )

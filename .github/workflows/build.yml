@@ -12,6 +12,7 @@ env:
   BUILD_TYPE: Debug
 
 jobs:
+
   maketest:
     runs-on: ubuntu-latest
     container:
@@ -65,33 +66,52 @@ jobs:
           packages_dir: NGSTrefftz/wheelhouse/
           #repository_url: https://test.pypi.org/legacy/
 
-  pypi-src:
+
+  pypi-mac:
+    name: Build wheels for macOS
     needs: [maketest]
+    if: github.event_name == 'release' && github.event.action == 'created' 
+    strategy:
+      matrix:
+        py: ['3.8', '3.9', '3.10', '3.11']
+    runs-on: macos-11
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '10.15'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          path: 'NGSTrefftz'
+      - name: Get Python ${{ matrix.py }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py }}
+      - name: Run build script
+        run: cd NGSTrefftz/.github/workflows && bash build_pip_mac.sh ${{ matrix.py }}
+      - name: Store the binary wheel
+        uses: actions/upload-artifact@v2
+        with:
+          name: python-package-distributions
+          path: NGSTrefftz/dist
+  publish-pypi-mac:
+    name: Publish to PyPI
+    needs: pypi-mac
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: 'True'
-          fetch-depth: 0
-      - name: install pkgs
-        run: |
-             sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install vim python3 python3-pip python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake git g++ libglu1-mesa-dev libblas-dev liblapack-dev
-      - name: Update pip and Install setuptools
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install -U pytest-check numpy wheel scikit-build mkl==2022.* mkl-devel==2022.* setuptools
-          python3 -m pip install ngsolve --pre
-      - name: Package ngstrefftz sources for PyPI
-        run: python3 setup.py sdist
-      - name: pip install ngstrefftz
-        run: pip install dist/*
-      - name: Publish source distribution to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        if: github.event_name == 'release' && github.event.action == 'created' #startsWith(github.ref, 'refs/tags/v') # && github.event_name == 'push' 
-        with:
-          skip_existing: true
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
+    - name: Download all the dists
+      uses: actions/download-artifact@v2
+      with:
+        name: python-package-distributions
+        path: NGSTrefftz/dist/
+    - name: Publish binary distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        skip_existing: true
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        packages_dir: NGSTrefftz/dist/
+        #repository_url: https://test.pypi.org/legacy/
 
   docker:
     needs: [maketest,pypi]
