@@ -24,9 +24,10 @@ jobs:
         run: yum -y update && yum -y install git ninja-build fontconfig-devel tk-devel tcl-devel libXmu-devel mesa-libGLU-devel ccache python-devel lapack blas 
       - name: pip ngsolve
         run: |
-             ${{ env.PYDIR }}/pip install -U pytest-check numpy wheel scikit-build mkl==2022.* mkl-devel==2022.* setuptools
-             ${{ env.PYDIR }}/pip install ngsolve --pre
+             #${{ env.PYDIR }}/pip install -U pytest-check numpy wheel scikit-build mkl==2023.* mkl-devel==2023.* setuptools
+             ${{ env.PYDIR }}/pip install ngsolve 
              echo "${{ env.PYDIR }}" >> $GITHUB_PATH
+             echo "LD_LIBRARY_PATH=${{ env.LD_LIBRARY_PATH }}:/opt/_internal/cpython-3.10.9/lib/" >> $GITHUB_ENV
       - uses: actions/checkout@v3
         with:
           submodules: 'True'
@@ -34,7 +35,9 @@ jobs:
       - name: cmake NGSTrefftz
         run: cmake -DCMAKE_CXX_COMPILER=ngscxx -DNETGENDIR=${{ env.PYDIR }}/.. -DCMAKE_PREFIX_PATH=${{ env.PYDIR }}/..  -DPYTHON_EXECUTABLE=${{ env.PYDIR }}/python3 -DPYTHON_LIBRARY=${{ env.PYDIR }}/../lib -DPYTHON_INCLUDE_DIR=${{ env.PYDIR }}/../include -B $GITHUB_WORKSPACE/NGSTrefftz/make -S $GITHUB_WORKSPACE/NGSTrefftz/src/
       - name: compile NGSTrefftz
-        run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make
+        run: |
+          make -C $GITHUB_WORKSPACE/NGSTrefftz/make
+          echo "${{ env.LD_LIBRARY_PATH }}"
       - name: test NGSTrefftz
         run: env CTEST_OUTPUT_ON_FAILURE=1 make -C $GITHUB_WORKSPACE/NGSTrefftz/make test
       - name: install NGSTrefftz
@@ -43,13 +46,13 @@ jobs:
         #if: ${{ failure() }}
         #uses: mxschmitt/action-tmate@v3
 
-  pypi:
+  pypi-linux:
+    name: Build wheels for linux
     needs: [maketest]
     runs-on: ubuntu-latest
     container:
       #image: quay.io/pypa/manylinux2014_x86_64:latest
       image: sameli/manylinux2014_x86_64_cuda_11
-    if: github.event_name == 'release' && github.event.action == 'created' #startsWith(github.ref, 'refs/tags/v') # && github.event_name == 'push' 
     steps:
       - uses: actions/checkout@v3
         with:
@@ -57,20 +60,16 @@ jobs:
           path: 'NGSTrefftz'
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
       - name: build pip
-        run: cd NGSTrefftz/.github/workflows && sh build_pip.sh
-      - name: Publish source distribution to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        run: cd NGSTrefftz/.github/workflows && sh build_pip.sh 
+      - name: Store the binary wheel
+        uses: actions/upload-artifact@v2
         with:
-          skip_existing: true
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          packages_dir: NGSTrefftz/wheelhouse/
-          #repository_url: https://test.pypi.org/legacy/
-
+          name: python-package-distributions
+          path: NGSTrefftz/wheelhouse
 
   pypi-mac:
     name: Build wheels for macOS
     needs: [maketest]
-    if: github.event_name == 'release' && github.event.action == 'created' 
     strategy:
       matrix:
         py: ['3.8', '3.9', '3.10', '3.11']
@@ -94,27 +93,57 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: python-package-distributions
-          path: NGSTrefftz/dist
-  publish-pypi-mac:
+          path: NGSTrefftz/wheelhouse
+
+  pypi-src:
+    name: pypi src
+    needs: [maketest]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: 'True'
+          fetch-depth: 0
+          path: 'NGSTrefftz'
+      - name: install pkgs
+        run: |
+             sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install vim python3 python3-pip python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake git g++ libglu1-mesa-dev libblas-dev liblapack-dev
+      - name: Update pip and Install setuptools
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -U pytest-check numpy wheel scikit-build mkl==2023.* mkl-devel==2023.* setuptools
+          python3 -m pip install ngsolve 
+      - name: Package ngstrefftz sources for PyPI
+        run: cd NGSTrefftz && python3 setup.py sdist -d wheelhouse
+      #- name: pip install ngstrefftz
+        #run: pip install dist/*
+      - name: Store the sdist
+        uses: actions/upload-artifact@v2
+        with:
+          name: python-package-distributions
+          path: NGSTrefftz/wheelhouse
+
+  publish-pypi:
     name: Publish to PyPI
-    needs: pypi-mac
+    #if: github.event_name == 'release' && github.event.action == 'created' 
+    needs: [pypi-mac, pypi-linux, pypi-src]
     runs-on: ubuntu-latest
     steps:
     - name: Download all the dists
       uses: actions/download-artifact@v2
       with:
         name: python-package-distributions
-        path: NGSTrefftz/dist/
+        path: NGSTrefftz/wheelhouse/
     - name: Publish binary distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        skip_existing: true
+        skip-existing: true
         password: ${{ secrets.PYPI_API_TOKEN }}
-        packages_dir: NGSTrefftz/dist/
-        #repository_url: https://test.pypi.org/legacy/
+        packages-dir: NGSTrefftz/wheelhouse/
+        repository-url: https://test.pypi.org/legacy/
 
   docker:
-    needs: [maketest,pypi]
+    needs: [publish-pypi]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'created'
     steps:
@@ -147,7 +176,7 @@ jobs:
           #labels: ${{ steps.meta.outputs.labels }}
 
   docs:
-    needs: [maketest,pypi]
+    needs: [publish-pypi]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

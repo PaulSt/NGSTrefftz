@@ -25,17 +25,17 @@ do
 
     #rm -rf /home/app/ngstrefftz/make
     rm -rf _skbuild
-    $PYDIR/pip install -U pytest-check numpy wheel scikit-build mkl==2022.* mkl-devel==2022.* setuptools
+    $PYDIR/pip install pytest-check numpy wheel scikit-build mkl==2023.* mkl-devel==2023.* setuptools
     $PYDIR/pip install ngsolve 
 
     $PYDIR/pip wheel -vvv .
+    cat src/ngstrefftz.egg-info/SOURCES.txt
     #auditwheel repair ngstrefftz*.whl
     rename linux_ manylinux_2_17_x86_64.manylinux2014_ ngstrefftz*.whl
     mv ngstrefftz*.whl wheelhouse/
     rm -rf *.whl
-    $PYDIR/pip uninstall -y ngsolve
-    $PYDIR/pip uninstall -y netgen-mesher
-    $PYDIR/pip uninstall -y setuptools
+    $PYDIR/pip uninstall -y ngsolve netgen-mesher setuptools pytest-check numpy wheel scikit-build mkl mkl-devel 
+
 
     # avx2 build:
     #rm -rf _skbuild
@@ -47,6 +47,6 @@ do
     #$PYDIR/pip uninstall -y netgen-mesher-avx2
 done
 
-$PYDIR/pip install -U twine
+#$PYDIR/pip install -U twine
 #$PYDIR/twine upload wheelhouse/*manylinux*.whl
 #$PYDIR/twine upload --repository testpypi wheelhouse/*manylinux*.whl
