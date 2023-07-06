@@ -4,6 +4,7 @@ WORKDIR /home/app
 
 RUN pip install ngstrefftz 
 ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python3.10/site-packages/
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
 
 RUN pip3 install numpy jupyter_contrib_nbextensions webgui_jupyter_widgets
 RUN jupyter nbextension enable --py widgetsnbextension
