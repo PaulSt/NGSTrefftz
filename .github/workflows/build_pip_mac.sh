@@ -24,4 +24,6 @@ export CMAKE_OSX_ARCHITECTURES='arm64;x86_64'
 $PYDIR/pip3 install ngsolve
 
 #$PYDIR/pip3 wheel .
-$PYDIR/python3 setup.py bdist_wheel --plat-name macosx-10.15-universal2 -d dist
+$PYDIR/python3 setup.py bdist_wheel --plat-name macosx-10.15-universal2 -d wheelhouse
+
+cat src/ngstrefftz.egg-info/SOURCES.txt

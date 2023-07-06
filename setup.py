@@ -96,6 +96,8 @@ install_requires = [ 'ngsolve >= '+ngsolve_version ]
 # skbuild.cmaker.CMaker._parse_manifests = _patched_parse_manifests
 
 py_install_dir = get_python_lib(1,0,'').replace('\\','/')
+print("python install dir:")
+print(py_install_dir)
 
 # root_dir = os.path.abspath(os.path.join(netgen.__file__, '../'*(len(py_install_dir.split('/'))+2)))
 
@@ -104,6 +106,7 @@ _cmake_args = ['-DCMAKE_CXX_COMPILER=ngscxx']
 packages=["ngstrefftz"]
 
 if 'darwin' in sys.platform:
+    _cmake_args += ['-DPY_INSTALL_DIR='+py_install_dir]
     pass
 elif 'linux' in sys.platform:
     install_requires.append('mkl')
@@ -111,11 +114,18 @@ elif 'linux' in sys.platform:
 elif 'win' in sys.platform:
     install_requires.append('mkl')
 
+cmake_prefix_path = ""
 if 'PYDIR' in os.environ:
-    _cmake_args += [f'-DCMAKE_PREFIX_PATH={os.environ["PYDIR"]}']
+    cmake_prefix_path += os.environ["PYDIR"]
     _cmake_args += [f'-DPYTHON_EXECUTABLE={os.environ["PYDIR"]}/python3']
     _cmake_args += [f'-DPYTHON_LIBRARY={os.environ["PYDIR"]}/../lib']
     _cmake_args += [f'-DPYTHON_INCLUDE_DIR={os.environ["PYDIR"]}/../include']
+if 'CMAKE_PREFIX_PATH' in os.environ:
+    cmake_prefix_path += os.environ["CMAKE_PREFIX_PATH"]
+_cmake_args += ['-DCMAKE_PREFIX_PATH='+cmake_prefix_path]
+
+print("cmake args:")
+print(_cmake_args)
 
 setup(
     name='ngstrefftz',

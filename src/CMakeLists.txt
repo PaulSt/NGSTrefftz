@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.1)
 ########################################################
 project(ngstrefftz)
 ########################################################
@@ -14,7 +15,6 @@ file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
 if(EXISTS "${LOC_PATH}")
     message(FATAL_ERROR "You cannot build in a source directory (or any directory with a CMakeLists.txt file). Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles.")
 endif()
-cmake_minimum_required(VERSION 3.1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(NGSolve CONFIG REQUIRED
@@ -25,19 +25,22 @@ find_package(NGSolve CONFIG REQUIRED
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX ${NGSOLVE_INSTALL_DIR} CACHE PATH "Install dir" FORCE)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-set(NGSTREFFTZ_INSTALL_DIR_PYTHON ${CMAKE_INSTALL_PREFIX}/${NGSOLVE_INSTALL_DIR_PYTHON}/ngstrefftz)
+if (NOT DEFINED PY_INSTALL_DIR)
+    set(PY_INSTALL_DIR ${NGSOLVE_INSTALL_DIR_PYTHON} CACHE PATH "subdir of install dir for python modules" FORCE)
+endif()
+set(NGSTREFFTZ_INSTALL_DIR_PYTHON ${PY_INSTALL_DIR}/ngstrefftz)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
 
 ### add ngstents dependency if needed
 if (NOT TARGET _pytents)
     include_directories(${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src)
-    set(NGSTENTS_INSTALL_DIR_PYTHON ${CMAKE_INSTALL_PREFIX}/${NGSOLVE_INSTALL_DIR_PYTHON}/ngstents)
+    set(NGSTENTS_INSTALL_DIR_PYTHON ${PY_INSTALL_DIR}/ngstents)
     add_ngsolve_python_module(_pytents
       ${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src/python_tents.cpp
       ${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src/tents.cpp
       )
     set_target_properties(_pytents PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents")
-    install(TARGETS _pytents DESTINATION ${NGSTENTS_INSTALL_DIR_PYTHON})
+    install(TARGETS _pytents DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTENTS_INSTALL_DIR_PYTHON})
 endif()
 
 ### ngstrefftz
@@ -74,16 +77,15 @@ endif (USE_LAPACK)
 ### install
 message("${BoldCyan}With 'make install' the package will be installed to: ${CMAKE_INSTALL_PREFIX}
 Make sure to add it to the python path: 
--->   export PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${NGSOLVE_INSTALL_DIR_PYTHON}:$PYTHONPATH")
-install(TARGETS _trefftz DESTINATION ${NGSTREFFTZ_INSTALL_DIR_PYTHON})
+-->   export PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${PY_INSTALL_DIR}:$PYTHONPATH")
+install(TARGETS _trefftz DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTREFFTZ_INSTALL_DIR_PYTHON}/)
 install(FILES
         __init__.py 
-        DESTINATION ${NGSTREFFTZ_INSTALL_DIR_PYTHON}
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTREFFTZ_INSTALL_DIR_PYTHON}
         #COMPONENT ngstrefftz
        )
 
 ### tests 
-# TODO: tests only work if library output = binary dir
 include(CTest)
 file(COPY 
     ${CMAKE_SOURCE_DIR}/../test/embt.py
@@ -95,4 +97,4 @@ add_test(NAME trefftz COMMAND python3 -m doctest ${CMAKE_BINARY_DIR}/Testing/tre
 add_test(NAME tents COMMAND python3 -m doctest ${CMAKE_BINARY_DIR}/Testing/tents.py)
 #WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 set_tests_properties(embtrefftz trefftz tents
-    PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}:$ENV{PYTHONPATH}")
+    PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:$ENV{PYTHONPATH}")
