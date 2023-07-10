@@ -65,6 +65,9 @@ pip install ngsolve --pre
 🚀 Nov, 2021: NGSTrefftz now comes in a docker and with binder notebooks! 
 
 ## Papers using the code
+* *Trefftz Discontinuous Galerkin discretization for the Stokes problem*  
+Philip L. Lederer, Christoph Lehrenfeld, Paul Stocker  
+[![arXiv](https://img.shields.io/badge/arXiv-2306.14600-b31b1b.svg)](https://arxiv.org/abs/2306.14600)
 * *Unfitted Trefftz discontinuous Galerkin methods for elliptic boundary value problems*  
 Fabian Heimann, Christoph Lehrenfeld, Paul Stocker, Henry von Wahl  
 [![arXiv](https://img.shields.io/badge/arXiv-2212.12236-b31b1b.svg)](https://arxiv.org/abs/2212.12236)
