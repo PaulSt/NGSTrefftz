@@ -33,6 +33,12 @@ namespace ngfem
       shared_ptr<MeshAccess> mesh, IntegrationRule &intrule, Vector<> ipdata)
       : CoefficientFunction (1)
   {
+    this->ma = mesh;
+    this->intrule.SetSize (intrule.Size ());
+    for (size_t i = 0; i < intrule.Size (); i++)
+      this->intrule[i] = (intrule)[i];
+    this->intrule.SetDim (intrule.Dim ());
+
     values.resize (mesh->GetNE ());
     int elnr = 0;
     for (auto &vec : values)
@@ -51,6 +57,12 @@ namespace ngfem
       shared_ptr<MeshAccess> mesh, IntegrationRule &intrule, Matrix<> ipdata)
       : CoefficientFunction (1)
   {
+    this->ma = mesh;
+    this->intrule.SetSize (intrule.Size ());
+    for (size_t i = 0; i < intrule.Size (); i++)
+      this->intrule[i] = (intrule)[i];
+    this->intrule.SetDim (intrule.Dim ());
+
     values.resize (mesh->GetNE ());
     int elnr = 0;
     for (auto &vec : values)
@@ -91,6 +103,51 @@ namespace ngfem
         cout << endl;
       }
     cout << endl;
+  }
+
+  vector<vector<double>> IntegrationPointFunction ::Export ()
+  {
+    LocalHeap lh (1000 * 1000 * 100, "export intpointfct");
+
+    vector<vector<double>> pointnvalues;
+    pointnvalues.resize (ma->GetNE () * intrule.GetNIP ());
+    for (size_t elnr = 0; elnr < ma->GetNE (); elnr++)
+      {
+        switch (ma->GetDimension ())
+          {
+          case 2:
+            {
+              MappedIntegrationRule<2, 2> mir (intrule,
+                                               ma->GetTrafo (elnr, lh), lh);
+              for (auto mip : mir)
+                {
+                  auto &vec = pointnvalues[elnr * intrule.GetNIP ()
+                                           + mip.GetIPNr ()];
+                  vec.resize (3);
+                  for (int i = 0; i < 2; i++)
+                    vec[i] = mip.Point ()[i];
+                  vec[2] = values[elnr][mip.GetIPNr ()];
+                }
+              break;
+            }
+          case 3:
+            {
+              MappedIntegrationRule<3, 3> mir (intrule,
+                                               ma->GetTrafo (elnr, lh), lh);
+              for (auto mip : mir)
+                {
+                  auto &vec = pointnvalues[elnr * intrule.GetNIP ()
+                                           + mip.GetIPNr ()];
+                  vec.resize (4);
+                  for (int i = 0; i < 3; i++)
+                    vec[i] = mip.Point ()[i];
+                  vec[3] = values[elnr][mip.GetIPNr ()];
+                }
+              break;
+            }
+          }
+      }
+    return pointnvalues;
   }
 
   WeightedRadiusFunction ::WeightedRadiusFunction (
@@ -236,7 +293,8 @@ void ExportSpecialCoefficientFunction (py::module m)
               return new IntegrationPointFunction (mesh, intrule, data);
             }),
             py::arg ("mesh"), py::arg ("intrule"), py::arg ("Matrix"))
-      .def ("PrintTable", &IntegrationPointFunction::PrintTable);
+      .def ("PrintTable", &IntegrationPointFunction::PrintTable)
+      .def ("Export", &IntegrationPointFunction::Export);
 
   py::class_<WeightedRadiusFunction, shared_ptr<WeightedRadiusFunction>,
              CoefficientFunction> (m, "WeightedRadiusFunction")

@@ -39,6 +39,8 @@ namespace ngfem
   {
   private:
     vector<vector<double>> values;
+    shared_ptr<MeshAccess> ma;
+    IntegrationRule intrule;
 
   public:
     IntegrationPointFunction (shared_ptr<MeshAccess> mesh,
@@ -47,6 +49,7 @@ namespace ngfem
                               IntegrationRule &intrule, Matrix<> ipdata);
     virtual double Evaluate (const BaseMappedIntegrationPoint &ip) const;
     void PrintTable ();
+    vector<vector<double>> Export ();
   };
 
   class WeightedRadiusFunction : public CoefficientFunction

@@ -57,3 +57,9 @@ Tips on opening a pull request:
 
 **IMPORTANT**: By submitting a patch, you agree to allow the project owners to license your work under the terms of the *LGPL License*.
 
+## Code format
+
+A code style file is provided in the repo to be used with `clang-format`. All c++ files should be formated using this style, to quickly apply it to all files use
+   ```bash
+   find src/ -iname *.hpp -o -iname *.cpp | xargs clang-format -style='file:.clang-format' -i
+   ```

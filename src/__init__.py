@@ -22,9 +22,9 @@ def GetWave(self,U):
         wavefront = self.GetWavefront()
         ipfct=IntegrationPointFunction(initmesh,intrule,wavefront)
         f = LinearForm(fes)
-        f += SymbolicLFI(ipfct*v, intrule=intrule)
+        f += SymbolicLFI(ipfct*v).SetIntegrationRule(eltyp,intrule)
         f.Assemble()
-        U.vec.data = a.mat.Inverse() * f.vec
+        U.vec.data = a.mat.Inverse(inverse='sparsecholesky') * f.vec
         # return gfu
     else:
         fes = L2(initmesh, order=order-1)**(D+1)
@@ -35,11 +35,11 @@ def GetWave(self,U):
         a.Assemble()
 
         sirsize = int(wavefront.Width()/(D+1))
+        f = LinearForm(fes)
         for d in range(D+1):
             ipfct=IntegrationPointFunction(initmesh,intrule,wavefront[:,d*sirsize:(d+1)*sirsize])
-            f = LinearForm(fes)
-            f += SymbolicLFI(ipfct*v[d], intrule=intrule)
-            f.Assemble()
+            f += SymbolicLFI(ipfct*v[d]).SetIntegrationRule(eltyp,intrule)
+        f.Assemble()
         U.vec.data = a.mat.Inverse() * f.vec
 
 
