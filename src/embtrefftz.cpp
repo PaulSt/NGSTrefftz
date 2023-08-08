@@ -295,7 +295,10 @@ namespace ngcomp
             SigI (i, i) = 1.0 / elmat (i, i);
           Matrix<SCAL> elinverse = V * SigI * Ut;
 
-          lfvec.FV () (dofs) = elinverse * elvec;
+          // lfvec.FV () (dofs) = elinverse * elvec;
+          FlatVector<SCAL> elsol (dofs.Size (), mlh);
+          elsol = elinverse * elvec;
+          lfvec.SetIndirect (dofs, elsol);
         }
     });
 

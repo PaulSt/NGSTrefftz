@@ -243,7 +243,11 @@ namespace ngfem
       FlatMatrixFixHeight<DIM_DMAT, TSCAL> mat (DIM * fel.GetNDof (), lh);
       // Cast(fel).CalcShape (mip, mat.Row(0));
       GenerateMatrix (fel, mip, mat, lh);
-      y.Range (DIM * fel.GetNDof ()) += Trans (mat) * x;
+      // y.Range (DIM * fel.GetNDof ()) += Trans (mat) * x;
+
+      FlatVector<TSCAL> vec (DIM * fel.GetNDof (), lh);
+      vec = Trans (mat) * x;
+      y.Range (DIM * fel.GetNDof ()) += vec;
     }
   };
 
@@ -362,11 +366,14 @@ namespace ngfem
                                FlatVector<Complex> x,
                                BareSliceVector<Complex> y, LocalHeap &lh)
     {
-      FlatMatrixFixHeight<DIM_DMAT, Complex> mat (DIM * fel.GetNDof (), lh);
-      y.Range (DIM * fel.GetNDof ())
-          += (Cast (fel).GetDShapeComplex (mip, lh)) * x;
-      // GenerateMatrix (fel, mip, mat, lh);
-      // y.Range(DIM*fel.GetNDof()) += Trans (mat) * x;
+      FlatVector<Complex> vec (DIM * fel.GetNDof (), lh);
+      vec = (Cast (fel).GetDShapeComplex (mip, lh)) * x;
+      y.Range (DIM * fel.GetNDof ()) += vec;
+      // y.Range (DIM * fel.GetNDof ())
+      //+= (Cast (fel).GetDShapeComplex (mip, lh)) * x;
+      // FlatMatrixFixHeight<DIM_DMAT, Complex> mat (DIM * fel.GetNDof (), lh);
+      //  GenerateMatrix (fel, mip, mat, lh);
+      //  y.Range(DIM*fel.GetNDof()) += Trans (mat) * x;
     }
 
     template <typename MIR, class TVX, class TVY>
