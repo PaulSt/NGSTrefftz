@@ -22,14 +22,16 @@ namespace ngfem
           hir[i], eltrans, -1);
 
     new (&points) BareSliceMatrix<SIMD<double>> (
+        mips.Size (), DIM_SPACE,
         sizeof (SIMD<MappedIntegrationPoint<DIM_ELEMENT, DIM_SPACE>>)
             / sizeof (SIMD<double>),
-        &mips[0].Point () (0), DummySize (mips.Size (), DIM_SPACE));
+        &mips[0].Point () (0));
 
     new (&normals) BareSliceMatrix<SIMD<double>> (
+        mips.Size (), DIM_SPACE,
         sizeof (SIMD<MappedIntegrationPoint<DIM_ELEMENT, DIM_SPACE>>)
             / sizeof (SIMD<double>),
-        &mips[0].NV () (0), DummySize (mips.Size (), DIM_SPACE));
+        &mips[0].NV () (0));
 
     eltrans.CalcMultiPointJacobian (ir, *this);
 
