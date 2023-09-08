@@ -468,7 +468,7 @@ namespace ngcomp
   template <typename T, typename shrdT>
   void
   EmbTrefftzFESpace<T, shrdT>::VTransformMR (ElementId ei,
-                                             const SliceMatrix<double> mat,
+                                             SliceMatrix<double> mat,
                                              TRANSFORM_TYPE type) const
   {
     static Timer timer ("EmbTrefftz: MTransform");
@@ -497,7 +497,7 @@ namespace ngcomp
   template <typename T, typename shrdT>
   void
   EmbTrefftzFESpace<T, shrdT>::VTransformVR (ElementId ei,
-                                             const SliceVector<double> vec,
+                                             SliceVector<double> vec,
                                              TRANSFORM_TYPE type) const
   {
     static Timer timer ("EmbTrefftz: VTransform");

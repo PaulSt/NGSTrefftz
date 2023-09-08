@@ -51,10 +51,10 @@ namespace ngcomp
 
     void GetDofNrs (ElementId ei, Array<int> &dnums) const override;
 
-    virtual void VTransformMR (ElementId ei, const SliceMatrix<double> mat,
+    virtual void VTransformMR (ElementId ei, SliceMatrix<double> mat,
                                TRANSFORM_TYPE type) const override;
 
-    virtual void VTransformVR (ElementId ei, const SliceVector<double> vec,
+    virtual void VTransformVR (ElementId ei, SliceVector<double> vec,
                                TRANSFORM_TYPE type) const override;
   };
 }
