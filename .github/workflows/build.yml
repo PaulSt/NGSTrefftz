@@ -25,7 +25,7 @@ jobs:
       - name: pip ngsolve
         run: |
              #${{ env.PYDIR }}/pip install -U pytest-check numpy wheel scikit-build mkl==2023.* mkl-devel==2023.* setuptools
-             ${{ env.PYDIR }}/pip install ngsolve 
+             ${{ env.PYDIR }}/pip install ngsolve --pre
              echo "${{ env.PYDIR }}" >> $GITHUB_PATH
              echo "LD_LIBRARY_PATH=${{ env.LD_LIBRARY_PATH }}:/opt/_internal/cpython-3.10.9/lib/" >> $GITHUB_ENV
       - uses: actions/checkout@v3
@@ -110,7 +110,7 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install -U pytest-check numpy wheel scikit-build mkl==2023.* mkl-devel==2023.* setuptools
-          python3 -m pip install ngsolve 
+          python3 -m pip install ngsolve --pre
       - name: Package ngstrefftz sources for PyPI
         run: cd NGSTrefftz && python3 setup.py sdist -d wheelhouse
       #- name: pip install ngstrefftz
