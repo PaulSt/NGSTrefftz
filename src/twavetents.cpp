@@ -552,6 +552,7 @@ namespace ngcomp
 
   template <int D> double TWaveTents<D>::TentFaceArea (Mat<D + 1, D + 1> ve)
   {
+    // note: we scale by factor 2 or 6 (D=2,3) the measure of the reference element. Already computed in GetWeight/GetMeasure of any MappedIP
     switch (D)
       {
       case 1:
