@@ -76,8 +76,7 @@ namespace ngcomp
               SliceMatrix<> subm
                   = elmat.Cols (eli * nbasis, (eli + 1) * nbasis)
                         .Rows (eli * nbasis, (eli + 1) * nbasis);
-              SliceVector<> subv
-                  = elvec.Range (eli * nbasis, (eli + 1) * nbasis);
+              FlatVector<> subv (nbasis, &elvec (eli * nbasis));
               CalcTentBndEl (selnums[0], tent, tel, sir, slh, subm, subv);
             }
 
@@ -100,7 +99,7 @@ namespace ngcomp
           int eli = ndomains > 1 ? macroel[tent->els[elnr]] : 0;
           SliceMatrix<> subm = elmat.Cols (eli * nbasis, (eli + 1) * nbasis)
                                    .Rows (eli * nbasis, (eli + 1) * nbasis);
-          SliceVector<> subv = elvec.Range (eli * nbasis, (eli + 1) * nbasis);
+          FlatVector<> subv (nbasis, &elvec (eli * nbasis));
           double bla = wavespeed[tent->els[elnr]];
           CalcTentEl (
               tent->els[elnr], tent, tel, [&] (int imip) { return bla; }, sir,
@@ -132,7 +131,7 @@ namespace ngcomp
                                   ScalarMappedElement<D + 1> &tel,
                                   TFUNC LocalWavespeed,
                                   SIMD_IntegrationRule &sir, LocalHeap &slh,
-                                  SliceMatrix<> elmat, SliceVector<> elvec,
+                                  SliceMatrix<> elmat, FlatVector<> elvec,
                                   SliceMatrix<SIMD<double>> simddshapes)
   {
     static Timer tint1 ("tent top calcshape");
@@ -267,7 +266,7 @@ namespace ngcomp
   void TWaveTents<D>::CalcTentBndEl (int surfel, const Tent *tent,
                                      ScalarMappedElement<D + 1> &tel,
                                      SIMD_IntegrationRule &sir, LocalHeap &slh,
-                                     SliceMatrix<> elmat, SliceVector<> elvec)
+                                     SliceMatrix<> elmat, FlatVector<> elvec)
   {
     HeapReset hr (slh);
     size_t snip = sir.Size () * nsimd;
@@ -371,7 +370,7 @@ namespace ngcomp
                                   const Tent *tent,
                                   ScalarMappedElement<D + 1> &tel,
                                   SIMD_IntegrationRule &sir, LocalHeap &slh,
-                                  SliceMatrix<> elmat, SliceVector<> elvec)
+                                  SliceMatrix<> elmat, FlatVector<> elvec)
   {
     HeapReset hr (slh);
     size_t snip = sir.Size () * nsimd;
@@ -553,6 +552,7 @@ namespace ngcomp
 
   template <int D> double TWaveTents<D>::TentFaceArea (Mat<D + 1, D + 1> ve)
   {
+    // note: we scale by factor 2 or 6 (D=2,3) the measure of the reference element. Already computed in GetWeight/GetMeasure of any MappedIP
     switch (D)
       {
       case 1:

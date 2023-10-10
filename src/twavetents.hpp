@@ -43,19 +43,19 @@ namespace ngcomp
     void
     CalcTentEl (int elnr, const Tent *tent, ScalarMappedElement<D + 1> &tel,
                 TFUNC LocalWavespeed, SIMD_IntegrationRule &sir,
-                LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec,
+                LocalHeap &slh, SliceMatrix<> elmat, FlatVector<> elvec,
                 SliceMatrix<SIMD<double>> simddshapes);
 
     void
     CalcTentBndEl (int surfel, const Tent *tent,
                    ScalarMappedElement<D + 1> &tel, SIMD_IntegrationRule &sir,
-                   LocalHeap &slh, SliceMatrix<> elmat, SliceVector<> elvec);
+                   LocalHeap &slh, SliceMatrix<> elmat, FlatVector<> elvec);
 
     void CalcTentMacroEl (int fnr, const Array<int> &elnums,
                           std::unordered_map<int, int> &macroel,
                           const Tent *tent, ScalarMappedElement<D + 1> &tel,
                           SIMD_IntegrationRule &sir, LocalHeap &slh,
-                          SliceMatrix<> elmat, SliceVector<> elvec);
+                          SliceMatrix<> elmat, FlatVector<> elvec);
 
     void
     CalcTentElEval (int elnr, const Tent *tent,
