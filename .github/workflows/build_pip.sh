@@ -1,11 +1,11 @@
 #! /bin/bash
+cd workspace/NGSTrefftz
 set -e
 yum -y update
 yum -y install ninja-build fontconfig-devel tk-devel tcl-devel libXmu-devel mesa-libGLU-devel ccache
 
 py=/opt/python/cp39-cp39/bin/python
-$py fix_auditwheel_policy.py
-cd ../..
+cd .github/workflows/ && $py fix_auditwheel_policy.py && cd ../..
 
 rm -rf wheelhouse
 mkdir wheelhouse
@@ -26,7 +26,7 @@ do
     #rm -rf /home/app/ngstrefftz/make
     rm -rf _skbuild
     $PYDIR/pip install pytest-check numpy wheel scikit-build mkl==2023.* mkl-devel==2023.* setuptools
-    $PYDIR/pip install ngsolve 
+    $PYDIR/pip install ngsolve --pre
 
     $PYDIR/pip wheel -vvv .
     cat src/ngstrefftz.egg-info/SOURCES.txt

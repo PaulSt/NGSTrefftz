@@ -13,61 +13,35 @@ env:
 
 jobs:
 
-  maketest:
-    runs-on: ubuntu-latest
-    container:
-      #image: quay.io/pypa/manylinux2014_x86_64:latest
-      image: sameli/manylinux2014_x86_64_cuda_11
-    steps:     
-      - run: echo "PYDIR=/opt/python/cp310-cp310/bin" >> $GITHUB_ENV
-      - name: install pkgs
-        run: yum -y update && yum -y install git ninja-build fontconfig-devel tk-devel tcl-devel libXmu-devel mesa-libGLU-devel ccache python-devel lapack blas 
-      - name: pip ngsolve
-        run: |
-             #${{ env.PYDIR }}/pip install -U pytest-check numpy wheel scikit-build mkl==2023.* mkl-devel==2023.* setuptools
-             ${{ env.PYDIR }}/pip install ngsolve --pre
-             echo "${{ env.PYDIR }}" >> $GITHUB_PATH
-             echo "LD_LIBRARY_PATH=${{ env.LD_LIBRARY_PATH }}:/opt/_internal/cpython-3.10.9/lib/" >> $GITHUB_ENV
-      - uses: actions/checkout@v3
-        with:
-          submodules: 'True'
-          path: 'NGSTrefftz'
-      - name: cmake NGSTrefftz
-        run: cmake -DCMAKE_CXX_COMPILER=ngscxx -DNETGENDIR=${{ env.PYDIR }}/.. -DCMAKE_PREFIX_PATH=${{ env.PYDIR }}/..  -DPYTHON_EXECUTABLE=${{ env.PYDIR }}/python3 -DPYTHON_LIBRARY=${{ env.PYDIR }}/../lib -DPYTHON_INCLUDE_DIR=${{ env.PYDIR }}/../include -B $GITHUB_WORKSPACE/NGSTrefftz/make -S $GITHUB_WORKSPACE/NGSTrefftz/src/
-      - name: compile NGSTrefftz
-        run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make
-      - name: test NGSTrefftz
-        run: env CTEST_OUTPUT_ON_FAILURE=1 make -C $GITHUB_WORKSPACE/NGSTrefftz/make test
-      - name: install NGSTrefftz
-        run: make -C $GITHUB_WORKSPACE/NGSTrefftz/make install  
-      #- name: Debugging with tmate
-        #if: ${{ failure() }}
-        #uses: mxschmitt/action-tmate@v3
-
   pypi-linux:
     name: Build wheels for linux
-    needs: [maketest]
     runs-on: ubuntu-latest
-    container:
+    #container:
       #image: quay.io/pypa/manylinux2014_x86_64:latest
-      image: sameli/manylinux2014_x86_64_cuda_11
+      #image: sameli/manylinux2014_x86_64_cuda_11
     steps:
+      - name: clear cache
+        run: rm -rf /opt/hostedtoolcache
       - uses: actions/checkout@v3
         with:
           submodules: 'True'
           path: 'NGSTrefftz'
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
+      - name: pull manylinux
+        run: docker pull sameli/manylinux2014_x86_64_cuda_11.7
+      - name: run test
+        run: docker run -v $GITHUB_WORKSPACE:/workspace sameli/manylinux2014_x86_64_cuda_11.7 /bin/sh /workspace/NGSTrefftz/.github/workflows/build_linux_test.sh
       - name: build pip
-        run: cd NGSTrefftz/.github/workflows && sh build_pip.sh 
+        run: docker run -v $GITHUB_WORKSPACE:/workspace sameli/manylinux2014_x86_64_cuda_11.7 /bin/sh /workspace/NGSTrefftz/.github/workflows/build_pip.sh 
       - name: Store the binary wheel
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: python-package-distributions
           path: NGSTrefftz/wheelhouse
 
   pypi-mac:
     name: Build wheels for macOS
-    needs: [maketest]
+    needs: [pypi-linux]
     strategy:
       matrix:
         py: ['3.8', '3.9', '3.10', '3.11']
@@ -88,14 +62,14 @@ jobs:
       - name: Run build script
         run: cd NGSTrefftz/.github/workflows && bash build_pip_mac.sh ${{ matrix.py }}
       - name: Store the binary wheel
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: python-package-distributions
           path: NGSTrefftz/wheelhouse
 
   pypi-src:
     name: pypi src
-    needs: [maketest]
+    needs: [pypi-linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -116,14 +90,14 @@ jobs:
       #- name: pip install ngstrefftz
         #run: pip install dist/*
       - name: Store the sdist
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: python-package-distributions
           path: NGSTrefftz/wheelhouse
 
   publish-pypi:
     name: Publish to PyPI
-    if: github.event_name == 'release' && github.event.action == 'created' 
+    #if: github.event_name == 'release' && github.event.action == 'created' 
     needs: [pypi-mac, pypi-linux, pypi-src]
     runs-on: ubuntu-latest
     steps:
@@ -133,6 +107,7 @@ jobs:
         name: python-package-distributions
         path: NGSTrefftz/wheelhouse/
     - name: Publish binary distributions to PyPI
+      if: github.ref == 'refs/heads/main'
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         skip-existing: true
@@ -145,6 +120,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'created'
     steps:
+      - name: clear cache
+        run: rm -rf /opt/hostedtoolcache
       - name: Checkout
         uses: actions/checkout@v3
       - name: Docker meta
@@ -173,8 +150,42 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           #labels: ${{ steps.meta.outputs.labels }}
 
-  docs:
+  pyodide:
     needs: [publish-pypi]
+    runs-on: ubuntu-latest
+    steps:
+      - name: clear cache
+        run: rm -rf /opt/hostedtoolcache
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
+          submodules: 'True'
+          path: 'NGSTrefftz'
+      - name: install pkgs
+        run: sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install docker
+      - name: build docker
+        run: cd $GITHUB_WORKSPACE/NGSTrefftz && docker build -t ngstpyodide -f .github/workflows/pyodide/Dockerfile .
+      - name: retrieve tar
+        run: id=$(docker create ngstpyodide) && docker cp $id:/root/output/ngstrefftz_pyodide.tar.bz2 $GITHUB_WORKSPACE/
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Build the JupyterLite site
+        run: |
+          cd $GITHUB_WORKSPACE/NGSTrefftz/.github/workflows/pyodide && python -m pip install -r requirements.txt
+          cd $GITHUB_WORKSPACE && jupyter lite build --pyodide ngstrefftz_pyodide.tar.bz2 --contents ./NGSTrefftz/docs/notebooks/ --output-dir ngst-pyodide
+      #- name: upload 
+        #uses: actions/upload-pages-artifact@v2
+      - name: Store the sdist
+        uses: actions/upload-artifact@v3
+        with:
+          name: ngst-pyodide
+          path: ./ngst-pyodide
+
+
+
+  docs:
+    needs: [publish-pypi,pyodide]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -205,6 +216,11 @@ jobs:
         with:
           repository_path: 'NGSTrefftz'
           #requirements_path: ./docs/requirements.txt
+      - name: Download pyodide stuff
+        uses: actions/download-artifact@v2
+        with:
+          name: ngst-pyodide
+          path: NGSTrefftz/ngst-pyodide
       - run: tree -d .
       - name: Upload
         uses: actions/upload-pages-artifact@v2
@@ -220,7 +236,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'created'
+    #if: github.event_name == 'release' && github.event.action == 'created'
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
@@ -238,7 +255,7 @@ jobs:
           journal: joss
           paper-path: docs/paper/paper.md
       - name: Upload
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: joss_paper
           path: docs/paper/paper.pdf
