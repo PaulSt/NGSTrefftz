@@ -106,22 +106,6 @@ pkg.update({
       "unvendored_tests": False,
       "shared_library": True
     },
-    "ngstrefftz": {
-      "name": "ngstrefftz",
-      "version": "6.2.2304",
-      "file_name": "ngstrefftz.zip",
-      "install_dir": "stdlib",
-      "sha256": getHash("ngstrefftz.zip"),
-      "package_type": "cpython_module",
-      "imports": [
-        "ngstrefftz"
-      ],
-      "depends": [
-        "ngsolve"
-      ],
-      "unvendored_tests": False,
-      "shared_library": True
-    },
     "ngstents": {
       "name": "ngstents",
       "version": "6.2.2304",
@@ -134,6 +118,23 @@ pkg.update({
       ],
       "depends": [
         "ngsolve"
+      ],
+      "unvendored_tests": False,
+      "shared_library": True
+    },
+    "ngstrefftz": {
+      "name": "ngstrefftz",
+      "version": "6.2.2304",
+      "file_name": "ngstrefftz.zip",
+      "install_dir": "stdlib",
+      "sha256": getHash("ngstrefftz.zip"),
+      "package_type": "cpython_module",
+      "imports": [
+        "ngstrefftz"
+      ],
+      "depends": [
+        "ngsolve",
+        "ngstents"
       ],
       "unvendored_tests": False,
       "shared_library": True

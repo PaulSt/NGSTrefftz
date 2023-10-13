@@ -13,27 +13,12 @@ env:
 
 jobs:
 
-  maketest:
+  pypi-linux:
+    name: Build wheels for linux
     runs-on: ubuntu-latest
     #container:
       #image: quay.io/pypa/manylinux2014_x86_64:latest
       #image: sameli/manylinux2014_x86_64_cuda_11
-    steps:     
-      - name: clear cache
-        run: rm -rf /opt/hostedtoolcache
-      - uses: actions/checkout@v3
-        with:
-          submodules: 'True'
-          path: 'NGSTrefftz'
-      - name: run container
-        run: |
-           docker pull sameli/manylinux2014_x86_64_cuda_11.7
-           docker run -v $GITHUB_WORKSPACE:/workspace sameli/manylinux2014_x86_64_cuda_11.7 /bin/sh /workspace/NGSTrefftz/.github/workflows/build_linux_test.sh
-
-  pypi-linux:
-    name: Build wheels for linux
-    needs: [maketest]
-    runs-on: ubuntu-latest
     steps:
       - name: clear cache
         run: rm -rf /opt/hostedtoolcache
@@ -42,10 +27,12 @@ jobs:
           submodules: 'True'
           path: 'NGSTrefftz'
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
+      - name: pull manylinux
+        run: docker pull sameli/manylinux2014_x86_64_cuda_11.7
+      - name: run test
+        run: docker run -v $GITHUB_WORKSPACE:/workspace sameli/manylinux2014_x86_64_cuda_11.7 /bin/sh /workspace/NGSTrefftz/.github/workflows/build_linux_test.sh
       - name: build pip
-        run: |
-           docker pull sameli/manylinux2014_x86_64_cuda_11.7
-           docker run -v $GITHUB_WORKSPACE:/workspace sameli/manylinux2014_x86_64_cuda_11.7 /bin/sh /workspace/NGSTrefftz/.github/workflows/build_pip.sh 
+        run: docker run -v $GITHUB_WORKSPACE:/workspace sameli/manylinux2014_x86_64_cuda_11.7 /bin/sh /workspace/NGSTrefftz/.github/workflows/build_pip.sh 
       - name: Store the binary wheel
         uses: actions/upload-artifact@v3
         with:
@@ -54,7 +41,7 @@ jobs:
 
   pypi-mac:
     name: Build wheels for macOS
-    needs: [maketest]
+    needs: [pypi-linux]
     strategy:
       matrix:
         py: ['3.8', '3.9', '3.10', '3.11']
@@ -82,7 +69,7 @@ jobs:
 
   pypi-src:
     name: pypi src
-    needs: [maketest]
+    needs: [pypi-linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -119,13 +106,14 @@ jobs:
       with:
         name: python-package-distributions
         path: NGSTrefftz/wheelhouse/
-    #- name: Publish binary distributions to PyPI
-      #uses: pypa/gh-action-pypi-publish@release/v1
-      #with:
-        #skip-existing: true
-        #password: ${{ secrets.PYPI_API_TOKEN }}
-        #packages-dir: NGSTrefftz/wheelhouse/
-        ##repository-url: https://test.pypi.org/legacy/
+    - name: Publish binary distributions to PyPI
+      if: github.ref == 'refs/heads/main'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        skip-existing: true
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        packages-dir: NGSTrefftz/wheelhouse/
+        #repository-url: https://test.pypi.org/legacy/
 
   docker:
     needs: [publish-pypi]
@@ -228,7 +216,7 @@ jobs:
         with:
           repository_path: 'NGSTrefftz'
           #requirements_path: ./docs/requirements.txt
-      - name: Download all the dists
+      - name: Download pyodide stuff
         uses: actions/download-artifact@v2
         with:
           name: ngst-pyodide
@@ -248,7 +236,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'created'
+    #if: github.event_name == 'release' && github.event.action == 'created'
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
