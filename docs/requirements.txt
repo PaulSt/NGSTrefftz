@@ -105,5 +105,7 @@ webgui-jupyter-widgets==0.2.14
 websocket-client==1.4.1
 widgetsnbextension==4.0.3
 scipy>=1.11.1 
-xfem>=2.1.2303
-ngstrefftz>=0.2.3
+
+ngsolve==6.2.2302
+xfem==2.1.2302
+ngstrefftz==0.2.7
