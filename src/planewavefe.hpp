@@ -2,6 +2,7 @@
 #define FILE_PLANEWAVEELEMENT_HPP
 
 #include <fem.hpp>
+#include "ngsttd.hpp"
 #include "scalarmappedfe.hpp"
 
 namespace ngfem
@@ -74,10 +75,10 @@ namespace ngfem
       throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
     }
 
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     Evaluate (const BaseMappedIntegrationRule &mir,
               BareSliceVector<Complex> coefs, FlatVector<Complex> vals) const;
-    HD NGS_DLL_HEADER virtual Complex
+    NGST_DLL virtual Complex
     EvaluateComplex (const BaseMappedIntegrationPoint &mip,
                      BareSliceVector<Complex> x) const;
     void CalcShape (const BaseMappedIntegrationPoint &mip,

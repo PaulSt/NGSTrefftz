@@ -1,8 +1,24 @@
 #include "twavetents.hpp"
 #include <h1lofe.hpp>
 #include <paralleldepend.hpp>
+#include <fem.hpp>
 #include "trefftzfespace.hpp"
-#include "intrule4.cpp"
+
+namespace ngfem
+{
+  template <int DIM_ELEMENT, int DIM_SPACE>
+  void SIMD_STMappedIntegrationRule<DIM_ELEMENT, DIM_SPACE>::Print (
+      ostream &ost) const
+  {
+    ost << "simd-mir, size = " << mips.Size () << endl;
+    for (size_t i = 0; i < mips.Size (); i++)
+      mips[i].Print (ost);
+  }
+
+  template class SIMD_STMappedIntegrationRule<1, 2>;
+  template class SIMD_STMappedIntegrationRule<2, 3>;
+  template class SIMD_STMappedIntegrationRule<3, 4>;
+}
 
 namespace ngcomp
 {
@@ -143,8 +159,8 @@ namespace ngcomp
     size_t snip = sir.Size () * nsimd;
     ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
 
-    SIMD_MappedIntegrationRule<D, D + 1> smir (sir, ma->GetTrafo (elnr, slh),
-                                               -1, slh);
+    SIMD_STMappedIntegrationRule<D, D + 1> smir (sir, ma->GetTrafo (elnr, slh),
+                                                 -1, slh);
     SIMD_MappedIntegrationRule<D, D> smir_fix (sir, ma->GetTrafo (elnr, slh),
                                                slh);
     for (size_t imip = 0; imip < sir.Size (); imip++)
@@ -288,8 +304,8 @@ namespace ngcomp
       map.Col (i) = vert.Col (i + 1) - vert.Col (0);
     Vec<D + 1> shift = vert.Col (0);
 
-    SIMD_MappedIntegrationRule<D, D + 1> smir (sir, ma->GetTrafo (0, slh), -1,
-                                               slh);
+    SIMD_STMappedIntegrationRule<D, D + 1> smir (sir, ma->GetTrafo (0, slh),
+                                                 -1, slh);
     for (size_t imip = 0; imip < sir.Size (); imip++)
       smir[imip].Point ()
           = map * sir[imip].operator Vec<D, SIMD<double>> () + shift;
@@ -409,8 +425,8 @@ namespace ngcomp
       map.Col (i) = vert.Col (i + 1) - vert.Col (0);
     Vec<D + 1> shift = vert.Col (0);
 
-    SIMD_MappedIntegrationRule<D, D + 1> smir (sir, ma->GetTrafo (0, slh), -1,
-                                               slh);
+    SIMD_STMappedIntegrationRule<D, D + 1> smir (sir, ma->GetTrafo (0, slh),
+                                                 -1, slh);
     for (size_t imip = 0; imip < snip; imip++)
       smir[imip].Point ()
           = map * sir[imip].operator Vec<D, SIMD<double>> () + shift;
@@ -479,8 +495,8 @@ namespace ngcomp
     size_t snip = sir.Size () * nsimd;
     ScalarFE<eltyp, 1> faceint; // linear basis for tent faces
 
-    SIMD_MappedIntegrationRule<D, D + 1> smir (sir, ma->GetTrafo (elnr, slh),
-                                               -1, slh);
+    SIMD_STMappedIntegrationRule<D, D + 1> smir (sir, ma->GetTrafo (elnr, slh),
+                                                 -1, slh);
     SIMD_MappedIntegrationRule<D, D> smir_fix (sir, ma->GetTrafo (elnr, slh),
                                                slh);
     for (size_t imip = 0; imip < sir.Size (); imip++)
@@ -552,7 +568,8 @@ namespace ngcomp
 
   template <int D> double TWaveTents<D>::TentFaceArea (Mat<D + 1, D + 1> ve)
   {
-    // note: we scale by factor 2 or 6 (D=2,3) the measure of the reference element. Already computed in GetWeight/GetMeasure of any MappedIP
+    // note: we scale by factor 2 or 6 (D=2,3) the measure of the reference
+    // element. Already computed in GetWeight/GetMeasure of any MappedIP
     switch (D)
       {
       case 1:
@@ -661,7 +678,7 @@ namespace ngcomp
     for (size_t elnr = 0; elnr < ma->GetNE (); elnr++)
       {
         HeapReset hr (lh);
-        SIMD_MappedIntegrationRule<D, D + 1> smir (
+        SIMD_STMappedIntegrationRule<D, D + 1> smir (
             sir, ma->GetTrafo (elnr, lh), -1, lh);
         SIMD_MappedIntegrationRule<D, D> smir_fix (
             sir, ma->GetTrafo (elnr, lh), lh);

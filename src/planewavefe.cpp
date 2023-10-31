@@ -34,8 +34,8 @@ namespace ngfem
       {
         Vec<2> dir = GetDirection (i);
         shape (i) = 0.0;
-        shape (i)
-            = exp (1i * (cpoint[0] * dir[0] + cpoint[1] * dir[1]) * conj);
+        shape (i) = exp (
+            Complex (0, (cpoint[0] * dir[0] + cpoint[1] * dir[1]) * conj));
       }
   }
 
@@ -52,8 +52,9 @@ namespace ngfem
           Vec<2> dir = GetDirection (i);
           dshape (i, d) = 0.0;
           dshape (i, d)
-              = 1i * dir[d] * conj
-                * exp (1i * (cpoint[0] * dir[0] + cpoint[1] * dir[1]) * conj);
+              = Complex (0, dir[d] * conj)
+                * exp (Complex (0, (cpoint[0] * dir[0] + cpoint[1] * dir[1])
+                                       * conj));
         }
   }
 

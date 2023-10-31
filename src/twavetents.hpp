@@ -4,8 +4,77 @@
 #include "scalarmappedfe.hpp"
 #include <unordered_map>
 
+namespace ngfem
+{
+  template <int DIM_ELEMENT, int DIM_SPACE>
+  class SIMD_STMappedIntegrationRule : public SIMD_BaseMappedIntegrationRule
+  {
+    FlatArray<SIMD<MappedIntegrationPoint<DIM_ELEMENT, DIM_SPACE>>> mips;
+
+  public:
+    SIMD_STMappedIntegrationRule (const SIMD_IntegrationRule &ir,
+                                  const ElementTransformation &aeltrans,
+                                  Allocator &lh)
+        : SIMD_BaseMappedIntegrationRule (ir, aeltrans), mips (ir.Size (), lh)
+    {
+      throw Exception ("Not implemented for sstmip");
+    }
+
+    SIMD_STMappedIntegrationRule (const SIMD_IntegrationRule &ir,
+                                  const ElementTransformation &aeltrans,
+                                  int dummy, Allocator &lh)
+        : SIMD_BaseMappedIntegrationRule (ir, aeltrans), mips (ir.Size (), lh)
+    {
+      dim_element = DIM_ELEMENT;
+      dim_space = DIM_SPACE;
+      baseip = (char *)(void *)(SIMD<BaseMappedIntegrationPoint> *)(&mips[0]);
+      incr = sizeof (SIMD<MappedIntegrationPoint<DIM_ELEMENT, DIM_SPACE>>);
+
+      for (size_t i = 0; i < ir.Size (); i++)
+        new (&mips[i]) SIMD<MappedIntegrationPoint<DIM_ELEMENT, DIM_SPACE>> (
+            ir[i], eltrans, -1);
+
+      new (&points) BareSliceMatrix<SIMD<double>> (
+          mips.Size (), DIM_SPACE,
+          sizeof (SIMD<MappedIntegrationPoint<DIM_ELEMENT, DIM_SPACE>>)
+              / sizeof (SIMD<double>),
+          &mips[0].Point () (0));
+
+      new (&normals) BareSliceMatrix<SIMD<double>> (
+          mips.Size (), DIM_SPACE,
+          sizeof (SIMD<MappedIntegrationPoint<DIM_ELEMENT, DIM_SPACE>>)
+              / sizeof (SIMD<double>),
+          &mips[0].NV () (0));
+    }
+
+    virtual void
+    ComputeNormalsAndMeasure (ELEMENT_TYPE et, int facetnr) override
+    {
+      throw Exception ("Not implemented for sstmip");
+    }
+    SIMD<MappedIntegrationPoint<DIM_ELEMENT, DIM_SPACE>> &
+    operator[] (size_t i) const
+    {
+      return mips[i];
+    }
+    virtual void Print (ostream &ost) const override;
+
+    virtual void
+    TransformGradient (BareSliceMatrix<SIMD<double>> grad) const override
+    {
+      throw Exception ("Not implemented for sstmip");
+    }
+    virtual void
+    TransformGradientTrans (BareSliceMatrix<SIMD<double>> grad) const override
+    {
+      throw Exception ("Not implemented for sstmip");
+    }
+  };
+}
+
 namespace ngcomp
 {
+
   class TrefftzTents
   {
   public:

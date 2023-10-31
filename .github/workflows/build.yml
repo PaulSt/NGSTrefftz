@@ -41,7 +41,6 @@ jobs:
 
   pypi-mac:
     name: Build wheels for macOS
-    needs: [pypi-linux]
     strategy:
       matrix:
         py: ['3.8', '3.9', '3.10', '3.11']
@@ -67,9 +66,34 @@ jobs:
           name: python-package-distributions
           path: NGSTrefftz/wheelhouse
 
+  pypi-win:
+    name: Build wheels for Windows
+    strategy:
+      matrix:
+        py: ['3.8', '3.9', '3.10', '3.11']
+    runs-on: windows-2019
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          path: 'NGSTrefftz'
+      - name: Get Python ${{ matrix.py }}
+        id: python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.py }}
+      - name: Run build script
+        run: Set-Location NGSTrefftz/.github/workflows; ./build_pip.ps1 ${{ env.pythonLocation }}
+      - name: Store the binary wheel
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-package-distributions
+          path: NGSTrefftz/wheelhouse
+
   pypi-src:
     name: pypi src
-    needs: [pypi-linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -98,7 +122,7 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     #if: github.event_name == 'release' && github.event.action == 'created' 
-    needs: [pypi-mac, pypi-linux, pypi-src]
+    needs: [pypi-linux, pypi-mac, pypi-win, pypi-src]
     runs-on: ubuntu-latest
     steps:
     - name: Download all the dists
@@ -185,7 +209,7 @@ jobs:
 
 
   docs:
-    needs: [publish-pypi,pyodide]
+    needs: [pyodide]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -215,6 +239,7 @@ jobs:
         uses: sphinx-notes/pages@v2
         with:
           repository_path: 'NGSTrefftz'
+          publish: false
           #requirements_path: ./docs/requirements.txt
       - name: Download pyodide stuff
         uses: actions/download-artifact@v2

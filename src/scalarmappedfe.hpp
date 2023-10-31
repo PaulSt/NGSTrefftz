@@ -2,6 +2,7 @@
 #define FILE_SCALARMAPPEDELEMENT_HPP
 
 #include <fem.hpp>
+#include "ngsttd.hpp"
 
 namespace ngfem
 {
@@ -19,19 +20,16 @@ namespace ngfem
     }
 
     // compute shape
-    HD NGS_DLL_HEADER virtual void
-    CalcShape (const BaseMappedIntegrationPoint &mip,
-               BareSliceVector<> shape) const
+    NGST_DLL virtual void CalcShape (const BaseMappedIntegrationPoint &mip,
+                                     BareSliceVector<> shape) const
         = 0;
 
-    HD NGS_DLL_HEADER virtual void
-    CalcShape (const BaseMappedIntegrationPoint &mip,
-               BareSliceVector<Complex> shape) const;
+    NGST_DLL virtual void CalcShape (const BaseMappedIntegrationPoint &mip,
+                                     BareSliceVector<Complex> shape) const;
 
     // compute dshape, matrix: ndof x spacedim
-    HD NGS_DLL_HEADER virtual void
-    CalcDShape (const BaseMappedIntegrationPoint &mip,
-                BareSliceMatrix<> dshape) const
+    NGST_DLL virtual void CalcDShape (const BaseMappedIntegrationPoint &mip,
+                                      BareSliceMatrix<> dshape) const
         = 0;
 
     // returns shape functions in point ip.
@@ -44,60 +42,57 @@ namespace ngfem
     }
 
     // compute shape, row is shape nr, col is ip nr
-    HD NGS_DLL_HEADER virtual void
-    CalcShape (const BaseMappedIntegrationRule &mir,
-               SliceMatrix<> shape) const;
+    NGST_DLL virtual void CalcShape (const BaseMappedIntegrationRule &mir,
+                                     SliceMatrix<> shape) const;
 
     // compute shape, row is shape nr, col is ip nr
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     CalcShape (const SIMD_BaseMappedIntegrationRule &mir,
                BareSliceMatrix<SIMD<double>> shape) const;
 
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     CalcMappedDShape (const SIMD_BaseMappedIntegrationRule &mir,
                       BareSliceMatrix<SIMD<double>> dshapes) const;
 
     // Evaluates function in integration point ip / integration rule ir.
     // Vector x provides coefficient vector.
-    HD NGS_DLL_HEADER virtual double
-    Evaluate (const BaseMappedIntegrationPoint &mip,
-              BareSliceVector<> x) const;
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual double Evaluate (const BaseMappedIntegrationPoint &mip,
+                                      BareSliceVector<> x) const;
+    NGST_DLL virtual void
     Evaluate (const BaseMappedIntegrationRule &mir, BareSliceVector<> coefs,
               FlatVector<> values) const;
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     Evaluate (const SIMD_BaseMappedIntegrationRule &mir,
               BareSliceVector<> coefs, BareVector<SIMD<double>> values) const;
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     Evaluate (const SIMD_BaseMappedIntegrationRule &mir, SliceMatrix<> coefs,
               BareSliceMatrix<SIMD<double>> values) const;
     // Each column a vector ...
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     Evaluate (const BaseMappedIntegrationRule &mir, SliceMatrix<> coefs,
               SliceMatrix<> values) const;
 
     // Evaluate function in points of integrationrule ir, transpose operation.
     // Vector x provides coefficient vector.
-    HD NGS_DLL_HEADER virtual void
-    EvaluateTrans (const BaseMappedIntegrationRule &mir,
-                   FlatVector<double> values,
-                   BareSliceVector<double> coefs) const;
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void EvaluateTrans (const BaseMappedIntegrationRule &mir,
+                                         FlatVector<double> values,
+                                         BareSliceVector<double> coefs) const;
+    NGST_DLL virtual void
     AddTrans (const SIMD_BaseMappedIntegrationRule &mir,
               BareVector<SIMD<double>> values, BareSliceVector<> coefs) const;
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     AddTrans (const SIMD_BaseMappedIntegrationRule &mir,
               BareSliceMatrix<SIMD<double>> values, SliceMatrix<> coefs) const;
 
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     EvaluateGrad (const SIMD_BaseMappedIntegrationRule &ir,
                   BareSliceVector<> coefs,
                   BareSliceMatrix<SIMD<double>> values) const;
     // needed for ALE-trafo
-    // HD NGS_DLL_HEADER virtual void EvaluateGrad (const SIMD_IntegrationRule
+    // NGST_DLL virtual void EvaluateGrad (const SIMD_IntegrationRule
     // & ir, BareSliceVector<> coefs, BareSliceMatrix<SIMD<double>> values)
     // const;
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     AddGradTrans (const SIMD_BaseMappedIntegrationRule &ir,
                   BareSliceMatrix<SIMD<double>> values,
                   BareSliceVector<> coefs) const;
@@ -157,8 +152,8 @@ namespace ngfem
     void SetWavespeed (double wavespeed) { this->c = wavespeed; }
 
     // the name
-    NGS_DLL_HEADER virtual string ClassName () const;
-    HD NGS_DLL_HEADER virtual int Dim () const { return D; }
+    NGST_DLL virtual string ClassName () const;
+    NGST_DLL virtual int Dim () const { return D; }
 
     // returns derivatives in point ip.
     INLINE const FlatMatrixFixWidth<D>
@@ -187,18 +182,17 @@ namespace ngfem
                              BareSliceMatrix<SIMD<double>> dshape) const;
 
     // compute dshape, matrix: ndof x spacedim, Use CalcMappedDShape only for
-    // consistancy, can use CalcDShape with BaseMappedIR HD NGS_DLL_HEADER
+    // consistancy, can use CalcDShape with BaseMappedIR NGST_DLL
     // virtual void CalcMappedDShape (const BaseMappedIntegrationPoint & mip,
     // BareSliceMatrix<> dshape) const;
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     CalcMappedDShape (const BaseMappedIntegrationRule &mir,
                       SliceMatrix<> dshapes) const;
 
     // Evaluates gradient in integration point ip.
     // Vector x provides coefficient vector.
-    HD NGS_DLL_HEADER virtual Vec<D>
-    EvaluateGrad (const BaseMappedIntegrationPoint &ip,
-                  BareSliceVector<> x) const;
+    NGST_DLL virtual Vec<D> EvaluateGrad (const BaseMappedIntegrationPoint &ip,
+                                          BareSliceVector<> x) const;
 
     using BaseScalarMappedElement::AddGradTrans;
     using BaseScalarMappedElement::Evaluate;
@@ -206,27 +200,27 @@ namespace ngfem
 
     // Evaluate gradient in points of integrationrule ir.
     // Vector x provides coefficient vector.
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     EvaluateGrad (const BaseMappedIntegrationRule &ir, BareSliceVector<> coefs,
                   FlatMatrixFixWidth<D> values) const;
 
     // Evaluate gradient in points of integrationrule ir, transpose operation.
     // Vector x provides coefficient vector.
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     EvaluateGradTrans (const BaseMappedIntegrationRule &ir,
                        FlatMatrixFixWidth<D> values,
                        BareSliceVector<> coefs) const;
-    HD NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     EvaluateGradTrans (const BaseMappedIntegrationRule &ir,
                        SliceMatrix<> values, SliceMatrix<> coefs) const;
-    // HD NGS_DLL_HEADER virtual void GetPolOrders (FlatArray<PolOrder<D> >
+    // NGST_DLL virtual void GetPolOrders (FlatArray<PolOrder<D> >
     // orders) const;
 
     // public:
-    //	NGS_DLL_HEADER virtual std::list<std::tuple<std::string,double>> Timing
+    //	NGST_DLL virtual std::list<std::tuple<std::string,double>> Timing
     //() const;
 
-    // NGS_DLL_HEADER virtual void CalcMappedDDShape (const
+    // NGST_DLL virtual void CalcMappedDDShape (const
     // BaseMappedIntegrationPoint & bmip, BareSliceMatrix<> hddshape) const;
     // using ScalarMappedElement<D+1>::CalcMappedDDShape;
     virtual void CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,

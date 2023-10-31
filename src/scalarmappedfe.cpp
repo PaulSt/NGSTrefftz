@@ -422,14 +422,14 @@ namespace ngfem
             for (int i = 0, ii = 0; i <= order; i++)
               for (int j = 0; j <= order - i; j++)
                 for (int k = 0; k <= order - i - j; k++)
-                  pol[ii++] = (d1 == d2 ? (d1 == 0 ? i * (i - 1)
-                                                   : (d1 == 1 ? j * (j - 1)
-                                                              : k * (k - 1)))
-                                        : (int[3]){ i, j, k }[d1]
-                                              * (int[3]){ i, j, k }[d2])
-                              * polxt[0][i - (d1 == 0) - (d2 == 0)]
-                              * polxt[1][j - (d1 == 1) - (d2 == 1)]
-                              * polxt[2][k - (d1 == 2) - (d2 == 2)];
+                  {
+                    int ijkd1 = d1 == 0 ? i : (d1 == 1 ? j : k);
+                    int ijkd2 = d2 == 0 ? i : (d2 == 1 ? j : k);
+                    pol[ii++] = ijkd1 * (ijkd2 - (d1 == d2))
+                                * polxt[0][i - (d1 == 0) - (d2 == 0)]
+                                * polxt[1][j - (d1 == 1) - (d2 == 1)]
+                                * polxt[2][k - (d1 == 2) - (d2 == 2)];
+                  }
 
             for (int i = 0; i < this->ndof; ++i)
               {

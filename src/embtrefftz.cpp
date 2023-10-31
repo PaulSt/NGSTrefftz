@@ -5,7 +5,7 @@
 namespace ngbla
 {
 
-#ifdef LAPACK
+#if defined(LAPACK) && !defined(WIN32)
   void
   LapackSVD (SliceMatrix<double, ColMajor> A, SliceMatrix<double, ColMajor> U,
              SliceMatrix<double, ColMajor> V)
@@ -67,9 +67,10 @@ namespace ngbla
     // for(int i=0;i<A.Height();i++)
     // for(int j=0;j<A.Width();j++)
     // AA(i,j)= A(i,j);
-#ifdef LAPACK
+#if defined(LAPACK) && !defined(WIN32)
     LapackSVD (AA, U, V);
 #else
+    cout << "No Lapack, using CalcSVD" << endl;
     CalcSVD (AA, U, V);
 #endif
     A = 0.0;
@@ -82,9 +83,21 @@ namespace ngbla
   GetSVD<double> (SliceMatrix<double> A, SliceMatrix<double, ColMajor> U,
                   SliceMatrix<double, ColMajor> V);
 
-  template void
+  template <>
+  void
   GetSVD<Complex> (SliceMatrix<Complex> A, SliceMatrix<Complex, ColMajor> U,
-                   SliceMatrix<Complex, ColMajor> V);
+                   SliceMatrix<Complex, ColMajor> V)
+  {
+    Matrix<Complex, ColMajor> AA = A;
+#if defined(LAPACK) && !defined(WIN32)
+    LapackSVD (AA, U, V);
+#else
+    throw Exception ("Need Lapack for complex SVD");
+#endif
+    A = 0.0;
+    for (int i = 0; i < min (A.Width (), A.Height ()); i++)
+      A (i, i) = AA (i, i);
+  }
 }
 
 namespace ngcomp
@@ -466,10 +479,9 @@ namespace ngcomp
   }
 
   template <typename T, typename shrdT>
-  void
-  EmbTrefftzFESpace<T, shrdT>::VTransformMR (ElementId ei,
-                                             SliceMatrix<double> mat,
-                                             TRANSFORM_TYPE type) const
+  void EmbTrefftzFESpace<T, shrdT>::VTransformMR (ElementId ei,
+                                                  SliceMatrix<double> mat,
+                                                  TRANSFORM_TYPE type) const
   {
     static Timer timer ("EmbTrefftz: MTransform");
     RegionTimer reg (timer);
@@ -495,10 +507,9 @@ namespace ngcomp
   }
 
   template <typename T, typename shrdT>
-  void
-  EmbTrefftzFESpace<T, shrdT>::VTransformVR (ElementId ei,
-                                             SliceVector<double> vec,
-                                             TRANSFORM_TYPE type) const
+  void EmbTrefftzFESpace<T, shrdT>::VTransformVR (ElementId ei,
+                                                  SliceVector<double> vec,
+                                                  TRANSFORM_TYPE type) const
   {
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
@@ -525,11 +536,11 @@ namespace ngcomp
       EmbTrefftzFESpace<L2HighOrderFESpace, shared_ptr<L2HighOrderFESpace>>>
       initembt ("L2EmbTrefftzFESpace");
 
-  template class EmbTrefftzFESpace<VectorL2FESpace,
-                                   shared_ptr<VectorL2FESpace>>;
-  static RegisterFESpace<
-      EmbTrefftzFESpace<VectorL2FESpace, shared_ptr<VectorL2FESpace>>>
-      initembt2 ("VL2EmbTrefftzFESpace");
+  // template class EmbTrefftzFESpace<VectorL2FESpace,
+  // shared_ptr<VectorL2FESpace>>;
+  // static RegisterFESpace<
+  // EmbTrefftzFESpace<VectorL2FESpace, shared_ptr<VectorL2FESpace>>>
+  // initembt2 ("VL2EmbTrefftzFESpace");
 
   template class EmbTrefftzFESpace<MonomialFESpace,
                                    shared_ptr<MonomialFESpace>>;
@@ -570,8 +581,8 @@ void ExportEmbTrefftz (py::module m)
   ExportETSpace<ngcomp::L2HighOrderFESpace,
                 shared_ptr<ngcomp::L2HighOrderFESpace>> (
       m, "L2EmbTrefftzFESpace");
-  ExportETSpace<ngcomp::VectorL2FESpace, shared_ptr<ngcomp::VectorL2FESpace>> (
-      m, "VL2EmbTrefftzFESpace");
+  // ExportETSpace<ngcomp::VectorL2FESpace,
+  // shared_ptr<ngcomp::VectorL2FESpace>> ( m, "VL2EmbTrefftzFESpace");
   ExportETSpace<ngcomp::MonomialFESpace, shared_ptr<ngcomp::MonomialFESpace>> (
       m, "MonomialEmbTrefftzFESpace");
 
@@ -584,10 +595,10 @@ void ExportEmbTrefftz (py::module m)
               ngcomp::L2HighOrderFESpace,
               shared_ptr<ngcomp::L2HighOrderFESpace>>> (
               dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes));
-        else if (dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes))
-          nfes = make_shared<ngcomp::EmbTrefftzFESpace<
-              ngcomp::VectorL2FESpace, shared_ptr<ngcomp::VectorL2FESpace>>> (
-              dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes));
+        // else if (dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes))
+        // nfes = make_shared<ngcomp::EmbTrefftzFESpace<
+        // ngcomp::VectorL2FESpace, shared_ptr<ngcomp::VectorL2FESpace>>> (
+        // dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes));
         else if (dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes))
           nfes = make_shared<ngcomp::EmbTrefftzFESpace<
               ngcomp::MonomialFESpace, shared_ptr<ngcomp::MonomialFESpace>>> (
