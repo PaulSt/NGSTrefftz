@@ -28,62 +28,24 @@ endif()
 set(NGSTREFFTZ_INSTALL_DIR_PYTHON ${PY_INSTALL_DIR}/ngstrefftz)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
 
-
-function(add_ngsolve_python_module2 target)
-    if(NOT CMAKE_BUILD_TYPE)
-      message(STATUS "Setting build type to NGSolve build type: ${NGSOLVE_CMAKE_BUILD_TYPE}")
-      set(CMAKE_BUILD_TYPE ${NGSOLVE_CMAKE_BUILD_TYPE} PARENT_SCOPE)
-    endif()
-    add_library(${target} SHARED ${ARGN})
-
-    #find_package (Python3 COMPONENTS Interpreter Development)
-    #target_include_directories(${target} PRIVATE ${Python3_INCLUDE_DIRS})
-    find_package(PythonInterp 3 REQUIRED)
-    find_package(PythonLibs 3 REQUIRED)
-    target_include_directories(${target} PRIVATE ${PYTHON_INCLUDE_DIR})
-
-    if(NETGEN_BUILD_FOR_CONDA)
-        message(STATUS "netgen build for conda")
-        if(APPLE)
-            target_link_options(${target} PUBLIC -undefined dynamic_lookup)
-        else(APPLE)
-        #target_link_libraries(${target} PUBLIC ${Python3_LIBRARIES})
-        target_link_libraries(${target} PUBLIC ${PYTHON_LIBRARY})
-        endif(APPLE)
-    endif(NETGEN_BUILD_FOR_CONDA)
-
-    set_target_properties(${target} PROPERTIES PREFIX "" CXX_STANDARD 17)
-
-    #if(NETGEN_USE_GUI AND WIN32)
-    target_link_libraries(${target} PUBLIC ngsolve)
-    #else(NETGEN_USE_GUI AND WIN32)
-    #  target_link_libraries(${target} PUBLIC solve)
-    #endif(NETGEN_USE_GUI AND WIN32)
-
-    if(WIN32)
-      set_target_properties( ${target} PROPERTIES SUFFIX ".pyd" )
-    else(WIN32)
-      set_target_properties(${target} PROPERTIES SUFFIX ".so")
-    endif(WIN32)
-
-    set_target_properties(${target} PROPERTIES INSTALL_RPATH "${NGSOLVE_LIBRARY_DIR}")
-endfunction()
-
 ### add ngstents dependency if needed
 if (NOT TARGET _pytents)
     include_directories(${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src)
     set(NGSTENTS_INSTALL_DIR_PYTHON ${PY_INSTALL_DIR}/ngstents)
-    add_ngsolve_python_module2(_pytents
+    add_ngsolve_python_module(_pytents
       ${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src/python_tents.cpp
       ${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src/tents.cpp
       )
+    if(WIN32)
+        target_link_libraries(_pytents PUBLIC ${PYTHON_LIBRARY})
+    endif(WIN32)
     target_compile_definitions(_pytents PRIVATE NGSTENT_EXPORTS)
     set_target_properties(_pytents PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents")
     install(TARGETS _pytents DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTENTS_INSTALL_DIR_PYTHON})
 endif()
 
 ### ngstrefftz
-add_ngsolve_python_module2(_trefftz 
+add_ngsolve_python_module(_trefftz 
     python_trefftz.cpp
     diffopmapped.hpp
     scalarmappedfe.cpp
@@ -96,6 +58,9 @@ add_ngsolve_python_module2(_trefftz
     mesh1dtents.cpp
     #airy.cpp #for testing, requires boost
     )
+if(WIN32)
+    target_link_libraries(_trefftz PUBLIC ${PYTHON_LIBRARY})
+endif(WIN32)
 #target_compile_options(_trefftz PRIVATE "$<$<CONFIG:DEBUG>:-W;-Wall;-Wextra;-Wpedantic;-Wno-unused-parameter;-g;>")
 target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_EXPORTS)
 target_link_libraries(_trefftz PRIVATE _pytents)
@@ -106,19 +71,8 @@ file(COPY ${CMAKE_SOURCE_DIR}/__init__.py DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIR
 
 ### link lapack if found
 if (USE_LAPACK) # currently needed for SVD in embTrefftz, TODO: switch to ngsolve interface..
-    #find_package(BLAS)
-    #find_package(LAPACK)
-    #if(LAPACK_FOUND AND BLAS_FOUND)
-       #set(lapackblas_libraries ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
-       #target_link_libraries(_trefftz PRIVATE ${lapackblas_libraries})
-       #target_compile_definitions(_trefftz PRIVATE ET_LAPACK)
-    #endif()
     target_link_libraries(_trefftz INTERFACE "${LAPACK_LIBRARIES}")
-    #target_link_libraries(_trefftz INTERFACE ngs_lapack)
 endif (USE_LAPACK)
-#if(NOT LAPACK_FOUND OR NOT BLAS_FOUND)
-    #target_compile_definitions(_trefftz PRIVATE -DET_LAPACK)
-#endif()
 
 ### install
 message("${BoldCyan}With 'make install' the package will be installed to: ${CMAKE_INSTALL_PREFIX}
