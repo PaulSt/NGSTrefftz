@@ -76,8 +76,8 @@ def get_version():
 # avx2 = ''
 # name = 'ngstrefftz' + avx2
 # # ngsolve_version = pkg_resources.get_distribution("ngsolve").version
-ngsolve_version = '6.2.2301'
-install_requires = [ 'ngsolve >= '+ngsolve_version ]
+ngsolve_version = '6.2.2305'
+install_requires = [ 'ngsolve >= '+ngsolve_version, 'ngstents >= 0.0.1.post31' ]
 
 
 # def install_filter(cmake_manifest):
