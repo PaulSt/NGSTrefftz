@@ -6,6 +6,7 @@
 // #include <tents.hpp>
 #include "trefftzfespace.hpp"
 #include "specialcoefficientfunction.hpp"
+#include "specialintegrator.hpp"
 #include "twavetents.hpp"
 #include "embtrefftz.hpp"
 #include "mesh1dtents.hpp"
@@ -20,6 +21,7 @@ PYBIND11_MODULE (_trefftz, m)
 
   ExportTrefftzFESpace (m);
   ExportSpecialCoefficientFunction (m);
+  ExportSpecialIntegrator (m);
   ExportTWaveTents (m);
   ExportEmbTrefftz (m);
   ExportMesh1dTents (m);

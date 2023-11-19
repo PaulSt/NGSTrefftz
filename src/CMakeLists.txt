@@ -52,6 +52,7 @@ add_ngsolve_python_module(_trefftz
     planewavefe.cpp
     trefftzfespace.cpp
     specialcoefficientfunction.cpp
+    specialintegrator.cpp
     twavetents.cpp
     embtrefftz.cpp
     monomialfespace.cpp 
@@ -91,10 +92,10 @@ file(COPY
     ${CMAKE_SOURCE_DIR}/../test/embt.py
     ${CMAKE_SOURCE_DIR}/../test/trefftz.py
     ${CMAKE_SOURCE_DIR}/../test/tents.py
-     DESTINATION ${CMAKE_BINARY_DIR}/Testing)
-add_test(NAME embtrefftz COMMAND python3 -m doctest ${CMAKE_BINARY_DIR}/Testing/embt.py)
-add_test(NAME trefftz COMMAND python3 -m doctest ${CMAKE_BINARY_DIR}/Testing/trefftz.py)
-add_test(NAME tents COMMAND python3 -m doctest ${CMAKE_BINARY_DIR}/Testing/tents.py)
-#WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing)
+add_test(NAME embtrefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/embt.py)
+add_test(NAME trefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/trefftz.py)
+add_test(NAME tents COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/tents.py)
+#WORKING_DIRECTORY ${ CMAKE_CURRENT_SOURCE_DIR }
 set_tests_properties(embtrefftz trefftz tents
     PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:$ENV{PYTHONPATH}")
