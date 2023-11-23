@@ -28,11 +28,9 @@ namespace ngfem
       ;
     }
     using CoefficientFunction::Evaluate;
-    virtual double Evaluate (const BaseMappedIntegrationPoint &ip) const;
-    virtual void Evaluate (const BaseMappedIntegrationRule &ir,
-                           FlatMatrix<double> values) const;
-    virtual void EvaluateStdRule (const BaseMappedIntegrationRule &ir,
-                                  FlatMatrix<double> values) const;
+    double Evaluate (const BaseMappedIntegrationPoint &ip) const override;
+    void Evaluate (const BaseMappedIntegrationPoint &ip,
+                   FlatVector<> result) const override;
   };
 
   class IntegrationPointFunction : public CoefficientFunction

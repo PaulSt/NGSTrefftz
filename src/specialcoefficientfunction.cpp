@@ -16,17 +16,12 @@ namespace ngfem
     return coef->Evaluate (ip);
   }
 
-  void ClipCoefficientFunction ::Evaluate (const BaseMappedIntegrationRule &ir,
-                                           FlatMatrix<double> values) const
+  void
+  ClipCoefficientFunction ::Evaluate (const BaseMappedIntegrationPoint &ip,
+                                      FlatVector<> result) const
   {
-    cout << "not yet implemented" << endl;
-  }
-
-  void ClipCoefficientFunction ::EvaluateStdRule (
-      const BaseMappedIntegrationRule &ir, FlatMatrix<double> values) const
-  {
-    for (size_t i = 0; i < ir.Size (); i++)
-      values (i, 0) = Evaluate (ir[i]);
+    ip.GetPoint ()[clipdim] = clipvalue;
+    coef->Evaluate (ip, result);
   }
 
   IntegrationPointFunction ::IntegrationPointFunction (
