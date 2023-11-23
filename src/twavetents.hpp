@@ -2,6 +2,7 @@
 #define FILE_TESTPYTHON_HPP
 #include <tents.hpp>
 #include "scalarmappedfe.hpp"
+#include "trefftzfespace.hpp"
 #include <unordered_map>
 
 namespace ngfem
@@ -225,8 +226,9 @@ namespace ngcomp
   template <int D> class QTWaveTents : public TWaveTents<D>
   {
   private:
-    Matrix<shared_ptr<CoefficientFunction>> GGder;
-    Matrix<shared_ptr<CoefficientFunction>> BBder;
+    QTWaveBasis<D> basis;
+    // Matrix<shared_ptr<CoefficientFunction>> GGder;
+    // Matrix<shared_ptr<CoefficientFunction>> BBder;
     double TentXdiam (const Tent *tent);
     const int nsimd = SIMD<double>::Size ();
     static constexpr ELEMENT_TYPE eltyp
@@ -239,49 +241,11 @@ namespace ngcomp
     QTWaveTents (int aorder, shared_ptr<TentPitchedSlab> atps,
                  shared_ptr<CoefficientFunction> awavespeedcf,
                  shared_ptr<CoefficientFunction> aBBcf)
-        : TWaveTents<D> (aorder, atps, awavespeedcf)
+        : TWaveTents<D> (aorder, atps, awavespeedcf),
+          basis (aorder, awavespeedcf, aBBcf)
     {
       this->nbasis = BinCoeff (D + this->order, this->order)
                      + BinCoeff (D + this->order - 1, this->order - 1);
-      shared_ptr<CoefficientFunction> GGcf
-          = make_shared<ConstantCoefficientFunction> (1)
-            / (awavespeedcf * awavespeedcf);
-      shared_ptr<CoefficientFunction> GGcfx
-          = make_shared<ConstantCoefficientFunction> (1)
-            / (awavespeedcf * awavespeedcf);
-      GGder.SetSize (this->order - 1, (this->order - 2) * (D == 2) + 1);
-      for (int ny = 0; ny <= (this->order - 2) * (D == 2); ny++)
-        {
-          for (int nx = 0; nx <= this->order - 2; nx++)
-            {
-              GGder (nx, ny) = GGcfx;
-              GGcfx
-                  = GGcfx->Diff (MakeCoordinateCoefficientFunction (0).get (),
-                                 make_shared<ConstantCoefficientFunction> (1));
-            }
-          GGcf = GGcf->Diff (MakeCoordinateCoefficientFunction (1).get (),
-                             make_shared<ConstantCoefficientFunction> (1));
-          GGcfx = GGcf;
-        }
-
-      if (!aBBcf)
-        aBBcf = make_shared<ConstantCoefficientFunction> (1);
-      shared_ptr<CoefficientFunction> BBcf = aBBcf;
-      shared_ptr<CoefficientFunction> BBcfx = aBBcf;
-      BBder.SetSize (this->order, (this->order - 1) * (D == 2) + 1);
-      for (int ny = 0; ny <= (this->order - 1) * (D == 2); ny++)
-        {
-          for (int nx = 0; nx <= this->order - 1; nx++)
-            {
-              BBder (nx, ny) = BBcfx;
-              BBcfx
-                  = BBcfx->Diff (MakeCoordinateCoefficientFunction (0).get (),
-                                 make_shared<ConstantCoefficientFunction> (1));
-            }
-          BBcf = BBcf->Diff (MakeCoordinateCoefficientFunction (1).get (),
-                             make_shared<ConstantCoefficientFunction> (1));
-          BBcfx = BBcf;
-        }
     }
 
     void Propagate ();

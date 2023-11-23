@@ -373,7 +373,7 @@ def Cartsolve2D(fes,c,fullsys=False,inputsol=None):
     >>> mesh = CartSquare(N,c*N)
 
     using Trefftz basis
-    >>> fes = trefftzfespace(mesh, order = order, dgjumps=True)
+    >>> fes = trefftzfespace(mesh, order = order, dgjumps=True, eq="wave")
     >>> fes.SetCoeff(c)
     >>> Cartsolve2D(fes,c) # doctest:+ELLIPSIS
     [17.0, ..., ...e-09, ...e-08]
