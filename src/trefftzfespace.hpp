@@ -147,7 +147,19 @@ namespace ngcomp
                      shared_ptr<CoefficientFunction> coeffC)
         : PolBasis (aorder)
     {
-      ;
+      AAder.SetSize (this->order, D == 2 ? this->order : 1);
+      BBder.SetSize (this->order, D == 2 ? this->order : 1);
+      CCder.SetSize (this->order, D == 2 ? this->order : 1);
+      if (!coeffA)
+        coeffA = make_shared<ConstantCoefficientFunction> (1);
+      if (!coeffB)
+        coeffB = make_shared<ConstantCoefficientFunction> (0);
+      if (!coeffC)
+        coeffC = make_shared<ConstantCoefficientFunction> (0);
+
+      this->ComputeDerivs (coeffA, AAder);
+      this->ComputeDerivs (coeffB, BBder);
+      this->ComputeDerivs (coeffC, CCder);
     }
     CSR Basis (Vec<D> ElCenter, double elsize = 1.0);
   };
@@ -166,7 +178,6 @@ namespace ngcomp
                  shared_ptr<CoefficientFunction> coeffB)
         : PolBasis (aorder)
     {
-
       AAder.SetSize (this->order - 1, D == 2 ? this->order - 1 : 1);
       BBder.SetSize (this->order, D == 2 ? this->order : 1);
       if (!coeffA)
