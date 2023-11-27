@@ -49,7 +49,7 @@ namespace ngcomp
 
     if (eqtyp == "fowave" || eqtyp == "foqtwave")
       local_ndof = (D)*BinCoeff (D - 1 + order, D - 1);
-    else if (eqtyp == "wave")
+    else if (eqtyp == "wave" || eqtyp == "fowave_reduced")
       local_ndof = BinCoeff (D - 1 + order, order)
                    + BinCoeff (D - 1 + order - 1, order - 1)
                    - (eqtyp == "fowave_reduced");
@@ -163,7 +163,8 @@ namespace ngcomp
             {
               basismat = THeatBasis<1>::Basis (order, 0, 0);
             }
-          else if (eqtyp == "wave" || eqtyp == "qtwave")
+          else if (eqtyp == "wave" || eqtyp == "qtwave"
+                   || eqtyp == "fowave_reduced")
             {
               basismat = TWaveBasis<1>::Basis (order, basistype,
                                                eqtyp == "fowave_reduced");
@@ -191,7 +192,8 @@ namespace ngcomp
             {
               basismat = THeatBasis<2>::Basis (order, 0, 0);
             }
-          else if (eqtyp == "wave" || eqtyp == "qtwave")
+          else if (eqtyp == "wave" || eqtyp == "qtwave"
+                   || eqtyp == "fowave_reduced")
             {
               basismat = TWaveBasis<2>::Basis (order, basistype,
                                                eqtyp == "fowave_reduced");
@@ -274,7 +276,7 @@ namespace ngcomp
                           ElCenter<2> (ei), ElSize<2> (ei, 1.0));
                   return *(new (alloc) ScalarMappedElement<2> (
                       local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                      1.0));
+                      ElSize<2> (ei, 1.0)));
                 }
               else if (eqtyp == "foqtwave")
                 {
@@ -409,9 +411,18 @@ namespace ngcomp
 
   //////////////////////////// Trefftz basis ////////////////////////////
 
+  template <int D, typename T> T vsum (Vec<D, T> v)
+  {
+    T sum = 0;
+    for (int i = 0; i < D; i++)
+      sum += v[i];
+    return sum;
+  }
+
   template <int D, typename TFunc>
   void TraversePol (int order, const TFunc &func)
   {
+    // traverse polynomials increasing smaller dimensions first
     switch (D)
       {
       case 0:
@@ -437,6 +448,76 @@ namespace ngcomp
             for (int k = 0; k <= order - i - j; k++)
               for (int l = 0; l <= order - i - j - k; l++)
                 func (ii++, Vec<4, int>{ l, k, j, i });
+        break;
+      default:
+        throw Exception ("TraverseDimensions: too many dimensions!");
+      }
+  }
+
+  template <int D, typename TFunc>
+  void TraversePol (Vec<D, size_t> order, const TFunc &func)
+  {
+    // traverse polynomials increasing smaller dimensions first, up to order in
+    // each dimension
+    switch (D)
+      {
+      case 0:
+        break;
+      case 1:
+        for (int i = 0, ii = 0; i <= order[0]; i++)
+          func (ii++, Vec<1, int>{ i });
+        break;
+      case 2:
+        for (int i = 0, ii = 0; i <= order[1]; i++)
+          for (int j = 0; j <= order[0]; j++)
+            func (ii++, Vec<2, int>{ j, i });
+        break;
+      case 3:
+        for (int i = 0, ii = 0; i <= order[2]; i++)
+          for (int j = 0; j <= order[1]; j++)
+            for (int k = 0; k <= order[0]; k++)
+              func (ii++, Vec<3, int>{ k, j, i });
+        break;
+      case 4:
+        for (int i = 0, ii = 0; i <= order[3]; i++)
+          for (int j = 0; j <= order[2]; j++)
+            for (int k = 0; k <= order[1]; k++)
+              for (int l = 0; l <= order[0]; l++)
+                func (ii++, Vec<4, int>{ l, k, j, i });
+        break;
+      default:
+        throw Exception ("TraverseDimensions: too many dimensions!");
+      }
+  }
+
+  template <int D, typename TFunc>
+  void TraversePol2 (int order, const TFunc &func)
+  {
+    // traverse polynomials in order of increasing degree
+    switch (D)
+      {
+      case 0:
+        break;
+      case 1:
+        for (int i = 0, ii = 0; i <= order; i++)
+          func (ii++, Vec<1, int>{ i });
+        break;
+      case 2:
+        for (int ord = 0, ii = 0; ord <= order; ord++)
+          for (int i = 0; i <= ord; i++)
+            {
+              int j = ord - i;
+              func (ii++, Vec<2, int>{ j, i });
+            }
+        break;
+      case 3:
+        for (int ord = 0, ii = 0; ord <= order; ord++)
+          for (int i = 0; i <= ord; i++)
+            for (int j = 0; j <= ord - i; j++)
+              {
+                int k = ord - i - j;
+                func (ii++, Vec<3, int>{ k, j, i });
+              }
         break;
       default:
         throw Exception ("TraverseDimensions: too many dimensions!");
@@ -475,6 +556,14 @@ namespace ngcomp
   }
 
   constexpr int factorial (int n) { return n > 1 ? n * factorial (n - 1) : 1; }
+
+  template <int D> int factorial (Vec<D, int> v)
+  {
+    int fac = 1;
+    for (int i = 0; i < D; i++)
+      fac *= factorial (v[i]);
+    return fac;
+  }
 
   template <int D>
   CSR TWaveBasis<D>::Basis (int ord, int basistype, int fowave)
@@ -735,57 +824,91 @@ namespace ngcomp
         for (int i = 0; i < D; i++)
           mip.Point ()[i] = ElCenter[i];
 
-        Matrix<> AA (order - 1, (order - 2) * (D == 2) + 1);
-        Matrix<> BB (order, (order - 1) * (D == 2) + 1);
-        for (int ny = 0; ny <= (order - 1) * (D == 2); ny++)
-          {
-            for (int nx = 0; nx <= order - 1; nx++)
-              {
-                double fac = (factorial (nx) * factorial (ny));
-                BB (nx, ny) = BBder (nx, ny)->Evaluate (mip) / fac
-                              * pow (elsize, nx + ny);
-                if (nx < order - 1 && ny < order - 1)
-                  AA (nx, ny) = AAder (nx, ny)->Evaluate (mip) / fac
-                                * pow (elsize, nx + ny);
-              }
-          }
+        const int ndiffs = (BinCoeff (D + order - 1, order - 1));
+        Vector<Matrix<>> AA (ndiffs);
+        Vector<Vector<>> BB (ndiffs);
+        Vector<> CC (ndiffs);
+
+        TraversePol<D> (order - 1, [&] (int i, Vec<D, int> coeff) {
+          int nx = coeff[0];
+          int ny = coeff[1];
+          int index = PolBasis::IndexMap2<D> (coeff, order - 1);
+          AA[index].SetSize (D, D);
+          BB[index].SetSize (D);
+          // double fac = (factorial (nx) * factorial (ny));
+          //  if (nx < order - 1 && ny < order - 1)
+          AAder (nx, ny)->Evaluate (mip, AA[index].AsVector ());
+          // AA[index] *= pow (elsize, nx + ny) /fac;
+          BBder (nx, ny)->Evaluate (mip, BB[index]);
+          // BB *= pow (elsize, nx + ny) /fac;
+          CC[index] = CCder (nx, ny)->Evaluate (mip);
+          /// fac * pow (elsize, nx + ny);
+        });
 
         const int ndof = (BinCoeff (D - 1 + order, order)
                           + BinCoeff (D - 1 + order - 1, order - 1));
         const int npoly = (BinCoeff (D + order, order));
         Matrix<> qtbasis (ndof, npoly);
         qtbasis = 0;
-        for (int basis = 0; basis < ndof; basis++)
-          {
-            int tracker = 0;
-            TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
-              if (tracker >= 0)
-                tracker++;
-              int indexmap = PolBasis::IndexMap2<D - 1> (coeff, order);
-              int k = coeff (D - 1);
-              if ((k == 0 || k == 1) && (tracker > basis))
-                {
-                  qtbasis (basis, indexmap) = 1;
-                  tracker = -1;
-                }
-              else if (coeff (D - 1) > 1)
-                {
-                  for (int m = 0; m < D - 1; m++) // rekursive sum
-                    {
-                      Vec<D, int> get_coeff = coeff;
-                      get_coeff[D - 1] = get_coeff[D - 1] - 2;
-                      get_coeff[m] = get_coeff[m] + 2;
-                      qtbasis (basis, indexmap)
-                          -= (coeff (m) + 1) * (coeff (m) + 2)
-                             * qtbasis (basis, PolBasis::IndexMap2<D - 1> (
-                                                   get_coeff, order));
-                    }
-                  double lapcoeff = 1.0;
-                  qtbasis (basis, indexmap)
-                      *= lapcoeff * lapcoeff / (k * (k - 1));
-                }
-            });
-          }
+        // init qtbasis
+        TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
+          if (coeff[D - 1] > 1)
+            return;
+          int indexmap = PolBasis::IndexMap2<D> (coeff, order);
+          qtbasis (i, indexmap) = 1;
+        });
+        // start recursion
+        TraversePol2<D> (order, [&] (int i, Vec<D, int> coeff) {
+          if (coeff (D - 1) <= 1)
+            return;
+          int indexmap = PolBasis::IndexMap2<D> (coeff, order);
+          Vec<D, int> mii = coeff;
+          mii[D - 1] = mii[D - 1] - 2;
+          for (int j = 0; j < D; j++)
+            {
+              Vec<D, int> ej = 0;
+              ej[j] = 1;
+
+              TraversePol<D> (mii + ej, [&] (int i2, Vec<D, int> mil) {
+                // matrix coeff A
+                for (int m = 0; m < D; m++)
+                  {
+                    if (i2 == 0 && m == D - 1 && j == D - 1)
+                      continue;
+                    Vec<D, int> em = 0;
+                    em[m] = 1;
+                    qtbasis.Col (indexmap)
+                        -= factorial (mii + ej) / factorial (mil)
+                           * (AA[IndexMap2<D> (mil, order - 1)]) (j, m)
+                           / pow (elsize, vsum<D, int> (mii - mil) + 2)
+                           * (mii[m] + ej[m] - mil[m] + 1)
+                           * qtbasis.Col (PolBasis::IndexMap2<D> (
+                               mii + ej - mil + em, order));
+                  }
+                // vec coeff B
+                qtbasis.Col (indexmap)
+                    += factorial (mii + ej) / factorial (mil)
+                       * (BB[IndexMap2<D> (mil, order - 1)]) (j)
+                       / pow (elsize, vsum<D, int> (mii - mil) + 1)
+                       * qtbasis.Col (
+                           PolBasis::IndexMap2<D> (mii + ej - mil, order));
+
+                // scal coeff C
+                if (j == 0 && mil[0] <= mii[0])
+                  qtbasis.Col (indexmap)
+                      += factorial (mii) / factorial (mil)
+                         * CC[IndexMap2<D> (mil, order - 1)]
+                         / pow (elsize, vsum<D, int> (mii - mil))
+                         * qtbasis.Col (
+                             PolBasis::IndexMap2<D> (mii - mil, order));
+              });
+            }
+          Vec<D, int> eD = 0;
+          eD[D - 1] = 2;
+          qtbasis.Col (indexmap) *= pow (elsize, vsum<D, int> (mii) + 2)
+                                    / factorial (mii + eD)
+                                    / (AA[0](D - 1, D - 1));
+        });
         MatToCSR (qtbasis, gtbstore[encode]);
       }
 
@@ -1053,9 +1176,10 @@ namespace ngcomp
                                                * qtbasis[d](basisn, getcoeff)
                                                / BB (0);
                                   if (d == 0)
-                                    *newcoefft -= AA (x - betax, y - betay)
-                                                  * qtbasis[D](basisn, getcoeff)
-                                                  / AA (0);
+                                    *newcoefft
+                                        -= AA (x - betax, y - betay)
+                                           * qtbasis[D](basisn, getcoeff)
+                                           / AA (0);
                                 }
                           }
                       }
