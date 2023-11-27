@@ -107,11 +107,11 @@ packages=["ngstrefftz"]
 
 if 'darwin' in sys.platform:
     _cmake_args += ['-DPY_INSTALL_DIR='+py_install_dir]
-    pass
 elif 'linux' in sys.platform:
     install_requires.append('mkl')
     # packages = []
 elif 'win' in sys.platform:
+    _cmake_args += ['-DPY_INSTALL_DIR='+py_install_dir]
     install_requires.append('mkl')
 
 cmake_prefix_path = ""
