@@ -115,9 +115,6 @@ namespace ngcomp
     shared_ptr<CoefficientFunction> coeffA = nullptr;
     shared_ptr<CoefficientFunction> coeffB = nullptr;
     shared_ptr<CoefficientFunction> coeffC = nullptr;
-    Matrix<shared_ptr<CoefficientFunction>> AAder;
-    Matrix<shared_ptr<CoefficientFunction>> BBder;
-    Matrix<shared_ptr<CoefficientFunction>> CCder;
     CSR basismat;
     Vector<CSR> basismats;
     PolBasis *basis;
@@ -128,6 +125,8 @@ namespace ngcomp
     void SetCoeff (shared_ptr<CoefficientFunction> acoeffA,
                    shared_ptr<CoefficientFunction> acoeffB = nullptr,
                    shared_ptr<CoefficientFunction> acoeffC = nullptr);
+    shared_ptr<GridFunction>
+    GetEWSolution (shared_ptr<CoefficientFunction> acoeffF);
     string GetClassName () const override { return "trefftz"; }
     void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
     FiniteElement &GetFE (ElementId ei, Allocator &alloc) const override;
@@ -206,6 +205,7 @@ namespace ngcomp
     Vector<shared_ptr<CoefficientFunction>> AAder;
     Vector<shared_ptr<CoefficientFunction>> BBder;
     Vector<shared_ptr<CoefficientFunction>> CCder;
+    Vector<shared_ptr<CoefficientFunction>> FFder;
 
   public:
     QTEllipticBasis (int aorder, shared_ptr<CoefficientFunction> coeffA,
@@ -225,6 +225,12 @@ namespace ngcomp
       this->ComputeDerivs<D> (order - 1, coeffC, CCder);
     }
     CSR Basis (Vec<D> ElCenter, double elsize = 1.0);
+    void SetRHS (shared_ptr<CoefficientFunction> coeffF)
+    {
+      this->ComputeDerivs<D> (order, coeffF, FFder);
+    }
+    void
+    GetParticularSolution (Vec<D> ElCenter, double elsize, FlatVector<> sol);
   };
 
   template <int D> class QTWaveBasis : public PolBasis
