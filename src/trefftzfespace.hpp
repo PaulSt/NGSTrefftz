@@ -15,8 +15,74 @@ namespace ngcomp
   public:
     PolBasis () { ; }
     PolBasis (int aorder) : order (aorder) { ; }
-    void ComputeDerivs (shared_ptr<CoefficientFunction> acoeff,
-                        Matrix<shared_ptr<CoefficientFunction>> &ders);
+    template <int D>
+    void ComputeDerivs (int order, shared_ptr<CoefficientFunction> acoeff,
+                        Vector<shared_ptr<CoefficientFunction>> &ders)
+    {
+      const int ndiffs = (BinCoeff (D + order, order));
+      ders.SetSize (ndiffs);
+
+      shared_ptr<CoefficientFunction> coeff = acoeff;
+      shared_ptr<CoefficientFunction> coeffx = acoeff;
+      shared_ptr<CoefficientFunction> coeffxy = acoeff;
+
+      switch (D)
+        {
+        case 0:
+          break;
+        case 1:
+          for (int i = 0, ii = 0; i <= order; i++)
+            {
+              ders (i) = coeffx;
+              coeffx = coeffx->Diff (
+                  MakeCoordinateCoefficientFunction (0).get (),
+                  make_shared<ConstantCoefficientFunction> (1));
+            }
+          break;
+        case 2:
+          for (int i = 0, ii = 0; i <= order; i++)
+            {
+              for (int j = 0; j <= order - i; j++)
+                {
+                  int iix = IndexMap2<2> (Vec<2, int>{ j, i }, order);
+                  ders (iix) = coeffx;
+                  coeffx = coeffx->Diff (
+                      MakeCoordinateCoefficientFunction (0).get (),
+                      make_shared<ConstantCoefficientFunction> (1));
+                }
+              coeff
+                  = coeff->Diff (MakeCoordinateCoefficientFunction (1).get (),
+                                 make_shared<ConstantCoefficientFunction> (1));
+              coeffx = coeff;
+            }
+          break;
+        case 3:
+          for (int i = 0, ii = 0; i <= order; i++)
+            {
+              for (int j = 0; j <= order - i; j++)
+                {
+                  for (int k = 0; k <= order - i - j; k++)
+                    {
+                      int iix = IndexMap2<3> (Vec<3, int>{ k, j, i }, order);
+                      ders (iix) = coeffxy;
+                      coeffxy = coeffx->Diff (
+                          MakeCoordinateCoefficientFunction (0).get (),
+                          make_shared<ConstantCoefficientFunction> (1));
+                    }
+                  coeffx = coeffx->Diff (
+                      MakeCoordinateCoefficientFunction (1).get (),
+                      make_shared<ConstantCoefficientFunction> (1));
+                  coeffxy = coeffx;
+                }
+              coeff
+                  = coeff->Diff (MakeCoordinateCoefficientFunction (2).get (),
+                                 make_shared<ConstantCoefficientFunction> (1));
+              coeffx = coeff;
+            }
+          break;
+        }
+    }
+
     template <int D> static int IndexMap2 (Vec<D, int> index, int ord)
     {
       int sum = 0;
@@ -137,9 +203,9 @@ namespace ngcomp
     mutex gentrefftzbasis;
     std::map<string, CSR> gtbstore;
 
-    Matrix<shared_ptr<CoefficientFunction>> AAder;
-    Matrix<shared_ptr<CoefficientFunction>> BBder;
-    Matrix<shared_ptr<CoefficientFunction>> CCder;
+    Vector<shared_ptr<CoefficientFunction>> AAder;
+    Vector<shared_ptr<CoefficientFunction>> BBder;
+    Vector<shared_ptr<CoefficientFunction>> CCder;
 
   public:
     QTEllipticBasis (int aorder, shared_ptr<CoefficientFunction> coeffA,
@@ -147,9 +213,6 @@ namespace ngcomp
                      shared_ptr<CoefficientFunction> coeffC)
         : PolBasis (aorder)
     {
-      AAder.SetSize (this->order, D == 2 ? this->order : 1);
-      BBder.SetSize (this->order, D == 2 ? this->order : 1);
-      CCder.SetSize (this->order, D == 2 ? this->order : 1);
       if (!coeffA)
         coeffA = make_shared<ConstantCoefficientFunction> (1);
       if (!coeffB)
@@ -157,9 +220,9 @@ namespace ngcomp
       if (!coeffC)
         coeffC = make_shared<ConstantCoefficientFunction> (0);
 
-      this->ComputeDerivs (coeffA, AAder);
-      this->ComputeDerivs (coeffB, BBder);
-      this->ComputeDerivs (coeffC, CCder);
+      this->ComputeDerivs<D> (order - 1, coeffA, AAder);
+      this->ComputeDerivs<D> (order - 1, coeffB, BBder);
+      this->ComputeDerivs<D> (order - 1, coeffC, CCder);
     }
     CSR Basis (Vec<D> ElCenter, double elsize = 1.0);
   };
@@ -168,8 +231,8 @@ namespace ngcomp
   {
     mutex gentrefftzbasis;
     std::map<string, CSR> gtbstore;
-    Matrix<shared_ptr<CoefficientFunction>> AAder;
-    Matrix<shared_ptr<CoefficientFunction>> BBder;
+    Vector<shared_ptr<CoefficientFunction>> AAder;
+    Vector<shared_ptr<CoefficientFunction>> BBder;
 
   public:
     QTWaveBasis () { ; }
@@ -178,8 +241,6 @@ namespace ngcomp
                  shared_ptr<CoefficientFunction> coeffB)
         : PolBasis (aorder)
     {
-      AAder.SetSize (this->order - 1, D == 2 ? this->order - 1 : 1);
-      BBder.SetSize (this->order, D == 2 ? this->order : 1);
       if (!coeffA)
         coeffA = make_shared<ConstantCoefficientFunction> (1);
       if (!coeffB)
@@ -193,8 +254,8 @@ namespace ngcomp
       // make_shared<ConstantCoefficientFunction> (1)
       /// (coeffA * coeffA);
 
-      this->ComputeDerivs (coeffAA, AAder);
-      this->ComputeDerivs (coeffB, BBder);
+      this->ComputeDerivs<D> (order - 2, coeffAA, AAder);
+      this->ComputeDerivs<D> (order - 1, coeffB, BBder);
     }
 
     CSR Basis (int ord, Vec<D + 1> ElCenter, double elsize = 1.0,
@@ -205,8 +266,8 @@ namespace ngcomp
   {
     mutex gentrefftzbasis;
     Vec<D + 1, std::map<string, CSR>> gtbstore;
-    Matrix<shared_ptr<CoefficientFunction>> AAder;
-    Matrix<shared_ptr<CoefficientFunction>> BBder;
+    Vector<shared_ptr<CoefficientFunction>> AAder;
+    Vector<shared_ptr<CoefficientFunction>> BBder;
 
   public:
     FOQTWaveBasis () { ; }
@@ -219,14 +280,12 @@ namespace ngcomp
         coeffA = make_shared<ConstantCoefficientFunction> (1);
       if (!coeffB)
         coeffB = make_shared<ConstantCoefficientFunction> (1);
-      AAder.SetSize (this->order - 1, D == 2 ? this->order - 1 : 1);
-      BBder.SetSize (this->order, D == 2 ? this->order : 1);
 
       shared_ptr<CoefficientFunction> coeffAA
           = make_shared<ConstantCoefficientFunction> (1) / (coeffA * coeffA);
 
-      this->ComputeDerivs (coeffAA, AAder);
-      this->ComputeDerivs (coeffB, BBder);
+      this->ComputeDerivs<D> (order - 1, coeffAA, AAder);
+      this->ComputeDerivs<D> (order - 1, coeffB, BBder);
     }
 
     CSR Basis (int ord, int rdim, Vec<D + 1> ElCenter, double elsize = 1.0);
