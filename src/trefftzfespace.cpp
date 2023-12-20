@@ -6,30 +6,6 @@
 
 namespace ngcomp
 {
-
-  void PolBasis ::ComputeDerivs (shared_ptr<CoefficientFunction> acoeff,
-                                 Matrix<shared_ptr<CoefficientFunction>> &ders)
-  {
-    shared_ptr<CoefficientFunction> coeff
-        = !acoeff ? make_shared<ConstantCoefficientFunction> (1) : acoeff;
-    shared_ptr<CoefficientFunction> coeffx
-        = !acoeff ? make_shared<ConstantCoefficientFunction> (1) : acoeff;
-
-    for (int ny = 0; ny < ders.Width (); ny++)
-      {
-        for (int nx = 0; nx < ders.Height (); nx++)
-          {
-            ders (nx, ny) = coeffx;
-            coeffx
-                = coeffx->Diff (MakeCoordinateCoefficientFunction (0).get (),
-                                make_shared<ConstantCoefficientFunction> (1));
-          }
-        coeff = coeff->Diff (MakeCoordinateCoefficientFunction (1).get (),
-                             make_shared<ConstantCoefficientFunction> (1));
-        coeffx = coeff;
-      }
-  }
-
   TrefftzFESpace ::TrefftzFESpace (shared_ptr<MeshAccess> ama,
                                    const Flags &flags)
       : FESpace (ama, flags)
@@ -222,16 +198,6 @@ namespace ngcomp
     // if (eqtyp.find ("qt") != std::string::npos)
     UpdateBasis ();
   }
-
-  // static Timer timerder ("QTrefftzDerivatives");
-  // timerder.Start ();
-  // timerder.Stop ();
-
-  // Matrix<shared_ptr<CoefficientFunction>> *ders[3]
-  //= { &AAder, &BBder, &CCder };
-  // shared_ptr<CoefficientFunction> coeffs[3]
-  //= { coeffA, coeffB, coeffC };
-  // int sizes[3] = { AAsize, BBsize, CCsize };
 
   void TrefftzFESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
   {
@@ -835,14 +801,9 @@ namespace ngcomp
           int index = PolBasis::IndexMap2<D> (coeff, order - 1);
           AA[index].SetSize (D, D);
           BB[index].SetSize (D);
-          // double fac = (factorial (nx) * factorial (ny));
-          //  if (nx < order - 1 && ny < order - 1)
-          AAder (nx, ny)->Evaluate (mip, AA[index].AsVector ());
-          // AA[index] *= pow (elsize, nx + ny) /fac;
-          BBder (nx, ny)->Evaluate (mip, BB[index]);
-          // BB *= pow (elsize, nx + ny) /fac;
-          CC[index] = CCder (nx, ny)->Evaluate (mip);
-          /// fac * pow (elsize, nx + ny);
+          AAder[index]->Evaluate (mip, AA[index].AsVector ());
+          BBder[index]->Evaluate (mip, BB[index]);
+          CC[index] = CCder[index]->Evaluate (mip);
         });
 
         const int ndof = (BinCoeff (D - 1 + order, order)
@@ -949,18 +910,21 @@ namespace ngcomp
 
         Matrix<> BB (ord, (ord - 1) * (D == 2) + 1);
         Matrix<> AA (ord - 1, (ord - 2) * (D == 2) + 1);
-        for (int ny = 0; ny <= (ord - 1) * (D == 2); ny++)
-          {
-            for (int nx = 0; nx <= ord - 1; nx++)
-              {
-                double fac = (factorial (nx) * factorial (ny));
-                BB (nx, ny) = BBder (nx, ny)->Evaluate (mip) / fac
-                              * pow (elsize, nx + ny);
-                if (nx < ord - 1 && ny < ord - 1)
-                  AA (nx, ny) = AAder (nx, ny)->Evaluate (mip) / fac
-                                * pow (elsize, nx + ny);
-              }
-          }
+
+        TraversePol<D> (order - 1, [&] (int i, Vec<D, int> coeff) {
+          int nx = coeff[0];
+          int ny = D > 1 ? coeff[1] : 0;
+          double fac = (factorial (nx) * factorial (ny));
+          int index = PolBasis::IndexMap2<D> (coeff, order - 1);
+          BB (nx, ny)
+              = BBder[index]->Evaluate (mip) / fac * pow (elsize, nx + ny);
+          if (vsum<D, int> (coeff) < ord - 1)
+            {
+              index = PolBasis::IndexMap2<D> (coeff, order - 2);
+              AA (nx, ny)
+                  = AAder[index]->Evaluate (mip) / fac * pow (elsize, nx + ny);
+            }
+        });
 
         const int ndof
             = (BinCoeff (D + ord, ord) + BinCoeff (D + ord - 1, ord - 1));
@@ -1098,17 +1062,17 @@ namespace ngcomp
 
         Matrix<> BB (ord, (ord - 1) * (D == 2) + 1);
         Matrix<> AA (ord, (ord - 1) * (D == 2) + 1);
-        for (int ny = 0; ny <= (ord - 1) * (D == 2); ny++)
-          {
-            for (int nx = 0; nx <= ord - 1; nx++)
-              {
-                double fac = (factorial (nx) * factorial (ny));
-                BB (nx, ny) = BBder (nx, ny)->Evaluate (mip) / fac
-                              * pow (elsize, nx + ny);
-                AA (nx, ny) = AAder (nx, ny)->Evaluate (mip) / fac
-                              * pow (elsize, nx + ny);
-              }
-          }
+
+        TraversePol<D> (order - 1, [&] (int i, Vec<D, int> coeff) {
+          int nx = coeff[0];
+          int ny = D > 1 ? coeff[1] : 0;
+          double fac = (factorial (nx) * factorial (ny));
+          int index = PolBasis::IndexMap2<D> (coeff, order - 1);
+          BB (nx, ny)
+              = BBder[index]->Evaluate (mip) / fac * pow (elsize, nx + ny);
+          AA (nx, ny)
+              = AAder[index]->Evaluate (mip) / fac * pow (elsize, nx + ny);
+        });
 
         const int ndof = (D + 1) * BinCoeff (ord + D, D);
         const int npoly = BinCoeff ((D + 1) + ord, ord);
