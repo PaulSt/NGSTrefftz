@@ -115,6 +115,7 @@ namespace ngcomp
     shared_ptr<CoefficientFunction> coeffA = nullptr;
     shared_ptr<CoefficientFunction> coeffB = nullptr;
     shared_ptr<CoefficientFunction> coeffC = nullptr;
+
     CSR basismat;
     Vector<CSR> basismats;
     PolBasis *basis;
@@ -125,6 +126,7 @@ namespace ngcomp
     void SetCoeff (shared_ptr<CoefficientFunction> acoeffA,
                    shared_ptr<CoefficientFunction> acoeffB = nullptr,
                    shared_ptr<CoefficientFunction> acoeffC = nullptr);
+                   
     shared_ptr<GridFunction>
     GetEWSolution (shared_ptr<CoefficientFunction> acoeffF);
     string GetClassName () const override { return "trefftz"; }
@@ -207,6 +209,7 @@ namespace ngcomp
     Vector<shared_ptr<CoefficientFunction>> CCder;
     Vector<shared_ptr<CoefficientFunction>> FFder;
 
+
   public:
     QTEllipticBasis (int aorder, shared_ptr<CoefficientFunction> coeffA,
                      shared_ptr<CoefficientFunction> coeffB,
@@ -231,6 +234,7 @@ namespace ngcomp
     }
     void
     GetParticularSolution (Vec<D> ElCenter, double elsize, FlatVector<> sol);
+
   };
 
   template <int D> class QTWaveBasis : public PolBasis
