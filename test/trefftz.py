@@ -547,6 +547,94 @@ def TestHeat():
     return sqrt(Integrate((gfu-ubnd)**2, mesh))
 
 
+########################################################################
+# QTelliptic
+########################################################################
+
+def dgell(mesh,order):
+
+    """
+    Solve qtell equation using Trefftz fcts
+    >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
+    >>> for i in range(4):
+    ...     dgell(mesh,5) # doctest:+ELLIPSIS
+    ...     mesh.Refine()
+    3...e-05
+    ...e-06
+    ...e-08
+    ...e-10
+    """
+    exact = (1+x+y)**6
+    A = CF((1+x+y,0,0,1+x+y),dims=(2,2))
+    B = CF((1,0))
+    C = 3/(1+x+y)
+    rhs = -sum( (A*CF((exact.Diff(x),exact.Diff(y))))[i].Diff(var) for i,var in enumerate([x,y])) + B*CF((exact.Diff(x),exact.Diff(y))) + C*exact
+    rhs.Compile()
+    Dbndc = exact
+    Dbnd=".*"
+    Nbnd=""
+    Nbndc = 0
+
+
+    fes = trefftzfespace(mesh,order=order,eq="qtelliptic")
+    with TaskManager():
+        fes.SetCoeff(A,B,C)
+        uf = fes.GetEWSolution(rhs)
+
+    mesh = fes.mesh
+    order = fes.globalorder
+
+    n = specialcf.normal(mesh.dim)
+    h = specialcf.mesh_size
+
+    alpha = 4*order**2/h
+
+    u = fes.TrialFunction()
+    v = fes.TestFunction()
+    jump = lambda u: (u-u.Other())*n
+    mean_d = lambda u: 0.5 * A * (grad(u)+grad(u).Other())
+    mean_B = lambda u: 0.5 * B * (u+u.Other())
+
+    a = BilinearForm(fes)
+    a += A*grad(u)*grad(v) * dx \
+        +alpha*jump(u)*jump(v) * dx(skeleton=True) \
+        +(-mean_d(u)*jump(v)-mean_d(v)*jump(u)) * dx(skeleton=True) \
+        +alpha*u*v * ds(skeleton=True,definedon=mesh.Boundaries(Dbnd)) \
+        +(-A*grad(u)*n*v-A*grad(v)*n*u)* ds(skeleton=True,definedon=mesh.Boundaries(Dbnd))
+    a += (-B*u*grad(v) + C*u*v) * dx \
+        + (mean_B(u) * jump(v) + 0.5*sqrt((B*n)**2)*jump(u)*jump(v)) * dx(skeleton=True) \
+        + B*u*n*v * ds(skeleton=True,definedon=mesh.Boundaries(Nbnd)) 
+
+    f = LinearForm(fes)
+    f += Dbndc * (-A*grad(v)*n + alpha*v - B*n*v) * ds(skeleton=True,definedon=mesh.Boundaries(Dbnd)) \
+         - Nbndc * v * ds(skeleton=True,definedon=mesh.Boundaries(Nbnd)) \
+         + rhs*v*dx
+    if uf:
+        f += -A*grad(uf)*grad(v) * dx \
+            -alpha*jump(uf)*jump(v) * dx(skeleton=True) \
+            -(-mean_d(uf)*jump(v)-mean_d(v)*jump(uf)) * dx(skeleton=True) \
+            -alpha*uf*v * ds(skeleton=True,definedon=mesh.Boundaries(Dbnd)) \
+            -(-A*grad(uf)*n*v-A*grad(v)*n*uf)* ds(skeleton=True,definedon=mesh.Boundaries(Dbnd))
+        f += (B*uf*grad(v) - C*uf*v) * dx \
+            - (mean_B(uf) * jump(v) + 0.5*sqrt((B*n)**2)*jump(uf)*jump(v)) * dx(skeleton=True) \
+            - B*uf*n*v * ds(skeleton=True,definedon=mesh.Boundaries(Nbnd)) 
+
+
+    with TaskManager():
+        a.Assemble()
+        f.Assemble()
+        gfu = GridFunction(fes)
+        gfu.vec.data = a.mat.Inverse() * f.vec
+
+    gfu += uf
+
+    error = sqrt(Integrate((gfu-exact)**2,mesh))
+    return error
+
+
+
+
+
 
 if __name__ == "__main__":
     import doctest
