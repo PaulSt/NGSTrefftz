@@ -233,8 +233,7 @@ namespace ngcomp
       this->ComputeDerivs<D> (order, coeffF, FFder);
     }
     void
-    GetParticularSolution (Vec<D> ElCenter, double elsize, FlatVector<> sol);
-
+    GetParticularSolution (Vec<D> ElCenter, double elsize, FlatVector<> sol, LocalHeap &lh);
   };
 
   template <int D> class QTWaveBasis : public PolBasis
