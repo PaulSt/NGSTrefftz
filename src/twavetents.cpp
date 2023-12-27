@@ -907,8 +907,6 @@ namespace ngcomp
     shared_ptr<MeshAccess> ma = this->ma;
     SIMD_IntegrationRule sir (eltyp, this->order * 2);
 
-    QTWaveBasis<D> basis;
-
     // cout << "solving qt " << (this->tps)->GetNTents() << " tents in " << D
     // << "+1 dimensions..." << endl;
 
@@ -922,7 +920,7 @@ namespace ngcomp
       double tentsize = TentXdiam (tent);
 
       // QTWaveFE<D> tel(GGder, BBder, this->order, center, tentsize);
-      CSR basismat = basis.Basis (this->order, center, GGder, BBder, tentsize);
+      CSR basismat = this->basis.Basis (this->order, center, tentsize);
       int nbasis = this->nbasis;
       ScalarMappedElement<D + 1> tel (nbasis, this->order, basismat, ET_TET,
                                       center, tentsize, 1);
