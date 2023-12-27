@@ -2,6 +2,7 @@
 #include <python_comp.hpp>
 
 #include "trefftzfespace.hpp"
+#include "monomialfespace.hpp"
 #include "diffopmapped.hpp"
 
 namespace ngcomp
@@ -197,6 +198,64 @@ namespace ngcomp
     this->coeffC = acoeffC;
     // if (eqtyp.find ("qt") != std::string::npos)
     UpdateBasis ();
+  }
+
+  shared_ptr<GridFunction>
+  TrefftzFESpace ::GetEWSolution (shared_ptr<CoefficientFunction> acoeffF)
+  {
+    LocalHeap lh (1000 * 1000 * 1000);
+    if (eqtyp != "qtelliptic")
+      throw Exception ("TrefftzFESpace::GetEWSolution: elementwise particular "
+                       "solution not available for eqtyp");
+
+    Flags flags;
+    flags.SetFlag ("order", order);
+    // MonomialFESpace mon(ma,flags);
+    shared_ptr<FESpace> fes = make_shared<MonomialFESpace> (ma, flags);
+    auto pws = CreateGridFunction (fes, "pws", flags);
+    pws->Update ();
+    // pws->ConnectAutoUpdate();
+
+    switch (D)
+      {
+      case 2:
+        static_cast<QTEllipticBasis<2> *> (basis)->SetRHS (acoeffF);
+        break;
+      case 3:
+        static_cast<QTEllipticBasis<3> *> (basis)->SetRHS (acoeffF);
+        break;
+      }
+
+    // for (auto ei : ma->Elements (VOL))
+    ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
+      Array<DofId> dofs;
+      fes->GetDofNrs (ei, dofs, VISIBLE_DOF);
+      bool hasregdof = false;
+      for (DofId d : dofs)
+        if (IsRegularDof (d))
+          hasregdof = true;
+      // assumption here: Either all or no dof is regular
+      if (!hasregdof)
+        return; // continue;
+
+      FlatVector<double> elvec (dofs.Size (), mlh);
+
+      switch (D)
+        {
+        case 2:
+          static_cast<QTEllipticBasis<2> *> (basis)->GetParticularSolution (
+              ElCenter<2> (ei), ElSize<2> (ei, 1.0), elvec);
+          break;
+        case 3:
+          static_cast<QTEllipticBasis<3> *> (basis)->GetParticularSolution (
+              ElCenter<3> (ei), ElSize<3> (ei, 1.0), elvec);
+          break;
+        }
+
+      pws->SetElementVector (dofs, elvec);
+    });
+
+    return pws;
   }
 
   void TrefftzFESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
@@ -796,8 +855,6 @@ namespace ngcomp
         Vector<> CC (ndiffs);
 
         TraversePol<D> (order - 1, [&] (int i, Vec<D, int> coeff) {
-          int nx = coeff[0];
-          int ny = coeff[1];
           int index = PolBasis::IndexMap2<D> (coeff, order - 1);
           AA[index].SetSize (D, D);
           BB[index].SetSize (D);
@@ -881,11 +938,101 @@ namespace ngcomp
       }
 
     return gtbstore[encode];
+    // CSR tb;
+    // MatToCSR (qtbasis, tb);
+    // return tb;
   }
 
-  // template class QTEllipticBasis<1>;
+  template <int D>
+  void
+  QTEllipticBasis<D>::GetParticularSolution (Vec<D> ElCenter, double elsize,
+                                             FlatVector<> sol)
+  {
+    IntegrationPoint ip (ElCenter, 0);
+    Mat<D, D> dummy;
+    FE_ElementTransformation<D, D> et (D == 3   ? ET_TET
+                                       : D == 2 ? ET_TRIG
+                                                : ET_SEGM,
+                                       dummy);
+    MappedIntegrationPoint<D, D> mip (ip, et, 0);
+    for (int i = 0; i < D; i++)
+      mip.Point ()[i] = ElCenter[i];
+
+    int ndiffs = (BinCoeff (D + order - 1, order - 1));
+    Vector<Matrix<>> AA (ndiffs);
+    Vector<Vector<>> BB (ndiffs);
+    Vector<> CC (ndiffs);
+    ndiffs = (BinCoeff (D + order, order));
+    Vector<> FF (ndiffs);
+
+    TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
+      int index = PolBasis::IndexMap2<D> (coeff, order);
+      FF[index] = FFder[index]->Evaluate (mip);
+      if (vsum<D, int> (coeff) < order)
+        {
+          index = PolBasis::IndexMap2<D> (coeff, order - 1);
+          AA[index].SetSize (D, D);
+          BB[index].SetSize (D);
+          AAder[index]->Evaluate (mip, AA[index].AsVector ());
+          BBder[index]->Evaluate (mip, BB[index]);
+          CC[index] = CCder[index]->Evaluate (mip);
+        }
+    });
+
+    sol = 0;
+    // start recursion
+    TraversePol2<D> (order, [&] (int i, Vec<D, int> mii) {
+      if (mii (D - 1) <= 1)
+        return;
+      int indexmap = PolBasis::IndexMap2<D> (mii, order);
+      mii[D - 1] = mii[D - 1] - 2;
+      for (int j = 0; j < D; j++)
+        {
+          Vec<D, int> ej = 0;
+          ej[j] = 1;
+
+          TraversePol<D> (mii + ej, [&] (int i2, Vec<D, int> mil) {
+            // matrix coeff A
+            for (int m = 0; m < D; m++)
+              {
+                if (i2 == 0 && m == D - 1 && j == D - 1)
+                  continue;
+                Vec<D, int> em = 0;
+                em[m] = 1;
+                sol (indexmap) -= factorial (mii + ej) / factorial (mil)
+                                  * (AA[IndexMap2<D> (mil, order - 1)]) (j, m)
+                                  / pow (elsize, vsum<D, int> (mii - mil) + 2)
+                                  * (mii[m] + ej[m] - mil[m] + 1)
+                                  * sol (PolBasis::IndexMap2<D> (
+                                      mii + ej - mil + em, order));
+              }
+            // vec coeff B
+            sol (indexmap)
+                += factorial (mii + ej) / factorial (mil)
+                   * (BB[IndexMap2<D> (mil, order - 1)]) (j)
+                   / pow (elsize, vsum<D, int> (mii - mil) + 1)
+                   * sol (PolBasis::IndexMap2<D> (mii + ej - mil, order));
+
+            // scal coeff C
+            if (j == 0 && mil[0] <= mii[0])
+              sol (indexmap)
+                  += factorial (mii) / factorial (mil)
+                     * CC[IndexMap2<D> (mil, order - 1)]
+                     / pow (elsize, vsum<D, int> (mii - mil))
+                     * sol (PolBasis::IndexMap2<D> (mii - mil, order));
+          });
+        }
+      sol (indexmap) += -FF[PolBasis::IndexMap2<D> (mii, order)];
+      Vec<D, int> eD = 0;
+      eD[D - 1] = 2;
+      sol (indexmap) *= pow (elsize, vsum<D, int> (mii) + 2)
+                        / factorial (mii + eD) / (AA[0](D - 1, D - 1));
+    });
+  }
+
+  template class QTEllipticBasis<1>;
   template class QTEllipticBasis<2>;
-  // template class QTEllipticBasis<3>;
+  template class QTEllipticBasis<3>;
 
   template <int D>
   CSR QTWaveBasis<D>::Basis (int ord, Vec<D + 1> ElCenter, double elsize,
@@ -1206,11 +1353,22 @@ void ExportTrefftzFESpace (py::module m)
                     Coefficient B
                 coeffC : CoefficientFunction
                     Coefficient C
-
-
             )mydelimiter",
           py::arg ("acoeffA"), py::arg ("acoeffB") = nullptr,
-          py::arg ("acoeffC") = nullptr);
+          py::arg ("acoeffC") = nullptr)
+      .def ("GetEWSolution",
+            static_cast<shared_ptr<GridFunction> (TrefftzFESpace::*) (
+                shared_ptr<CoefficientFunction>)> (
+                &TrefftzFESpace::GetEWSolution),
+            R"mydelimiter(
+                Compute a element-wise particular solution for given right hand side.
+
+                Parameters
+                ----------
+                coeffF : CoefficientFunction
+                    Right hand side
+            )mydelimiter",
+            py::arg ("acoeffF"));
 
   // ExportFESpace<FOTWaveFESpace, CompoundFESpace> (m, "FOTWave");
 }
