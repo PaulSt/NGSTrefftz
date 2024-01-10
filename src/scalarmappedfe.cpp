@@ -47,7 +47,7 @@ namespace ngfem
 
   void
   BaseScalarMappedElement ::CalcShape (const BaseMappedIntegrationRule &mir,
-                                       SliceMatrix<> shape) const
+                                       BareSliceMatrix<> shape) const
   {
     for (size_t i = 0; i < mir.Size (); i++)
       CalcShape (mir[i], shape.Col (i));
@@ -228,7 +228,7 @@ namespace ngfem
 
   template <int D>
   void ScalarMappedElement<D>::CalcMappedDShape (
-      const BaseMappedIntegrationRule &mir, SliceMatrix<> dshapes) const
+      const BaseMappedIntegrationRule &mir, BareSliceMatrix<> dshapes) const
   {
     for (size_t i = 0; i < mir.Size (); i++)
       CalcMappedDShape (mir[i], dshapes.Cols (i * D, (i + 1) * D));

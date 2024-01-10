@@ -43,7 +43,7 @@ namespace ngfem
       throw Exception ("CalcShape only complex for PW ");
     }
     void CalcShape (const BaseMappedIntegrationRule &mir,
-                    SliceMatrix<> shape) const override
+                    BareSliceMatrix<> shape) const override
     {
       throw Exception ("CalcShape only complex for PW ");
     }
@@ -65,13 +65,11 @@ namespace ngfem
     void CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
                     BareSliceMatrix<SIMD<double>> shape) const override
     {
-      cout << "NO SIMD" << endl;
       throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
     }
     void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
                      BareSliceMatrix<SIMD<double>> dshape) const override
     {
-      cout << "NO SIMD" << endl;
       throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
     }
 
@@ -89,7 +87,6 @@ namespace ngfem
     void CalcDShape (const BaseMappedIntegrationRule &mir,
                      BareSliceMatrix<Complex> dshapes) const
     {
-      cout << __FILE__ << " " << __LINE__ << endl;
       for (size_t i = 0; i < mir.Size (); i++)
         CalcDShape (mir[i], dshapes.Cols (i * D, (i + 1) * D));
     }
@@ -149,14 +146,14 @@ namespace ngfem
     static void
     GenerateMatrix (const FiniteElement &fel,
                     const BaseMappedIntegrationPoint &mip,
-                    SliceMatrix<double, ColMajor> mat, LocalHeap &lh)
+                    BareSliceMatrix<double, ColMajor> mat, LocalHeap &lh)
     {
-      cout << "Not for complex shapes";
+      throw Exception ("Not implemented for complex PW ");
     }
     static void
     GenerateMatrix (const FiniteElement &fel,
                     const BaseMappedIntegrationPoint &mip,
-                    SliceMatrix<Complex, ColMajor> mat, LocalHeap &lh)
+                    BareSliceMatrix<Complex, ColMajor> mat, LocalHeap &lh)
     {
       Cast (fel).CalcShape (mip, mat.Row (0));
     }
@@ -189,7 +186,7 @@ namespace ngfem
     static void ApplyIR (const FiniteElement &fel, const MIR &mir,
                          BareSliceVector<double> x, TMY y, LocalHeap &lh)
     {
-      cout << "Not for complex shapes";
+      throw Exception ("Not implemented for complex PW ");
     }
 
     template <class MIR>
@@ -291,7 +288,7 @@ namespace ngfem
     static void
     GenerateMatrix (const FiniteElement &fel,
                     const MappedIntegrationPoint<D, D, SCALMIP> &mip,
-                    SliceMatrix<Complex, ColMajor> mat, LocalHeap &lh)
+                    BareSliceMatrix<Complex, ColMajor> mat, LocalHeap &lh)
     {
       Cast (fel).CalcDShape (mip, Trans (mat));
     }
