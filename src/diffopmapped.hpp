@@ -333,7 +333,7 @@ namespace ngfem
     static void
     GenerateMatrixIR (const FiniteElement &fel,
                       const MappedIntegrationRule<D, D> &mir,
-                      SliceMatrix<double, ColMajor> mat, LocalHeap &lh)
+                      BareSliceMatrix<double, ColMajor> mat, LocalHeap &lh)
     {
       Cast (fel).CalcMappedDShape (mir, Trans (mat));
     }

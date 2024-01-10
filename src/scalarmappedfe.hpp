@@ -43,7 +43,7 @@ namespace ngfem
 
     // compute shape, row is shape nr, col is ip nr
     NGST_DLL virtual void CalcShape (const BaseMappedIntegrationRule &mir,
-                                     SliceMatrix<> shape) const;
+                                     BareSliceMatrix<> shape) const;
 
     // compute shape, row is shape nr, col is ip nr
     NGST_DLL virtual void
@@ -187,7 +187,7 @@ namespace ngfem
     // BareSliceMatrix<> dshape) const;
     NGST_DLL virtual void
     CalcMappedDShape (const BaseMappedIntegrationRule &mir,
-                      SliceMatrix<> dshapes) const;
+                      BareSliceMatrix<> dshapes) const;
 
     // Evaluates gradient in integration point ip.
     // Vector x provides coefficient vector.
