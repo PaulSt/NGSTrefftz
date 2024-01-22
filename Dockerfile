@@ -6,9 +6,10 @@ RUN pip install ngstrefftz
 ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python3.10/site-packages/
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
 
-RUN pip3 install numpy jupyter_contrib_nbextensions webgui_jupyter_widgets
-RUN jupyter nbextension enable --py widgetsnbextension
-RUN jupyter nbextension enable --py webgui_jupyter_widgets
+RUN pip3 install numpy webgui_jupyter_widgets notebook
+#RUN pip3 install jupyter_contrib_nbextensions 
+#RUN jupyter nbextension enable --py widgetsnbextension
+#RUN jupyter nbextension enable --py webgui_jupyter_widgets
 
 ARG NB_USER=jovyan
 ARG NB_UID=1000

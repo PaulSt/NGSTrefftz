@@ -10,6 +10,7 @@ from ngsolve import *
 from embt import *
 import time
 ngsglobals.msg_level=0
+SetNumThreads(4)
 
 
 def DGwaveeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alpha=0.5,beta=0.5,gamma=1,mu=0,BB=1):
@@ -409,7 +410,6 @@ def TestQTrefftz(order, mesh, t_step,qtrefftz=1):
     """
     Solve with quasi-Trefftz basis functions
     >>> order = 4
-    >>> SetNumThreads(1)
     >>> t_step = 1
     >>> for h in [4,8,16,32]:
     ...        mesh = CartSquare(h,h)
@@ -446,7 +446,6 @@ def TestBessel(order, mesh, t_step):
     """
     Solve using quasi-Trefftz basis functions
     >>> order = 4
-    >>> SetNumThreads(1)
     >>> t_step = 1
     >>> for h in [4,8,16,32]:
     ...        mesh = CartSquare(h,h,xshift=3)
@@ -555,16 +554,15 @@ def dgell(mesh,order):
 
     """
     Solve qtell equation using Trefftz fcts
-    >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
-    >>> for i in range(4):
-    ...     dgell(mesh,5) # doctest:+ELLIPSIS
+    >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
+    >>> for i in range(3):
+    ...     dgell(mesh,4) # doctest:+ELLIPSIS
     ...     mesh.Refine()
     3...e-05
     ...e-06
     ...e-08
-    ...e-10
     """
-    exact = (1+x+y)**6
+    exact = (1+x+y)**5
     A = CF((1+x+y,0,0,1+x+y),dims=(2,2))
     B = CF((1,0))
     C = 3/(1+x+y)

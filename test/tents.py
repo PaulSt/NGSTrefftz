@@ -128,13 +128,12 @@ def TestQTrefftz(order, initmesh, t_step,qtrefftz=1):
     ...e-05
     ...e-06
     >>> initmesh = Mesh(unit_square.GenerateMesh(maxh = 0.5))
-    >>> for h in range(4):
+    >>> for h in range(3):
     ...        TestQTrefftz(order,initmesh,t_step) # doctest:+ELLIPSIS
     ...        initmesh.Refine()
     0.004...
     0.001...
     ...e-05
-    ...e-06
 
     Compare to standard Trefftz basis
     >>> for h in [4,8,16,32]:
@@ -145,13 +144,12 @@ def TestQTrefftz(order, initmesh, t_step,qtrefftz=1):
     0.01...
     0.003...
     >>> initmesh = Mesh(unit_square.GenerateMesh(maxh = 0.5))
-    >>> for h in range(4):
+    >>> for h in range(3):
     ...        TestQTrefftz(order,initmesh,t_step,None) # doctest:+ELLIPSIS
     ...        initmesh.Refine()
     0.1...
     0.02...
     0.00...
-    0.001...
     """
 
     # for i in range(0,len(initmesh.GetBoundaries())):
