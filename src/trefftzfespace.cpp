@@ -227,7 +227,7 @@ namespace ngcomp
         static_cast<QTEllipticBasis<3> *> (basis)->SetRHS (acoeffF);
         break;
       }
-    
+
     // for (auto ei : ma->Elements (VOL))
     ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
       HeapReset hr (mlh);
@@ -834,14 +834,14 @@ namespace ngcomp
   template <int D>
   CSR QTEllipticBasis<D>::Basis (Vec<D> ElCenter, double elsize)
   {
-    //lock_guard<mutex> lock (gentrefftzbasis);
-    //int order = this->order;
-    //string encode = to_string (order) + to_string (elsize);
-    //for (int i = 0; i < D; i++)
-      //encode += to_string (ElCenter[i]);
+    lock_guard<mutex> lock (gentrefftzbasis);
+    int order = this->order;
+    string encode = to_string (order) + to_string (elsize);
+    for (int i = 0; i < D; i++)
+      encode += to_string (ElCenter[i]);
 
-    //if (gtbstore[encode][0].Size () == 0)
-      //{
+    if (gtbstore[encode][0].Size () == 0)
+      {
         IntegrationPoint ip (ElCenter, 0);
         Mat<D, D> dummy;
         FE_ElementTransformation<D, D> et (D == 3   ? ET_TET
@@ -930,20 +930,20 @@ namespace ngcomp
                                     / factorial (mii + eD)
                                     / (AA[0](D - 1, D - 1));
         });
-        //MatToCSR (qtbasis, gtbstore[encode]);
-      //}
+        MatToCSR (qtbasis, gtbstore[encode]);
+      }
 
-    //if (gtbstore[encode].Size () == 0)
-      //{
-        //stringstream str;
-        //str << "failed to generate trefftz basis of order " << order << endl;
-        //throw Exception (str.str ());
-      //}
+    if (gtbstore[encode].Size () == 0)
+      {
+        stringstream str;
+        str << "failed to generate trefftz basis of order " << order << endl;
+        throw Exception (str.str ());
+      }
 
-    //return gtbstore[encode];
-     CSR tb;
-     MatToCSR (qtbasis, tb);
-     return tb;
+    return gtbstore[encode];
+    // CSR tb;
+    // MatToCSR (qtbasis, tb);
+    // return tb;
   }
 
   template <int D>
@@ -964,11 +964,11 @@ namespace ngcomp
       mip.Point ()[i] = ElCenter[i];
 
     int ndiffs = (BinCoeff (D + order - 1, order - 1));
-    FlatVector<Matrix<>> AA (ndiffs,lh);
-    FlatVector<Vector<>> BB (ndiffs,lh);
-    FlatVector<> CC (ndiffs,lh);
+    FlatVector<Matrix<>> AA (ndiffs, lh);
+    FlatVector<Vector<>> BB (ndiffs, lh);
+    FlatVector<> CC (ndiffs, lh);
     ndiffs = (BinCoeff (D + order, order));
-    FlatVector<> FF (ndiffs,lh);
+    FlatVector<> FF (ndiffs, lh);
 
     TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
       int index = PolBasis::IndexMap2<D> (coeff, order);
@@ -976,8 +976,8 @@ namespace ngcomp
       if (vsum<D, int> (coeff) < order)
         {
           index = PolBasis::IndexMap2<D> (coeff, order - 1);
-          AA[index].AssignMemory (D, D,lh);
-          BB[index].AssignMemory (D,lh);
+          AA[index].AssignMemory (D, D, lh);
+          BB[index].AssignMemory (D, lh);
           AAder[index]->Evaluate (mip, AA[index].AsVector ());
           BBder[index]->Evaluate (mip, BB[index]);
           CC[index] = CCder[index]->Evaluate (mip);
