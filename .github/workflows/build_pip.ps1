@@ -29,7 +29,7 @@ if (test-path venv_ngs) {
 
 
 pip3 install scikit-build wheel numpy twine mkl-devel==2022.* mkl==2022.*
-pip3 install ngsolve
+pip3 install ngsolve --pre
 
 
 #$env:PYDIR = "$env:Python3_ROOT_DIR"
