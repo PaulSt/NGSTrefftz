@@ -78,6 +78,7 @@ namespace ngcomp
                   = coeff->Diff (MakeCoordinateCoefficientFunction (2).get (),
                                  make_shared<ConstantCoefficientFunction> (1));
               coeffx = coeff;
+              coeffxy = coeff;
             }
           break;
         }

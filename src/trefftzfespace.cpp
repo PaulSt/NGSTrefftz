@@ -158,6 +158,10 @@ namespace ngcomp
         {
           if (eqtyp == "laplace")
             basismat = TLapBasis<3>::Basis (order, basistype);
+          else if (eqtyp == "qtelliptic")
+            {
+              basis = new QTEllipticBasis<3> (order, coeffA, coeffB, coeffC);
+            }
           else if (eqtyp == "fowave" || eqtyp == "foqtwave")
             {
               basismats.SetSize (D);
@@ -357,6 +361,15 @@ namespace ngcomp
                   return *(new (alloc) ScalarMappedElement<3> (
                       local_ndof, order, basismat, eltype, ElCenter<3> (ei),
                       1.0));
+                }
+              else if (eqtyp == "qtelliptic")
+                {
+                  CSR basismat
+                      = static_cast<QTEllipticBasis<3> *> (basis)->Basis (
+                          ElCenter<3> (ei), ElSize<3> (ei, 1.0));
+                  return *(new (alloc) ScalarMappedElement<3> (
+                      local_ndof, order, basismat, eltype, ElCenter<3> (ei),
+                      ElSize<3> (ei, 1.0)));
                 }
               else if (eqtyp == "foqtwave")
                 {
