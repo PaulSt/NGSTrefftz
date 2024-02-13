@@ -129,31 +129,14 @@ namespace ngfem
                     double &tbot)
   {
     int D = eltrans1.SpaceDim ();
-    double vertices[D + 1][D];
     ELEMENT_TYPE etfacet
         = ElementTopology::GetFacetType (eltype, LocalFacetNr);
     int nvert_facet = ElementTopology::GetNVertices (etfacet);
     // int nfaces = ElementTopology::GetNFaces (eltype);
     // int nvert_face = ElementTopology::GetNVertices (faces[LocalFacetNr]);
     auto elvertices = ElementTopology::GetVertices (eltype);
-    if (D == 3)
-      {
-        const FACE *faces = ElementTopology::GetFaces (eltype);
-        for (int i = 0; i < nvert_facet; i++)
-          {
-            for (int j = 0; j < D; j++)
-              vertices[i][j] = elvertices[faces[LocalFacetNr][i]][j];
-          }
-      }
-    if (D == 2)
-      {
-        const EDGE *edges = ElementTopology::GetEdges (eltype);
-        for (int i = 0; i < nvert_facet; i++)
-          {
-            for (int j = 0; j < D; j++)
-              vertices[i][j] = elvertices[edges[LocalFacetNr][i]][j];
-          }
-      }
+    const FACE *faces = ElementTopology::GetFaces (eltype);
+    const EDGE *edges = ElementTopology::GetEdges (eltype);
 
     slabheight = numeric_limits<double>::max ();
     slabwidth = D > 2 ? numeric_limits<double>::max () : 1.0;
@@ -161,12 +144,30 @@ namespace ngfem
     for (int i = 0; i < nvert_facet; i++)
       {
         Vector<> point1 (D);
-        eltrans1.CalcPoint (IntegrationPoint (vertices[i], 0), point1);
+        if (D == 3)
+          {
+            IntegrationPoint ip1 (elvertices[faces[LocalFacetNr][i]], 0);
+            eltrans1.CalcPoint (ip1, point1);
+          }
+        else if (D == 2)
+          {
+            IntegrationPoint ip1 (elvertices[edges[LocalFacetNr][i]], 0);
+            eltrans1.CalcPoint (ip1, point1);
+          }
         tbot = min (tbot, point1[D - 1]);
         for (int j = 0; j < nvert_facet; j++)
           {
             Vector<> point2 (D);
-            eltrans1.CalcPoint (IntegrationPoint (vertices[j], 0), point2);
+            if (D == 3)
+              {
+                IntegrationPoint ip2 (elvertices[faces[LocalFacetNr][j]], 0);
+                eltrans1.CalcPoint (ip2, point2);
+              }
+            else if (D == 2)
+              {
+                IntegrationPoint ip2 (elvertices[edges[LocalFacetNr][j]], 0);
+                eltrans1.CalcPoint (ip2, point2);
+              }
             if (abs (point1[D - 1] - point2[D - 1]) > 0)
               slabheight
                   = min (slabheight, abs (point1[D - 1] - point2[D - 1]));

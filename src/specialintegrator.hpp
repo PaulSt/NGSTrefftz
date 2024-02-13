@@ -133,8 +133,7 @@ namespace ngfem
     Array<shared_ptr<CoefficientFunction>>
         dcf_dtest; // derivatives by test-functions
   public:
-    NGS_DLL_HEADER
-    SymbolicFFacetBilinearFormIntegrator (shared_ptr<CoefficientFunction> acf,
+    NGST_DLL SymbolicFFacetBilinearFormIntegrator (shared_ptr<CoefficientFunction> acf,
                                           VorB avb, bool aelement_boundary);
 
     virtual VorB VB () const { return vb; }
@@ -146,7 +145,7 @@ namespace ngfem
       return DGFormulation (neighbor_testfunction, element_boundary);
     }
 
-    NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     CalcFacetMatrix (const FiniteElement &volumefel1, int LocalFacetNr1,
                      const ElementTransformation &eltrans1,
                      FlatArray<int> &ElVertices1,
@@ -155,7 +154,7 @@ namespace ngfem
                      FlatArray<int> &ElVertices2, FlatMatrix<double> elmat,
                      LocalHeap &lh) const;
 
-    NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     CalcFacetMatrix (const FiniteElement &volumefel, int LocalFacetNr,
                      const ElementTransformation &eltrans,
                      FlatArray<int> &ElVertices,
@@ -163,7 +162,7 @@ namespace ngfem
                      FlatArray<int> &SElVertices, FlatMatrix<double> elmat,
                      LocalHeap &lh) const;
 
-    NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     CalcFacetMatrix (const FiniteElement &volumefel1, int LocalFacetNr1,
                      const ElementTransformation &eltrans1,
                      FlatArray<int> &ElVertices1,
@@ -172,7 +171,7 @@ namespace ngfem
                      FlatArray<int> &ElVertices2, FlatMatrix<Complex> elmat,
                      LocalHeap &lh) const;
 
-    NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     CalcFacetMatrix (const FiniteElement &volumefel, int LocalFacetNr,
                      const ElementTransformation &eltrans,
                      FlatArray<int> &ElVertices,
@@ -180,7 +179,7 @@ namespace ngfem
                      FlatArray<int> &SElVertices, FlatMatrix<Complex> elmat,
                      LocalHeap &lh) const;
 
-    NGS_DLL_HEADER virtual void CalcLinearizedFacetMatrix (
+    NGST_DLL virtual void CalcLinearizedFacetMatrix (
         const FiniteElement &volumefel, int LocalFacetNr,
         const ElementTransformation &eltrans, FlatArray<int> &ElVertices,
         const ElementTransformation &seltrans, FlatArray<int> &SElVertices,
@@ -190,7 +189,7 @@ namespace ngfem
           "SymbolicFFacetBFI::CalcLinearizedFacetMatrix not implemented");
     }
 
-    NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     ApplyFacetMatrix (const FiniteElement &volumefel1, int LocalFacetNr1,
                       const ElementTransformation &eltrans1,
                       FlatArray<int> &ElVertices1,
@@ -202,7 +201,7 @@ namespace ngfem
       throw Exception ("SymbolicFFacetBFI::ApplyFacetMatrix not implemented");
     }
 
-    NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     CalcTraceValues (const FiniteElement &volumefel, int LocalFacetNr,
                      const ElementTransformation &eltrans,
                      FlatArray<int> &ElVertices, FlatVector<double> &trace,
@@ -211,7 +210,7 @@ namespace ngfem
       throw Exception ("SymbolicFFacetBFI::CalcTraceValues not implemented");
     }
 
-    NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     ApplyFromTraceValues (const FiniteElement &volumefel, int LocalFacetNr,
                           const ElementTransformation &eltrans,
                           FlatArray<int> &ElVertices, FlatVector<double> trace,
@@ -222,7 +221,7 @@ namespace ngfem
           "SymbolicFFacetBFI::ApplyFromTraceValues not implemented");
     }
 
-    NGS_DLL_HEADER virtual void
+    NGST_DLL virtual void
     ApplyFacetMatrix (const FiniteElement &volumefel, int LocalFacetNr,
                       const ElementTransformation &eltrans,
                       FlatArray<int> &ElVertices,
@@ -270,7 +269,7 @@ namespace ngfem
     virtual VorB VB () const override { return vb; }
     virtual bool BoundaryForm () const override { return vb == BND; }
 
-    NGS_DLL_HEADER void
+    NGST_DLL void
     CalcFacetVector (const FiniteElement &volumefel1, int LocalFacetNr1,
                      const ElementTransformation &eltrans1,
                      FlatArray<int> &ElVertices1,
@@ -279,7 +278,7 @@ namespace ngfem
                      FlatArray<int> &ElVertices2, FlatVector<double> elvec,
                      LocalHeap &lh) const override;
 
-    NGS_DLL_HEADER void
+    NGST_DLL void
     CalcFacetVector (const FiniteElement &volumefel1, int LocalFacetNr1,
                      const ElementTransformation &eltrans1,
                      FlatArray<int> &ElVertices1,
@@ -288,14 +287,14 @@ namespace ngfem
                      FlatArray<int> &ElVertices2, FlatVector<Complex> elvec,
                      LocalHeap &lh) const override;
 
-    NGS_DLL_HEADER void
+    NGST_DLL void
     CalcFacetVector (const FiniteElement &volumefel, int LocalFacetNr,
                      const ElementTransformation &eltrans,
                      FlatArray<int> &ElVertices,
                      const ElementTransformation &seltrans,
                      FlatVector<double> elvec, LocalHeap &lh) const override;
 
-    NGS_DLL_HEADER void
+    NGST_DLL void
     CalcFacetVector (const FiniteElement &volumefel, int LocalFacetNr,
                      const ElementTransformation &eltrans,
                      FlatArray<int> &ElVertices,

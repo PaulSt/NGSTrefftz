@@ -25,7 +25,7 @@ find_package(NGSolve CONFIG REQUIRED
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX ${NGSOLVE_INSTALL_DIR} CACHE PATH "Install dir" FORCE)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-set(PY_INSTALL_DIR ${NGSOLVE_INSTALL_DIR_PYTHON} CACHE PATH "subdir of install dir for python modules")
+set(PY_INSTALL_DIR ${NGSOLVE_INSTALL_DIR_PYTHON} CACHE STRING "subdir of install dir for python modules")
 set(NGSTREFFTZ_INSTALL_DIR_PYTHON ${PY_INSTALL_DIR}/ngstrefftz)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
 
@@ -68,7 +68,7 @@ endif(WIN32)
 set(NGSTREFFTZ_USE_LAPACK ${NGSOLVE_USE_LAPACK} CACHE BOOL "Try to use lapack from ngsolve")
 if(NGSTREFFTZ_USE_LAPACK AND NOT WIN32)
     target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_USE_LAPACK)
-endif(NGSTREFFTZ_USE_LAPACK)
+endif()
 target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_EXPORTS)
 target_link_libraries(_trefftz PRIVATE _pytents)
 set_target_properties(_trefftz PROPERTIES
