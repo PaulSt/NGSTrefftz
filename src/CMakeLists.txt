@@ -4,7 +4,10 @@ project(ngstrefftz)
 ########################################################
 if(NOT WIN32)
   string(ASCII 27 Esc)
+  set(ColourReset "${Esc}[m")
+  set(Red         "${Esc}[31m")
   set(BoldCyan    "${Esc}[1;36m")
+  set(BoldWhite   "${Esc}[1;37m")
 endif()
 
 ### Requirements
@@ -22,9 +25,7 @@ find_package(NGSolve CONFIG REQUIRED
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX ${NGSOLVE_INSTALL_DIR} CACHE PATH "Install dir" FORCE)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-if (NOT DEFINED PY_INSTALL_DIR)
-    set(PY_INSTALL_DIR ${NGSOLVE_INSTALL_DIR_PYTHON} CACHE PATH "subdir of install dir for python modules" FORCE)
-endif()
+set(PY_INSTALL_DIR ${NGSOLVE_INSTALL_DIR_PYTHON} CACHE PATH "subdir of install dir for python modules")
 set(NGSTREFFTZ_INSTALL_DIR_PYTHON ${PY_INSTALL_DIR}/ngstrefftz)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
 
@@ -63,6 +64,11 @@ if(WIN32)
     target_link_libraries(_trefftz PUBLIC ${PYTHON_LIBRARY})
 endif(WIN32)
 #target_compile_options(_trefftz PRIVATE "$<$<CONFIG:DEBUG>:-W;-Wall;-Wextra;-Wpedantic;-Wno-unused-parameter;-g;>")
+#set_target_properties(_trefftz PROPERTIES COMPILE_DEFINITIONS "NGSTREFFTZ_EXPORTS")
+set(NGSTREFFTZ_USE_LAPACK ${NGSOLVE_USE_LAPACK} CACHE BOOL "Try to use lapack from ngsolve")
+if(NGSTREFFTZ_USE_LAPACK AND NOT WIN32)
+    target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_USE_LAPACK)
+endif(NGSTREFFTZ_USE_LAPACK)
 target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_EXPORTS)
 target_link_libraries(_trefftz PRIVATE _pytents)
 set_target_properties(_trefftz PROPERTIES
@@ -70,15 +76,23 @@ set_target_properties(_trefftz PROPERTIES
 )
 file(COPY ${CMAKE_SOURCE_DIR}/__init__.py DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz)
 
-### link lapack if found
-if (USE_LAPACK) # currently needed for SVD in embTrefftz, TODO: switch to ngsolve interface..
-    target_link_libraries(_trefftz INTERFACE "${LAPACK_LIBRARIES}")
-endif (USE_LAPACK)
-
 ### install
-message("${BoldCyan}With 'make install' the package will be installed to: ${CMAKE_INSTALL_PREFIX}
+message("${BoldCyan}
+------------------------------------------------------------------------
+  Build type: ${CMAKE_BUILD_TYPE}
+  Compiler: ${CMAKE_CXX_COMPILER}
+  Flags: ${flags}
+
+  Enabled functionality from ngsolve:
+    LAPACK: ............ ${NGSTREFFTZ_USE_LAPACK} 
+    MKL: ............... ${NGSOLVE_USE_MKL}
+
+With 'make install' the package will be installed to: ${CMAKE_INSTALL_PREFIX}
 Make sure to add it to the python path: 
--->   export PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${PY_INSTALL_DIR}:$PYTHONPATH")
+-->   export PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${PY_INSTALL_DIR}:$PYTHONPATH
+------------------------------------------------------------------------
+\n${ColourReset}")
+
 install(TARGETS _trefftz DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTREFFTZ_INSTALL_DIR_PYTHON}/)
 install(FILES
         __init__.py 

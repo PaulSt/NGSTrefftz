@@ -5,7 +5,7 @@
 namespace ngbla
 {
 
-#if defined(LAPACK) && !defined(WIN32)
+#ifdef NGSTREFFTZ_USE_LAPACK
   void
   LapackSVD (SliceMatrix<double, ColMajor> A, SliceMatrix<double, ColMajor> U,
              SliceMatrix<double, ColMajor> V)
@@ -67,7 +67,7 @@ namespace ngbla
     // for(int i=0;i<A.Height();i++)
     // for(int j=0;j<A.Width();j++)
     // AA(i,j)= A(i,j);
-#if defined(LAPACK) && !defined(WIN32)
+#ifdef NGSTREFFTZ_USE_LAPACK
     LapackSVD (AA, U, V);
 #else
     cout << "No Lapack, using CalcSVD" << endl;
@@ -89,7 +89,7 @@ namespace ngbla
                    SliceMatrix<Complex, ColMajor> V)
   {
     Matrix<Complex, ColMajor> AA = A;
-#if defined(LAPACK) && !defined(WIN32)
+#ifdef NGSTREFFTZ_USE_LAPACK
     LapackSVD (AA, U, V);
 #else
     throw Exception ("Need Lapack for complex SVD");
