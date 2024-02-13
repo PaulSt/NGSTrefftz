@@ -42,7 +42,7 @@
 #RUN bash /root/ngsolve/tests/gitlab-ci/pyodide/build_in_docker.sh
 
 ### load above steps 
-FROM paulstdocker/ngsolve_pyodite:402bd26
+FROM paulstdocker/ngsolve_pyodide:6.2.2401
 
 ### build ngstrefftz
 #RUN git clone --recursive https://github.com/PaulSt/NGSTrefftz /root/ngstrefftz
