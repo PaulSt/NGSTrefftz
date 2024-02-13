@@ -444,7 +444,7 @@ namespace ngfem
 
     static string Name () { return "hesse"; }
     // static Array<int> GetDimensions() { return Array<int> ( { D,D } ); }
-    static INT<2> GetDimensions () { return { D, D }; }
+    static IVec<2> GetDimensions () { return { D, D }; }
 
     static auto &Cast (const FiniteElement &fel)
     {

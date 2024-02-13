@@ -549,7 +549,7 @@ namespace ngcomp
       }
     else // top or bot of tent
       {
-        INT<D + 1> vnr = ma->GetElVertices (ElementId (VOL, elnr));
+        IVec<D + 1> vnr = ma->GetElVertices (ElementId (VOL, elnr));
         // determine linear basis function coeffs to use for tent face
         for (size_t ivert = 0; ivert < vnr.Size (); ivert++)
           {
