@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: clear cache
         run: rm -rf /opt/hostedtoolcache
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'True'
           path: 'NGSTrefftz'
@@ -49,13 +49,13 @@ jobs:
       MACOSX_DEPLOYMENT_TARGET: '10.15'
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
           path: 'NGSTrefftz'
       - name: Get Python ${{ matrix.py }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.py }}
       - name: Run build script
@@ -74,14 +74,14 @@ jobs:
     runs-on: windows-2019
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
           path: 'NGSTrefftz'
       - name: Get Python ${{ matrix.py }}
         id: python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.py }}
       - name: Run build script
@@ -96,7 +96,7 @@ jobs:
     name: pypi src
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'True'
           fetch-depth: 0
@@ -126,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: python-package-distributions
         path: NGSTrefftz/wheelhouse/
@@ -146,7 +146,7 @@ jobs:
       - name: clear cache
         run: rm -rf /opt/hostedtoolcache
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v3
@@ -156,16 +156,16 @@ jobs:
           # generate Docker tags based on the following events/attributes
           tags: type=semver,pattern={{version}}
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: "Dockerfile"
@@ -179,7 +179,7 @@ jobs:
     steps:
       - name: clear cache
         run: rm -rf /opt/hostedtoolcache
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
           submodules: 'True'
@@ -190,7 +190,7 @@ jobs:
         run: cd $GITHUB_WORKSPACE/NGSTrefftz && docker build -t ngstpyodide -f .github/workflows/pyodide/Dockerfile .
       - name: retrieve tar
         run: id=$(docker create ngstpyodide) && docker cp $id:/root/output/ngstrefftz_pyodide.tar.bz2 $GITHUB_WORKSPACE/
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Build the JupyterLite site
@@ -198,7 +198,7 @@ jobs:
           cd $GITHUB_WORKSPACE/NGSTrefftz/.github/workflows/pyodide && python -m pip install -r requirements.txt
           cd $GITHUB_WORKSPACE && jupyter lite build --pyodide ngstrefftz_pyodide.tar.bz2 --contents ./NGSTrefftz/docs/notebooks/ --output-dir ngst-pyodide
       #- name: upload 
-        #uses: actions/upload-pages-artifact@v2
+        #uses: actions/upload-pages-artifact@v3
       - name: Store the sdist
         uses: actions/upload-artifact@v3
         with:
@@ -211,7 +211,7 @@ jobs:
     needs: [pyodide]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
           submodules: 'True'
@@ -241,13 +241,13 @@ jobs:
           publish: false
           #requirements_path: ./docs/requirements.txt
       - name: Download pyodide stuff
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: ngst-pyodide
           path: NGSTrefftz/ngst-pyodide
       - run: tree -d .
       - name: Upload
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
           path: 'NGSTrefftz/'
                 
@@ -272,7 +272,7 @@ jobs:
     name: Paper Draft
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build draft PDF
         uses: openjournals/openjournals-draft-action@master
         with:
