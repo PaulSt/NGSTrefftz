@@ -34,7 +34,7 @@ jobs:
       - name: build pip
         run: docker run -v $GITHUB_WORKSPACE:/workspace sameli/manylinux2014_x86_64_cuda_11.7 /bin/sh /workspace/NGSTrefftz/.github/workflows/build_pip.sh 
       - name: Store the binary wheel
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
           path: NGSTrefftz/wheelhouse
@@ -61,7 +61,7 @@ jobs:
       - name: Run build script
         run: cd NGSTrefftz/.github/workflows && bash build_pip_mac.sh ${{ matrix.py }}
       - name: Store the binary wheel
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
           path: NGSTrefftz/wheelhouse
@@ -87,7 +87,7 @@ jobs:
       - name: Run build script
         run: Set-Location NGSTrefftz/.github/workflows; ./build_pip.ps1 ${{ env.pythonLocation }}
       - name: Store the binary wheel
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
           path: NGSTrefftz/wheelhouse
@@ -114,7 +114,7 @@ jobs:
       #- name: pip install ngstrefftz
         #run: pip install dist/*
       - name: Store the sdist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
           path: NGSTrefftz/wheelhouse
@@ -200,7 +200,7 @@ jobs:
       #- name: upload 
         #uses: actions/upload-pages-artifact@v3
       - name: Store the sdist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ngst-pyodide
           path: ./ngst-pyodide
@@ -279,7 +279,7 @@ jobs:
           journal: joss
           paper-path: docs/paper/paper.md
       - name: Upload
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: joss_paper
           path: docs/paper/paper.pdf
