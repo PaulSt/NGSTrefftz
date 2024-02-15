@@ -36,7 +36,7 @@ jobs:
       - name: Store the binary wheel
         uses: actions/upload-artifact@v4
         with:
-          name: python-package-distributions
+          name: python-package-distributions-linux
           path: NGSTrefftz/wheelhouse
 
   pypi-mac:
@@ -63,7 +63,7 @@ jobs:
       - name: Store the binary wheel
         uses: actions/upload-artifact@v4
         with:
-          name: python-package-distributions
+          name: python-package-distributions-mac-${{ matrix.py }}
           path: NGSTrefftz/wheelhouse
 
   pypi-win:
@@ -89,7 +89,7 @@ jobs:
       - name: Store the binary wheel
         uses: actions/upload-artifact@v4
         with:
-          name: python-package-distributions
+          name: python-package-distributions-win-${{ matrix.py }}
           path: NGSTrefftz/wheelhouse
 
   pypi-src:
@@ -116,7 +116,7 @@ jobs:
       - name: Store the sdist
         uses: actions/upload-artifact@v4
         with:
-          name: python-package-distributions
+          name: python-package-distributions-src
           path: NGSTrefftz/wheelhouse
 
   publish-pypi:
@@ -128,7 +128,8 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:
-        name: python-package-distributions
+        pattern: python-package-distributions-*
+        merge-multiple: true
         path: NGSTrefftz/wheelhouse/
     - name: Publish binary distributions to PyPI
       if: github.ref == 'refs/heads/main'
@@ -161,6 +162,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
         uses: docker/login-action@v3
+        if: github.event_name == 'release' && github.event.action == 'created'
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}

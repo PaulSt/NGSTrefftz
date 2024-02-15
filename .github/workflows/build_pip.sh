@@ -26,7 +26,7 @@ do
     #rm -rf /home/app/ngstrefftz/make
     rm -rf _skbuild
     $PYDIR/pip install pytest-check numpy wheel scikit-build mkl==2023.* mkl-devel==2023.* setuptools
-    $PYDIR/pip install ngsolve --pre
+    $PYDIR/pip install -r ./.github/workflows/ngsolve_version.txt
 
     $PYDIR/pip wheel -vvv .
     cat src/ngstrefftz.egg-info/SOURCES.txt
