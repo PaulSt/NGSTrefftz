@@ -132,7 +132,7 @@ jobs:
         merge-multiple: true
         path: NGSTrefftz/wheelhouse/
     - name: Publish binary distributions to PyPI
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' || github.event_name == 'release'
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         skip-existing: true

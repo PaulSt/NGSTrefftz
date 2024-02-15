@@ -1,1 +1,1 @@
-ngsolve==6.2.2401
+ngsolve>=6.2.2401.post24.dev0
