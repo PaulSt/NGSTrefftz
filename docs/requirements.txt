@@ -106,5 +106,6 @@ websocket-client==1.4.1
 widgetsnbextension==4.0.3
 scipy>=1.11.1 
 
-xfem>=2.1.2302
-ngstrefftz>=0.2.7
+ngsolve==6.2.2304
+xfem==2.1.2303.post8.dev0
+ngstrefftz==0.2.6
