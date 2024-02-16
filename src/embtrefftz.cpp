@@ -150,12 +150,9 @@ namespace ngcomp
 
     size_t active_elements = 0;
     size_t test_local_ndof = test_fes->GetNDof () / ne;
-    Vector<SCAL> sing_val_avg (test_local_ndof);
-    sing_val_avg = 0;
-    Vector<double> sing_val_max (test_local_ndof);
-    sing_val_max = 0;
-    Vector<double> sing_val_min (test_local_ndof);
-    sing_val_min = DBL_MAX;
+    Vector<SCAL> sing_val_avg;
+    Vector<double> sing_val_max;
+    Vector<double> sing_val_min;
 
     bool has_hidden_dofs = false;
     for (DofId d = 0; d < ndof || !has_hidden_dofs; d++)
@@ -270,6 +267,15 @@ namespace ngcomp
 
       if (stats)
         {
+          if (sing_val_avg.Size () == 0)
+            {
+              sing_val_avg.SetSize (elmat.Height ());
+              sing_val_max.SetSize (elmat.Height ());
+              sing_val_min.SetSize (elmat.Height ());
+              sing_val_avg = 0;
+              sing_val_max = 0;
+              sing_val_min = DBL_MAX;
+            }
           active_elements += 1;
           for (size_t i = 0; i < elmat.Height (); i++)
             {
