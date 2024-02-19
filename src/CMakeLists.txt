@@ -69,6 +69,18 @@ set(NGSTREFFTZ_USE_LAPACK ${NGSOLVE_USE_LAPACK} CACHE BOOL "Try to use lapack fr
 if(NGSTREFFTZ_USE_LAPACK AND NOT WIN32)
     target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_USE_LAPACK)
 endif()
+if(NGSOLVE_USE_MKL)
+    find_package(MKL REQUIRED)
+    find_library(MKLRT mkl_rt.2 HINTS ${MKL_ROOT}/lib/)
+    message("Linking with MKL_RT=${MKL_LIBRARY}")
+    if(MKL_STATIC)
+      set(MKL_CMAKE_LINK_INTERFACE PRIVATE)
+    else()
+      set(MKL_CMAKE_LINK_INTERFACE PUBLIC)
+    endif()
+    target_link_options(_trefftz ${LAPACK_CMAKE_LINK_INTERFACE} ${MKLRT})
+endif()
+
 target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_EXPORTS)
 target_link_libraries(_trefftz PRIVATE _pytents)
 set_target_properties(_trefftz PROPERTIES
