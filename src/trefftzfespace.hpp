@@ -65,7 +65,7 @@ namespace ngcomp
                     {
                       int iix = IndexMap2<3> (Vec<3, int>{ k, j, i }, order);
                       ders (iix) = coeffxy;
-                      coeffxy = coeffx->Diff (
+                      coeffxy = coeffxy->Diff (
                           MakeCoordinateCoefficientFunction (0).get (),
                           make_shared<ConstantCoefficientFunction> (1));
                     }
