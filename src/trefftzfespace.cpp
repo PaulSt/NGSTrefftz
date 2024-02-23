@@ -1019,7 +1019,7 @@ namespace ngcomp
                 em[m] = 1;
                 sol (indexmap) -= factorial (mii + ej) / factorial (mil)
                                   * (AA[IndexMap2<D> (mil, order - 1)]) (j, m)
-                                  / pow (elsize, vsum<D, int> (mii - mil) + 2)
+                                  * pow (elsize, vsum<D, int> (mil))
                                   * (mii[m] + ej[m] - mil[m] + 1)
                                   * sol (PolBasis::IndexMap2<D> (
                                       mii + ej - mil + em, order));
@@ -1027,8 +1027,8 @@ namespace ngcomp
             // vec coeff B
             sol (indexmap)
                 += factorial (mii + ej) / factorial (mil)
-                   * (BB[IndexMap2<D> (mil, order - 1)]) (j)
-                   / pow (elsize, vsum<D, int> (mii - mil) + 1)
+                   * (BB[IndexMap2<D> (mil, order - 1)]) (j)*pow (
+                       elsize, vsum<D, int> (mil) + 1)
                    * sol (PolBasis::IndexMap2<D> (mii + ej - mil, order));
 
             // scal coeff C
@@ -1036,15 +1036,15 @@ namespace ngcomp
               sol (indexmap)
                   += factorial (mii) / factorial (mil)
                      * CC[IndexMap2<D> (mil, order - 1)]
-                     / pow (elsize, vsum<D, int> (mii - mil))
+                     * pow (elsize, vsum<D, int> (mil) + 2)
                      * sol (PolBasis::IndexMap2<D> (mii - mil, order));
           });
         }
-      sol (indexmap) += -FF[PolBasis::IndexMap2<D> (mii, order)];
+      sol (indexmap) += -FF[PolBasis::IndexMap2<D> (mii, order)]
+                        * pow (elsize, vsum<D, int> (mii) + 2);
       Vec<D, int> eD = 0;
       eD[D - 1] = 2;
-      sol (indexmap) *= pow (elsize, vsum<D, int> (mii) + 2)
-                        / factorial (mii + eD) / (AA[0](D - 1, D - 1));
+      sol (indexmap) *= 1.0 / factorial (mii + eD) / (AA[0](D - 1, D - 1));
     });
   }
 
