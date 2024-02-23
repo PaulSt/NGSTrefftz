@@ -216,7 +216,7 @@ namespace ngcomp
 
     Flags flags;
     flags.SetFlag ("order", order);
-    // MonomialFESpace mon(ma,flags);
+    flags.SetFlag ("usescale", 1);
     shared_ptr<FESpace> fes = make_shared<MonomialFESpace> (ma, flags);
     auto pws = CreateGridFunction (fes, "pws", flags);
     pws->Update ();

@@ -13,6 +13,7 @@ namespace ngcomp
     int nel;
     int local_ndof;
     int useshift = 1;
+    int usescale = 1;
     shared_ptr<CoefficientFunction> coeff_cf = nullptr;
     CSR basismat;
 
@@ -53,8 +54,8 @@ namespace ngcomp
 
     template <int D> double Adiam (ElementId ei) const
     {
-      if (useshift == 0)
-        return 1;
+      if (usescale == 0)
+        return 1.0;
       LocalHeap lh (1000 * 1000);
       double anisotropicdiam = 0.0;
       auto vertices_index = ma->GetElVertices (ei);

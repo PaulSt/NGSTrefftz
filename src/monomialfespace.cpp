@@ -16,6 +16,7 @@ namespace ngcomp
 
     order = int (flags.GetNumFlag ("order", 3));
     useshift = flags.GetNumFlag ("useshift", 1);
+    usescale = flags.GetNumFlag ("usescale", 1);
 
     this->local_ndof = BinCoeff (D + 1 + order, order);
     this->nel = ma->GetNE ();
@@ -130,9 +131,10 @@ namespace ngcomp
   DocInfo MonomialFESpace ::GetDocu ()
   {
     auto docu = FESpace::GetDocu ();
-    docu.Arg ("useshift")
-        = "bool = True\n"
-          "  use shift of basis functins to element center and scale them";
+    docu.Arg ("useshift") = "bool = True\n"
+                            "  shift of basis functins to element center";
+    docu.Arg ("usescale") = "bool = True\n"
+                            "  scale element basis functions with diam";
     return docu;
   }
 
