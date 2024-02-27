@@ -123,4 +123,14 @@ add_test(NAME trefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTOR
 add_test(NAME tents COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/tents.py)
 #WORKING_DIRECTORY ${ CMAKE_CURRENT_SOURCE_DIR }
 set_tests_properties(embtrefftz trefftz tents
-    PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:$ENV{PYTHONPATH}")
+    PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON}:$ENV{PYTHONPATH}")
+
+# make uninstall
+add_custom_target("uninstall" COMMENT "Uninstall installed files")
+add_custom_command(
+    TARGET "uninstall"
+    POST_BUILD
+    COMMENT "Uninstall files with install_manifest.txt"
+    COMMAND xargs rm -vf < install_manifest.txt || echo Nothing in
+            install_manifest.txt to be uninstalled!
+)

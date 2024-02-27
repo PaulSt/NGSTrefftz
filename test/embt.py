@@ -36,15 +36,13 @@ def dglap(fes,bndc,rhs=0,uf=0):
     u = fes.TrialFunction()
     v = fes.TestFunction()
 
-    jump_u = u-u.Other()
-    jump_v = v-v.Other()
-    mean_dudn = 0.5*n * (grad(u)+grad(u.Other()))
-    mean_dvdn = 0.5*n * (grad(v)+grad(v.Other()))
+    jump = lambda u: u-u.Other()
+    mean_dn = lambda u: 0.5*n * (grad(u)+grad(u).Other())
 
     a = BilinearForm(fes)
     a += grad(u)*grad(v) * dx \
-        +alpha*order**2/h*jump_u*jump_v * dx(skeleton=True) \
-        +(-mean_dudn*jump_v-mean_dvdn*jump_u) * dx(skeleton=True) \
+        +alpha*order**2/h*jump(u)*jump(v) * dx(skeleton=True) \
+        +(-mean_dn(u)*jump(v)-mean_dn(v)*jump(u)) * dx(skeleton=True) \
         +alpha*order**2/h*u*v * ds(skeleton=True) \
         +(-n*grad(u)*v-n*grad(v)*u)* ds(skeleton=True)
     a.Assemble()
@@ -59,20 +57,25 @@ def dglap(fes,bndc,rhs=0,uf=0):
         fes2 = L2(fes.mesh, order=fes.globalorder, dgjumps=True)
         u = fes2.TrialFunction()
 
-        jump_u = (u-u.Other())*n
-        jump_v = (v-v.Other())*n
-        mean_dudn = 0.5 * (grad(u)+grad(u.Other()))
-        mean_dvdn = 0.5 * (grad(v)+grad(v.Other()))
+        # a2 = BilinearForm(fes2,fes,nonassemble=True)
+        # a2 += grad(u)*grad(v) * dx \
+            # +alpha*order**2/h*jump_u*jump_v * dx(skeleton=True) \
+            # +(-mean_dudn*jump_v-mean_dvdn*jump_u) * dx(skeleton=True) \
+            # +alpha*order**2/h*u*v * ds(skeleton=True) \
+            # +(-n*grad(u)*v-n*grad(v)*u)* ds(skeleton=True)
+        # auf = f.vec.CreateVector()
+        # a2.Apply(uf.vec,auf)
 
-        a2 = BilinearForm(fes2,fes,nonassemble=True)
-        a2 += grad(u)*grad(v) * dx \
-            +alpha*order**2/h*jump_u*jump_v * dx(skeleton=True) \
-            +(-mean_dudn*jump_v-mean_dvdn*jump_u) * dx(skeleton=True) \
-            +alpha*order**2/h*u*v * ds(skeleton=True) \
-            +(-n*grad(u)*v-n*grad(v)*u)* ds(skeleton=True)
-        auf = f.vec.CreateVector()
-        a2.Apply(uf.vec,auf)
-        f.vec.data = f.vec - auf
+
+        auf = LinearForm(fes)
+        auf += grad(uf)*grad(v) * dx \
+            +alpha*order**2/h*jump(uf)*jump(v) * dx(skeleton=True) \
+            +(-mean_dn(uf)*jump(v)-mean_dn(v)*jump(uf)) * dx(skeleton=True) \
+            +alpha*order**2/h*uf*v * ds(skeleton=True) \
+            +(-n*grad(uf)*v-n*grad(v)*uf)* ds(skeleton=True)
+        auf.Assemble()
+
+        f.vec.data = f.vec - auf.vec
     return a,f
 
 ########################################################################
