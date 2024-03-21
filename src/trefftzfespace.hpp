@@ -300,6 +300,24 @@ namespace ngcomp
     CSR Basis (int ord, int rdim, Vec<D + 1> ElCenter, double elsize = 1.0);
   };
 
+  template <int D> class QTHeatBasis : public PolBasis
+  {
+    mutex gentrefftzbasis;
+    std::map<string, CSR> gtbstore;
+
+    Vector<shared_ptr<CoefficientFunction>> AAder;
+
+  public:
+    QTHeatBasis (int aorder, shared_ptr<CoefficientFunction> coeffA)
+        : PolBasis (aorder)
+    {
+      if (!coeffA)
+        coeffA = make_shared<ConstantCoefficientFunction> (1);
+
+      this->ComputeDerivs<D> (order - 1, coeffA, AAder);
+    }
+    CSR Basis (Vec<D> ElCenter, double elsize = 1.0);
+  };
 }
 
 #ifdef NGS_PYTHON

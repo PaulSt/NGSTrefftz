@@ -32,6 +32,9 @@ namespace ngcomp
                    - (eqtyp == "fowave_reduced");
     else if (eqtyp == "heat")
       local_ndof = BinCoeff (D - 1 + order, order);
+    else if (eqtyp == "qtheat")
+      local_ndof = BinCoeff (D - 1 + order, order)
+                   + BinCoeff (D - 1 + order - 1, order - 1);
     else if (eqtyp == "laplace")
       local_ndof = BinCoeff (D - 1 + order, order)
                    + BinCoeff (D - 1 + order - 1, order - 1);
@@ -140,6 +143,10 @@ namespace ngcomp
             {
               basismat = THeatBasis<1>::Basis (order, 0, 0);
             }
+          else if (eqtyp == "qtheat")
+            {
+              basis = new QTHeatBasis<2> (order, coeffA);
+            }
           else if (eqtyp == "wave" || eqtyp == "qtwave"
                    || eqtyp == "fowave_reduced")
             {
@@ -172,6 +179,10 @@ namespace ngcomp
           else if (eqtyp == "heat")
             {
               basismat = THeatBasis<2>::Basis (order, 0, 0);
+            }
+          else if (eqtyp == "qtheat")
+            {
+              basis = new QTHeatBasis<3> (order, coeffA);
             }
           else if (eqtyp == "wave" || eqtyp == "qtwave"
                    || eqtyp == "fowave_reduced")
@@ -341,6 +352,14 @@ namespace ngcomp
                       ElSize<2> (ei, coeff_const),
                       coeff_const / ElSize<2> (ei, coeff_const)));
                 }
+              else if (eqtyp == "qtheat")
+                {
+                  CSR basismat = static_cast<QTHeatBasis<2> *> (basis)->Basis (
+                      ElCenter<2> (ei), ElSize<2> (ei, 1.0));
+                  return *(new (alloc) ScalarMappedElement<2> (
+                      local_ndof, order, basismat, eltype, ElCenter<2> (ei),
+                      ElSize<2> (ei, 1.0)));
+                }
               else
                 {
                   return *(new (alloc) ScalarMappedElement<2> (
@@ -441,6 +460,10 @@ namespace ngcomp
                            "flag is always True for trefftzfespace.";
     docu.Arg ("complex") = "bool = False\n"
                            "  Set if FESpace should be complex";
+    docu.Arg ("useshift") = "bool = True\n"
+                            "  shift of basis functins to element center";
+    docu.Arg ("usescale") = "bool = True\n"
+                            "  scale element basis functions with diam";
     // docu.Arg("useshift") = "bool = True\n"
     //"  use shift of basis functins to element center and scale them";
     // docu.Arg("basistype")
@@ -1334,6 +1357,85 @@ namespace ngcomp
 
   template class FOQTWaveBasis<1>;
   template class FOQTWaveBasis<2>;
+
+  template <int D> CSR QTHeatBasis<D>::Basis (Vec<D> ElCenter, double elsize)
+  {
+    lock_guard<mutex> lock (gentrefftzbasis);
+    int order = this->order;
+    string encode = to_string (order) + to_string (elsize);
+    for (int i = 0; i < D; i++)
+      encode += to_string (ElCenter[i]);
+
+    if (gtbstore[encode][0].Size () == 0)
+      {
+        // IntegrationPoint ip (ElCenter, 0);
+        // Mat<D, D> dummy;
+        // FE_ElementTransformation<D, D> et (D == 3   ? ET_TET
+        //: D == 2 ? ET_TRIG
+        //: ET_SEGM,
+        // dummy);
+        // MappedIntegrationPoint<D, D> mip (ip, et, 0);
+        // for (int i = 0; i < D; i++)
+        // mip.Point ()[i] = ElCenter[i];
+
+        // const int ndiffs = (BinCoeff (D + order - 1, order - 1));
+        // Vector<> AA (ndiffs);
+
+        // TraversePol<D> (order - 1, [&] (int i, Vec<D, int> coeff) {
+        // int index = PolBasis::IndexMap2<D> (coeff, order - 1);
+        // AA[index] = AAder[index]->Evaluate (mip);
+        //});
+
+        const int ndof = (BinCoeff (D - 1 + order, order)
+                          + BinCoeff (D - 1 + order - 1, order - 1));
+        const int npoly = (BinCoeff (D + order, order));
+        Matrix<> qtbasis (ndof, npoly);
+        qtbasis = 0;
+        // init qtbasis
+        int counter = 0;
+        TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
+          if (coeff[0] > 1)
+            return;
+          int indexmap = PolBasis::IndexMap2<D> (coeff, order);
+          qtbasis (counter++, indexmap) = 1;
+        });
+        // start recursion
+        TraversePol2<D> (order, [&] (int i, Vec<D, int> coeff) {
+          if (coeff[0] <= 1)
+            return;
+          int indexmap = PolBasis::IndexMap2<D> (coeff, order);
+          Vec<D, int> mii = coeff;
+          mii[0] = mii[0] - 2;
+          mii[D - 1] = mii[D - 1] + 1;
+          // scal coeff C
+          qtbasis.Col (indexmap)
+              += (coeff[D - 1] + 1) * elsize / coeff[0] / (coeff[0] - 1)
+                 * qtbasis.Col (PolBasis::IndexMap2<D> (mii, order));
+          // qtbasis.Col (indexmap) *= pow (elsize, vsum<D, int> (mii) + 2)
+          /// factorial (mii + eD)
+          /// (AA[0](D - 1, D - 1));
+        });
+
+        MatToCSR (qtbasis, gtbstore[encode]);
+      }
+
+    if (gtbstore[encode].Size () == 0)
+      {
+        stringstream str;
+        str << "failed to generate trefftz basis of order " << order << endl;
+        throw Exception (str.str ());
+      }
+
+    return gtbstore[encode];
+    // CSR tb;
+    // MatToCSR (qtbasis, tb);
+    // return tb;
+  }
+
+  // template class QTHeatBasis<1>;
+  template class QTHeatBasis<2>;
+  template class QTHeatBasis<3>;
+
 }
 
 #ifdef NGS_PYTHON
