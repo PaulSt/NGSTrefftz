@@ -175,7 +175,18 @@ namespace ngcomp
     // functions
     vert = TentFaceVerts (tent, elnr, -1);
     linbasis = vert.Row (D);
-    faceint.Evaluate (sir, linbasis, mirtimes);
+    try
+      {
+        faceint.Evaluate (sir, linbasis, mirtimes);
+      }
+    catch (ExceptionNOSIMD)
+      {
+        IntegrationRule ir (eltyp, order * 2);
+        FlatVector<double> mirt (sir.Size (),
+                                 reinterpret_cast<double *> (&mirtimes (0)));
+        faceint.Evaluate (ir, linbasis, mirt);
+      }
+
     for (size_t imip = 0; imip < sir.Size (); imip++)
       smir[imip].Point () (D) = mirtimes[imip];
 
@@ -225,7 +236,17 @@ namespace ngcomp
     /// Integration over top of tent
     vert = TentFaceVerts (tent, elnr, 1);
     linbasis = vert.Row (D);
-    faceint.Evaluate (sir, linbasis, mirtimes);
+    try
+      {
+        faceint.Evaluate (sir, linbasis, mirtimes);
+      }
+    catch (ExceptionNOSIMD)
+      {
+        IntegrationRule ir (eltyp, order * 2);
+        FlatVector<double> mirt (sir.Size (),
+                                 reinterpret_cast<double *> (&mirtimes (0)));
+        faceint.Evaluate (ir, linbasis, mirt);
+      }
     for (size_t imip = 0; imip < sir.Size (); imip++)
       smir[imip].Point () (D) = mirtimes[imip];
 
@@ -503,9 +524,19 @@ namespace ngcomp
       smir[imip].Point ().Range (0, D) = smir_fix[imip].Point ().Range (0, D);
 
     Mat<D + 1> v = TentFaceVerts (tent, elnr, 1);
-    Vec<D + 1> bs = v.Row (D);
+    Vec<D + 1> linbasis = v.Row (D);
     FlatVector<SIMD<double>> mirtimes (sir.Size (), slh);
-    faceint.Evaluate (sir, bs, mirtimes);
+    try
+      {
+        faceint.Evaluate (sir, linbasis, mirtimes);
+      }
+    catch (ExceptionNOSIMD)
+      {
+        IntegrationRule ir (eltyp, order * 2);
+        FlatVector<double> mirt (sir.Size (),
+                                 reinterpret_cast<double *> (&mirtimes (0)));
+        faceint.Evaluate (ir, linbasis, mirt);
+      }
     for (size_t imip = 0; imip < sir.Size (); imip++)
       smir[imip].Point () (D) = mirtimes[imip];
 
