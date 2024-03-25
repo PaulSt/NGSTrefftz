@@ -21,6 +21,43 @@ find_package(NGSolve CONFIG REQUIRED
     HINTS $ENV{NETGENDIR}/.. $ENV{NETGENDIR}/../Resources/CMake /opt/netgen/ /Applications/Netgen.app/Contents/Resources/CMake C:/netgen $ENV{NGSolve_DIR}
     )
 
+function(add_ngsolve_python_module2 target)
+    if(NOT CMAKE_BUILD_TYPE)
+      message(STATUS "Setting build type to NGSolve build type: ${NGSOLVE_CMAKE_BUILD_TYPE}")
+      set(CMAKE_BUILD_TYPE ${NGSOLVE_CMAKE_BUILD_TYPE} PARENT_SCOPE)
+    endif()
+    add_library(${target} SHARED ${ARGN})
+
+    if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.18)
+        find_package(Python3 REQUIRED COMPONENTS Development.Module)
+        if(NOT EMSCRIPTEN)
+            find_package(Python3 COMPONENTS Interpreter Development.Embed)
+        endif()
+    else()
+      find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+    endif()
+    target_include_directories(${target} PRIVATE ${Python3_INCLUDE_DIRS})
+
+    if(NETGEN_BUILD_FOR_CONDA AND NOT WIN32)
+        if(APPLE)
+            target_link_options(${target} PUBLIC -undefined dynamic_lookup)
+        endif(APPLE)
+    else(NETGEN_BUILD_FOR_CONDA AND NOT WIN32)
+        target_link_libraries(${target} PUBLIC ${PYTHON_LIBRARY})
+    endif(NETGEN_BUILD_FOR_CONDA AND NOT WIN32)
+
+    set_target_properties(${target} PROPERTIES PREFIX "" CXX_STANDARD 17)
+    target_link_libraries(${target} PUBLIC ngsolve)
+
+    if(WIN32)
+      set_target_properties( ${target} PROPERTIES SUFFIX ".pyd" )
+    else(WIN32)
+      set_target_properties(${target} PROPERTIES SUFFIX ".so")
+    endif(WIN32)
+
+    set_target_properties(${target} PROPERTIES INSTALL_RPATH "${NGSOLVE_LIBRARY_DIR}")
+endfunction()
+
 ### check if CMAKE_INSTALL_PREFIX is set by user, if not install in NGSolve python dir
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX ${NGSOLVE_INSTALL_DIR} CACHE PATH "Install dir" FORCE)
@@ -33,7 +70,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
 if (NOT TARGET _pytents)
     include_directories(${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src)
     set(NGSTENTS_INSTALL_DIR_PYTHON ${PY_INSTALL_DIR}/ngstents)
-    add_ngsolve_python_module(_pytents
+    add_ngsolve_python_module2(_pytents
       ${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src/python_tents.cpp
       ${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src/tents.cpp
       )
@@ -46,7 +83,7 @@ if (NOT TARGET _pytents)
 endif()
 
 ### ngstrefftz
-add_ngsolve_python_module(_trefftz 
+add_ngsolve_python_module2(_trefftz 
     python_trefftz.cpp
     diffopmapped.hpp
     scalarmappedfe.cpp

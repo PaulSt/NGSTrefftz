@@ -348,9 +348,9 @@ namespace ngfem
            LocalHeap &lh) const
     {
       auto fluxsize = flux.AddSize (bmir.Size (), DIFFOP::DIM_DMAT);
-      const MappedIntegrationRule<this->DIM_ELEMENT, this->DIM_SPACE> &mir
-          = static_cast<const MappedIntegrationRule<this->DIM_ELEMENT,
-                                                    this->DIM_SPACE> &> (bmir);
+      const MappedIntegrationRule<DIFFOP::DIM_ELEMENT, DIFFOP::DIM_SPACE> &mir
+          = static_cast<const MappedIntegrationRule<DIFFOP::DIM_ELEMENT,
+                                                    DIFFOP::DIM_SPACE> &> (bmir);
       DIFFOP::ApplyIR (bfel, mir, x, fluxsize, lh);
     }
 
@@ -367,9 +367,9 @@ namespace ngfem
                      FlatMatrix<Complex> flux, BareSliceVector<Complex> x,
                      LocalHeap &lh) const
     {
-      const MappedIntegrationRule<this->DIM_ELEMENT, this->DIM_SPACE> &mir
-          = static_cast<const MappedIntegrationRule<this->DIM_ELEMENT,
-                                                    this->DIM_SPACE> &> (bmir);
+      const MappedIntegrationRule<DIFFOP::DIM_ELEMENT, DIFFOP::DIM_SPACE> &mir
+          = static_cast<const MappedIntegrationRule<DIFFOP::DIM_ELEMENT,
+                                                    DIFFOP::DIM_SPACE> &> (bmir);
       DIFFOP::ApplyTransIR (bfel, mir, flux, x, lh);
     }
   };
