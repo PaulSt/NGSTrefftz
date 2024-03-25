@@ -114,6 +114,7 @@ install(FILES
 ### tests 
 include(CTest)
 file(COPY 
+    ${CMAKE_SOURCE_DIR}/../test/dg.py
     ${CMAKE_SOURCE_DIR}/../test/embt.py
     ${CMAKE_SOURCE_DIR}/../test/trefftz.py
     ${CMAKE_SOURCE_DIR}/../test/tents.py
