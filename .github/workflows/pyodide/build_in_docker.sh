@@ -12,20 +12,11 @@ export SIDE_MODULE_LDFLAGS="-O2 -g0 -sWASM_BIGINT -s SIDE_MODULE=1"
 export TARGETINSTALLDIR=/root/xbuildenv/pyodide-root/cpython/installs/python-${PYTHON_VERSION}/
 export CMAKE_TOOLCHAIN_FILE=/root/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
 
+echo "TARGETINSTALLDIR $TARGETINSTALLDIR"
 sed -i 's/TARGET_SUPPORTS_SHARED_LIBS FALSE/TARGET_SUPPORTS_SHARED_LIBS TRUE/' $CMAKE_TOOLCHAIN_FILE
 echo 'set(CMAKE_STRIP "${EMSCRIPTEN_ROOT_PATH}/emstrip${EMCC_SUFFIX}" CACHE FILEPATH "Emscripten strip")' >> ${CMAKE_TOOLCHAIN_FILE}
 export CCACHE_DIR=/ccache
 ccache -s
-
-
-      #-DPYTHON_EXECUTABLE=$TARGETINSTALLDIR/../../../../dist \
-      #-DPYTHON_LIBRARY=$TARGETINSTALLDIR/lib/ \
-      #
-      #-DPYTHON_INCLUDE_DIR=$TARGETINSTALLDIR/include/python3.11 \
-      #-DPYTHON_VERSION=3.11.2 \
-      #
-      #-DCMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:/opt/netgen/lib/cmake/netgen:/opt/netgen/lib/cmake/ngsolve \
-      #-DNETGENDIR=/opt/netgen/bin \
 
 emcmake cmake /root/ngstrefftz/src \
        -DCMAKE_CROSSCOMPILING=ON \
@@ -55,8 +46,6 @@ emcmake cmake /root/ngstrefftz/src \
        -DPython3_ROOT_DIR=$TARGETINSTALLDIR \
        -DPython3_INCLUDE_DIR=$TARGETINSTALLDIR/include/python3.12 \
        -DPython3_INCLUDE_DIRS=$TARGETINSTALLDIR/include \
-       -DPYTHON_INCLUDE_DIRS=$TARGETINSTALLDIR/include \
-       -DPYTHON_LIBRARIES=$TARGETINSTALLDIR \
        -DNG_INSTALL_DIR_PYTHON=python \
        -DNG_INSTALL_DIR_LIB=python/netgen \
        -DUSE_STLGEOM:UNINITIALIZED=ON \
