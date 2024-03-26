@@ -6,6 +6,7 @@ from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from ngsolve.TensorProductTools import *
 from ngsolve import *
+from dg import *
 import time
 
 # USE tenthight = wavespeed + 3
@@ -95,7 +96,6 @@ def SolveWaveTents(initmesh, order, c, t_step):
     TT.SetInitial(bdd)
     TT.SetBoundaryCF(bdd[D+1])
     if initmesh.ngmesh.GetBCName(0) == "neumann": TT.SetBoundaryCF(bdd[1:D+1])
-    # print('HELLO',initmesh.ngmesh.GetBCName(0))
 
     start = time.time()
     with TaskManager():
@@ -103,11 +103,6 @@ def SolveWaveTents(initmesh, order, c, t_step):
     timing = (time.time()-start)
 
     error = TT.Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step))
-    # print("COMPARE ERRORS")
-    # print("L2 Error ", TT.L2Error(TT.GetWavefront(),TT.MakeWavefront(bdd,t_step)))
-    # print("L2 proj Error ", sqrt(Integrate((bdd[0] - TT.GetWave())**2, initmesh)) )
-    # input()
-    # adiam = TT.MaxAdiam()
 
     # return [error, timing, adiam]
     return error
