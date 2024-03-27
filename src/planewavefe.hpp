@@ -350,7 +350,8 @@ namespace ngfem
       auto fluxsize = flux.AddSize (bmir.Size (), DIFFOP::DIM_DMAT);
       const MappedIntegrationRule<DIFFOP::DIM_ELEMENT, DIFFOP::DIM_SPACE> &mir
           = static_cast<const MappedIntegrationRule<DIFFOP::DIM_ELEMENT,
-                                                    DIFFOP::DIM_SPACE> &> (bmir);
+                                                    DIFFOP::DIM_SPACE> &> (
+              bmir);
       DIFFOP::ApplyIR (bfel, mir, x, fluxsize, lh);
     }
 
@@ -369,7 +370,8 @@ namespace ngfem
     {
       const MappedIntegrationRule<DIFFOP::DIM_ELEMENT, DIFFOP::DIM_SPACE> &mir
           = static_cast<const MappedIntegrationRule<DIFFOP::DIM_ELEMENT,
-                                                    DIFFOP::DIM_SPACE> &> (bmir);
+                                                    DIFFOP::DIM_SPACE> &> (
+              bmir);
       DIFFOP::ApplyTransIR (bfel, mir, flux, x, lh);
     }
   };

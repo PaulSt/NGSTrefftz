@@ -263,18 +263,18 @@ namespace ngcomp
       // make_shared<ConstantCoefficientFunction> (1)
       /// (coeffA * coeffA);
 
-      this->ComputeDerivs<D> (order - 2, coeffAA, AAder);
-      this->ComputeDerivs<D> (order - 1, coeffB, BBder);
+      this->ComputeDerivs<D - 1> (order - 2, coeffAA, AAder);
+      this->ComputeDerivs<D - 1> (order - 1, coeffB, BBder);
     }
 
-    CSR Basis (int ord, Vec<D + 1> ElCenter, double elsize = 1.0,
-               int basistype = 0);
+    CSR
+    Basis (int ord, Vec<D> ElCenter, double elsize = 1.0, int basistype = 0);
   };
 
   template <int D> class FOQTWaveBasis : public PolBasis
   {
     mutex gentrefftzbasis;
-    Vec<D + 1, std::map<string, CSR>> gtbstore;
+    Vec<D, std::map<string, CSR>> gtbstore;
     Vector<shared_ptr<CoefficientFunction>> AAder;
     Vector<shared_ptr<CoefficientFunction>> BBder;
 
@@ -293,11 +293,11 @@ namespace ngcomp
       shared_ptr<CoefficientFunction> coeffAA
           = make_shared<ConstantCoefficientFunction> (1) / (coeffA * coeffA);
 
-      this->ComputeDerivs<D> (order - 1, coeffAA, AAder);
-      this->ComputeDerivs<D> (order - 1, coeffB, BBder);
+      this->ComputeDerivs<D - 1> (order - 1, coeffAA, AAder);
+      this->ComputeDerivs<D - 1> (order - 1, coeffB, BBder);
     }
 
-    CSR Basis (int ord, int rdim, Vec<D + 1> ElCenter, double elsize = 1.0);
+    CSR Basis (int ord, int rdim, Vec<D> ElCenter, double elsize = 1.0);
   };
 
   template <int D> class QTHeatBasis : public PolBasis

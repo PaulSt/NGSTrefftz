@@ -54,7 +54,7 @@ namespace ngcomp
     static Timer ttentmacro ("tentmacro");
     static Timer ttenteval ("tenteval");
 
-    CSR basismat = TWaveBasis<D>::Basis (order, 0, fosystem);
+    CSR basismat = TWaveBasis<D + 1>::Basis (order, 0, fosystem);
 
     RunParallelDependency (tps->tent_dependency, [&] (int tentnr) {
       LocalHeap slh = lh.Split (); // split to threads
