@@ -71,9 +71,9 @@ namespace ngcomp
           else if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
             {
               evaluator[VOL] = make_shared<
-                  T_DifferentialOperator<DiffOpMappedComplex<2>>> ();
+                  T_DifferentialOperatorC<DiffOpMappedComplex<2>>> ();
               flux_evaluator[VOL] = make_shared<
-                  T_DifferentialOperator<DiffOpMappedGradientComplex<2>>> ();
+                  T_DifferentialOperatorC<DiffOpMappedGradientComplex<2>>> ();
             }
           else
             {

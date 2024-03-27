@@ -1,205 +1,15 @@
 # import sys, os
 # sys.path.append(os.path.join(os.path.dirname(sys.path[0])))
 from ngstrefftz import *
-from embt import dglap
 # from ngstents import TentSlab
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from ngsolve.TensorProductTools import *
 from ngsolve import *
-from embt import *
+from dg import *
 import time
 ngsglobals.msg_level=0
 SetNumThreads(4)
-
-
-def DGwaveeqsys(fes,U0,v0,sig0,c,gD,fullsys=False, applyrhs = False,alpha=0.5,beta=0.5,gamma=1,mu=0,BB=1):
-    D = fes.mesh.dim - 1
-    # if not isinstance(BB,(int,float)): BB.spacedim = D
-    U = fes.TrialFunction()
-    V = fes.TestFunction()
-    gU = grad(U)
-    gV = grad(V)
-
-    v = gU[D]
-    sig = CoefficientFunction(tuple([-gU[i] for i in  range(D)]))*BB
-    w = gV[D]
-    tau = CoefficientFunction(tuple([-gV[i] for i in  range(D)]))*BB
-
-    vo = gU.Other()[D]
-    sigo = CoefficientFunction(tuple([-gU.Other()[i] for i in  range(D)]))*BB
-    wo = gV.Other()[D]
-    tauo = CoefficientFunction(tuple([-gV.Other()[i] for i in  range(D)]))*BB
-
-    h = specialcf.mesh_size
-    n = specialcf.normal(D+1)
-    n_t = n[D]/Norm(n)
-    n_x = CoefficientFunction( tuple([n[i]/Norm(n) for i in  range(D)]) )
-
-    mean_v = 0.5*(v+vo)
-    mean_w = 0.5*(w+wo)
-    mean_sig = 0.5*(sig+sigo)
-    mean_tau = 0.5*(tau+tauo)
-
-    jump_vx = ( v - vo ) * n_x
-    jump_wx = ( w - wo ) * n_x
-    jump_sigx = (( sig - sigo ) * n_x)
-    jump_taux = (( tau - tauo ) * n_x)
-
-    jump_vt = ( v - vo ) * n_t
-    jump_wt = ( w - wo ) * n_t
-    jump_sigt = ( sig - sigo ) * n_t
-    jump_taut = ( tau - tauo ) * n_t
-
-    jump_Ut = (U - U.Other()) * n_t
-    jump_Vt = (V - V.Other()) * n_t
-
-    timelike = n_x*n_x # n_t=0
-    spacelike = n_t**2 # n_x=0
-
-    delta=0.5
-    theta=1
-    gR=0
-
-    a = BilinearForm(fes)
-    if(fullsys==True):
-        HV = V.Operator("hesse")
-        a += SymbolicBFI( - v * (BB*sum([-HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
-        if not isinstance(BB,(int,float)):
-            a += SymbolicBFI( - v * (BB.Diff(x)*(-gV[0]) + BB.Diff(y)*(-gV[1])) )
-        # a += SymbolicBFI(  sig*(CoefficientFunction([-HV[i,D] for i in range(D)]) + CoefficientFunction([HV[D,i] for i in range(D)])) )
-        HU = U.Operator("hesse")
-        a += SymbolicBFI(  mu * pow(c,2)
-                              * (-sum([HU[i*(D+2)] for i in range(D)]) + pow(c,-2)*HU[(D+1)*(D+1)-1])
-                              * (-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1])
-                        )
-    #space like faces, w/o x jump ASSUME TENSOR MESH
-    if(applyrhs == False):
-        a += SymbolicBFI( spacelike * ( pow(c,-2)*IfPos(n_t,v,vo)*jump_wt + IfPos(n_t,sig,sigo)*jump_taut/BB ), VOL, skeleton=True )
-    # a += SymbolicBFI( spacelike * ( IfPos(n_t,v,vo)*(pow(c,-2)*jump_wt+jump_taux) + IfPos(n_t,sig,sigo)*(jump_wx+jump_taut) ), VOL, skeleton=True )
-    #time like faces
-    a += SymbolicBFI( timelike * ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ), VOL, skeleton=True )        #t=T (or *x)
-    a += SymbolicBFI( ( pow(c,-2)*v*w + sig*tau/BB ), BND, definedon=fes.mesh.Boundaries("outflow"), skeleton=True)
-    #dirichlet boundary 'timelike'
-    a += SymbolicBFI( ( sig*n_x*w + alpha*v*w ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True)
-    #impedence boundary
-    a += SymbolicBFI( (1-delta)*theta/c*v*w+(1-delta)*v*(tau*n_x)+delta*(sig*n_x)*w+delta*c/theta*(sig*n_x)*(tau*n_x) , BND, definedon=fes.mesh.Boundaries("robin"), skeleton=True)
-    #correction term to recover sol of second order system
-    if(applyrhs == False):
-        a += SymbolicBFI( spacelike * ( gamma * jump_Ut*jump_Vt ), VOL, skeleton=True )
-    # a += SymbolicBFI( spacelike * ( gamma * (n_t*jump_Ut)*IfPos(n_t,V.Other(),V) ), VOL, skeleton=True )
-    # a += SymbolicBFI( spacelike * ( gamma * (-n_t*jump_Ut)*IfPos(n_t,V.Other(),V) ), VOL, skeleton=True )
-    # a += SymbolicBFI( spacelike * ( gamma * (-jump_Ut)*IfPos(n_t,V.Other(),V) ), VOL, skeleton=True )
-    a += SymbolicBFI( ( gamma * U*V ), BND, definedon=fes.mesh.Boundaries("inflow"), skeleton=True )
-    a.Assemble()
-
-    if(applyrhs == False):
-
-        f = LinearForm(fes)
-        f += SymbolicLFI( ( pow(c,-2)*v0*w + sig0*tau ), BND, definedon=fes.mesh.Boundaries("inflow"), skeleton=True) #t=0 (or *(1-x))
-        f += SymbolicLFI( ( gD * (alpha*w - tau*n_x) ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True) #dirichlet boundary 'timelike'
-        f += SymbolicLFI( gamma * ( (U0)*V ), BND, definedon=fes.mesh.Boundaries("inflow"),  skeleton=True ) #rhs correction term to recover sol of second order system
-        f += SymbolicLFI( ( gR * ((1-delta)*w-delta*c/theta*tau*n_x) ), BND, definedon=fes.mesh.Boundaries("robin"), skeleton=True) #robin boundary 'timelike'
-        f.Assemble()
-    else:
-        # f = GridFunction(fes)
-        # rhs = BilinearForm(fes)
-        # rhs += SymbolicBFI( ( pow(c,-2)*vo*w + sigo*tau ), BND, definedon=fes.mesh.Boundaries("inflow"), skeleton=True) #t=0 (or *(1-x))
-        # rhs += SymbolicBFI( ( gD * (alpha*w - tau*n_x) ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True) #dirichlet boundary 'timelike'
-        # rhs += SymbolicBFI( gamma * ( U.Other()*V ), BND, definedon=fes.mesh.Boundaries("inflow"),  skeleton=True ) #rhs correction term to recover sol of second order system
-        # rhs.Apply(U0.vec,f.vec)
-
-        # a = BilinearForm(fes)
-        # if(fullsys==True):
-            # HV = V.Operator("hesse")
-            # a += SymbolicBFI(  -v*(-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
-        # a += SymbolicBFI( timelike * ( mean_v*jump_taux + mean_sig*jump_wx + alpha*jump_vx*jump_wx + beta*jump_sigx*jump_taux ), VOL, skeleton=True ) #time like faces
-        # a += SymbolicBFI( IfPos(n_t,1,0) * spacelike * ( pow(c,-2)*v*w + sig*tau ), element_boundary=True) #t=T (or *x)
-        # a += SymbolicBFI( IfPos(n_t,0,1) * spacelike * ( gamma * U*V ), element_boundary=True ) #BND correction term to recover sol of second order system
-        # a += SymbolicBFI( ( sig*n_x*w + alpha*v*w ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True) #dirichlet boundary 'timelike'
-        # a += SymbolicBFI( (1-delta)*theta/c*v*w+(1-delta)*v*(tau*n_x)+delta*(sig*n_x)*w+delta*c/theta*(sig*n_x)*(tau*n_x) , BND, definedon=fes.mesh.Boundaries("robin"), skeleton=True)
-        # a.Assemble()
-        f = GridFunction(fes)
-        rhs = BilinearForm(fes)
-        rhs += SymbolicBFI( IfPos(n_t,0,1) * spacelike * ( pow(c,-2)*vo*w + sigo*tau ), element_boundary=True ) #space like faces, w/o x jump
-        rhs += SymbolicBFI( IfPos(n_t,0,1) * spacelike * ( U.Other()*V ), element_boundary=True )
-        rhs += SymbolicBFI( ( gD * (alpha*w - tau*n_x) ), BND, definedon=fes.mesh.Boundaries("dirichlet"), skeleton=True) #dirichlet boundary 'timelike'
-        rhs += SymbolicBFI( ( gR * ((1-delta)*w-delta*c/theta*tau*n_x) ), BND, definedon=fes.mesh.Boundaries("robin"), skeleton=True) #robin boundary 'timelike'
-        rhs.Apply(U0.vec,f.vec)
-
-    return [a,f]
-
-def DGnormerror(fes,uh,gradtruesol,c,alpha,beta,BB=1):
-    D = fes.mesh.dim - 1
-    U = fes.TrialFunction()
-    V = fes.TestFunction()
-    gU = grad(U)
-    gV = grad(V)
-
-    v = gU[D]
-    sig = CoefficientFunction(tuple([-gU[i] for i in  range(D)]))
-    w = gV[D]
-    tau = CoefficientFunction(tuple([-gV[i] for i in  range(D)]))
-
-    vo = gU.Other()[D]
-    sigo = CoefficientFunction(tuple([-gU.Other()[i] for i in  range(D)]))
-    wo = gV.Other()[D]
-    tauo = CoefficientFunction(tuple([-gV.Other()[i] for i in  range(D)]))
-
-    h = specialcf.mesh_size
-    n = specialcf.normal(D+1)
-    n_t = n[D]/Norm(n)
-    n_x = CoefficientFunction( tuple([n[i]/Norm(n) for i in  range(D)]) )
-
-    mean_v = 0.5*(v+vo)
-    mean_w = 0.5*(w+wo)
-    mean_sig = 0.5*(sig+sigo)
-    mean_tau = 0.5*(tau+tauo)
-
-    jump_vx = ( v - vo ) * n_x
-    jump_wx = ( w - wo ) * n_x
-    jump_sigx = (( sig - sigo ) * n_x)
-    jump_taux = (( tau - tauo ) * n_x)
-
-    jump_vt = ( v - vo ) * n_t
-    jump_wt = ( w - wo ) * n_t
-    jump_sigt = ( sig - sigo ) * n_t
-    jump_taut = ( tau - tauo ) * n_t
-
-    jump_Ut = (U - U.Other()) * n_t
-    jump_Vt = (V - V.Other()) * n_t
-
-    timelike = n_x*n_x # n_t=0
-    spacelike = n_t**2 # n_x=0
-
-    # make use of the fact that on a Cart mesh we have A(w,tau;w,tau)=||(w,tau)||^2_DG
-    a = BilinearForm(fes)
-    # if(fullsys==True):
-        # HV = V.Operator("hesse")
-        # # a += SymbolicBFI(  -v*(-HV[0]+pow(c,-2)*HV[3]) ) #- sig*(-HV[1]+HV[2])  )
-        # a += SymbolicBFI(  -v*(-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1]) )
-        # HU = U.Operator("hesse")
-        # a += SymbolicBFI(  mu * pow(c,2)
-                              # * (-sum([HU[i*(D+2)] for i in range(D)]) + pow(c,-2)*HU[(D+1)*(D+1)-1])
-                              # * (-sum([HV[i*(D+2)] for i in range(D)]) + pow(c,-2)*HV[(D+1)*(D+1)-1])
-                        # )
-    # space like faces, w/o x jump
-    a += SymbolicBFI( spacelike * 0.5 * pow(c,-2)*jump_wt*jump_vt , VOL, skeleton=True)
-    a += SymbolicBFI( spacelike * 0.5 * 1/BB*jump_taut * jump_sigt , VOL, skeleton=True )
-    # time like faces
-    a += SymbolicBFI( timelike * alpha * jump_vx * jump_wx , VOL, skeleton=True )
-    a += SymbolicBFI( timelike * beta * jump_sigx * jump_taux , VOL, skeleton=True )
-    jumppart = uh.vec.CreateVector()
-    a.Apply(uh.vec,jumppart)
-    # smooth solution vanishes on jumppart
-    norm = 0
-    norm += uh.vec.InnerProduct(jumppart)
-    norm += 0.5 * Integrate((BoundaryFromVolumeCF(grad(uh)[D]) - gradtruesol[D])**2 / c, fes.mesh, definedon=fes.mesh.Boundaries("outflow|inflow"))
-    norm += 0.5 * Integrate(sum((BoundaryFromVolumeCF(grad(uh)[i]) - gradtruesol[i])**2 / sqrt(BB) for i in range(D)), fes.mesh, definedon=fes.mesh.Boundaries("outflow|inflow"))
-    norm += Integrate(alpha * (BoundaryFromVolumeCF(grad(uh)[D]) - gradtruesol[D])**2 , fes.mesh, definedon=fes.mesh.Boundaries("dirichlet"))
-
-    return sqrt(norm)
-
 
 
 import netgen.meshing as ngm
@@ -265,7 +75,7 @@ def testlaptrefftz(order,mesh):
     2...e-06
     """
     fes = trefftzfespace(mesh,order=order,eq="laplace")
-    a,f = dglap(fes,exactlap)
+    a,f = dgell(fes,exactlap)
     gfu = GridFunction(fes)
     gfu.vec.data = a.mat.Inverse() * f.vec
     return sqrt(Integrate((gfu-exactlap)**2, mesh))
@@ -273,51 +83,6 @@ def testlaptrefftz(order,mesh):
 ########################################################################
 # Helmholtz
 ########################################################################
-
-def dghelm(fes,fes2,bndc,omega):
-    mesh = fes.mesh
-    order = fes.globalorder
-    n = specialcf.normal(mesh.dim)
-    h = specialcf.mesh_size
-    alpha = 1/(omega*h)
-    beta = omega*h
-    delta = omega*h
-
-    u = fes.TrialFunction()
-    v = fes.TestFunction()
-    if fes2 is not None:
-        v = fes2.TestFunction()
-    jump_u = (u-u.Other())*n
-    jump_v = (v-v.Other())*n
-    jump_du = (grad(u)-grad(u.Other()))*n
-    jump_dv = (grad(v)-grad(v.Other()))*n
-    mean_u = 0.5 * ((u)+(u.Other()))
-    mean_du = 0.5 * (grad(u)+grad(u.Other()))
-    mean_dv = 0.5 * (grad(v)+grad(v.Other()))
-
-    a = BilinearForm(fes)
-    if fes2 is not None:
-        a = BilinearForm(fes,fes2)
-    a += mean_u*(jump_dv) * dx(skeleton=True)
-    a += 1/omega*1j*beta*jump_du*(jump_dv) * dx(skeleton=True)
-    a += -mean_du*(jump_v) * dx(skeleton=True)
-    a += omega*1j*alpha*jump_u*(jump_v) * dx(skeleton=True)
-
-    a += (1-delta)*u*(grad(v))*n * ds(skeleton=True)
-    a += 1/omega*1j*delta*(grad(u)*n)*((grad(v))*n) * ds(skeleton=True)
-    a += -delta*grad(u)*n*(v) * ds(skeleton=True)
-    a += omega*1j*(1-delta)*u*(v) * ds(skeleton=True)
-
-    f = LinearForm(fes)
-    if fes2 is not None:
-        f = LinearForm(fes2)
-    f += 1/omega*1j*delta*bndc*(grad(v))*n*ds(skeleton=True)
-    f += (1-delta)*bndc*(v)*ds(skeleton=True)
-
-    with TaskManager():
-        a.Assemble()
-        f.Assemble()
-    return a,f
 
 def testhelmtrefftz(order,mesh):
     """
@@ -345,48 +110,31 @@ def testhelmtrefftz(order,mesh):
 ########################################################################
 # Waveeq
 ########################################################################
-def TestSolution2D(fes,c,timeoffset=0):
-    k = 3
-    truesol = sin( k*(c*y + x) )
-    v0 = c*k*cos(k*(c*y+x))
-    sig0 = -k*cos(k*(c*y+x))
-    gD = v0
-    U0 = GridFunction(fes)
-    U0.Set(truesol)
-    return [truesol,U0,sig0,v0,gD]
 
-
-def PostProcess(fes, truesol, sol):
-    mesh = fes.mesh
-    U = GridFunction(fes)
-    U.Set(truesol)
-    L2error = sqrt(Integrate((truesol - sol)*(truesol - sol), mesh))
-    sH1error = sqrt(Integrate((grad(U) - grad(sol))*(grad(U) - grad(sol)), mesh))
-    return [L2error,sH1error]
-
-
-def Cartsolve2D(fes,c,fullsys=False,inputsol=None):
+def Cartsolve2D(fes,c,fullsys=False):
     """
     We can solve on a simple rectangle grid
     >>> N = 4
     >>> c = 2
-    >>> order = 8
     >>> mesh = CartSquare(N,c*N)
 
     using Trefftz basis
-    >>> fes = trefftzfespace(mesh, order = order, dgjumps=True, eq="wave")
+    >>> fes = trefftzfespace(mesh, order = 8, dgjumps=True, eq="wave")
     >>> fes.SetCoeff(c)
     >>> Cartsolve2D(fes,c) # doctest:+ELLIPSIS
-    [17.0, ..., ...e-09, ...e-08]
+    [17.0, ..., ...e-09, ...e-07]
 
     or normal L2 basis, requiring the full system
-    >>> fes = L2(mesh, order=order, dgjumps=True)
+    >>> fes = monomialfespace(mesh, order=8, dgjumps=True)
     >>> Cartsolve2D(fes,c,True) # doctest:+ELLIPSIS
-    [81.0, ..., ...e-12, ...e-10]
+    [45.0, ..., ...e-09, ...e-07]
     """
-    if inputsol is None:
-        inputsol = TestSolution2D(fes,c)
-    [truesol,U0,sig0,v0,gD] = inputsol
+    k = 3
+    sol = sin( k*(c*y + x) )
+    v0 = c*k*cos(k*(c*y+x))
+    sig0 = -k*cos(k*(c*y+x))
+    gD = v0
+    U0=sol
 
     start = time.time()
     [a,f] = DGwaveeqsys(fes,U0,v0,sig0,c,gD,fullsys,False,0.5,0.5,1)
@@ -398,7 +146,10 @@ def Cartsolve2D(fes,c,fullsys=False,inputsol=None):
     cond = 0
     # print("DGsolve: ", str(time.clock()-start))
 
-    [L2error, sH1error] = PostProcess(fes,truesol,gfu)
+    mesh = fes.mesh
+    gts = CF((sol.Diff(x),sol.Diff(y)))
+    L2error = sqrt(Integrate((sol - gfu)*(sol - gfu), mesh))
+    sH1error = sqrt(Integrate((gts - grad(gfu))*(gts - grad(gfu)), mesh))
 
     dof=fes.ndof/fes.mesh.ne
 
@@ -502,46 +253,8 @@ def TestHeat():
     #fes = L2(mesh, order=order, dgjumps=True)
     fes = trefftzfespace(mesh, order=2*order+1, dgjumps=True, eq="heat")
     fes.SetCoeff(diffusion)
-    # import pdb; pdb.set_trace()
-    u, v = fes.TnT()
-
-    eps = diffusion
-    b = CoefficientFunction((0, 1))
     ubnd = exp(y*diffusion)*exp(x)
-    lambd = 10
-    h = specialcf.mesh_size
-    n = specialcf.normal(mesh.dim)
-
-    space_jump_u = (u-u.Other())
-    space_jump_v = (v-v.Other())
-    space_mean_dudn = 0.5* (grad(u)[0]+grad(u.Other())[0])*n[0]
-    space_mean_dvdn = 0.5* (grad(v)[0]+grad(v.Other())[0])*n[0]
-
-    space_diffusion = grad(u)[0]*grad(v)[0] * dx \
-        + lambd*(order*n[0])**2/h*space_jump_u*space_jump_v*dx(skeleton=True) \
-        + (-space_mean_dudn*space_jump_v - space_mean_dvdn*space_jump_u)*dx(skeleton=True) \
-        + (-grad(u)[0]*n[0] * v -grad(v)[0]*n[0] * u)*ds(definedon=mesh.Boundaries("left|right"),skeleton=True) \
-        + lambd*(order*n[0])**2/h*u*v*ds(definedon=mesh.Boundaries("left|right"),skeleton=True)
-
-    space_time_convection = -b * u * grad(v)*dx \
-        + b*n*IfPos(b*n, u, u.Other()) * (v-v.Other()) * dx(skeleton=True) \
-        + b*n*u*v * ds(definedon=mesh.Boundaries("top"), skeleton=True)
-
-    a = BilinearForm(fes, symmetric=False)
-    a += eps * space_diffusion + space_time_convection
-    a.Assemble()
-
-    #f_coef = (ubnd.Diff(y)-eps*ubnd.Diff(x).Diff(x) )
-
-    f = LinearForm(fes)
-    #f += f_coef * v * dx
-    f += -b*n* ubnd * v * ds(definedon=mesh.Boundaries("bottom"),skeleton=True)
-    f += -eps*grad(v)[0]*n[0] * ubnd * ds(definedon=mesh.Boundaries("left|right"),skeleton=True)
-    f += eps*lambd*(order*n[0])**2/h*ubnd*v*ds(definedon=mesh.Boundaries("left|right"),skeleton=True)
-    f.Assemble()
-
-    gfu = GridFunction(fes)
-    gfu.vec.data = a.mat.Inverse() * f.vec
+    gfu = dgheat(fes, diffusion, ubnd)
 
     return sqrt(Integrate((gfu-ubnd)**2, mesh))
 
@@ -550,13 +263,13 @@ def TestHeat():
 # QTelliptic
 ########################################################################
 
-def dgell(mesh,order):
+def qtell(mesh,order):
 
     """
     Solve qtell equation using Trefftz fcts
     >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
     >>> for i in range(3):
-    ...     dgell(mesh,4) # doctest:+ELLIPSIS
+    ...     qtell(mesh,4) # doctest:+ELLIPSIS
     ...     mesh.Refine()
     3...e-05
     ...e-06
@@ -573,65 +286,19 @@ def dgell(mesh,order):
     Nbnd=""
     Nbndc = 0
 
-
     fes = trefftzfespace(mesh,order=order,eq="qtelliptic")
     with TaskManager():
         fes.SetCoeff(A,B,C)
         uf = fes.GetEWSolution(rhs)
 
-    mesh = fes.mesh
-    order = fes.globalorder
-
-    n = specialcf.normal(mesh.dim)
-    h = specialcf.mesh_size
-
-    alpha = 4*order**2/h
-
-    u = fes.TrialFunction()
-    v = fes.TestFunction()
-    jump = lambda u: (u-u.Other())*n
-    mean_d = lambda u: 0.5 * A * (grad(u)+grad(u).Other())
-    mean_B = lambda u: 0.5 * B * (u+u.Other())
-
-    a = BilinearForm(fes)
-    a += A*grad(u)*grad(v) * dx \
-        +alpha*jump(u)*jump(v) * dx(skeleton=True) \
-        +(-mean_d(u)*jump(v)-mean_d(v)*jump(u)) * dx(skeleton=True) \
-        +alpha*u*v * ds(skeleton=True,definedon=mesh.Boundaries(Dbnd)) \
-        +(-A*grad(u)*n*v-A*grad(v)*n*u)* ds(skeleton=True,definedon=mesh.Boundaries(Dbnd))
-    a += (-B*u*grad(v) + C*u*v) * dx \
-        + (mean_B(u) * jump(v) + 0.5*sqrt((B*n)**2)*jump(u)*jump(v)) * dx(skeleton=True) \
-        + B*u*n*v * ds(skeleton=True,definedon=mesh.Boundaries(Nbnd)) 
-
-    f = LinearForm(fes)
-    f += Dbndc * (-A*grad(v)*n + alpha*v - B*n*v) * ds(skeleton=True,definedon=mesh.Boundaries(Dbnd)) \
-         - Nbndc * v * ds(skeleton=True,definedon=mesh.Boundaries(Nbnd)) \
-         + rhs*v*dx
-    if uf:
-        f += -A*grad(uf)*grad(v) * dx \
-            -alpha*jump(uf)*jump(v) * dx(skeleton=True) \
-            -(-mean_d(uf)*jump(v)-mean_d(v)*jump(uf)) * dx(skeleton=True) \
-            -alpha*uf*v * ds(skeleton=True,definedon=mesh.Boundaries(Dbnd)) \
-            -(-A*grad(uf)*n*v-A*grad(v)*n*uf)* ds(skeleton=True,definedon=mesh.Boundaries(Dbnd))
-        f += (B*uf*grad(v) - C*uf*v) * dx \
-            - (mean_B(uf) * jump(v) + 0.5*sqrt((B*n)**2)*jump(uf)*jump(v)) * dx(skeleton=True) \
-            - B*uf*n*v * ds(skeleton=True,definedon=mesh.Boundaries(Nbnd)) 
-
-
+    a,f = dgell(fes,Dbndc,rhs=rhs,uf=uf,A=A,B=B,C=C)
     with TaskManager():
-        a.Assemble()
-        f.Assemble()
         gfu = GridFunction(fes)
         gfu.vec.data = a.mat.Inverse() * f.vec
-
     gfu += uf
 
     error = sqrt(Integrate((gfu-exact)**2,mesh))
     return error
-
-
-
-
 
 
 if __name__ == "__main__":

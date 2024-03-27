@@ -4,7 +4,7 @@ import os
 
 pyodide_version = os.environ['PYODIDE_VERSION']
 
-repo_file = 'repodata.json'
+repo_file = 'pyodide-lock.json'
 ori = json.load(open(repo_file))
 pkg = ori['packages']
 
@@ -26,40 +26,40 @@ pkg.update({
       "version": "6.9.2",
       "file_name": "../../extensions/@jupyterlite/pyodide-kernel-extension/static/pypi/./ipykernel-6.9.2-py3-none-any.whl",
       "install_dir": "site",
-      "sha256": "3024d4ac0f91cb909d0d74e8be144ab2edf2c8b3a8c46df68c3efd910b15699f",
+      "sha256": "83d4bd34f31029710294f53e6f11ac06f48f6777098a5b8cb0ae9aa46fb38764",
       "imports": [],
       "depends": []
     },
     "piplite": {
       "name": "piplite",
-      "version": "0.1.1",
-      "file_name": "../../extensions/@jupyterlite/pyodide-kernel-extension/static/pypi/piplite-0.1.1-py3-none-any.whl",
+      "version": "0.3.0a0",
+      "file_name": "../../extensions/@jupyterlite/pyodide-kernel-extension/static/pypi/piplite-0.3.0a0-py3-none-any.whl",
       "install_dir": "site",
-      "sha256": "95ec2f128ad4e1c7d8bde13bb5261b669c72746094e128297c478e75adf24b5e",
+      "sha256": "20734a5170829f6b8b56179d601f10e36a6289f00a85eb0ded9c7a37d085f982",
       "imports": [],
       "depends": []
     },
     "pyodide-kernel": {
       "name": "pyodide-kernel",
-      "version": "0.1.1",
-      "file_name": "../../extensions/@jupyterlite/pyodide-kernel-extension/static/pypi/./pyodide_kernel-0.1.1-py3-none-any.whl",
+      "version": "0.3.0a0",
+      "file_name": "../../extensions/@jupyterlite/pyodide-kernel-extension/static/pypi/./pyodide_kernel-0.3.0a0-py3-none-any.whl",
       "install_dir": "site",
-      "sha256": "cf50220493bf2bd6f1dfc5f0c10c64476c5c5fb93c5bab154fac0fe5f47f968a",
+      "sha256": "9d9a78d0305b359cc494b7343257e12049c5753819f3fe7c82bc9f4e2424de69",
       "imports": [],
       "depends": []
     },
     "widgetsnbextension": {
       "name": "widgetsnbextension",
-      "version": "4.0.7",
-      "file_name": "../../extensions/@jupyterlite/pyodide-kernel-extension/static/pypi/./widgetsnbextension-4.0.7-py3-none-any.whl",
+      "version": "4.0.10",
+      "file_name": "../../extensions/@jupyterlite/pyodide-kernel-extension/static/pypi/./widgetsnbextension-4.0.10-py3-none-any.whl",
       "install_dir": "site",
-      "sha256": "5fd374049672a5350eb999956f3051dde5523983f8a611b11a6ffabc32a794df",
+      "sha256": "28b5e8b2a9fa39d187b88e4f5dea10441b0cd3a5afc4a3b8d452e9c256f22c46",
       "imports": [],
       "depends": []
     },
     "netgen": {
       "name": "netgen",
-      "version": "6.2.2304",
+      "version": "6.2.2402",
       "file_name": "netgen.zip",
       "install_dir": "stdlib",
       "sha256": getHash("netgen.zip"),
@@ -76,7 +76,7 @@ pkg.update({
     },
     "ngsolve": {
       "name": "ngsolve",
-      "version": "6.2.2304",
+      "version": "6.2.2402",
       "file_name": "ngsolve.zip",
       "install_dir": "stdlib",
       "sha256": getHash("ngsolve.zip"),
@@ -85,7 +85,6 @@ pkg.update({
         "ngsolve"
       ],
       "depends": [
-        "clapack",
         "numpy",
         "netgen"
       ],
@@ -108,7 +107,7 @@ pkg.update({
     },
     "ngstents": {
       "name": "ngstents",
-      "version": "6.2.2304",
+      "version": "0.0.1",
       "file_name": "ngstents.zip",
       "install_dir": "stdlib",
       "sha256": getHash("ngstents.zip"),
@@ -124,7 +123,7 @@ pkg.update({
     },
     "ngstrefftz": {
       "name": "ngstrefftz",
-      "version": "6.2.2304",
+      "version": "0.3.2401",
       "file_name": "ngstrefftz.zip",
       "install_dir": "stdlib",
       "sha256": getHash("ngstrefftz.zip"),
