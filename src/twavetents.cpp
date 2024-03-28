@@ -22,6 +22,13 @@ namespace ngfem
 
 namespace ngcomp
 {
+  template <int D>
+  void SetWavespeed (ScalarMappedElement<D> &tel, double wavespeed)
+  {
+    Vec<D> scale = tel.GetScale ();
+    scale[D - 1] = scale[0] * wavespeed;
+    tel.SetScale (scale);
+  }
 
   template <typename T> int sgn_nozero (T val)
   {
@@ -64,7 +71,7 @@ namespace ngcomp
       center.Range (0, D) = ma->GetPoint<D> (tent->vertex);
       center[D] = (tent->ttop - tent->tbot) / 2 + tent->tbot;
       ScalarMappedElement<D + 1> tel (nbasis, order, basismat, ET_TET, center,
-                                      TentAdiam (tent), 1);
+                                      1.0 / TentAdiam (tent));
 
       std::unordered_map<int, int> macroel;
       int ndomains = MakeMacroEl (tent->els, macroel);
@@ -86,7 +93,7 @@ namespace ngcomp
           // Integrate boundary tent
           if (elnums.Size () == 1 && selnums.Size () == 1)
             {
-              tel.SetWavespeed (wavespeed[elnums[0]]);
+              SetWavespeed (tel, wavespeed[elnums[0]]);
               int eli = ndomains > 1 ? macroel[elnums[0]] : 0;
 
               SliceMatrix<> subm
@@ -111,7 +118,7 @@ namespace ngcomp
       // Integrate top and bottom space-like tent faces
       for (size_t elnr = 0; elnr < tent->els.Size (); elnr++)
         {
-          tel.SetWavespeed (wavespeed[tent->els[elnr]]);
+          SetWavespeed (tel, wavespeed[tent->els[elnr]]);
           int eli = ndomains > 1 ? macroel[tent->els[elnr]] : 0;
           SliceMatrix<> subm = elmat.Cols (eli * nbasis, (eli + 1) * nbasis)
                                    .Rows (eli * nbasis, (eli + 1) * nbasis);
@@ -129,7 +136,7 @@ namespace ngcomp
       // eval solution on top of tent
       for (size_t elnr = 0; elnr < tent->els.Size (); elnr++)
         {
-          tel.SetWavespeed (wavespeed[tent->els[elnr]]);
+          SetWavespeed (tel, wavespeed[tent->els[elnr]]);
           int eli = ndomains > 1 ? macroel[tent->els[elnr]] : 0;
           CalcTentElEval (tent->els[elnr], tent, tel, sir, slh,
                           sol.Range (eli * nbasis, (eli + 1) * nbasis),
@@ -454,14 +461,14 @@ namespace ngcomp
 
     FlatMatrix<> *bbmat[2];
 
-    tel.SetWavespeed (this->wavespeed[elnums[0]]);
+    SetWavespeed (tel, this->wavespeed[elnums[0]]);
     FlatMatrix<SIMD<double>> simddshapes1 ((D + 1) * nbasis, sir.Size (), slh);
     tel.CalcDShape (smir, simddshapes1);
     bbmat[0]
         = new FlatMatrix<> (nbasis, (D + 1) * snip,
                             reinterpret_cast<double *> (&simddshapes1 (0, 0)));
 
-    tel.SetWavespeed (this->wavespeed[elnums[1]]);
+    SetWavespeed (tel, this->wavespeed[elnums[1]]);
     FlatMatrix<SIMD<double>> simddshapes2 ((D + 1) * nbasis, sir.Size (), slh);
     tel.CalcDShape (smir, simddshapes2);
     bbmat[1]
@@ -954,7 +961,7 @@ namespace ngcomp
       CSR basismat = this->basis.Basis (this->order, center, tentsize);
       int nbasis = this->nbasis;
       ScalarMappedElement<D + 1> tel (nbasis, this->order, basismat, ET_TET,
-                                      center, tentsize, 1);
+                                      center, 1.0 / tentsize);
 
       FlatMatrix<> elmat (nbasis, slh);
       FlatVector<> elvec (nbasis, slh);

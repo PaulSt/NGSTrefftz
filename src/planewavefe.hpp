@@ -13,14 +13,16 @@ namespace ngfem
     Vec<D> GetDirection (int i) const;
     bool iscomplex = true;
     int conj;
+    double elsize;
+    double c;
 
   public:
     PlaneWaveElement (int andof, int aord, ELEMENT_TYPE aeltype,
-                      Vec<D> aelcenter = 0, double aelsize = 1, float ac = 1.0,
+                      Vec<D> ashift = 0, double aelsize = 1, double ac = 1.0,
                       int aconj = 1)
-        : ScalarMappedElement<D> (andof, aord, Matrix<> (), aeltype, aelcenter,
-                                  aelsize, ac),
-          conj (aconj)
+        : ScalarMappedElement<D> (andof, aord, Matrix<> (), aeltype, ashift,
+                                  1.0),
+          elsize (aelsize), c (ac), conj (aconj)
     {
       ;
     }

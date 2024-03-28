@@ -28,7 +28,7 @@ namespace ngfem
                                        BareSliceVector<Complex> shape) const
   {
     Vec<2> cpoint = mip.GetPoint ();
-    cpoint -= elcenter;
+    cpoint -= shift;
 
     for (int i = 0; i < this->ndof; ++i)
       {
@@ -44,7 +44,7 @@ namespace ngfem
                                         BareSliceMatrix<Complex> dshape) const
   {
     Vec<2> cpoint = mip.GetPoint ();
-    cpoint -= elcenter;
+    cpoint -= shift;
 
     for (int d = 0; d < 2; d++)
       for (int i = 0; i < this->ndof; ++i)

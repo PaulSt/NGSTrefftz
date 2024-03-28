@@ -139,7 +139,7 @@ namespace ngcomp
   protected:
     void UpdateBasis ();
     template <int D>
-    double ElSize (ElementId ei, double coeff_const = 1.0) const
+    double ElSize (ElementId ei, Vec<D> coeff_const = 1.0) const
     {
       double anisotropicdiam = 0.0;
       auto vertices_index = ma->GetElVertices (ei);
@@ -147,12 +147,9 @@ namespace ngcomp
         {
           for (auto vertex2 : vertices_index)
             {
-              Vec<D> v1 = ma->GetPoint<D> (vertex1);
-              Vec<D> v2 = ma->GetPoint<D> (vertex2);
-              anisotropicdiam = max (
-                  anisotropicdiam,
-                  sqrt (L2Norm2 (v1.Range (0, D - 1) - v2.Range (0, D - 1))
-                        + pow (coeff_const * (v1 (D - 1) - v2 (D - 1)), 2)));
+              Vec<D> v = ma->GetPoint<D> (vertex2) - ma->GetPoint<D> (vertex1);
+              vtimes (v, coeff_const);
+              anisotropicdiam = max (anisotropicdiam, sqrt (L2Norm2 (v)));
             }
         }
       return anisotropicdiam * usescale + (usescale == 0);
