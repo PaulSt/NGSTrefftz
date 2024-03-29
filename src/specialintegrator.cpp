@@ -35,8 +35,9 @@ namespace ngfem
 
   template <int D>
   int GetElnrNeighbourByPoint (shared_ptr<ngcomp::MeshAccess> ma,
-                               MappedIntegrationPoint<D, D> mip, int elnr,
-                               IntegrationPoint &neighbourip, int &localfnum)
+                               MappedIntegrationPoint<D, D> mip,
+                               ElementId elnr, IntegrationPoint &neighbourip,
+                               int &localfnum)
   {
     auto fnums = ma->GetElFacets (elnr);
     localfnum = 0;
@@ -46,7 +47,7 @@ namespace ngfem
         ma->GetFacetElements (i, elnums);
         for (int elnr2 : elnums)
           {
-            if (elnr2 != elnr
+            if (elnr2 != elnr.Nr ()
                 && PointContainedInElement (ma, mip, neighbourip, elnr2))
               return elnr2;
           }
@@ -534,11 +535,11 @@ namespace ngfem
                 // if (!eltrans1.BelongsToMesh (uhma.get ()))
                 //{
                 IntegrationPoint rip1;
-                int uh_elnr1 = uhma->FindElementOfPoint (
+                auto uh_el1 = uhma->FindElementOfPoint (
                     mip1.GetPoint (), rip1,
                     true); // buildtree not yet threadsafe (maybe now ?)
                 const ElementTransformation &uh_trafo1
-                    = uhma->GetTrafo (ElementId (VOL, uh_elnr1), lh);
+                    = uhma->GetTrafo (uh_el1, lh);
                 // BaseMappedIntegrationPoint &uh_mip1 = uh_trafo1 (rip1, lh);
                 MappedIntegrationPoint<D, D> uh_mip1 (rip1, uh_trafo1);
                 //// ASSUME CONST OUTWARD NORMAL, OR TODO: GET LOCALFACET
@@ -548,30 +549,21 @@ namespace ngfem
                 IntegrationPoint rip2;
                 int uh_LocalFacetNr1, uh_LocalFacetNr2;
                 int uh_elnr2 = GetElnrNeighbourByPoint (
-                    uhma, mip1, uh_elnr1, rip2, uh_LocalFacetNr1);
+                    uhma, mip1, uh_el1, rip2, uh_LocalFacetNr1);
+                ElementId uh_el2 (VOL, uh_elnr2);
                 IntegrationPoint dip;
-                GetElnrNeighbourByPoint (uhma, mip1, uh_elnr2, dip,
+                GetElnrNeighbourByPoint (uhma, mip1, uh_el2, dip,
                                          uh_LocalFacetNr2);
                 const ElementTransformation &uh_trafo2
-                    = uhma->GetTrafo (ElementId (VOL, uh_elnr2), lh);
+                    = uhma->GetTrafo (uh_el2, lh);
                 MappedIntegrationPoint<D, D> uh_mip2 (rip2, uh_trafo2);
 
-                // cout << "LocalFacetNr1: " << LocalFacetNr1
-                //<< " LocalFacetNr2: " << LocalFacetNr2 << endl
-                //<< "uh_LocalFacetNr1: " << uh_LocalFacetNr1
-                //<< " uh_LocalFacetNr2: " << uh_LocalFacetNr2 << endl;
-                // cout << "uh_elnr1: " << uh_elnr1 << " uh_elnr2: " <<
-                // uh_elnr2
-                //<< endl;
-
-                Vec<D> uh_normal1
-                    = GetNormal (uhma->GetElType (ElementId (VOL, uh_elnr1)),
-                                 uh_LocalFacetNr1, uh_mip1);
+                Vec<D> uh_normal1 = GetNormal (uhma->GetElType (uh_el1),
+                                               uh_LocalFacetNr1, uh_mip1);
                 uh_normal1 *= 1 / L2Norm (uh_normal1);
 
-                Vec<D> uh_normal2
-                    = GetNormal (uhma->GetElType (ElementId (VOL, uh_elnr2)),
-                                 uh_LocalFacetNr2, uh_mip2);
+                Vec<D> uh_normal2 = GetNormal (uhma->GetElType (uh_el2),
+                                               uh_LocalFacetNr2, uh_mip2);
                 uh_normal2 *= 1 / L2Norm (uh_normal2);
 
                 // cout << "uh_mip1: " << uh_mip1.Point () << endl

@@ -350,7 +350,7 @@ namespace ngcomp
                 }
               else if (eqtyp == "heat")
                 {
-                  Vec<2> scale = 1.0 / ElSize<2> (ei);
+                  Vec<2> scale = 1.0 / sqrt(ElSize<2> (ei));
                   scale[1] = coeff_const * scale[1] * scale[1];
                   return *(new (alloc) ScalarMappedElement<2> (
                       local_ndof, order, basismat, eltype, ElCenter<2> (ei),
@@ -358,11 +358,14 @@ namespace ngcomp
                 }
               else if (eqtyp == "qtheat")
                 {
+                  double hx = ElSize<2> (ei, { 1.0, 0 });
+                  double ht = ElSize<2> (ei, { 0, 1.0 });
+                  Vec<2> scale ({ 1.0 / hx, 1.0 / ht });
                   CSR basismat = static_cast<QTHeatBasis<2> *> (basis)->Basis (
-                      ElCenter<2> (ei), ElSize<2> (ei));
+                      ElCenter<2> (ei), hx, ht);
                   return *(new (alloc) ScalarMappedElement<2> (
                       local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                      ElSize<2> (ei)));
+                      scale));
                 }
               else
                 {
@@ -420,7 +423,7 @@ namespace ngcomp
                 }
               else if (eqtyp == "heat")
                 {
-                  Vec<3> scale = 1.0 / ElSize<3> (ei);
+                  Vec<3> scale = 1.0 / sqrt(ElSize<3> (ei));
                   scale[2] = coeff_const * scale[2] * scale[2];
                   return *(new (alloc) ScalarMappedElement<3> (
                       local_ndof, order, basismat, eltype, ElCenter<3> (ei),
@@ -1365,78 +1368,99 @@ namespace ngcomp
   template class FOQTWaveBasis<2>;
   template class FOQTWaveBasis<3>;
 
-  template <int D> CSR QTHeatBasis<D>::Basis (Vec<D> ElCenter, double elsize)
+  template <int D>
+  CSR QTHeatBasis<D>::Basis (Vec<D> ElCenter, double hx, double ht)
   {
-    lock_guard<mutex> lock (gentrefftzbasis);
-    int order = this->order;
-    string encode = to_string (order) + to_string (elsize);
-    for (int i = 0; i < D; i++)
-      encode += to_string (ElCenter[i]);
+    // lock_guard<mutex> lock (gentrefftzbasis);
+    // int order = this->order;
+    // string encode = to_string (order) + to_string (hx) + to_string (ht);
+    // for (int i = 0; i < D-1; i++)
+    // encode += to_string (ElCenter[i]);
 
-    if (gtbstore[encode][0].Size () == 0)
-      {
-        // IntegrationPoint ip (ElCenter, 0);
-        // Mat<D, D> dummy;
-        // FE_ElementTransformation<D, D> et (D == 3   ? ET_TET
-        //: D == 2 ? ET_TRIG
-        //: ET_SEGM,
-        // dummy);
-        // MappedIntegrationPoint<D, D> mip (ip, et, 0);
-        // for (int i = 0; i < D; i++)
-        // mip.Point ()[i] = ElCenter[i];
+    // if (gtbstore[encode][0].Size () == 0)
+    {
+      IntegrationPoint ip (ElCenter, 0);
+      Mat<D, D> dummy;
+      FE_ElementTransformation<D, D> et (D == 3 ? ET_TET : ET_TRIG, dummy);
+      MappedIntegrationPoint<D, D> mip (ip, et, 0);
+      for (int i = 0; i < D; i++)
+        mip.Point ()[i] = ElCenter[i];
 
-        // const int ndiffs = (BinCoeff (D + order - 1, order - 1));
-        // Vector<> AA (ndiffs);
+      const int ndiffs = (BinCoeff (D + order - 1, order - 1));
+      Vector<Matrix<>> AA (ndiffs);
 
-        // TraversePol<D> (order - 1, [&] (int i, Vec<D, int> coeff) {
-        // int index = PolBasis::IndexMap2<D> (coeff, order - 1);
-        // AA[index] = AAder[index]->Evaluate (mip);
-        //});
+      TraversePol<D> (order - 1, [&] (int i, Vec<D, int> coeff) {
+        int index = PolBasis::IndexMap2<D> (coeff, order - 1);
+        AA[index].SetSize (D - 1, D - 1);
+        AAder[index]->Evaluate (mip, AA[index].AsVector ());
+      });
 
-        const int ndof = (BinCoeff (D - 1 + order, order)
-                          + BinCoeff (D - 1 + order - 1, order - 1));
-        const int npoly = (BinCoeff (D + order, order));
-        Matrix<> qtbasis (ndof, npoly);
-        qtbasis = 0;
-        // init qtbasis
-        int counter = 0;
-        TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
-          if (coeff[0] > 1)
-            return;
-          int indexmap = PolBasis::IndexMap2<D> (coeff, order);
-          qtbasis (counter++, indexmap) = 1;
-        });
-        // start recursion
-        TraversePol2<D> (order, [&] (int i, Vec<D, int> coeff) {
-          if (coeff[0] <= 1)
-            return;
-          int indexmap = PolBasis::IndexMap2<D> (coeff, order);
-          Vec<D, int> mii = coeff;
-          mii[0] = mii[0] - 2;
-          mii[D - 1] = mii[D - 1] + 1;
-          // scal coeff C
-          qtbasis.Col (indexmap)
-              += (coeff[D - 1] + 1) * elsize / coeff[0] / (coeff[0] - 1)
-                 * qtbasis.Col (PolBasis::IndexMap2<D> (mii, order));
-          // qtbasis.Col (indexmap) *= pow (elsize, vsum<D, int> (mii) + 2)
-          /// factorial (mii + eD)
-          /// (AA[0](D - 1, D - 1));
-        });
+      const int ndof = (BinCoeff (D - 1 + order, order)
+                        + BinCoeff (D - 1 + order - 1, order - 1));
+      const int npoly = (BinCoeff (D + order, order));
+      Matrix<> qtbasis (ndof, npoly);
+      qtbasis = 0;
+      // init qtbasis
+      int counter = 0;
+      TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
+        if (coeff[0] > 1)
+          return;
+        int indexmap = PolBasis::IndexMap2<D> (coeff, order);
+        qtbasis (counter++, indexmap) = 1;
+      });
+      // start recursion
+      TraversePol2<D> (order, [&] (int i, Vec<D, int> coeff) {
+        if (coeff[0] <= 1)
+          return;
+        int indexmap = PolBasis::IndexMap2<D> (coeff, order);
+        Vec<D, int> mii = coeff;
+        mii[0] = mii[0] - 2;
+        // mii[D - 1] = mii[D - 1] + 1;
+        Vec<D, int> et = 0;
+        et[D - 1] = 1;
+        qtbasis.Col (indexmap)
+            += hx * hx / ht * (mii[D - 1] + 1) / coeff[0] / (coeff[0] - 1)
+               * qtbasis.Col (PolBasis::IndexMap2<D> (mii + et, order));
+        for (int j = 0; j < D - 1; j++)
+          {
+            Vec<D, int> ej = 0;
+            ej[j] = 1;
+            TraversePol<D> (mii + ej, [&] (int i2, Vec<D, int> mil) {
+              // matrix coeff A
+              for (int m = 0; m < D - 1; m++)
+                {
+                  if (i2 == 0 && m == 0 && j == 0)
+                    continue;
+                  Vec<D, int> em = 0;
+                  em[m] = 1;
+                  qtbasis.Col (indexmap)
+                      -= (AA[IndexMap2<D> (mil, order - 1)]) (j, m)
+                         * pow (hx, vsum<D - 1, int> (mil))
+                         * pow (ht, mil[D - 1]) * (mii[m] + ej[m] - mil[m] + 1)
+                         * (mii[j] + 1) / (mii[0] + 2) / (mii[0] + 1)
+                         / factorial (mil)
+                         * qtbasis.Col (PolBasis::IndexMap2<D> (
+                             mii + ej - mil + em, order));
+                }
+            });
+          }
+        qtbasis.Col (indexmap) *= 1.0 / (AA[0](0, 0));
+      });
 
-        MatToCSR (qtbasis, gtbstore[encode]);
-      }
+      // MatToCSR (qtbasis, gtbstore[encode]);
+      CSR tb;
+      MatToCSR (qtbasis, tb);
+      return tb;
+    }
 
-    if (gtbstore[encode].Size () == 0)
-      {
-        stringstream str;
-        str << "failed to generate trefftz basis of order " << order << endl;
-        throw Exception (str.str ());
-      }
+    // if (gtbstore[encode].Size () == 0)
+    //{
+    // stringstream str;
+    // str << "failed to generate trefftz basis of order " << order << endl;
+    // throw Exception (str.str ());
+    //}
 
-    return gtbstore[encode];
-    // CSR tb;
-    // MatToCSR (qtbasis, tb);
-    // return tb;
+    // return gtbstore[encode];
   }
 
   // template class QTHeatBasis<1>;

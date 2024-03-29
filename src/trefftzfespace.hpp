@@ -108,7 +108,7 @@ namespace ngcomp
     int D;
     int nel;
     int local_ndof;
-    float coeff_const = 1;
+    double coeff_const = 1;
     string eqtyp = "wave";
     int useshift = 1;
     int usescale = 1;
@@ -313,7 +313,7 @@ namespace ngcomp
 
       this->ComputeDerivs<D> (order - 1, coeffA, AAder);
     }
-    CSR Basis (Vec<D> ElCenter, double elsize = 1.0);
+    CSR Basis (Vec<D> ElCenter, double hx, double ht);
   };
 }
 
