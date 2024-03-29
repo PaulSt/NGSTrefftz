@@ -6,6 +6,20 @@
 
 namespace ngfem
 {
+  template <int D, typename T> T vsum (Vec<D, T> v)
+  {
+    T sum = 0;
+    for (int i = 0; i < D; i++)
+      sum += v[i];
+    return sum;
+  }
+
+  template <int D, typename T, typename T2>
+  void vtimes (Vec<D, T> &v, Vec<D, T2> w)
+  {
+    for (int i = 0; i < D; i++)
+      v[i] *= w[i];
+  }
 
   class BaseScalarMappedElement : public FiniteElement
   {
@@ -131,25 +145,24 @@ namespace ngfem
   protected:
     CSR localmat;
     ELEMENT_TYPE eltype;
-    Vec<D> elcenter;
-    double elsize;
-    float c = 1.0;
+    Vec<D> shift;
+    Vec<D> scale;
     const int npoly = BinCoeff (D + order, order);
 
   public:
     using BaseScalarMappedElement::BaseScalarMappedElement;
 
     ScalarMappedElement (int andof, int aord, CSR alocalmat,
-                         ELEMENT_TYPE aeltype, Vec<D> aelcenter = 0,
-                         double aelsize = 1, double ac = 1.0)
+                         ELEMENT_TYPE aeltype, Vec<D> ashift = 0,
+                         Vec<D> ascale = 1.0)
         : BaseScalarMappedElement (andof, aord), localmat (alocalmat),
-          eltype (aeltype), elcenter (aelcenter), elsize (aelsize), c (ac)
+          eltype (aeltype), shift (ashift), scale (ascale)
     {
       ;
     }
 
-    double GetWavespeed () const { return this->c; }
-    void SetWavespeed (double wavespeed) { this->c = wavespeed; }
+    Vec<D> GetScale () const { return scale; }
+    void SetScale (Vec<D> ascale) { scale = ascale; }
 
     // the name
     NGST_DLL virtual string ClassName () const;
@@ -317,21 +330,14 @@ namespace ngfem
   template <int D> class BlockMappedElement : public ScalarMappedElement<D>
   {
   private:
-    // const int nbasis;
-    // const int npoly;
-    // Vec<D> elcenter;
-    // double elsize;
-    // float c;
-    // ELEMENT_TYPE eltype;
     Vector<CSR> localmats;
 
   public:
-    // TrefftzWaveFE();
     BlockMappedElement (int andof, int aord, Vector<CSR> alocalmats,
-                        ELEMENT_TYPE aeltype, Vec<D> aelcenter = 0,
-                        double aelsize = 1, float ac = 1.0)
-        : ScalarMappedElement<D> (andof, aord, alocalmats[0], aeltype,
-                                  aelcenter, aelsize, ac),
+                        ELEMENT_TYPE aeltype, Vec<D> ashift = 0,
+                        Vec<D> ascale = 1.0)
+        : ScalarMappedElement<D> (andof, aord, alocalmats[0], aeltype, ashift,
+                                  ascale),
           localmats (alocalmats)
     {
       ;

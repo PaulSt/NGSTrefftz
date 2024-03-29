@@ -226,7 +226,7 @@ namespace ngcomp
   template <int D> class QTWaveTents : public TWaveTents<D>
   {
   private:
-    QTWaveBasis<D> basis;
+    QTWaveBasis<D + 1> basis;
     // Matrix<shared_ptr<CoefficientFunction>> GGder;
     // Matrix<shared_ptr<CoefficientFunction>> BBder;
     double TentXdiam (const Tent *tent);

@@ -32,6 +32,9 @@ namespace ngcomp
                    - (eqtyp == "fowave_reduced");
     else if (eqtyp == "heat")
       local_ndof = BinCoeff (D - 1 + order, order);
+    else if (eqtyp == "qtheat")
+      local_ndof = BinCoeff (D - 1 + order, order)
+                   + BinCoeff (D - 1 + order - 1, order - 1);
     else if (eqtyp == "laplace")
       local_ndof = BinCoeff (D - 1 + order, order)
                    + BinCoeff (D - 1 + order - 1, order - 1);
@@ -133,19 +136,23 @@ namespace ngcomp
             {
               basismats.SetSize (D);
               for (int d = 0; d < D; d++)
-                basismats[d] = FOTWaveBasis<1>::Basis (order, d);
-              basis = new FOQTWaveBasis<1> (order, coeffA, coeffB);
+                basismats[d] = FOTWaveBasis<2>::Basis (order, d);
+              basis = new FOQTWaveBasis<2> (order, coeffA, coeffB);
             }
           else if (eqtyp == "heat")
             {
-              basismat = THeatBasis<1>::Basis (order, 0, 0);
+              basismat = THeatBasis<2>::Basis (order, 0, 0);
+            }
+          else if (eqtyp == "qtheat")
+            {
+              basis = new QTHeatBasis<2> (order, coeffA);
             }
           else if (eqtyp == "wave" || eqtyp == "qtwave"
                    || eqtyp == "fowave_reduced")
             {
-              basismat = TWaveBasis<1>::Basis (order, basistype,
+              basismat = TWaveBasis<2>::Basis (order, basistype,
                                                eqtyp == "fowave_reduced");
-              basis = new QTWaveBasis<1> (order, coeffA, coeffB);
+              basis = new QTWaveBasis<2> (order, coeffA, coeffB);
             }
           else if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
             {
@@ -166,19 +173,23 @@ namespace ngcomp
             {
               basismats.SetSize (D);
               for (int d = 0; d < D; d++)
-                basismats[d] = FOTWaveBasis<2>::Basis (order, d);
-              basis = new FOQTWaveBasis<2> (order, coeffA, coeffB);
+                basismats[d] = FOTWaveBasis<3>::Basis (order, d);
+              basis = new FOQTWaveBasis<3> (order, coeffA, coeffB);
             }
           else if (eqtyp == "heat")
             {
-              basismat = THeatBasis<2>::Basis (order, 0, 0);
+              basismat = THeatBasis<3>::Basis (order, 0, 0);
+            }
+          else if (eqtyp == "qtheat")
+            {
+              basis = new QTHeatBasis<3> (order, coeffA);
             }
           else if (eqtyp == "wave" || eqtyp == "qtwave"
                    || eqtyp == "fowave_reduced")
             {
-              basismat = TWaveBasis<2>::Basis (order, basistype,
+              basismat = TWaveBasis<3>::Basis (order, basistype,
                                                eqtyp == "fowave_reduced");
-              basis = new QTWaveBasis<2> (order, coeffA, coeffB);
+              basis = new QTWaveBasis<3> (order, coeffA, coeffB);
             }
           else
             throw Exception ("TrefftzFESpace::UpdateBasis: unknown eqtyp");
@@ -251,11 +262,11 @@ namespace ngcomp
         {
         case 2:
           static_cast<QTEllipticBasis<2> *> (basis)->GetParticularSolution (
-              ElCenter<2> (ei), ElSize<2> (ei, 1.0), elvec, mlh);
+              ElCenter<2> (ei), ElSize<2> (ei), elvec, mlh);
           break;
         case 3:
           static_cast<QTEllipticBasis<3> *> (basis)->GetParticularSolution (
-              ElCenter<3> (ei), ElSize<3> (ei, 1.0), elvec, mlh);
+              ElCenter<3> (ei), ElSize<3> (ei), elvec, mlh);
           break;
         }
 
@@ -295,57 +306,76 @@ namespace ngcomp
             {
               if (eqtyp == "qtwave")
                 {
-                  CSR basismat = static_cast<QTWaveBasis<1> *> (basis)->Basis (
+                  CSR basismat = static_cast<QTWaveBasis<2> *> (basis)->Basis (
                       order, ElCenter<2> (ei));
                   return *(new (alloc) ScalarMappedElement<2> (
-                      local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                      1.0));
+                      local_ndof, order, basismat, eltype, ElCenter<2> (ei)));
                 }
               else if (eqtyp == "qtelliptic")
                 {
+                  double scale = 1.0 / ElSize<2> (ei);
                   CSR basismat
                       = static_cast<QTEllipticBasis<2> *> (basis)->Basis (
-                          ElCenter<2> (ei), ElSize<2> (ei, 1.0));
+                          ElCenter<2> (ei), ElSize<2> (ei));
                   return *(new (alloc) ScalarMappedElement<2> (
                       local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                      ElSize<2> (ei, 1.0)));
+                      scale));
                 }
               else if (eqtyp == "foqtwave")
                 {
                   Vec<2, CSR> qtbasis;
                   for (int d = 0; d < D; d++)
                     qtbasis[d]
-                        = static_cast<FOQTWaveBasis<1> *> (basis)->Basis (
+                        = static_cast<FOQTWaveBasis<2> *> (basis)->Basis (
                             order, d, ElCenter<2> (ei));
                   return *(new (alloc) BlockMappedElement<2> (
-                      local_ndof, order, qtbasis, eltype, ElCenter<2> (ei),
-                      1.0));
+                      local_ndof, order, qtbasis, eltype, ElCenter<2> (ei)));
                 }
               else if (eqtyp == "fowave")
                 {
+                  Vec<2> scale = 1.0;
+                  scale[1] = coeff_const;
+                  scale = 1.0 / ElSize<2> (ei, scale);
+                  scale[1] *= coeff_const;
                   return *(new (alloc) BlockMappedElement<2> (
                       local_ndof, order, basismats, eltype, ElCenter<2> (ei),
-                      ElSize<2> (ei, coeff_const), coeff_const));
+                      scale));
                 }
               else if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
                 {
                   return *(new (alloc) PlaneWaveElement<2> (
                       local_ndof, order, eltype, ElCenter<2> (ei),
-                      ElSize<2> (ei, coeff_const), coeff_const,
+                      ElSize<2> (ei), coeff_const,
                       (eqtyp == "helmholtz" ? 1 : -1)));
                 }
               else if (eqtyp == "heat")
                 {
+                  Vec<2> scale = 1.0 / sqrt(ElSize<2> (ei));
+                  scale[1] = coeff_const * scale[1] * scale[1];
                   return *(new (alloc) ScalarMappedElement<2> (
                       local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                      ElSize<2> (ei, coeff_const),
-                      coeff_const / ElSize<2> (ei, coeff_const)));
+                      scale));
+                }
+              else if (eqtyp == "qtheat")
+                {
+                  double hx = ElSize<2> (ei, { 1.0, 0 });
+                  double ht = ElSize<2> (ei, { 0, 1.0 });
+                  Vec<2> scale ({ 1.0 / hx, 1.0 / ht });
+                  CSR basismat = static_cast<QTHeatBasis<2> *> (basis)->Basis (
+                      ElCenter<2> (ei), hx, ht);
+                  return *(new (alloc) ScalarMappedElement<2> (
+                      local_ndof, order, basismat, eltype, ElCenter<2> (ei),
+                      scale));
                 }
               else
                 {
+                  Vec<2> scale = 1.0;
+                  scale[1] = coeff_const;
+                  scale = 1.0 / ElSize<2> (ei, scale);
+                  scale[1] *= coeff_const;
                   return *(new (alloc) ScalarMappedElement<2> (
                       local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                      ElSize<2> (ei, coeff_const), coeff_const));
+                      scale));
                 }
               break;
             }
@@ -356,49 +386,59 @@ namespace ngcomp
             {
               if (eqtyp == "qtwave")
                 {
-                  CSR basismat = static_cast<QTWaveBasis<2> *> (basis)->Basis (
+                  CSR basismat = static_cast<QTWaveBasis<3> *> (basis)->Basis (
                       order, ElCenter<3> (ei));
                   return *(new (alloc) ScalarMappedElement<3> (
-                      local_ndof, order, basismat, eltype, ElCenter<3> (ei),
-                      1.0));
+                      local_ndof, order, basismat, eltype, ElCenter<3> (ei)));
                 }
               else if (eqtyp == "qtelliptic")
                 {
+                  double scale = 1.0 / ElSize<3> (ei);
                   CSR basismat
                       = static_cast<QTEllipticBasis<3> *> (basis)->Basis (
-                          ElCenter<3> (ei), ElSize<3> (ei, 1.0));
+                          ElCenter<3> (ei), ElSize<3> (ei));
                   return *(new (alloc) ScalarMappedElement<3> (
                       local_ndof, order, basismat, eltype, ElCenter<3> (ei),
-                      ElSize<3> (ei, 1.0)));
+                      scale));
                 }
               else if (eqtyp == "foqtwave")
                 {
                   Vec<3, CSR> qtbasis;
                   for (int d = 0; d < D; d++)
                     qtbasis[d]
-                        = static_cast<FOQTWaveBasis<2> *> (basis)->Basis (
+                        = static_cast<FOQTWaveBasis<3> *> (basis)->Basis (
                             order, d, ElCenter<3> (ei));
                   return *(new (alloc) BlockMappedElement<3> (
-                      local_ndof, order, qtbasis, eltype, ElCenter<3> (ei),
-                      1.0));
+                      local_ndof, order, qtbasis, eltype, ElCenter<3> (ei)));
                 }
               else if (eqtyp == "fowave")
                 {
+                  Vec<3> scale = 1.0;
+                  scale[2] = coeff_const;
+                  scale = 1.0 / ElSize<3> (ei, scale);
+                  scale[2] *= coeff_const;
                   return *(new (alloc) BlockMappedElement<3> (
                       local_ndof, order, basismats, eltype, ElCenter<3> (ei),
-                      ElSize<3> (ei, coeff_const), coeff_const));
+                      scale));
                 }
               else if (eqtyp == "heat")
                 {
+                  Vec<3> scale = 1.0 / sqrt(ElSize<3> (ei));
+                  scale[2] = coeff_const * scale[2] * scale[2];
                   return *(new (alloc) ScalarMappedElement<3> (
                       local_ndof, order, basismat, eltype, ElCenter<3> (ei),
-                      ElSize<3> (ei, coeff_const),
-                      coeff_const / ElSize<3> (ei, coeff_const)));
+                      scale));
                 }
               else
-                return *(new (alloc) ScalarMappedElement<3> (
-                    local_ndof, order, basismat, eltype, ElCenter<3> (ei),
-                    ElSize<3> (ei, coeff_const), coeff_const));
+                {
+                  Vec<3> scale = 1.0;
+                  scale[2] = coeff_const;
+                  scale = 1.0 / ElSize<3> (ei, scale);
+                  scale[2] *= coeff_const;
+                  return *(new (alloc) ScalarMappedElement<3> (
+                      local_ndof, order, basismat, eltype, ElCenter<3> (ei),
+                      scale));
+                }
             }
             break;
           }
@@ -441,6 +481,10 @@ namespace ngcomp
                            "flag is always True for trefftzfespace.";
     docu.Arg ("complex") = "bool = False\n"
                            "  Set if FESpace should be complex";
+    docu.Arg ("useshift") = "bool = True\n"
+                            "  shift of basis functins to element center";
+    docu.Arg ("usescale") = "bool = True\n"
+                            "  scale element basis functions with diam";
     // docu.Arg("useshift") = "bool = True\n"
     //"  use shift of basis functins to element center and scale them";
     // docu.Arg("basistype")
@@ -451,14 +495,6 @@ namespace ngcomp
   static RegisterFESpace<TrefftzFESpace> initi_trefftz ("trefftzfespace");
 
   //////////////////////////// Trefftz basis ////////////////////////////
-
-  template <int D, typename T> T vsum (Vec<D, T> v)
-  {
-    T sum = 0;
-    for (int i = 0; i < D; i++)
-      sum += v[i];
-    return sum;
-  }
 
   template <int D, typename TFunc>
   void TraversePol (int order, const TFunc &func)
@@ -611,18 +647,18 @@ namespace ngcomp
   {
     CSR tb;
     const int ndof
-        = (BinCoeff (D + ord, ord) + BinCoeff (D + ord - 1, ord - 1));
-    const int npoly = (BinCoeff (D + 1 + ord, ord));
+        = (BinCoeff (D - 1 + ord, ord) + BinCoeff (D + ord - 2, ord - 1));
+    const int npoly = (BinCoeff (D + ord, ord));
     Matrix<> trefftzbasis (ndof, npoly);
     trefftzbasis = 0;
     for (int basis = 0; basis < ndof; basis++)
       {
         int tracker = 0;
-        TraversePol<D + 1> (ord, [&] (int i, Vec<D + 1, int> coeff) {
+        TraversePol<D> (ord, [&] (int i, Vec<D, int> coeff) {
           if (tracker >= 0)
             tracker++;
-          int indexmap = PolBasis::IndexMap2<D + 1> (coeff, ord);
-          int k = coeff (D);
+          int indexmap = PolBasis::IndexMap2<D> (coeff, ord);
+          int k = coeff (D - 1);
           if (k == 0 || k == 1)
             {
               switch (basistype)
@@ -638,38 +674,38 @@ namespace ngcomp
                   // i += ndof-1;	//jump to time = 2 if i=0
                   break;
                 case 1:
-                  if ((k == 0 && basis < BinCoeff (D + ord, ord))
-                      || (k == 1 && basis >= BinCoeff (D + ord, ord)))
+                  if ((k == 0 && basis < BinCoeff (D - 1 + ord, ord))
+                      || (k == 1 && basis >= BinCoeff (D - 1 + ord, ord)))
                     {
                       trefftzbasis (basis, indexmap) = 1;
-                      for (int exponent : coeff.Range (0, D))
+                      for (int exponent : coeff.Range (0, D - 1))
                         trefftzbasis (basis, indexmap)
                             *= LegCoeffMonBasis (basis, exponent);
                     }
                   break;
                 case 2:
-                  if ((k == 0 && basis < BinCoeff (D + ord, ord))
-                      || (k == 1 && basis >= BinCoeff (D + ord, ord)))
+                  if ((k == 0 && basis < BinCoeff (D - 1 + ord, ord))
+                      || (k == 1 && basis >= BinCoeff (D - 1 + ord, ord)))
                     {
                       trefftzbasis (basis, indexmap) = 1;
-                      for (int exponent : coeff.Range (0, D))
+                      for (int exponent : coeff.Range (0, D - 1))
                         trefftzbasis (basis, indexmap)
                             *= ChebCoeffMonBasis (basis, exponent);
                     }
                   break;
                 }
             }
-          else if (coeff (D) > 1)
+          else if (coeff (D - 1) > 1)
             {
-              for (int m = 0; m < D; m++) // rekursive sum
+              for (int m = 0; m < D - 1; m++) // rekursive sum
                 {
-                  Vec<D + 1, int> get_coeff = coeff;
-                  get_coeff[D] = get_coeff[D] - 2;
+                  Vec<D, int> get_coeff = coeff;
+                  get_coeff[D - 1] = get_coeff[D - 1] - 2;
                   get_coeff[m] = get_coeff[m] + 2;
                   trefftzbasis (basis, indexmap)
                       += (coeff (m) + 1) * (coeff (m) + 2)
-                         * trefftzbasis (basis, PolBasis::IndexMap2<D + 1> (
-                                                    get_coeff, ord));
+                         * trefftzbasis (
+                             basis, PolBasis::IndexMap2<D> (get_coeff, ord));
                 }
               double wavespeed = 1.0;
               trefftzbasis (basis, indexmap)
@@ -681,48 +717,48 @@ namespace ngcomp
     return tb;
   }
 
-  template class TWaveBasis<1>;
   template class TWaveBasis<2>;
   template class TWaveBasis<3>;
+  template class TWaveBasis<4>;
 
   template <int D>
   CSR THeatBasis<D>::Basis (int ord, int basistype, int fowave)
   {
     CSR tb;
-    const int ndof = BinCoeff (D + ord, ord);
-    const int npoly = BinCoeff (D + 1 + ord, ord);
+    const int ndof = BinCoeff (D - 1 + ord, ord);
+    const int npoly = BinCoeff (D + ord, ord);
     Matrix<> trefftzbasis (ndof, npoly);
     trefftzbasis = 0;
     for (int basis = 0; basis < ndof; basis++)
       {
         int tracker = 0;
-        TraversePol<D + 1> (ord, [&] (int i, Vec<D + 1, int> coeff) {
-          int indexmap = PolBasis::IndexMap2<D + 1> (coeff, ord);
+        TraversePol<D> (ord, [&] (int i, Vec<D, int> coeff) {
+          int indexmap = PolBasis::IndexMap2<D> (coeff, ord);
           int sum = 0;
-          for (int m = 0; m <= D; m++)
+          for (int m = 0; m <= D - 1; m++)
             sum += coeff[m];
-          if (coeff[D] == 0 && tracker >= basis)
+          if (coeff[D - 1] == 0 && tracker >= basis)
             {
               trefftzbasis (basis, indexmap) = 1;
               tracker = -1;
             }
-          else if (coeff[D] == 0 && tracker >= 0)
+          else if (coeff[D - 1] == 0 && tracker >= 0)
             {
               tracker++;
             }
-          else if (coeff[D] > 0 && coeff[D] <= ord / 2.0 && sum < ord)
+          else if (coeff[D - 1] > 0 && coeff[D - 1] <= ord / 2.0 && sum < ord)
             {
-              for (int m = 0; m < D; m++) // rekursive sum
+              for (int m = 0; m < D - 1; m++) // rekursive sum
                 {
-                  Vec<D + 1, int> get_coeff = coeff;
-                  get_coeff[D] = get_coeff[D] - 1;
+                  Vec<D, int> get_coeff = coeff;
+                  get_coeff[D - 1] = get_coeff[D - 1] - 1;
                   get_coeff[m] = get_coeff[m] + 2;
                   trefftzbasis (basis, indexmap)
                       += (coeff[m] + 1) * (coeff[m] + 2)
-                         * trefftzbasis (basis, PolBasis::IndexMap2<D + 1> (
-                                                    get_coeff, ord));
+                         * trefftzbasis (
+                             basis, PolBasis::IndexMap2<D> (get_coeff, ord));
                 }
-              trefftzbasis (basis, indexmap) *= 1.0 / coeff[D];
+              trefftzbasis (basis, indexmap) *= 1.0 / coeff[D - 1];
             }
         });
       }
@@ -730,7 +766,6 @@ namespace ngcomp
     return tb;
   }
 
-  template class THeatBasis<1>;
   template class THeatBasis<2>;
   template class THeatBasis<3>;
 
@@ -788,10 +823,10 @@ namespace ngcomp
 
   template <int D> CSR FOTWaveBasis<D>::Basis (int ord, int rdim)
   {
-    const int ndof = (D + 1) * BinCoeff (ord + D, D);
-    const int npoly = BinCoeff ((D + 1) + ord, ord);
-    Array<Matrix<>> trefftzbasis (D + 1);
-    for (int d = 0; d < D + 1; d++)
+    const int ndof = D * BinCoeff (ord + D - 1, D - 1);
+    const int npoly = BinCoeff (D + ord, ord);
+    Array<Matrix<>> trefftzbasis (D);
+    for (int d = 0; d < D; d++)
       {
         trefftzbasis[d].SetSize (ndof, npoly);
         trefftzbasis[d] = 0;
@@ -799,38 +834,38 @@ namespace ngcomp
     for (int basis = 0; basis < ndof; basis++)
       {
         int tracker = 0;
-        TraversePol<D + 1> (ord, [&] (int i, Vec<D + 1, int> coeff) {
+        TraversePol<D> (ord, [&] (int i, Vec<D, int> coeff) {
           if (tracker >= 0)
             tracker++;
-          int indexmap = PolBasis::IndexMap2<D + 1> (coeff, ord);
-          if (coeff (D) == 0 && tracker * (D + 1) > basis)
+          int indexmap = PolBasis::IndexMap2<D> (coeff, ord);
+          if (coeff (D - 1) == 0 && tracker * (D) > basis)
             {
-              int d = basis % (D + 1);
+              int d = basis % (D);
               trefftzbasis[d](basis, indexmap) = 1;
               tracker = -1;
             }
-          else if (coeff (D) > 0)
+          else if (coeff (D - 1) > 0)
             {
-              int k = coeff (D);
-              for (int d = 0; d < D; d++)
+              int k = coeff (D - 1);
+              for (int d = 0; d < D - 1; d++)
                 {
-                  Vec<D + 1, int> get_coeff = coeff;
-                  get_coeff[D] = get_coeff[D] - 1;
+                  Vec<D, int> get_coeff = coeff;
+                  get_coeff[D - 1] = get_coeff[D - 1] - 1;
                   get_coeff[d] = get_coeff[d] + 1;
                   trefftzbasis[d](basis, indexmap)
                       = (-1.0 / k) * (coeff (d) + 1)
-                        * trefftzbasis[D](basis, PolBasis::IndexMap2<D + 1> (
-                                                     get_coeff, ord));
-                  trefftzbasis[D](basis, indexmap)
+                        * trefftzbasis[D - 1](
+                            basis, PolBasis::IndexMap2<D> (get_coeff, ord));
+                  trefftzbasis[D - 1](basis, indexmap)
                       += (-1.0 / k) * (coeff (d) + 1)
-                         * trefftzbasis[d](basis, PolBasis::IndexMap2<D + 1> (
-                                                      get_coeff, ord));
+                         * trefftzbasis[d](
+                             basis, PolBasis::IndexMap2<D> (get_coeff, ord));
                 }
             }
         });
       }
-    Array<CSR> tb (D + 1);
-    for (int d = 0; d < D + 1; d++)
+    Array<CSR> tb (D);
+    for (int d = 0; d < D; d++)
       {
         // cout << d << endl << trefftzbasis[d] << endl;
         MatToCSR (trefftzbasis[d], tb[d]);
@@ -838,9 +873,9 @@ namespace ngcomp
     return tb[rdim];
   }
 
-  template class FOTWaveBasis<1>;
   template class FOTWaveBasis<2>;
   template class FOTWaveBasis<3>;
+  template class FOTWaveBasis<4>;
 
   //////////////////////////// quasi-Trefftz basis ////////////////////////////
 
@@ -1053,61 +1088,60 @@ namespace ngcomp
   template class QTEllipticBasis<3>;
 
   template <int D>
-  CSR QTWaveBasis<D>::Basis (int ord, Vec<D + 1> ElCenter, double elsize,
+  CSR QTWaveBasis<D>::Basis (int ord, Vec<D> ElCenter, double elsize,
                              int basistype)
   {
     lock_guard<mutex> lock (gentrefftzbasis);
     string encode = to_string (ord) + to_string (elsize);
-    for (int i = 0; i < D; i++)
+    for (int i = 0; i < D - 1; i++)
       encode += to_string (ElCenter[i]);
 
     if (gtbstore[encode][0].Size () == 0)
       {
         IntegrationPoint ip (ElCenter, 0);
-        Mat<D, D> dummy;
-        FE_ElementTransformation<D, D> et (D == 3   ? ET_TET
-                                           : D == 2 ? ET_TRIG
-                                                    : ET_SEGM,
-                                           dummy);
-        MappedIntegrationPoint<D, D> mip (ip, et, 0);
-        for (int i = 0; i < D; i++)
+        Mat<D - 1, D - 1> dummy;
+        FE_ElementTransformation<D - 1, D - 1> et (D == 4   ? ET_TET
+                                                   : D == 3 ? ET_TRIG
+                                                            : ET_SEGM,
+                                                   dummy);
+        MappedIntegrationPoint<D - 1, D - 1> mip (ip, et, 0);
+        for (int i = 0; i < D - 1; i++)
           mip.Point ()[i] = ElCenter[i];
 
-        Matrix<> BB (ord, (ord - 1) * (D == 2) + 1);
-        Matrix<> AA (ord - 1, (ord - 2) * (D == 2) + 1);
+        Matrix<> BB (ord, (ord - 1) * (D == 3) + 1);
+        Matrix<> AA (ord - 1, (ord - 2) * (D == 3) + 1);
 
-        TraversePol<D> (order - 1, [&] (int i, Vec<D, int> coeff) {
+        TraversePol<D - 1> (order - 1, [&] (int i, Vec<D - 1, int> coeff) {
           int nx = coeff[0];
-          int ny = D > 1 ? coeff[1] : 0;
+          int ny = D > 2 ? coeff[1] : 0;
           double fac = (factorial (nx) * factorial (ny));
-          int index = PolBasis::IndexMap2<D> (coeff, order - 1);
+          int index = PolBasis::IndexMap2<D - 1> (coeff, order - 1);
           BB (nx, ny)
               = BBder[index]->Evaluate (mip) / fac * pow (elsize, nx + ny);
-          if (vsum<D, int> (coeff) < ord - 1)
+          if (vsum<D - 1, int> (coeff) < ord - 1)
             {
-              index = PolBasis::IndexMap2<D> (coeff, order - 2);
+              index = PolBasis::IndexMap2<D - 1> (coeff, order - 2);
               AA (nx, ny)
                   = AAder[index]->Evaluate (mip) / fac * pow (elsize, nx + ny);
             }
         });
 
         const int ndof
-            = (BinCoeff (D + ord, ord) + BinCoeff (D + ord - 1, ord - 1));
-        const int npoly = BinCoeff (D + 1 + ord, ord);
+            = (BinCoeff (D - 1 + ord, ord) + BinCoeff (D + ord - 2, ord - 1));
+        const int npoly = BinCoeff (D + ord, ord);
         Matrix<> qtbasis (ndof, npoly);
         qtbasis = 0;
 
         for (int t = 0, basisn = 0; t < 2; t++)
           for (int x = 0; x <= ord - t; x++)
-            for (int y = 0; y <= (ord - x - t) * (D == 2); y++)
+            for (int y = 0; y <= (ord - x - t) * (D == 3); y++)
               {
-                Vec<D + 1, int> index;
-                index[D] = t;
+                Vec<D, int> index;
+                index[D - 1] = t;
                 index[0] = x;
-                if (D == 2)
+                if (D == 3)
                   index[1] = y;
-                qtbasis (basisn++, PolBasis::IndexMap2<D + 1> (index, ord))
-                    = 1.0;
+                qtbasis (basisn++, PolBasis::IndexMap2<D> (index, ord)) = 1.0;
               }
 
         for (int basisn = 0; basisn < ndof; basisn++)
@@ -1116,41 +1150,41 @@ namespace ngcomp
               {
                 for (int t = 0; t <= ell; t++)
                   {
-                    for (int x = (D == 1 ? ell - t : 0); x <= ell - t; x++)
+                    for (int x = (D == 2 ? ell - t : 0); x <= ell - t; x++)
                       {
                         int y = ell - t - x;
-                        Vec<D + 1, int> index;
+                        Vec<D, int> index;
                         index[1] = y;
                         index[0] = x;
-                        index[D] = t + 2;
+                        index[D - 1] = t + 2;
                         double *newcoeff = &qtbasis (
-                            basisn, PolBasis::IndexMap2<D + 1> (index, ord));
+                            basisn, PolBasis::IndexMap2<D> (index, ord));
                         *newcoeff = 0;
 
                         for (int betax = 0; betax <= x; betax++)
-                          for (int betay = (D == 2) ? 0 : y; betay <= y;
+                          for (int betay = (D == 3) ? 0 : y; betay <= y;
                                betay++)
                             {
                               index[1] = betay;
                               index[0] = betax + 1;
-                              index[D] = t;
+                              index[D - 1] = t;
                               int getcoeffx
-                                  = PolBasis::IndexMap2<D + 1> (index, ord);
+                                  = PolBasis::IndexMap2<D> (index, ord);
                               index[1] = betay + 1;
                               index[0] = betax;
-                              index[D] = t;
+                              index[D - 1] = t;
                               int getcoeffy
-                                  = PolBasis::IndexMap2<D + 1> (index, ord);
+                                  = PolBasis::IndexMap2<D> (index, ord);
                               index[1] = betay;
                               index[0] = betax + 2;
-                              index[D] = t;
+                              index[D - 1] = t;
                               int getcoeffxx
-                                  = PolBasis::IndexMap2<D + 1> (index, ord);
+                                  = PolBasis::IndexMap2<D> (index, ord);
                               index[1] = betay + 2;
                               index[0] = betax;
-                              index[D] = t;
+                              index[D - 1] = t;
                               int getcoeffyy
-                                  = PolBasis::IndexMap2<D + 1> (index, ord);
+                                  = PolBasis::IndexMap2<D> (index, ord);
 
                               *newcoeff
                                   += (betax + 2) * (betax + 1)
@@ -1161,7 +1195,7 @@ namespace ngcomp
                                            / ((t + 2) * (t + 1) * AA (0))
                                            * BB (x - betax + 1, y - betay)
                                            * qtbasis (basisn, getcoeffx);
-                              if (D == 2)
+                              if (D == 3)
                                 *newcoeff
                                     += (betay + 2) * (betay + 1)
                                            / ((t + 2) * (t + 1) * AA (0))
@@ -1175,9 +1209,9 @@ namespace ngcomp
                                 continue;
                               index[1] = betay;
                               index[0] = betax;
-                              index[D] = t + 2;
+                              index[D - 1] = t + 2;
                               int getcoeff
-                                  = PolBasis::IndexMap2<D + 1> (index, ord);
+                                  = PolBasis::IndexMap2<D> (index, ord);
 
                               *newcoeff -= AA (x - betax, y - betay)
                                            * qtbasis (basisn, getcoeff)
@@ -1201,63 +1235,63 @@ namespace ngcomp
     return gtbstore[encode];
   }
 
-  template class QTWaveBasis<1>;
   template class QTWaveBasis<2>;
+  template class QTWaveBasis<3>;
 
   template <int D>
-  CSR FOQTWaveBasis<D>::Basis (int ord, int rdim, Vec<D + 1> ElCenter,
+  CSR FOQTWaveBasis<D>::Basis (int ord, int rdim, Vec<D> ElCenter,
                                double elsize)
   {
     lock_guard<mutex> lock (gentrefftzbasis);
     string encode = to_string (ord) + to_string (elsize);
-    for (int i = 0; i < D; i++)
+    for (int i = 0; i < D - 1; i++)
       encode += to_string (ElCenter[i]);
 
     if (gtbstore[0][encode][0].Size () == 0)
       {
         IntegrationPoint ip (ElCenter, 0);
-        Mat<D, D> dummy;
-        FE_ElementTransformation<D, D> et (D == 3   ? ET_TET
-                                           : D == 2 ? ET_TRIG
-                                                    : ET_SEGM,
-                                           dummy);
-        MappedIntegrationPoint<D, D> mip (ip, et, 0);
-        for (int i = 0; i < D; i++)
+        Mat<D - 1, D - 1> dummy;
+        FE_ElementTransformation<D - 1, D - 1> et (D == 4   ? ET_TET
+                                                   : D == 3 ? ET_TRIG
+                                                            : ET_SEGM,
+                                                   dummy);
+        MappedIntegrationPoint<D - 1, D - 1> mip (ip, et, 0);
+        for (int i = 0; i < D - 1; i++)
           mip.Point ()[i] = ElCenter[i];
 
-        Matrix<> BB (ord, (ord - 1) * (D == 2) + 1);
-        Matrix<> AA (ord, (ord - 1) * (D == 2) + 1);
+        Matrix<> BB (ord, (ord - 1) * (D == 3) + 1);
+        Matrix<> AA (ord, (ord - 1) * (D == 3) + 1);
 
-        TraversePol<D> (order - 1, [&] (int i, Vec<D, int> coeff) {
+        TraversePol<D - 1> (order - 1, [&] (int i, Vec<D - 1, int> coeff) {
           int nx = coeff[0];
-          int ny = D > 1 ? coeff[1] : 0;
+          int ny = D > 2 ? coeff[1] : 0;
           double fac = (factorial (nx) * factorial (ny));
-          int index = PolBasis::IndexMap2<D> (coeff, order - 1);
+          int index = PolBasis::IndexMap2<D - 1> (coeff, order - 1);
           BB (nx, ny)
               = BBder[index]->Evaluate (mip) / fac * pow (elsize, nx + ny);
           AA (nx, ny)
               = AAder[index]->Evaluate (mip) / fac * pow (elsize, nx + ny);
         });
 
-        const int ndof = (D + 1) * BinCoeff (ord + D, D);
-        const int npoly = BinCoeff ((D + 1) + ord, ord);
-        Array<Matrix<>> qtbasis (D + 1);
-        for (int d = 0; d < D + 1; d++)
+        const int ndof = D * BinCoeff (ord + D - 1, D - 1);
+        const int npoly = BinCoeff (D + ord, ord);
+        Array<Matrix<>> qtbasis (D);
+        for (int d = 0; d < D; d++)
           {
             qtbasis[d].SetSize (ndof, npoly);
             qtbasis[d] = 0;
           }
 
-        for (int d = 0, basisn = 0; d < D + 1; d++)
+        for (int d = 0, basisn = 0; d < D; d++)
           {
             for (int x = 0; x <= ord; x++)
-              for (int y = 0; y <= (ord - x) * (D == 2); y++)
+              for (int y = 0; y <= (ord - x) * (D == 3); y++)
                 {
-                  Vec<D + 1, int> index;
+                  Vec<D, int> index;
                   index[1] = y;
                   index[0] = x;
-                  index[D] = 0;
-                  qtbasis[d](basisn++, PolBasis::IndexMap2<D + 1> (index, ord))
+                  index[D - 1] = 0;
+                  qtbasis[d](basisn++, PolBasis::IndexMap2<D> (index, ord))
                       = 1.0;
                 }
           }
@@ -1268,46 +1302,45 @@ namespace ngcomp
               {
                 for (int t = 0; t <= ell; t++)
                   {
-                    for (int x = (D == 1 ? ell - t : 0); x <= ell - t; x++)
+                    for (int x = (D == 2 ? ell - t : 0); x <= ell - t; x++)
                       {
                         int y = ell - t - x;
-                        Vec<D + 1, int> index;
+                        Vec<D, int> index;
                         index[1] = y;
                         index[0] = x;
-                        index[D] = t + 1;
-                        int newindex = PolBasis::IndexMap2<D + 1> (index, ord);
-                        double *newcoefft = &qtbasis[D](basisn, newindex);
-                        for (int d = 0; d < D; d++)
+                        index[D - 1] = t + 1;
+                        int newindex = PolBasis::IndexMap2<D> (index, ord);
+                        double *newcoefft = &qtbasis[D - 1](basisn, newindex);
+                        for (int d = 0; d < D - 1; d++)
                           {
                             double *newcoeff = &qtbasis[d](basisn, newindex);
 
                             index[1] = y + (d == 1);
                             index[0] = x + (d == 0);
-                            index[D] = t;
-                            int getcoeff
-                                = PolBasis::IndexMap2<D + 1> (index, ord);
-                            *newcoeff = -qtbasis[D](basisn, getcoeff)
+                            index[D - 1] = t;
+                            int getcoeff = PolBasis::IndexMap2<D> (index, ord);
+                            *newcoeff = -qtbasis[D - 1](basisn, getcoeff)
                                         * index[d] / (t + 1) / BB (0);
                             *newcoefft -= qtbasis[d](basisn, getcoeff)
                                           * index[d] / (t + 1) / AA (0);
                             for (int betax = 0; betax <= x; betax++)
-                              for (int betay = (D == 1) ? y : 0; betay <= y;
+                              for (int betay = (D == 2) ? y : 0; betay <= y;
                                    betay++)
                                 {
                                   if (betax + betay == x + y)
                                     continue;
                                   index[1] = betay;
                                   index[0] = betax;
-                                  index[D] = t + 1;
-                                  int getcoeff = PolBasis::IndexMap2<D + 1> (
-                                      index, ord);
+                                  index[D - 1] = t + 1;
+                                  int getcoeff
+                                      = PolBasis::IndexMap2<D> (index, ord);
                                   *newcoeff -= BB (x - betax, y - betay)
                                                * qtbasis[d](basisn, getcoeff)
                                                / BB (0);
                                   if (d == 0)
                                     *newcoefft
                                         -= AA (x - betax, y - betay)
-                                           * qtbasis[D](basisn, getcoeff)
+                                           * qtbasis[D - 1](basisn, getcoeff)
                                            / AA (0);
                                 }
                           }
@@ -1316,7 +1349,7 @@ namespace ngcomp
               }
           }
 
-        for (int d = 0; d < D + 1; d++)
+        for (int d = 0; d < D; d++)
           {
             MatToCSR (qtbasis[d], gtbstore[d][encode]);
           }
@@ -1332,8 +1365,108 @@ namespace ngcomp
     return gtbstore[rdim][encode];
   }
 
-  template class FOQTWaveBasis<1>;
   template class FOQTWaveBasis<2>;
+  template class FOQTWaveBasis<3>;
+
+  template <int D>
+  CSR QTHeatBasis<D>::Basis (Vec<D> ElCenter, double hx, double ht)
+  {
+    // lock_guard<mutex> lock (gentrefftzbasis);
+    // int order = this->order;
+    // string encode = to_string (order) + to_string (hx) + to_string (ht);
+    // for (int i = 0; i < D-1; i++)
+    // encode += to_string (ElCenter[i]);
+
+    // if (gtbstore[encode][0].Size () == 0)
+    {
+      IntegrationPoint ip (ElCenter, 0);
+      Mat<D, D> dummy;
+      FE_ElementTransformation<D, D> et (D == 3 ? ET_TET : ET_TRIG, dummy);
+      MappedIntegrationPoint<D, D> mip (ip, et, 0);
+      for (int i = 0; i < D; i++)
+        mip.Point ()[i] = ElCenter[i];
+
+      const int ndiffs = (BinCoeff (D + order - 1, order - 1));
+      Vector<Matrix<>> AA (ndiffs);
+
+      TraversePol<D> (order - 1, [&] (int i, Vec<D, int> coeff) {
+        int index = PolBasis::IndexMap2<D> (coeff, order - 1);
+        AA[index].SetSize (D - 1, D - 1);
+        AAder[index]->Evaluate (mip, AA[index].AsVector ());
+      });
+
+      const int ndof = (BinCoeff (D - 1 + order, order)
+                        + BinCoeff (D - 1 + order - 1, order - 1));
+      const int npoly = (BinCoeff (D + order, order));
+      Matrix<> qtbasis (ndof, npoly);
+      qtbasis = 0;
+      // init qtbasis
+      int counter = 0;
+      TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
+        if (coeff[0] > 1)
+          return;
+        int indexmap = PolBasis::IndexMap2<D> (coeff, order);
+        qtbasis (counter++, indexmap) = 1;
+      });
+      // start recursion
+      TraversePol2<D> (order, [&] (int i, Vec<D, int> coeff) {
+        if (coeff[0] <= 1)
+          return;
+        int indexmap = PolBasis::IndexMap2<D> (coeff, order);
+        Vec<D, int> mii = coeff;
+        mii[0] = mii[0] - 2;
+        // mii[D - 1] = mii[D - 1] + 1;
+        Vec<D, int> et = 0;
+        et[D - 1] = 1;
+        qtbasis.Col (indexmap)
+            += hx * hx / ht * (mii[D - 1] + 1) / coeff[0] / (coeff[0] - 1)
+               * qtbasis.Col (PolBasis::IndexMap2<D> (mii + et, order));
+        for (int j = 0; j < D - 1; j++)
+          {
+            Vec<D, int> ej = 0;
+            ej[j] = 1;
+            TraversePol<D> (mii + ej, [&] (int i2, Vec<D, int> mil) {
+              // matrix coeff A
+              for (int m = 0; m < D - 1; m++)
+                {
+                  if (i2 == 0 && m == 0 && j == 0)
+                    continue;
+                  Vec<D, int> em = 0;
+                  em[m] = 1;
+                  qtbasis.Col (indexmap)
+                      -= (AA[IndexMap2<D> (mil, order - 1)]) (j, m)
+                         * pow (hx, vsum<D - 1, int> (mil))
+                         * pow (ht, mil[D - 1]) * (mii[m] + ej[m] - mil[m] + 1)
+                         * (mii[j] + 1) / (mii[0] + 2) / (mii[0] + 1)
+                         / factorial (mil)
+                         * qtbasis.Col (PolBasis::IndexMap2<D> (
+                             mii + ej - mil + em, order));
+                }
+            });
+          }
+        qtbasis.Col (indexmap) *= 1.0 / (AA[0](0, 0));
+      });
+
+      // MatToCSR (qtbasis, gtbstore[encode]);
+      CSR tb;
+      MatToCSR (qtbasis, tb);
+      return tb;
+    }
+
+    // if (gtbstore[encode].Size () == 0)
+    //{
+    // stringstream str;
+    // str << "failed to generate trefftz basis of order " << order << endl;
+    // throw Exception (str.str ());
+    //}
+
+    // return gtbstore[encode];
+  }
+
+  // template class QTHeatBasis<1>;
+  template class QTHeatBasis<2>;
+  template class QTHeatBasis<3>;
+
 }
 
 #ifdef NGS_PYTHON

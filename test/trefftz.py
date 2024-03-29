@@ -87,7 +87,7 @@ def testlaptrefftz(order,mesh):
 def testhelmtrefftz(order,mesh):
     """
     >>> order = 5
-    >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
+    >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
     >>> [testhelmtrefftz(order,mesh)] # doctest:+ELLIPSIS
     [...e-09]
     """

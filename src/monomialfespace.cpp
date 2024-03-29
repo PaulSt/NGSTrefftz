@@ -100,7 +100,7 @@ namespace ngcomp
             {
               return *(new (alloc) ScalarMappedElement<2> (
                   local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                  Adiam<2> (ei)));
+                  1.0 / Adiam<2> (ei)));
               break;
             }
           case ET_HEX:
@@ -110,7 +110,7 @@ namespace ngcomp
             {
               return *(new (alloc) ScalarMappedElement<3> (
                   local_ndof, order, basismat, eltype, ElCenter<3> (ei),
-                  Adiam<3> (ei)));
+                  1.0 / Adiam<3> (ei)));
               break;
             }
           }
