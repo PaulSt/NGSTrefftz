@@ -102,6 +102,7 @@ namespace ngbla
 
 namespace ngcomp
 {
+  mutex stats_mutex;
 
   template <class SCAL>
   std::tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<BaseVector>>
@@ -267,6 +268,7 @@ namespace ngcomp
 
       if (stats)
         {
+          const lock_guard<mutex> lock(stats_mutex);
           if (sing_val_avg.Size () == 0)
             {
               sing_val_avg.SetSize (elmat.Height ());
