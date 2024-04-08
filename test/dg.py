@@ -2,6 +2,7 @@ from ngsolve import *
 from ngstrefftz import *
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
+import time
 
 Lap = lambda u : sum(Trace(u.Operator('hesse')))
 
@@ -19,7 +20,7 @@ mesh3d = Mesh(unit_cube.GenerateMesh(maxh = 1))
 def dgell(fes,Dbndc,rhs=0,uf=0,A=1,B=None,C=0,Dbnd=".*",Nbnd="",Nbndc=0):
     """
     >>> fes = L2(mesh2d, order=5,  dgjumps=True)#,all_dofs_together=True)
-    >>> a,f = dglap(fes,exactlap)
+    >>> a,f = dgell(fes,exactlap)
     >>> gfu = GridFunction(fes)
     >>> gfu.vec.data = a.mat.Inverse() * f.vec
     >>> sqrt(Integrate((gfu-exactlap)**2, mesh2d)) # doctest:+ELLIPSIS
@@ -354,3 +355,99 @@ def dgheat(fes, diffusion, ubnd):
     gfu = GridFunction(fes)
     gfu.vec.data = a.mat.Inverse() * f.vec
     return gfu
+
+
+########################################################################
+# LDG
+########################################################################
+def SolveLapLDG(mesh,order=1,bndc=0,rhs=0,trefftz=False,condense=True):
+    """
+    >>> mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.1))
+    >>> SolveLapLDG(mesh2d,order=5,bndc=exactlap,condense=False) # doctest:+ELLIPSIS
+    2...e-09
+    >>> SolveLapLDG(mesh2d,order=5,bndc=exactlap,condense=True) # doctest:+ELLIPSIS
+    2...e-09
+    """
+    SetNumThreads(1)
+    f1 = L2(mesh,order=order,dgjumps=True)
+    # f1 = trefftzfespace(mesh,order=order,eq="laplace")
+    f2 = VectorL2(mesh,order=order-1,dgjumps=True)
+    fes = f1 * f2
+    #print(fes.FreeDofs(coupling=True))
+    #print(VDofs)
+
+    n = specialcf.normal(mesh.dim)
+    h = specialcf.mesh_size
+    u,q = fes.TrialFunction()
+    v,r = fes.TestFunction()
+ 
+    C11 = 1/h
+    C12 = CF((1,1))
+    
+    jump_u = (u-u.Other())*n
+    jump_v = (v-v.Other())*n
+    jump_r = (r-r.Other())*n
+    jump_q = (q-q.Other())*n
+    mean_u = 0.5 * (u+u.Other())
+    mean_v = 0.5 * (v+v.Other())
+
+    a = BilinearForm(fes)
+    a += q*r * dx 
+    # b
+    a += u*div(r)*dx - (mean_u + C12*jump_u)*jump_r*dx(skeleton=True)
+    # -b
+    a += -1*( v*div(q)*dx - (mean_v + C12*jump_v)*jump_q*dx(skeleton=True) )
+    # c
+    a += C11*jump_u*jump_v*dx(skeleton=True) + C11*u*v * ds(skeleton=True)
+
+    f = LinearForm(fes)
+    f += bndc*r*n * ds(skeleton=True)
+    f += C11*bndc*v * ds(skeleton=True)
+    f += rhs*v * dx
+
+    with TaskManager():
+        a.Assemble()
+        f.Assemble()
+    # aspy(a.mat)
+
+    # if trefftz:  
+        # eps=10**-9
+        # Lap = lambda u : sum(Trace(u.Operator('hesse')))
+        # u = fes.TrialFunction()
+        # fes2 = L2(mesh, order=order-2,  dgjumps=True) * VectorL2(mesh,order=order-1,dgjumps=True) 
+        # (v,r) = fes2.TestFunction()
+        # op = Lap(u)*v*dx
+        # with TaskManager():
+            # PP = TrefftzEmbedding(op,fes,test_fes=fes2)
+        # PPT = PP.CreateTranspose()
+        # with TaskManager():
+            # TA = PPT@a.mat@PP
+            # TU = TA.Inverse(inverse='sparsecholesky')*(PPT*f.vec)
+            # tgfu = GridFunction(fes)
+            # tgfu.vec.data = PP*TU
+    # else:
+    timer = time.time()
+    if condense:
+        with TaskManager():
+            for i in range(f1.ndof,fes.ndof):
+               fes.SetCouplingType(i,COUPLING_TYPE.HIDDEN_DOF)
+            # VDofs = BitArray(fes.ndof)
+            # VDofs[:] = 1
+            # for i in range(fes.ndof):
+               # VDofs[i] = 0 if fes.CouplingType(i)==COUPLING_TYPE.HIDDEN_DOF else 1
+            amat = CondenseDG(a.mat,f.vec,fes) #.FreeDofs(coupling=True))
+            gfu = GridFunction(fes)    
+            gfu.components[0].vec.data = amat.Inverse() * f.vec[0:f1.ndof] #freedofs=VDofs
+    else:
+        with TaskManager():
+            gfu = GridFunction(fes)    
+            gfu.vec.data = a.mat.Inverse() * f.vec
+    print("Time:",time.time()-timer)
+
+    error = sqrt(Integrate((gfu.components[0]-exactlap)**2, mesh))
+    return error
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

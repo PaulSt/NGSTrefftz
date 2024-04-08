@@ -95,6 +95,7 @@ add_ngsolve_python_module2(_trefftz
     embtrefftz.cpp
     monomialfespace.cpp 
     mesh1dtents.cpp
+    condensedg.cpp
     #airy.cpp #for testing, requires boost
     )
 if(WIN32)
