@@ -16,17 +16,27 @@ namespace ngcomp
         out (i, j) = (*mat) (drow[i], dcol[j]);
   }
 
-  template <typename T>
-  inline void AInvBt (ngbla::FlatMatrix<T> a, ngbla::FlatMatrix<T> b)
-  {
-    LapackAInvBt (a, b, 'N');
-  }
+  // template <typename T>
+  // inline void AInvBt (ngbla::FlatMatrix<T> a, ngbla::FlatMatrix<T> b)
+  //{
+  // LapackAInvBt (a, b, 'N');
+  //}
 
-  inline void AInvBt (ngbla::FlatMatrix<double> a, ngbla::FlatMatrix<double> b)
+  // inline void AInvBt (ngbla::FlatMatrix<double> a, ngbla::FlatMatrix<double>
+  // b)
+  //{
+  // ArrayMem<int, 100> p (a.Height ());
+  // CalcLU (a, p);
+  // SolveTransFromLU (a, p, Trans (b));
+  //}
+
+  inline void AInvBt (FlatMatrix<double> a, FlatMatrix<double> b)
   {
-    ArrayMem<int, 100> p (a.Height ());
-    CalcLU (a, p);
-    SolveTransFromLU (a, p, Trans (b));
+    // TODO: improve this
+    Matrix<> ainv = a;
+    CalcInverse (ainv, INVERSE_LIB::INV_LAPACK);
+    Matrix<> c = b * ainv;
+    b = c;
   }
 
   Array<int>
@@ -164,7 +174,7 @@ namespace ngcomp
 
           FlatMatrix<> BB (odofs2.Size (), idofs1.Size (), mlh);
           GetSubMatrix<double> (smat, odofs2, idofs1, BB);
-          AInvBt (DD, BB); // b <--- b d^-1
+          AInvBt (DD, BB); // b <--- b d^-1 TODO: compute only once Dinv
 
           FlatVector<> vv (odofs2.Size (), mlh);
           vv = -1.0 * BB * dd;

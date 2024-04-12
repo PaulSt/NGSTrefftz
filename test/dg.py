@@ -362,7 +362,7 @@ def dgheat(fes, diffusion, ubnd):
 ########################################################################
 def SolveLapLDG(mesh,order=1,bndc=0,rhs=0,trefftz=False,condense=True):
     """
-    >>> mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.1))
+    >>> mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
     >>> SolveLapLDG(mesh2d,order=5,bndc=exactlap,condense=False) # doctest:+ELLIPSIS
     2...e-09
     >>> SolveLapLDG(mesh2d,order=5,bndc=exactlap,condense=True) # doctest:+ELLIPSIS
@@ -442,7 +442,7 @@ def SolveLapLDG(mesh,order=1,bndc=0,rhs=0,trefftz=False,condense=True):
         with TaskManager():
             gfu = GridFunction(fes)    
             gfu.vec.data = a.mat.Inverse() * f.vec
-    print("Time:",time.time()-timer)
+    # print("Time:",time.time()-timer)
 
     error = sqrt(Integrate((gfu.components[0]-exactlap)**2, mesh))
     return error
