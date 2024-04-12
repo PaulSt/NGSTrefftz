@@ -350,7 +350,7 @@ namespace ngcomp
                 }
               else if (eqtyp == "heat")
                 {
-                  Vec<2> scale = 1.0 / sqrt(ElSize<2> (ei));
+                  Vec<2> scale = 1.0 / sqrt (ElSize<2> (ei));
                   scale[1] = coeff_const * scale[1] * scale[1];
                   return *(new (alloc) ScalarMappedElement<2> (
                       local_ndof, order, basismat, eltype, ElCenter<2> (ei),
@@ -423,7 +423,7 @@ namespace ngcomp
                 }
               else if (eqtyp == "heat")
                 {
-                  Vec<3> scale = 1.0 / sqrt(ElSize<3> (ei));
+                  Vec<3> scale = 1.0 / sqrt (ElSize<3> (ei));
                   scale[2] = coeff_const * scale[2] * scale[2];
                   return *(new (alloc) ScalarMappedElement<3> (
                       local_ndof, order, basismat, eltype, ElCenter<3> (ei),
@@ -949,7 +949,7 @@ namespace ngcomp
                     qtbasis.Col (indexmap)
                         -= factorial (mii + ej) / factorial (mil)
                            * (AA[IndexMap2<D> (mil, order - 1)]) (j, m)
-                           / pow (elsize, vsum<D, int> (mii - mil) + 2)
+                           / pow (elsize, vsum<D, int> (-mil))
                            * (mii[m] + ej[m] - mil[m] + 1)
                            * qtbasis.Col (PolBasis::IndexMap2<D> (
                                mii + ej - mil + em, order));
@@ -958,7 +958,7 @@ namespace ngcomp
                 qtbasis.Col (indexmap)
                     += factorial (mii + ej) / factorial (mil)
                        * (BB[IndexMap2<D> (mil, order - 1)]) (j)
-                       / pow (elsize, vsum<D, int> (mii - mil) + 1)
+                       / pow (elsize, vsum<D, int> (-mil) - 1)
                        * qtbasis.Col (
                            PolBasis::IndexMap2<D> (mii + ej - mil, order));
 
@@ -967,16 +967,15 @@ namespace ngcomp
                   qtbasis.Col (indexmap)
                       += factorial (mii) / factorial (mil)
                          * CC[IndexMap2<D> (mil, order - 1)]
-                         / pow (elsize, vsum<D, int> (mii - mil))
+                         / pow (elsize, vsum<D, int> (-mil) - 2)
                          * qtbasis.Col (
                              PolBasis::IndexMap2<D> (mii - mil, order));
               });
             }
           Vec<D, int> eD = 0;
           eD[D - 1] = 2;
-          qtbasis.Col (indexmap) *= pow (elsize, vsum<D, int> (mii) + 2)
-                                    / factorial (mii + eD)
-                                    / (AA[0](D - 1, D - 1));
+          qtbasis.Col (indexmap)
+              *= 1.0 / factorial (mii + eD) / (AA[0](D - 1, D - 1));
         });
         MatToCSR (qtbasis, gtbstore[encode]);
       }
