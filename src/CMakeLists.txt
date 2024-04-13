@@ -22,6 +22,9 @@ find_package(NGSolve CONFIG REQUIRED
     )
 
 function(add_ngsolve_python_module2 target)
+    if(APPLE)
+        add_ngsolve_python_module(${ARGV})
+    else(APPLE)
     if(NOT CMAKE_BUILD_TYPE)
       message(STATUS "Setting build type to NGSolve build type: ${NGSOLVE_CMAKE_BUILD_TYPE}")
       set(CMAKE_BUILD_TYPE ${NGSOLVE_CMAKE_BUILD_TYPE} PARENT_SCOPE)
@@ -56,6 +59,7 @@ function(add_ngsolve_python_module2 target)
     endif(WIN32)
 
     set_target_properties(${target} PROPERTIES INSTALL_RPATH "${NGSOLVE_LIBRARY_DIR}")
+    endif(APPLE)
 endfunction()
 
 ### check if CMAKE_INSTALL_PREFIX is set by user, if not install in NGSolve python dir
