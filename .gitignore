@@ -1,0 +1,7 @@
+# build folder
+make/
+
+# python
+__pycache__/
+
+
