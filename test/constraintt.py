@@ -105,7 +105,11 @@ def PySVDConstraintTrefftz(op,fes,cop_lhs,cop_rhs,fes_constraint,eps):
 
 
 if __name__ == "__main__":
-    fes = L2(mesh2d, order=5,  dgjumps=True)#,all_dofs_together=True)
+
+    #eps = 10**-8
+    mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.4))
+
+    fes = L2(mesh2d, order=1,  dgjumps=True)#,all_dofs_together=True)
     u,v = fes.TnT()
     uh = u.Operator("hesse")
     vh = v.Operator("hesse")
