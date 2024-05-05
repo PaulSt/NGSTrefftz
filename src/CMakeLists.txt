@@ -86,7 +86,9 @@ if (NOT TARGET _pytents)
     endif(WIN32)
     target_compile_definitions(_pytents PRIVATE NGSTENT_EXPORTS)
     set_target_properties(_pytents PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents")
+    file(WRITE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents/__init__.py "from ._pytents import TentSlab, Tent")
     install(TARGETS _pytents DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTENTS_INSTALL_DIR_PYTHON})
+    install(FILES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents/__init__.py DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTENTS_INSTALL_DIR_PYTHON})
 endif()
 
 ### ngstrefftz
@@ -176,11 +178,7 @@ Make sure to add it to the python path:
 \n${ColourReset}")
 
 install(TARGETS _trefftz DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTREFFTZ_INSTALL_DIR_PYTHON}/)
-install(FILES
-        __init__.py 
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTREFFTZ_INSTALL_DIR_PYTHON}
-        #COMPONENT ngstrefftz
-       )
+install(FILES __init__.py DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTREFFTZ_INSTALL_DIR_PYTHON}) #COMPONENT ngstrefftz
 
 ### tests 
 include(CTest)
