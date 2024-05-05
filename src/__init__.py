@@ -1,7 +1,7 @@
 from ngsolve.fem import ET,IntegrationRule
 from ngsolve.comp import L2,BilinearForm,LinearForm,SymbolicBFI,SymbolicLFI,FESpace
 from ngsolve.fem import CoordCF
-from ngstents._pytents import TentSlab, Tent
+from ngstents import TentSlab, Tent
 from ._trefftz import *
 
 def GetWave(self,U):
