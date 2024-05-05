@@ -146,8 +146,7 @@ namespace ngcomp
         }
 
     vector<shared_ptr<Matrix<SCAL>>> ETmats (ne);
-    VVector<SCAL> lfvec (ndof);
-    lfvec = 0.0;
+    auto lfvec = make_shared<VVector<SCAL>> (ndof);
 
     size_t active_elements = 0;
     size_t test_local_ndof = test_fes->GetNDof () / ne;
@@ -268,7 +267,7 @@ namespace ngcomp
 
       if (stats)
         {
-          const lock_guard<mutex> lock(stats_mutex);
+          const lock_guard<mutex> lock (stats_mutex);
           if (sing_val_avg.Size () == 0)
             {
               sing_val_avg.SetSize (elmat.Height ());
@@ -319,7 +318,7 @@ namespace ngcomp
           // lfvec.FV () (dofs) = elinverse * elvec;
           FlatVector<SCAL> elsol (dofs.Size (), mlh);
           elsol = elinverse * elvec;
-          lfvec.SetIndirect (dofs, elsol);
+          lfvec->SetIndirect (dofs, elsol);
         }
     });
 
@@ -331,7 +330,7 @@ namespace ngcomp
         (*stats)["singmin"] = Vector<double> (sing_val_min);
       }
 
-    return std::make_tuple (ETmats, make_shared<VVector<SCAL>> (lfvec));
+    return std::make_tuple (ETmats, lfvec);
   }
 
   template std::tuple<vector<shared_ptr<Matrix<double>>>,
@@ -403,8 +402,8 @@ namespace ngcomp
     table = creator.MoveTable ();
     table2 = creator2.MoveTable ();
 
-    SparseMatrix<SCAL> PP (fes->GetNDof (), prevdofs, table, table2, false);
-    auto P = make_shared<SparseMatrix<SCAL>> (PP);
+    auto P = make_shared<SparseMatrix<SCAL>> (fes->GetNDof (), prevdofs, table,
+                                              table2, false);
     P->SetZero ();
     for (auto ei : ma->Elements (VOL))
       if (ETmats[ei.Nr ()])
@@ -526,14 +525,14 @@ namespace ngcomp
 
     if (type == TRANSFORM_RHS)
       {
-        Vector<double> new_vec (vec.Size ());
+        Vector<double> new_vec (nz);
         new_vec = Trans (*(ETmats[ei.Nr ()])) * vec;
         vec = new_vec;
       }
     else if (type == TRANSFORM_SOL)
       {
         Vector<double> new_vec (vec.Size ());
-        new_vec = (*(ETmats[ei.Nr ()])) * vec;
+        new_vec = (*(ETmats[ei.Nr ()])) * vec.Range (0, nz);
         vec = new_vec;
       }
   }

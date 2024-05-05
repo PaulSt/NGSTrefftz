@@ -2,18 +2,17 @@
 
 namespace ngcomp
 {
-  template <typename TSCAL>
-  void
-  GetSubMatrix (shared_ptr<SparseMatrixTM<TSCAL>> mat, FlatArray<int> drow,
-                FlatArray<int> dcol, FlatMatrix<> out)
+  void GetSubMatrix (shared_ptr<BaseMatrix> mat, FlatArray<int> drow,
+                     FlatArray<int> dcol, FlatMatrix<> out)
   {
     // auto colnr = mat->GetColIndices();
     // for (int i = 0; i < drow.Size (); i++)
     // for (size_t si = mat->First[drow[i]], j = 0; si < mat->First[drow[i] +
     // 1]; si++) if (dcol.Contains (colnr[si])) out (i, j++) = data[si];
+    auto smat = dynamic_pointer_cast<SparseMatrix<double>> (mat);
     for (int i = 0; i < drow.Size (); i++)
       for (int j = 0; j < dcol.Size (); j++)
-        out (i, j) = (*mat) (drow[i], dcol[j]);
+        out (i, j) = smat->operator() (drow[i], dcol[j]);
   }
 
   // template <typename T>
@@ -61,11 +60,11 @@ namespace ngcomp
   CondenseDG (shared_ptr<BaseMatrix> mat, shared_ptr<BaseVector> vec,
               shared_ptr<FESpace> fes)
   {
-    auto smat = dynamic_pointer_cast<SparseMatrixTM<double>> (mat);
+    auto smat = dynamic_pointer_cast<SparseMatrix<double>> (mat);
     auto svec = vec; // dynamic_pointer_cast<VVector<double>> (vec);
     if (!smat || !svec)
       throw Exception ("CondenseDG: matrix must be of type "
-                       "SparseMatrixTM and vector must be of type VVector");
+                       "SparseMatrix and vector must be of type VVector");
 
     static Timer sc ("CondenseDG");
     RegionTimer reg (sc);
@@ -119,9 +118,9 @@ namespace ngcomp
       }
     table = creator.MoveTable ();
 
-    SparseMatrix<double> PP (vndof, vndof, table, table,
-                             false); // TODO: support symmetric
-    PP.SetZero ();
+    auto PP = make_shared<SparseMatrix<double>> (
+        vndof, vndof, table, table, false); // TODO: support symmetric
+    PP->SetZero ();
     // finished output matrix
 
     ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
@@ -142,7 +141,7 @@ namespace ngcomp
         }
 
       FlatMatrix<> DD (idofs1.Size (), idofs1.Size (), mlh);
-      GetSubMatrix<double> (smat, idofs1, idofs1, DD);
+      GetSubMatrix (smat, idofs1, idofs1, DD);
 
       FlatVector<> dd (idofs1.Size (), mlh);
       svec->GetIndirect (idofs1, dd);
@@ -169,11 +168,11 @@ namespace ngcomp
             }
 
           FlatMatrix<> AA (odofs1.Size (), odofs2.Size (), mlh);
-          GetSubMatrix<double> (smat, odofs1, odofs2, AA);
-          PP.AddElementMatrix (odofs1, odofs2, AA, true);
+          GetSubMatrix (smat, odofs1, odofs2, AA);
+          PP->AddElementMatrix (odofs1, odofs2, AA, true);
 
           FlatMatrix<> BB (odofs2.Size (), idofs1.Size (), mlh);
-          GetSubMatrix<double> (smat, odofs2, idofs1, BB);
+          GetSubMatrix (smat, odofs2, idofs1, BB);
           AInvBt (DD, BB); // b <--- b d^-1 TODO: compute only once Dinv
 
           FlatVector<> vv (odofs2.Size (), mlh);
@@ -201,13 +200,13 @@ namespace ngcomp
                 }
 
               FlatMatrix<> CC (idofs1.Size (), odofs3.Size (), mlh);
-              GetSubMatrix<double> (smat, idofs1, odofs3, CC);
+              GetSubMatrix (smat, idofs1, odofs3, CC);
 
               FlatMatrix<> BDC (odofs2.Size (), odofs3.Size (), mlh);
               BDC = 0.0;
               // GetSubMatrix<double> (smat, odofs2, odofs3, AA);
               SubAB (BB, CC, BDC); // AA <--- -b c = -b d^-1 c why no SubABt?
-              PP.AddElementMatrix (odofs2, odofs3, BDC, true);
+              PP->AddElementMatrix (odofs2, odofs3, BDC, true);
               // smat->AddElementMatrix (odofs2, odofs3, BDC, true);
             }
         }
@@ -216,7 +215,7 @@ namespace ngcomp
     //*smat.get() = move(PP);
     // SparseMatrixTM<double> SPP (move(PP));
     // swap (SPP, PP);
-    return make_shared<SparseMatrix<double>> (PP);
+    return PP;
   }
 }
 
