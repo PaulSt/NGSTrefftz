@@ -9,10 +9,8 @@
 
 namespace ngcomp
 {
-  template <typename TSCAL>
-  void
-  GetSubMatrix (shared_ptr<SparseMatrixTM<TSCAL>> mat, FlatArray<int> drow,
-                FlatArray<int> dcol, FlatMatrix<> out);
+  void GetSubMatrix (shared_ptr<BaseMatrix> mat, FlatArray<int> drow,
+                     FlatArray<int> dcol, FlatMatrix<> out);
 
   shared_ptr<BaseMatrix>
   CondenseDG (shared_ptr<BaseMatrix> mat, shared_ptr<BaseVector> vec,
