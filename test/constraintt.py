@@ -1,5 +1,6 @@
 # import sys, os
 # sys.path.append(os.path.join(os.path.dirname(sys.path[0])))
+from typing import Final, List
 from ngsolve import *
 from ngstrefftz import *
 
@@ -108,9 +109,19 @@ def PySVDConstraintTrefftz(
     # localndof = int(fes.ndof/mesh.ne)
     # number of degrees of freedom per element
     # in the trefftz finite element space on fes
-    trefftzndof = 2 * order + 1 - 3
+    trefftzndof: Final[int] = 2 * order + 1 - 3
 
-    P = np.zeros([L.shape[1], (trefftzndof) * mesh.ne + fes_constraint.ndof])
+    # number of degrees of freedom of the contraint finite element space
+    n_constr: Final[int] = fes_constraint.ndof
+
+    # layout:
+    # /    |    \
+    # | P1 |  0 |
+    # +----+----+
+    # |  0 | P2 |
+    # \    |    /
+    # with P1 having shape (n_constr, n_constr),
+    P = np.zeros([L.shape[1], (trefftzndof) * mesh.ne + n_constr])
 
     # solve the following linear system in an element-wise fashion:
     # L @ T1 = B for the unknown matrix T1,
@@ -120,9 +131,9 @@ def PySVDConstraintTrefftz(
     #     | L |    | 0 |
     #     \   /    \   /
     for el, el_c in zip(fes.Elements(), fes_constraint.Elements()):
-        nr = el.nr
-        dofs = el.dofs
-        dofs_c = el_c.dofs
+        nr: Final[int] = el.nr
+        dofs: Final[List[int]] = el.dofs
+        dofs_c: Final[List[int]] = el_c.dofs
 
         if debug:
             print("dofs:", dofs)
@@ -172,7 +183,6 @@ def PySVDConstraintTrefftz(
         # place the local solution T1
         # into the global solution P
         print("T1 [:, 0:len()]", T1[:, 0 : len(dofs_c)])
-        # P[dofs, :][:, dofs_c] += T1[:, 0 : len(dofs_c)]
         P[np.ix_(dofs, dofs_c)] += T1[:, 0 : len(dofs_c)]
 
         if debug:
@@ -182,6 +192,24 @@ def PySVDConstraintTrefftz(
             plt.ylabel("singular value")
             plt.yscale("log")
             plt.show()
+
+        print("P shape", P.shape)
+        # for i in range(trefftzndof)
+        nonzero_dofs: Final[int] = len(dofs) - trefftzndof
+        if debug:
+            print(
+                "P[np.ix_(fes_constraint.ndof + dofs_c, dofs_c)]\n",
+                P[
+                    n_constr + nr * V.shape[1] : n_constr + (nr + 1) * V.shape[1],
+                    n_constr : n_constr + trefftzndof,
+                ],
+            )
+            print("V[nr:, :].T\n", V[nonzero_dofs, :].T)
+        P[
+            n_constr + nr * V.shape[1] : n_constr + (nr + 1) * V.shape[1],
+            n_constr : n_constr + trefftzndof,
+        ] += V[nonzero_dofs, :].T
+
     print(P)
     gfu = GridFunction(fes)
     for i in range(P.shape[1]):
