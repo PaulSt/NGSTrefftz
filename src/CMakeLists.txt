@@ -10,6 +10,9 @@ if(NOT WIN32)
   set(BoldWhite   "${Esc}[1;37m")
 endif()
 
+### Add Clangd support file
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 ### Requirements
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
 if(EXISTS "${LOC_PATH}")

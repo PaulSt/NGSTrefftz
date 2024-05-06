@@ -4,4 +4,8 @@ make/
 # python
 __pycache__/
 
+# Clangd support file
+compile_commands.json
 
+# Cache files
+.cache/
