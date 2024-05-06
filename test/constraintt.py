@@ -56,8 +56,8 @@ def PySVDConstraintTrefftz(
     opbf += op
     opbf.Assemble()
     rows, cols, vals = opbf.mat.COO()
-    A = sp.sparse.csr_matrix((vals, (rows, cols)))
-    A = A.todense()
+    L = sp.sparse.csr_matrix((vals, (rows, cols)))
+    L = L.todense()
 
     copbf_lhs = BilinearForm(trialspace=fes, testspace=fes_constraint)
     copbf_lhs += cop_lhs  # fes.TrialFunction()*fes_constraint.TestFunction()*dx(element_boundary=True) # cop_lhs
@@ -78,8 +78,15 @@ def PySVDConstraintTrefftz(
     # localndof = int(fes.ndof/mesh.ne)
     trefftzndof = 2 * order + 1 - 3
 
-    P = np.zeros([A.shape[1], (trefftzndof) * mesh.ne + fes_constraint.ndof])
+    P = np.zeros([L.shape[1], (trefftzndof) * mesh.ne + fes_constraint.ndof])
 
+    # solve the following linear system in an element-wise fashion:
+    # L @ T1 = B for the unknown matrix T1,
+    # with the given matrices:
+    #     /   \    /   \
+    #  A= |B_1| B= |B_2|
+    #     | L |    | 0 |
+    #     \   /    \   /
     for el, el_c in zip(fes.Elements(), fes_constraint.Elements()):
         nr = el.nr
         dofs = el.dofs
@@ -89,7 +96,7 @@ def PySVDConstraintTrefftz(
             print("dofs:", dofs)
             print("dofs_c:", dofs_c)
 
-        elmat_l = A[dofs, :][:, dofs]
+        elmat_l = L[dofs, :][:, dofs]
         elmat_b1 = B1[dofs_c, :][:, dofs]
         elmat_b2 = B2[dofs_c, :][:, dofs_c]
 
@@ -116,6 +123,8 @@ def PySVDConstraintTrefftz(
             print("s_inv", s_inv)
             print("V", V)
 
+        # solve B1 @ T1 = B2
+        # for the unknown T1
         T1 = V.T @ s_inv @ U.T @ elmat_rhs
 
         if debug:
