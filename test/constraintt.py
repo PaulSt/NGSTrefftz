@@ -11,6 +11,7 @@ from netgen.csg import unit_cube
 import scipy as sp
 import numpy as np
 import matplotlib.pyplot as plt
+import netgen.gui
 
 
 SetNumThreads(3)
@@ -105,6 +106,8 @@ def PySVDConstraintTrefftz(
     B2 = B2.todense()
 
     # localndof = int(fes.ndof/mesh.ne)
+    # number of degrees of freedom per element
+    # in the trefftz finite element space on fes
     trefftzndof = 2 * order + 1 - 3
 
     P = np.zeros([L.shape[1], (trefftzndof) * mesh.ne + fes_constraint.ndof])
@@ -168,16 +171,24 @@ def PySVDConstraintTrefftz(
 
         # place the local solution T1
         # into the global solution P
-        P[dofs, :][:, dofs_c] = T1[:, 0 : len(dofs_c)]
+        print("T1 [:, 0:len()]", T1[:, 0 : len(dofs_c)])
+        # P[dofs, :][:, dofs_c] += T1[:, 0 : len(dofs_c)]
+        P[np.ix_(dofs, dofs_c)] += T1[:, 0 : len(dofs_c)]
 
-        # gfu = GridFunction(fes)
-        # print("T1 slice:\n", T1[:, 0].flatten())
-        # gfu.vec.data[dofs, :][:, dofs_c] = T1[:, 0 : len(dofs_c)]
-        # Draw(gfu)
         if debug:
             plt.plot(s, marker="x")
+            plt.title(f"singular values of A for element number {nr}")
+            plt.xlabel("singular value number")
+            plt.ylabel("singular value")
+            plt.yscale("log")
             plt.show()
-            # input("")
+    print(P)
+    gfu = GridFunction(fes)
+    for i in range(P.shape[1]):
+        print("P slice:\n", P[:, i].flatten())
+        gfu.vec.FV().NumPy()[:] = P[:, i]
+        Draw(gfu)
+        input("")
     return P
 
 
@@ -186,7 +197,7 @@ if __name__ == "__main__":
     # eps = 10**-8
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.4))
 
-    fes = L2(mesh2d, order=1, dgjumps=True)  # ,all_dofs_together=True)
+    fes = L2(mesh2d, order=2, dgjumps=True)  # ,all_dofs_together=True)
     u, v = fes.TnT()
     uh = u.Operator("hesse")
     vh = v.Operator("hesse")
