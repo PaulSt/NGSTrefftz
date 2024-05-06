@@ -105,22 +105,18 @@ def PySVDConstraintTrefftz(
             print("elmat_rhs", elmat_rhs)
 
         U, s, V = np.linalg.svd(elmat_lhs)
-        # T1 = (
-        #    V.T
-        #    * np.hstack([np.diag(s), np.zeros((V.shape[0], U.shape[0] - V.shape[0]))])
-        #    * U.T
-        #    * elmat_rhs
-        # )
-        s_T = np.hstack(
+
+        # pseudo inverse of s
+        s_inv = np.hstack(
             [np.diag(1.0 / s), np.zeros((V.shape[0], U.shape[0] - V.shape[0]))]
         )
 
         if debug:
             print("U", U)
-            print("s_T", s_T)
+            print("s_inv", s_inv)
             print("V", V)
 
-        T1 = V.T @ s_T @ U.T @ elmat_rhs
+        T1 = V.T @ s_inv @ U.T @ elmat_rhs
 
         if debug:
             print("T1", T1)
