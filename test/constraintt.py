@@ -50,8 +50,33 @@ def PySVDConstraintTrefftz(
     eps: float,
     debug: bool = False,
 ) -> np.ndarray:
+    """
+    produces an embedding matrix P
+
+    `op`: the differential operation
+
+    `fes`: the finite element space of `op`
+
+    `cop_lhs`: left hand side of the constraint operation
+
+    `cop_rhs`: right hand side of the constraint operation
+
+    `fes_constraint`: finite element space of the constraint operation
+
+    `eps`: eigenvalues less than eps will be treated as 0
+
+    `debug`: if `True`, print debug messages. Default: `False`
+
+    returns: P
+
+    raises: LinAlgError: if the imput is not sound, a non-invertible matrix may
+        be tried to be inverted
+    """
     mesh = fes.mesh
     order = fes.globalorder
+
+    # let L be the matrix corrensponding to
+    # the differential operator op
     opbf = BilinearForm(fes)
     opbf += op
     opbf.Assemble()
@@ -59,18 +84,22 @@ def PySVDConstraintTrefftz(
     L = sp.sparse.csr_matrix((vals, (rows, cols)))
     L = L.todense()
 
+    # let B1 be the matrix corrensponding to
+    # the left hand side constraint operator cop_lhs
     copbf_lhs = BilinearForm(trialspace=fes, testspace=fes_constraint)
-    copbf_lhs += cop_lhs  # fes.TrialFunction()*fes_constraint.TestFunction()*dx(element_boundary=True) # cop_lhs
+    copbf_lhs += cop_lhs
     copbf_lhs.Assemble()
-    copbf_rhs = BilinearForm(fes_constraint)
-    copbf_rhs += cop_rhs
-    copbf_rhs.Assemble()
-
     rows, cols, vals = copbf_lhs.mat.COO()
     B1 = sp.sparse.csr_matrix((vals, (rows, cols)))
     B1 = B1.todense()
-    print(B1.shape)
+    if debug:
+        print("B1.shape", B1.shape)
 
+    # let B2 be the matrix corrensponding to
+    # the right hand side constraint operator cop_rhs
+    copbf_rhs = BilinearForm(fes_constraint)
+    copbf_rhs += cop_rhs
+    copbf_rhs.Assemble()
     rows, cols, vals = copbf_rhs.mat.COO()
     B2 = sp.sparse.csr_matrix((vals, (rows, cols)))
     B2 = B2.todense()
@@ -96,6 +125,7 @@ def PySVDConstraintTrefftz(
             print("dofs:", dofs)
             print("dofs_c:", dofs_c)
 
+        # produce local sub-matrices from the global matrices L, B1, B2
         elmat_l = L[dofs, :][:, dofs]
         elmat_b1 = B1[dofs_c, :][:, dofs]
         elmat_b2 = B2[dofs_c, :][:, dofs_c]
@@ -103,15 +133,20 @@ def PySVDConstraintTrefftz(
         if debug:
             print("elmat_b1", elmat_b1.shape)
             print("elmat_l", elmat_l.shape)
-        elmat_lhs = np.vstack([elmat_b1, elmat_l])
 
-        elmat_rhs = np.vstack([elmat_b2, np.zeros([len(dofs), len(dofs_c)])])
+        #     /   \    /   \
+        #  A= |B_1| B= |B_2|
+        #     | L |    | 0 |
+        #     \   /    \   /
+        elmat_a = np.vstack([elmat_b1, elmat_l])
+        elmat_b = np.vstack([elmat_b2, np.zeros([len(dofs), len(dofs_c)])])
 
         if debug:
-            print("elmat_lhs", elmat_lhs)
-            print("elmat_rhs", elmat_rhs)
+            print("elmat_a", elmat_a)
+            print("elmat_b", elmat_b)
 
-        U, s, V = np.linalg.svd(elmat_lhs)
+        # A = U @ s @ V, singular value decomposition
+        U, s, V = np.linalg.svd(elmat_a)
 
         # pseudo inverse of s
         s_inv = np.hstack(
@@ -123,13 +158,16 @@ def PySVDConstraintTrefftz(
             print("s_inv", s_inv)
             print("V", V)
 
-        # solve B1 @ T1 = B2
+        # solve A @ T1 = B
+        # i.e. T1 = A^{-1} @ B
         # for the unknown T1
-        T1 = V.T @ s_inv @ U.T @ elmat_rhs
+        T1 = V.T @ s_inv @ U.T @ elmat_b
 
         if debug:
             print("T1", T1)
 
+        # place the local solution T1
+        # into the global solution P
         P[dofs, :][:, dofs_c] = T1[:, 0 : len(dofs_c)]
 
         # gfu = GridFunction(fes)
