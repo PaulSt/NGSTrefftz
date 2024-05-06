@@ -10,6 +10,7 @@ from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 import scipy as sp
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 SetNumThreads(3)
@@ -47,6 +48,7 @@ def PySVDConstraintTrefftz(
     cop_rhs: comp.SumOfIntegrals,
     fes_constraint: FESpace,
     eps: float,
+    debug: bool = False,
 ) -> np.ndarray:
     mesh = fes.mesh
     order = fes.globalorder
@@ -82,20 +84,25 @@ def PySVDConstraintTrefftz(
         nr = el.nr
         dofs = el.dofs
         dofs_c = el_c.dofs
-        print("dofs:", dofs)
-        print("dofs_c:", dofs_c)
+
+        if debug:
+            print("dofs:", dofs)
+            print("dofs_c:", dofs_c)
+
         elmat_l = A[dofs, :][:, dofs]
         elmat_b1 = B1[dofs_c, :][:, dofs]
         elmat_b2 = B2[dofs_c, :][:, dofs_c]
 
-        print("elmat_b1", elmat_b1.shape)
-        print("elmat_l", elmat_l.shape)
+        if debug:
+            print("elmat_b1", elmat_b1.shape)
+            print("elmat_l", elmat_l.shape)
         elmat_lhs = np.vstack([elmat_b1, elmat_l])
 
         elmat_rhs = np.vstack([elmat_b2, np.zeros([len(dofs), len(dofs_c)])])
 
-        print("elmat_lhs", elmat_lhs)
-        print("elmat_rhs", elmat_rhs)
+        if debug:
+            print("elmat_lhs", elmat_lhs)
+            print("elmat_rhs", elmat_rhs)
 
         U, s, V = np.linalg.svd(elmat_lhs)
         # T1 = (
@@ -107,16 +114,27 @@ def PySVDConstraintTrefftz(
         s_T = np.hstack(
             [np.diag(1.0 / s), np.zeros((V.shape[0], U.shape[0] - V.shape[0]))]
         )
+
+        if debug:
+            print("U", U)
+            print("s_T", s_T)
+            print("V", V)
+
         T1 = V.T @ s_T @ U.T @ elmat_rhs
-        print("T1", T1)
+
+        if debug:
+            print("T1", T1)
 
         P[dofs, :][:, dofs_c] = T1[:, 0 : len(dofs_c)]
 
         # gfu = GridFunction(fes)
         # print("T1 slice:\n", T1[:, 0].flatten())
-        # gfu.vec.data = BaseVector(T1[:, 0].reshape((-1,)))
+        # gfu.vec.data[dofs, :][:, dofs_c] = T1[:, 0 : len(dofs_c)]
         # Draw(gfu)
-        input("")
+        if debug:
+            plt.plot(s, marker="x")
+            plt.show()
+            # input("")
     return P
 
 
@@ -136,7 +154,9 @@ if __name__ == "__main__":
     cop_lhs = u * vF * dx(element_boundary=True)
     cop_rhs = uF * vF * dx(element_boundary=True)
 
-    P = PySVDConstraintTrefftz(op, fes, cop_lhs, cop_rhs, fes_constraint, dg.eps)
+    P = PySVDConstraintTrefftz(
+        op, fes, cop_lhs, cop_rhs, fes_constraint, dg.eps, debug=True
+    )
 
     a, f = dg.dgell(fes, dg.exactlap)
     rows, cols, vals = a.mat.COO()
@@ -148,4 +168,3 @@ if __name__ == "__main__":
     tpgfu = GridFunction(fes)
     tpgfu.vec.data = P @ tsol
     print("error : ", sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d)))
-
