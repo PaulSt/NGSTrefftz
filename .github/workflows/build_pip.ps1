@@ -28,7 +28,7 @@ if (test-path venv_ngs) {
 #Write-Host $env:LIB
 
 
-pip3 install scikit-build wheel numpy twine mkl-devel==2022.* mkl==2022.*
+pip3 install scikit-build wheel numpy twine mkl-devel==2022.* mkl==2022.* setuptools setuptools_scm
 pip3 install -r ngsolve_version.txt
 
 

@@ -17,7 +17,7 @@ export CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:$NGSolve_Dir:$NETGEN_Dir
 #export PYDIR=/Library/Frameworks/Python.framework/Versions/$1/bin
 #$PYDIR/python3 -m venv ../venv_ngs
 #source ../venv_ngs/bin/activate
-$PYDIR/pip3 install scikit-build wheel
+$PYDIR/pip3 install scikit-build wheel setuptools setuptools_scm
 #$PYDIR/pip3 install -U pytest-check numpy wheel scikit-build mkl==2022.* mkl-devel==2022.* setuptools
 
 export CMAKE_OSX_ARCHITECTURES='arm64;x86_64'
