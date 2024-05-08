@@ -17,79 +17,78 @@ if(EXISTS "${LOC_PATH}")
 endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-find_package(NGSolve CONFIG REQUIRED
-    HINTS $ENV{NETGENDIR}/.. $ENV{NETGENDIR}/../Resources/CMake /opt/netgen/ /Applications/Netgen.app/Contents/Resources/CMake C:/netgen $ENV{NGSolve_DIR}
-    )
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-function(add_ngsolve_python_module2 target)
-    if(APPLE)
-        add_ngsolve_python_module(${ARGV})
-    else(APPLE)
-    if(NOT CMAKE_BUILD_TYPE)
-      message(STATUS "Setting build type to NGSolve build type: ${NGSOLVE_CMAKE_BUILD_TYPE}")
-      set(CMAKE_BUILD_TYPE ${NGSOLVE_CMAKE_BUILD_TYPE} PARENT_SCOPE)
-    endif()
-    add_library(${target} SHARED ${ARGN})
-
-    if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.18)
-        find_package(Python3 REQUIRED COMPONENTS Development.Module)
-        if(NOT EMSCRIPTEN)
-            find_package(Python3 COMPONENTS Interpreter Development.Embed)
-        endif()
-    else()
-      find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-    endif()
-    target_include_directories(${target} PRIVATE ${Python3_INCLUDE_DIRS})
-
-    if(NETGEN_BUILD_FOR_CONDA AND NOT WIN32)
-        if(APPLE)
-            target_link_options(${target} PUBLIC -undefined dynamic_lookup)
-        endif(APPLE)
-    else(NETGEN_BUILD_FOR_CONDA AND NOT WIN32)
-        target_link_libraries(${target} PUBLIC ${PYTHON_LIBRARY})
-    endif(NETGEN_BUILD_FOR_CONDA AND NOT WIN32)
-
-    set_target_properties(${target} PROPERTIES PREFIX "" CXX_STANDARD 17)
-    target_link_libraries(${target} PUBLIC ngsolve)
-
-    if(WIN32)
-      set_target_properties( ${target} PROPERTIES SUFFIX ".pyd" )
-    else(WIN32)
-      set_target_properties(${target} PROPERTIES SUFFIX ".so")
-    endif(WIN32)
-
-    set_target_properties(${target} PROPERTIES INSTALL_RPATH "${NGSOLVE_LIBRARY_DIR}")
-    endif(APPLE)
-endfunction()
+# Find NGSolve and Netgen using python
+if(CMAKE_VERSION VERSION_LESS "3.18")
+  find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+else()
+  find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+endif()
+set(Netgen_DIR "" CACHE PATH "Path to directory containing NetgenConfig.cmake")
+set(NGSolve_DIR "" CACHE PATH "Path to directory containing NGSolveConfig.cmake")
+execute_process(COMMAND ${Python3_EXECUTABLE} -m netgen.config OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE Netgen_DIR)
+execute_process(COMMAND ${Python3_EXECUTABLE} -m ngsolve.config OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE NGSolve_DIR)
+find_package(NGSolve CONFIG REQUIRED)
 
 ### check if CMAKE_INSTALL_PREFIX is set by user, if not install in NGSolve python dir
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX ${NGSOLVE_INSTALL_DIR} CACHE PATH "Install dir" FORCE)
+    execute_process(COMMAND ${Python3_EXECUTABLE} -m site --user-site OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE install_dir RESULT_VARIABLE ret)
+    if (NOT ret EQUAL 0)
+        # user site directory is disabled (are we in a virtual environment?)
+        set(install_dir ${Python3_SITEARCH})
+    endif()
+    message("The python module ${module_name} will be installed to: ${install_dir}")
+    set(CMAKE_INSTALL_PREFIX ${install_dir} CACHE PATH "Install dir" FORCE)
+else(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(PY_INSTALL_DIR ${NGSOLVE_INSTALL_DIR_PYTHON} CACHE STRING "subdir of install dir for python modules")
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-set(PY_INSTALL_DIR ${NGSOLVE_INSTALL_DIR_PYTHON} CACHE STRING "subdir of install dir for python modules")
-set(NGSTREFFTZ_INSTALL_DIR_PYTHON ${PY_INSTALL_DIR}/ngstrefftz)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
 
+### install message
+set(NGSTREFFTZ_USE_MKL ${NGSOLVE_USE_MKL} CACHE BOOL "Try to use mkl")
+set(NGSTREFFTZ_USE_LAPACK ${NGSOLVE_USE_LAPACK} CACHE BOOL "Try to use lapack from ngsolve")
+set(INSTALL_TENTS ON CACHE BOOL "Install ngstents")
+message("${BoldCyan}
+------------------------------------------------------------------------
+  Build type: ${CMAKE_BUILD_TYPE}
+  Compiler: ${CMAKE_CXX_COMPILER}
+  Flags: ${flags}
+
+  Enabled functionality:
+    LAPACK: ............ ${NGSTREFFTZ_USE_LAPACK} 
+    MKL: ............... ${NGSTREFFTZ_USE_MKL}
+    ngstents: .......... ${INSTALL_TENTS}
+
+With 'make install' the package will be installed to: ${CMAKE_INSTALL_PREFIX}
+Make sure to add it to the python path: 
+-->   export PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${PY_INSTALL_DIR}:$PYTHONPATH
+------------------------------------------------------------------------
+\n${ColourReset}")
+
 ### add ngstents dependency if needed
-if (NOT TARGET _pytents)
+if (INSTALL_TENTS)# AND NOT TARGET _pytents)
     include_directories(${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src)
-    set(NGSTENTS_INSTALL_DIR_PYTHON ${PY_INSTALL_DIR}/ngstents)
-    add_ngsolve_python_module2(_pytents
+    add_library( _pytents SHARED
       ${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src/python_tents.cpp
       ${CMAKE_SOURCE_DIR}/../external_dependencies/ngstents/src/tents.cpp
       )
+    target_link_libraries(_pytents PUBLIC ngsolve Python3::Module)
+    set_target_properties(_pytents PROPERTIES PREFIX "" CXX_STANDARD 17)
     if(WIN32)
-        target_link_libraries(_pytents PUBLIC ${PYTHON_LIBRARY})
+      set_target_properties(_pytents PROPERTIES SUFFIX ".pyd" )
+    else(WIN32)
+      set_target_properties(_pytents PROPERTIES SUFFIX ".so")
     endif(WIN32)
     target_compile_definitions(_pytents PRIVATE NGSTENT_EXPORTS)
     set_target_properties(_pytents PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents")
     file(WRITE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents/__init__.py "from ._pytents import TentSlab, Tent")
-    install(TARGETS _pytents DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTENTS_INSTALL_DIR_PYTHON})
-    install(FILES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents/__init__.py DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTENTS_INSTALL_DIR_PYTHON})
-endif()
+    install(TARGETS _pytents DESTINATION ${CMAKE_INSTALL_PREFIX}/${PY_INSTALL_DIR}/ngstents)
+    install(FILES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents/__init__.py DESTINATION ${CMAKE_INSTALL_PREFIX}/${PY_INSTALL_DIR}/ngstents)
+endif(INSTALL_TENTS)
 
 ### ngstrefftz
-add_ngsolve_python_module2(_trefftz 
+add_library( _trefftz SHARED
     python_trefftz.cpp
     diffopmapped.hpp
     scalarmappedfe.cpp
@@ -103,53 +102,80 @@ add_ngsolve_python_module2(_trefftz
     mesh1dtents.cpp
     condensedg.cpp
     #airy.cpp #for testing, requires boost
-    )
+  )
+target_link_libraries(_trefftz PUBLIC ngsolve Python3::Module)
+target_link_libraries(_trefftz PRIVATE _pytents)
+set_target_properties(_trefftz PROPERTIES PREFIX "" CXX_STANDARD 17)
 if(WIN32)
-    target_link_libraries(_trefftz PUBLIC ${PYTHON_LIBRARY})
+  set_target_properties(_trefftz PROPERTIES SUFFIX ".pyd" )
+else(WIN32)
+  set_target_properties(_trefftz PROPERTIES SUFFIX ".so")
 endif(WIN32)
+target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_EXPORTS)
 #target_compile_options(_trefftz PRIVATE "$<$<CONFIG:DEBUG>:-W;-Wall;-Wextra;-Wpedantic;-Wno-unused-parameter;-g;>")
 #set_target_properties(_trefftz PROPERTIES COMPILE_DEFINITIONS "NGSTREFFTZ_EXPORTS")
-set(NGSTREFFTZ_USE_LAPACK ${NGSOLVE_USE_LAPACK} CACHE BOOL "Try to use lapack from ngsolve")
-if(NGSTREFFTZ_USE_LAPACK AND NOT WIN32)
-    target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_USE_LAPACK)
-endif()
-if(USE_MKL AND NGSOLVE_USE_MKL)
-    find_package(MKL REQUIRED)
+
+### link LAPACK or MKL if possible
+if (NGSTREFFTZ_USE_MKL)
+    #list(GET NGSOLVE_INCLUDE_DIRS 0 NGSOLVE_MKL_INCLUDE_DIRS)
+    file(DOWNLOAD https://raw.githubusercontent.com/NGSolve/ngsolve/master/cmake/cmake_modules/FindMKL.cmake ${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake)
+    set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_BINARY_DIR}/cmake_modules")
+
+    set(MKL_MULTI_THREADED ON CACHE BOOL "Use threaded MKL libs")
+    if(NOT MKL_MULTI_THREADED)
+      set(MKL_THREADING sequential)
+    endif()
+    set(MKL_STATIC OFF CACHE BOOL "Link static MKL")
+    set(MKL_SDL ON CACHE BOOL "Link single dynamic MKL lib")
+    set(MKL_ARCH "intel64")
+    if(NOT MKL_LINK)
+      if(MKL_STATIC)
+        set(MKL_LINK static)
+      elseif(MKL_SDL AND NOT USE_MPI)
+        set(MKL_LINK sdl)
+      else()
+        set(MKL_LINK dynamic)
+      endif()
+    endif()
+    find_package(MKL) # HINTS ${MKL_ROOT} ${CMAKE_INSTALL_PREFIX}/../../cmake/mkl ${Python3_ROOT_DIR}/lib/cmake/mkl)
     if(APPLE OR WIN32)
       set(MKL_RT_NAME mkl_rt.2)
     else()
       set(MKL_RT_NAME libmkl_rt.so.2)
     endif()
     find_library(MKLRT ${MKL_RT_NAME} HINTS ${MKL_ROOT}/lib)
-    message("Linking with MKL_RT=${MKLRT}")
-    target_link_libraries(_trefftz PUBLIC ${MKLRT})
+    message("MKL minimal: ${MKL_MINIMAL_LIBRARIES}")
+    message("MKLRT: ${MKLRT}")
+
+    #if(NOT MKL_FOUND OR NOT MKLRT)
+    if(NOT MKL_MINIMAL_LIBRARIES)
+        message("${Red}MKL not found, switching off NGSTREFFTZ_USE_LAPACK!${ColourReset}")
+        set(NGSTREFFTZ_USE_LAPACK OFF)
+    else()
+        if(WIN32)
+            set(LAPACK_LIBRARIES "${MKL_MINIMAL_LIBRARIES}")
+        else()
+            set(LAPACK_LIBRARIES "${MKLRT}")
+        endif()
+        message("Setting LAPACK_LIBRARIES=${LAPACK_LIBRARIES}")
+        target_include_directories(_trefftz PRIVATE "${MKL_INCLUDE_DIRS}")
+    endif()
+endif (NGSTREFFTZ_USE_MKL)
+if(NGSTREFFTZ_USE_LAPACK AND NOT LAPACK_LIBRARIES)
+    find_package(LAPACK)
+endif(NGSTREFFTZ_USE_LAPACK)
+if(LAPACK_LIBRARIES)
+    #target_link_libraries(_trefftz PRIVATE $<BUILD_INTERFACE:ngs_lapack>)
+    message("Linking with LAPACK_LIBRARIES=${LAPACK_LIBRARIES}")
+    target_link_libraries(_trefftz PRIVATE ${LAPACK_LIBRARIES})
+    target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_USE_LAPACK)
 endif()
-target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_EXPORTS)
-target_link_libraries(_trefftz PRIVATE _pytents)
-set_target_properties(_trefftz PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz"
-)
-file(COPY ${CMAKE_SOURCE_DIR}/__init__.py DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz)
 
 ### install
-message("${BoldCyan}
-------------------------------------------------------------------------
-  Build type: ${CMAKE_BUILD_TYPE}
-  Compiler: ${CMAKE_CXX_COMPILER}
-  Flags: ${flags}
-
-  Enabled functionality from ngsolve:
-    LAPACK: ............ ${NGSTREFFTZ_USE_LAPACK} 
-    MKL: ............... ${NGSOLVE_USE_MKL}
-
-With 'make install' the package will be installed to: ${CMAKE_INSTALL_PREFIX}
-Make sure to add it to the python path: 
--->   export PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${PY_INSTALL_DIR}:$PYTHONPATH
-------------------------------------------------------------------------
-\n${ColourReset}")
-
-install(TARGETS _trefftz DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTREFFTZ_INSTALL_DIR_PYTHON}/)
-install(FILES __init__.py DESTINATION ${CMAKE_INSTALL_PREFIX}/${NGSTREFFTZ_INSTALL_DIR_PYTHON}) #COMPONENT ngstrefftz
+set_target_properties(_trefftz PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz")
+file(COPY ${CMAKE_SOURCE_DIR}/__init__.py DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz)
+install(TARGETS _trefftz DESTINATION ${CMAKE_INSTALL_PREFIX}/${PY_INSTALL_DIR}/ngstrefftz)
+install(FILES __init__.py DESTINATION ${CMAKE_INSTALL_PREFIX}/${PY_INSTALL_DIR}/ngstrefftz) #COMPONENT ngstrefftz
 
 ### tests 
 include(CTest)

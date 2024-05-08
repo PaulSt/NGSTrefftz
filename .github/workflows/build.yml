@@ -43,7 +43,7 @@ jobs:
     name: Build wheels for macOS
     strategy:
       matrix:
-        py: ['3.8', '3.9', '3.10', '3.11']
+        py: ['3.8', '3.9', '3.10', '3.11', '3.12']
     runs-on: macos-11
     env:
       MACOSX_DEPLOYMENT_TARGET: '10.15'
@@ -70,7 +70,7 @@ jobs:
     name: Build wheels for Windows
     strategy:
       matrix:
-        py: ['3.8', '3.9', '3.10', '3.11']
+        py: ['3.8', '3.9', '3.10', '3.11', '3.12']
     runs-on: windows-2019
     steps:
       - name: Checkout
@@ -107,7 +107,7 @@ jobs:
       - name: Update pip and Install setuptools
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install -U pytest-check numpy wheel scikit-build mkl==2023.* mkl-devel==2023.* setuptools
+          python3 -m pip install -U pytest-check numpy wheel scikit-build mkl==2023.* mkl-devel==2023.* setuptools setuptools_scm
           python3 -m pip install ngsolve --pre
       - name: Package ngstrefftz sources for PyPI
         run: cd NGSTrefftz && python3 setup.py sdist -d wheelhouse
@@ -176,7 +176,8 @@ jobs:
           #labels: ${{ steps.meta.outputs.labels }}
 
   pyodide:
-    needs: [publish-pypi]
+    #needs: [publish-pypi]
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: clear cache
@@ -210,7 +211,7 @@ jobs:
 
 
   docs:
-    needs: [pyodide]
+    needs: [publish-pypi]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -228,14 +229,6 @@ jobs:
         run: |
              echo "NETGENDIR=/usr/bin/" >> $GITHUB_ENV
              echo "LD_LIBRARY_PATH=${{ env.LD_LIBRARY_PATH }}:/home/runner/.local/lib:/usr/local/lib/" >> $GITHUB_ENV
-      - name: webgui
-        run: |
-             pip install jupyter_contrib_nbextensions 
-             jupyter contrib nbextension install --user
-             jupyter nbextension install --user --py widgetsnbextension
-             jupyter nbextension enable --user --py widgetsnbextension
-             jupyter nbextension install --user --py webgui_jupyter_widgets
-             jupyter nbextension enable --user --py webgui_jupyter_widgets            
       - name: Build and Commit
         uses: sphinx-notes/pages@v2
         with:
@@ -243,6 +236,7 @@ jobs:
           publish: false
           #requirements_path: ./docs/requirements.txt
       - name: Download pyodide stuff
+        if: false
         uses: actions/download-artifact@v4
         with:
           name: ngst-pyodide
