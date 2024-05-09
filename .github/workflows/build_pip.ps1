@@ -27,15 +27,20 @@ if (test-path venv_ngs) {
 #Get-ChildItem venv_ngs\scripts
 #Write-Host $env:LIB
 
+Set-Location ../..
+Get-ChildItem
+python.exe -m venv .\venv_ngs
+.\venv_ngs\scripts\Activate.ps1
+$env:PATH += Join-Path ";" (Get-Item .).FullName "venv_ngs\bin"
+Write-Host $env:PATH
 
-pip3 install scikit-build wheel numpy twine mkl-devel==2022.* mkl==2022.* setuptools setuptools_scm
-pip3 install -r ngsolve_version.txt
-
+pip3 install scikit-build wheel numpy twine mkl-devel==2022.* mkl==2022.* setuptools==69.5.1 setuptools_scm==8.1.0
+pip3 install -r .github/workflows/ngsolve_version.txt
 
 #$env:PYDIR = "$env:Python3_ROOT_DIR"
 #$env:PATH += ";$env:pythonLibrary;$env:Python3_ROOT_DIR"
-$env:NGSolve_DIR = "$env:Python3_ROOT_DIR\lib\site-packages\ngsolve\cmake"
-$env:Netgen_DIR = "$env:Python3_ROOT_DIR\lib\site-packages\netgen\cmake"
+#$env:NGSolve_DIR = "$env:Python3_ROOT_DIR\lib\site-packages\ngsolve\cmake"
+#$env:Netgen_DIR = "$env:Python3_ROOT_DIR\lib\site-packages\netgen\cmake"
 #$env:LIB = "$env:LIB;$env:Python3_ROOT_DIR\libs"
 #$env:LIBPATH = "$env:LIBPATH;$env:Python3_ROOT_DIR\libs"
 
@@ -49,6 +54,5 @@ $env:Netgen_DIR = "$env:Python3_ROOT_DIR\lib\site-packages\netgen\cmake"
 #Get-ChildItem $env:Python3_ROOT_DIR\lib\site-packages
 #Get-ChildItem $env:Python3_ROOT_DIR\lib\site-packages\ngsolve
 
-Set-Location ../..
-Get-ChildItem
+
 python setup.py bdist_wheel -G"Visual Studio 16 2019" -d wheelhouse
