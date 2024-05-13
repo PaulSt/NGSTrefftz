@@ -464,6 +464,7 @@ namespace ngcomp
     docu.short_docu = "Trefftz space for different PDEs. Use kwarg 'eq' to "
                       "choose the PDE, currently implemented are:\n"
                       " - laplace - for Laplace equation\n"
+                      " - qtelliptic - for the quasi-Trefftz space for an elliptic problem\n"
                       " - wave - for the second order acoustic wave equation\n"
                       " - qtwave - for the quasi-Trefftz space\n"
                       " - fowave - for the first order acoustic wave "
@@ -1487,6 +1488,9 @@ void ExportTrefftzFESpace (py::module m)
               shared_ptr<CoefficientFunction>)> (&TrefftzFESpace::SetCoeff),
           R"mydelimiter(
                 Set coefficient of Trefftz space. 
+
+                For an elliptic problem, the coefficients are given by
+                - div(coeffA*grad(u)) + coeffB*grad(u) + coeffC u = 0
 
                 For the first order wave equation, the coefficients are given by
                 grad(v) + coeffB dt sigma = 0
