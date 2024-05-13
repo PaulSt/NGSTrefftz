@@ -2,6 +2,8 @@
 #include <fespace.hpp>
 #include <memory>
 #include <fem.hpp>
+#include <pybind11/pybind11.h>
+#include <python_ngstd.hpp>
 
 namespace ngcomp
 {
@@ -13,3 +15,5 @@ namespace ngcomp
                      std::shared_ptr<ngfem::SumOfIntegrals> cop_rhs,
                      std::shared_ptr<FESpace> fes_constraint, int trefftzndof);
 }
+
+void ExportConstraintTrefftzEmbedding (py::module m);
