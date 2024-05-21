@@ -41,8 +41,8 @@ namespace ngcomp
   ///  `debug`: if `True`, print debug messages. Default: `False`
   ///
   ///  returns: P
-  template <class SCLA>
-  std::shared_ptr<ngbla::Matrix<SCLA>>
+  template <class SCAL>
+  std::shared_ptr<ngbla::Matrix<SCAL>>
   ConstraintTrefftzEmbedding (std::shared_ptr<ngfem::SumOfIntegrals> op,
                               std::shared_ptr<FESpace> fes,
                               std::shared_ptr<ngfem::SumOfIntegrals> cop_lhs,
@@ -59,8 +59,8 @@ namespace ngcomp
 
     // let L be the matrix corrensponding to
     // the differential operator op
-    T_BilinearForm<SCLA> opbf
-        = T_BilinearForm<SCLA> (fes, "Base FE Space", Flags ({}));
+    T_BilinearForm<SCAL> opbf
+        = T_BilinearForm<SCAL> (fes, "Base FE Space", Flags ({}));
 
     // #TODO is there an easier way to add the whole
     // SumOfIntegrals at once?
@@ -77,7 +77,7 @@ namespace ngcomp
 
     // let B1 be the matrix corrensponding to
     // the left hand side constraint operator cop_lhs
-    T_BilinearForm<SCLA> copbf_lhs = T_BilinearForm<SCLA> (
+    T_BilinearForm<SCAL> copbf_lhs = T_BilinearForm<SCAL> (
         fes, fes_constraint, "Mixed FE Space", Flags ({}));
 
     for (auto integral : *cop_lhs)
@@ -90,7 +90,7 @@ namespace ngcomp
 
     // let B2 be the matrix corrensponding to
     // the right hand side constraint operator cop_rhs
-    T_BilinearForm<SCLA> copbf_rhs = T_BilinearForm<SCLA> (
+    T_BilinearForm<SCAL> copbf_rhs = T_BilinearForm<SCAL> (
         fes_constraint, "Constraint FE Space", Flags ({}));
 
     for (auto integral : *cop_rhs)
@@ -109,7 +109,7 @@ namespace ngcomp
     // | P1 | P2 |
     // \    |    /
     // with P1 having shape (fes.ndof, n_constr),
-    Matrix<SCLA> P = Matrix<SCLA> (fes->GetNDof (), n_constr);
+    Matrix<SCAL> P = Matrix<SCAL> (fes->GetNDof (), n_constr);
     P = 0.0;
 
     // solve the following linear system in an element-wise fashion:
@@ -131,9 +131,16 @@ namespace ngcomp
 
           Array<DofId> dofs_constraint = Array<DofId> ();
           fes_constraint->GetDofNrs (el_id, dofs_constraint);
+
+          // #TODO: does this work this way?
+          auto el_l = opbf.GetInnerMatrix ();
+          auto el_b1 = copbf_lhs.GetInnerMatrix ();
+          auto el_b2 = copbf_rhs.GetInnerMatrix ();
+
+          auto el_a = FlatMatrix<SCAL> (); // #TODO: define height and width
         });
 
-    return make_shared<Matrix<SCLA>> (P);
+    return make_shared<Matrix<SCAL>> (P);
   }
 }
 
