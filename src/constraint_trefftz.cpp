@@ -1,6 +1,7 @@
 #include "constraint_trefftz.hpp"
 #include <basematrix.hpp>
 #include <bilinearform.hpp>
+#include <core/array.hpp>
 #include <core/flags.hpp>
 #include <core/localheap.hpp>
 #include <cstddef>
@@ -111,13 +112,25 @@ namespace ngcomp
     Matrix<SCLA> P = Matrix<SCLA> (fes->GetNDof (), n_constr);
     P = 0.0;
 
+    // solve the following linear system in an element-wise fashion:
+    // L @ T1 = B for the unknown matrix T1,
+    // with the given matrices:
+    //     /   \    /   \
+    //  A= |B_1| B= |B_2|
+    //     | L |    | 0 |
+    //     \   /    \   /
     mesh_access->IterateElements (
-        VOL, [&] (Ngs_Element mesh_element, LocalHeap &local_heap) {
-          const auto el_id = ElementId (mesh_element);
-          const FESpace::Element fes_element = fes->Element (el_id);
+        VOL, local_heap,
+        [&] (Ngs_Element mesh_element, LocalHeap &local_heap) {
+          const ElementId el_id = ElementId (mesh_element);
+          const FiniteElement &fes_element = fes->GetFE (el_id, local_heap);
 
-          const auto dofs = element.GetDofs ();
-          const auto idx = element.GetIndex ();
+          // #TODO: does array construction wor this way?
+          Array<DofId> dofs = Array<DofId> ();
+          fes->GetDofNrs (el_id, dofs);
+
+          Array<DofId> dofs_constraint = Array<DofId> ();
+          fes_constraint->GetDofNrs (el_id, dofs_constraint);
         });
 
     return make_shared<Matrix<SCLA>> (P);
