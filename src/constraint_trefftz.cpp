@@ -10,6 +10,7 @@
 #include <integrator.hpp>
 #include <matrix.hpp>
 #include <memory>
+#include <meshaccess.hpp>
 #include <pybind11/cast.h>
 #include <integratorcf.hpp>
 
@@ -20,10 +21,8 @@
 
 using namespace ngfem;
 
-/**
- * @param bf symblic representation of a bilinear form
- * @param bfis stores the calculated BilinearFormIntegrators
- */
+/// @param bf symblic representation of a bilinear form
+/// @param bfis stores the calculated BilinearFormIntegrators
 void calculateBilinearFormIntegrators (
     const SumOfIntegrals &bf,
     Array<shared_ptr<BilinearFormIntegrator>> bfis[4])
@@ -35,10 +34,8 @@ void calculateBilinearFormIntegrators (
     }
 }
 
-/**
- * @param lf symblic representation of a linear form
- * @param lfis stores the calculated LinearFormIntegrators
- */
+/// @param lf symblic representation of a linear form
+/// @param lfis stores the calculated LinearFormIntegrators
 void calculateLinearFormIntegrators (
     SumOfIntegrals &lf, Array<shared_ptr<LinearFormIntegrator>> lfis[4])
 {
@@ -47,6 +44,37 @@ void calculateLinearFormIntegrators (
       DifferentialSymbol &dx = icf->dx;
       lfis[dx.vb] += icf->MakeLinearFormIntegrator ();
     }
+}
+
+/// decides, if the given finite element space
+/// has hidden degrees of freedom.
+///
+/// @param fes finite element space
+bool fesHasHiddenDofs (const ngcomp::FESpace &fes)
+{
+  const size_t ndof = fes.GetNDof ();
+  bool has_hidden_dofs = false;
+  for (ngcomp::DofId d = 0; d < ndof; d++)
+    if (ngcomp::HIDDEN_DOF == fes.GetDofCouplingType (d))
+      return true;
+  return false;
+}
+
+/// Tests, if the given bilinear form is defined on the given element.
+///
+/// @param bf bilinear form
+/// @param mesh_element local mesh element
+bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
+                           const ngcomp::Ngs_Element &mesh_element)
+{
+  for (auto icf : bf.icfs)
+    {
+      if (icf->dx.vb == VOL)
+        if ((!icf->dx.definedonelements)
+            || (icf->dx.definedonelements->Test (mesh_element.Nr ())))
+          return true;
+    }
+  return false;
 }
 
 namespace ngcomp
@@ -152,6 +180,8 @@ namespace ngcomp
 
     vector<Matrix<SCAL>> element_matrices (num_elements);
 
+    const bool has_hidden_dofs = fesHasHiddenDofs (*fes);
+
     // solve the following linear system in an element-wise fashion:
     // L @ T1 = B for the unknown matrix T1,
     // with the given matrices:
@@ -164,6 +194,8 @@ namespace ngcomp
         [&] (Ngs_Element mesh_element, LocalHeap &local_heap) {
           const ElementId el_id = ElementId (mesh_element);
           const FiniteElement &fes_element = fes->GetFE (el_id, local_heap);
+
+          const bool definedhere = bfIsDefinedOnElement (*op, mesh_element);
 
           // #TODO: does array construction work this way?
           Array<DofId> dofs = Array<DofId> ();
