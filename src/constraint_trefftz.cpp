@@ -195,7 +195,10 @@ namespace ngcomp
           const ElementId el_id = ElementId (mesh_element);
           const FiniteElement &fes_element = fes->GetFE (el_id, local_heap);
 
-          const bool definedhere = bfIsDefinedOnElement (*op, mesh_element);
+          // skip this element, if the bilinear form is not defined
+          // on this element
+          if (!bfIsDefinedOnElement (*op, mesh_element))
+            return;
 
           // #TODO: does array construction work this way?
           Array<DofId> dofs = Array<DofId> ();
