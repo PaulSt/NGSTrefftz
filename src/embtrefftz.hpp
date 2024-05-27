@@ -4,7 +4,6 @@
 #include <python_comp.hpp>
 #include <fem.hpp>
 #include <integratorcf.hpp>
-#include <variant>
 #include <bla.hpp>
 
 namespace ngcomp
