@@ -4,6 +4,8 @@
 #include <memory>
 #include <meshaccess.hpp>
 
+#include "trefftz_helper.hpp"
+
 using namespace ngfem;
 using namespace ngcomp;
 
@@ -62,3 +64,5 @@ bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
     }
   return false;
 }
+
+#endif

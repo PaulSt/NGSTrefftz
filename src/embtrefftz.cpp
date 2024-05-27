@@ -166,23 +166,7 @@ namespace ngcomp
                               *test_fes, mlh);
 
       if (has_hidden_dofs) // extract visible dofs, if needed
-        {
-          Array<DofId> vdofs, vtest_dofs;
-          fes->GetDofNrs (ei, vdofs, VISIBLE_DOF);
-          test_fes->GetDofNrs (ei, vtest_dofs, VISIBLE_DOF);
-          FlatMatrix<SCAL> velmat (vtest_dofs.Size (), vdofs.Size (), mlh);
-          for (int jj = 0; jj < dofs.Size (); jj++)
-            for (int ii = 0; ii < test_dofs.Size (); ii++)
-              {
-                auto j = vdofs.Pos (dofs[jj]);
-                auto i = vtest_dofs.Pos (test_dofs[ii]);
-                if (i != size_t (-1) && j != size_t (-1))
-                  velmat (i, j) = elmat (ii, jj);
-              }
-          dofs = std::move (vdofs);
-          test_dofs = std::move (vtest_dofs);
-          elmat.Assign (velmat);
-        }
+        extractVisibleDofs (elmat, ei, *fes, *test_fes, dofs, test_dofs, mlh);
 
       FlatMatrix<SCAL, ColMajor> U (test_dofs.Size (), mlh),
           Vt (dofs.Size (), mlh);

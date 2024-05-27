@@ -1,10 +1,13 @@
 #ifndef FILE_TREFFTZ_HELPER_HPP
 #define FILE_TREFFTZ_HELPER_HPP
 
+#include <core/localheap.hpp>
+#include <elementtopology.hpp>
+#include <expr.hpp>
 #include <fem.hpp>
 #include <fespace.hpp>
 #include <meshaccess.hpp>
-// #include <pybind11/attr.h>
+#include <meshing/localh.hpp>
 
 using namespace ngfem;
 using namespace ngcomp;
@@ -53,6 +56,8 @@ inline void calculateElementMatrix (
     const MeshAccess &mesh_access, const ElementId &element_id,
     const FESpace &fes, const FESpace &test_fes, LocalHeap &local_heap)
 {
+  const HeapReset hr (local_heap);
+
   auto &trafo = mesh_access.GetTrafo (element_id, local_heap);
 
   auto &test_fel = test_fes.GetFE (element_id, local_heap);
@@ -96,6 +101,40 @@ inline void calculateElementMatrix (
             }
         }
     }
+}
+
+/// extract only the visible dofs
+/// @param elmat assembled element matrix of a bilinear form
+/// @param element_id id of the local element
+/// @param fes trial fe space of the bilinear form
+/// @param fes test fe space of the bilinear form
+/// @param dofs dofs of `fes`
+/// @param test_dofs dofs of `test_fes`
+/// @param local_heap allocator
+/// @tparam SCAL scalar value type and matrix dimensions
+template <class SCAL>
+void extractVisibleDofs (FlatMatrix<SCAL> elmat, const ElementId &element_id,
+                         const FESpace &fes, const FESpace &test_fes,
+                         Array<DofId> &dofs, Array<DofId> &test_dofs,
+                         LocalHeap &local_heap)
+{
+  const HeapReset hr (local_heap);
+
+  Array<DofId> vdofs, vtest_dofs;
+  fes.GetDofNrs (element_id, vdofs, VISIBLE_DOF);
+  test_fes.GetDofNrs (element_id, vtest_dofs, VISIBLE_DOF);
+  FlatMatrix<SCAL> velmat (vtest_dofs.Size (), vdofs.Size (), local_heap);
+  for (int jj = 0; jj < dofs.Size (); jj++)
+    for (int ii = 0; ii < test_dofs.Size (); ii++)
+      {
+        auto j = vdofs.Pos (dofs[jj]);
+        auto i = vtest_dofs.Pos (test_dofs[ii]);
+        if (i != size_t (-1) && j != size_t (-1))
+          velmat (i, j) = elmat (ii, jj);
+      }
+  dofs = std::move (vdofs);
+  test_dofs = std::move (vtest_dofs);
+  elmat.Assign (velmat);
 }
 
 #endif
