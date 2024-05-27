@@ -1,6 +1,8 @@
 #include "embtrefftz.hpp"
 #include "monomialfespace.hpp"
+#include "trefftz_helper.hpp"
 #include <cfloat>
+#include <meshaccess.hpp>
 
 namespace ngbla
 {
@@ -131,19 +133,11 @@ namespace ngcomp
     size_t dim = fes->GetDimension ();
 
     Array<shared_ptr<BilinearFormIntegrator>> bfis[4]; // VOL, BND, ...
-    for (auto icf : bf->icfs)
-      {
-        auto &dx = icf->dx;
-        bfis[dx.vb] += icf->MakeBilinearFormIntegrator ();
-      }
+    calculateBilinearFormIntegrators (*bf, bfis);
 
     Array<shared_ptr<LinearFormIntegrator>> lfis[4];
     if (lf)
-      for (auto icf : lf->icfs)
-        {
-          auto &dx = icf->dx;
-          lfis[dx.vb] += icf->MakeLinearFormIntegrator ();
-        }
+      calculateLinearFormIntegrators (*lf, lfis);
 
     vector<shared_ptr<Matrix<SCAL>>> ETmats (ne);
     auto lfvec = make_shared<VVector<SCAL>> (ndof);
@@ -154,22 +148,13 @@ namespace ngcomp
     Vector<double> sing_val_max;
     Vector<double> sing_val_min;
 
-    bool has_hidden_dofs = false;
-    for (DofId d = 0; d < ndof || !has_hidden_dofs; d++)
-      if (HIDDEN_DOF == fes->GetDofCouplingType (d))
-        has_hidden_dofs = true;
+    const bool has_hidden_dofs = fesHasHiddenDofs (*fes);
 
-    ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
-      bool definedhere = false;
-      for (auto icf : bf->icfs)
-        {
-          if (icf->dx.vb == VOL)
-            if ((!icf->dx.definedonelements)
-                || (icf->dx.definedonelements->Test (ei.Nr ())))
-              definedhere = true;
-        }
-      if (!definedhere)
-        return; // escape lambda
+    ma->IterateElements (VOL, lh, [&] (Ngs_Element ei, LocalHeap &mlh) {
+      // skip this element, if the bilinear form is not defined
+      // on this element
+      if (!bfIsDefinedOnElement (*bf, ei))
+        return;
 
       Array<DofId> dofs, test_dofs;
       test_fes->GetDofNrs (ei, test_dofs);
@@ -177,47 +162,8 @@ namespace ngcomp
 
       FlatMatrix<SCAL> elmat (test_dofs.Size (), dofs.Size (), mlh);
 
-      auto &trafo = ma->GetTrafo (ei, mlh);
-
-      auto &test_fel = test_fes->GetFE (ei, mlh);
-      auto &trial_fel = fes->GetFE (ei, mlh);
-
-      elmat = 0.0;
-      bool symmetric_so_far = true;
-      int bfi_ind = 0;
-      while (bfi_ind < bfis[VOL].Size ())
-        {
-          auto &bfi = bfis[VOL][bfi_ind];
-          bfi_ind++;
-          if (bfi->DefinedOnElement (ei.Nr ()))
-            {
-              auto &mapped_trafo
-                  = trafo.AddDeformation (bfi->GetDeformation ().get (), mlh);
-              try
-                {
-                  if (mixed_mode)
-                    {
-                      const auto &mixed_fel
-                          = MixedFiniteElement (trial_fel, test_fel);
-                      bfi->CalcElementMatrixAdd (mixed_fel, mapped_trafo,
-                                                 elmat, symmetric_so_far, mlh);
-                    }
-                  else
-                    {
-                      bfi->CalcElementMatrixAdd (test_fel, mapped_trafo, elmat,
-                                                 symmetric_so_far, mlh);
-                    }
-                }
-              catch (ExceptionNOSIMD e)
-                {
-                  elmat = 0.0;
-                  cout << IM (6) << "ExceptionNOSIMD " << e.What () << endl
-                       << "switching to scalar evaluation" << endl;
-                  bfi->SetSimdEvaluate (false);
-                  bfi_ind = 0;
-                }
-            }
-        }
+      calculateElementMatrix (elmat, bfis[VOL], *ma, ElementId (ei), *fes,
+                              *test_fes, mlh);
 
       if (has_hidden_dofs) // extract visible dofs, if needed
         {
