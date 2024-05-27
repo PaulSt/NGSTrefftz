@@ -109,6 +109,7 @@ add_library( _trefftz SHARED
     mesh1dtents.cpp
     condensedg.cpp
     constraint_trefftz.cpp
+    trefftz_helper.cpp
     #airy.cpp #for testing, requires boost
   )
 target_link_libraries(_trefftz PUBLIC ngsolve Python3::Module)

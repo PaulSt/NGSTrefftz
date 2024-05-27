@@ -1,0 +1,101 @@
+#ifndef FILE_TREFFTZ_HELPER_HPP
+#define FILE_TREFFTZ_HELPER_HPP
+
+#include <fem.hpp>
+#include <fespace.hpp>
+#include <meshaccess.hpp>
+// #include <pybind11/attr.h>
+
+using namespace ngfem;
+using namespace ngcomp;
+
+/// @param bf symblic representation of a bilinear form
+/// @param bfis stores the calculated BilinearFormIntegrators
+void calculateBilinearFormIntegrators (
+    const SumOfIntegrals &bf,
+    Array<shared_ptr<BilinearFormIntegrator>> bfis[4]);
+
+/// @param lf symblic representation of a linear form
+/// @param lfis stores the calculated LinearFormIntegrators
+void calculateLinearFormIntegrators (
+    SumOfIntegrals &lf, Array<shared_ptr<LinearFormIntegrator>> lfis[4]);
+
+/// decides, if the given finite element space
+/// has hidden degrees of freedom.
+///
+/// @param fes finite element space
+bool fesHasHiddenDofs (const FESpace &fes);
+
+/// Tests, if the given bilinear form is defined on the given element.
+///
+/// @param bf bilinear form
+/// @param mesh_element local mesh element
+bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
+                           const Ngs_Element &mesh_element);
+
+/// calculates the element local matrix of a bilinear form.
+///
+/// @param elmat element matrix is written into this matrix. Should be of
+///     dimension (ndof, ndof), where ndof is the number of local dofs of the
+///     finite element space on this element.
+/// @param bf_integrators array of integrators, that correspond to a bilinear
+///     form. Here, only the volume integrators are relevant.
+/// @param mesh_access access to the mesh Elements
+/// @param element_id id of the local element
+/// @param fes trial finite element space of the bilinear form
+/// @param test_fes test finite element space of the bilinear form. May be the
+///     same as `fes`.
+/// @param local_heap allocator. elmat will be allocated here, as well as
+template <class SCAL>
+inline void calculateElementMatrix (
+    FlatMatrix<SCAL> elmat,
+    const Array<shared_ptr<BilinearFormIntegrator>> &bf_integrators,
+    const MeshAccess &mesh_access, const ElementId &element_id,
+    const FESpace &fes, const FESpace &test_fes, LocalHeap &local_heap)
+{
+  auto &trafo = mesh_access.GetTrafo (element_id, local_heap);
+
+  auto &test_fel = test_fes.GetFE (element_id, local_heap);
+  auto &trial_fel = fes.GetFE (element_id, local_heap);
+
+  const bool mixed_mode = std::addressof (test_fes) != std::addressof (fes);
+
+  elmat = 0.0;
+  bool symmetric_so_far = true;
+  int bfi_ind = 0;
+  while (bfi_ind < bf_integrators.Size ())
+    {
+      auto &bfi = bf_integrators[bfi_ind];
+      bfi_ind++;
+      if (bfi->DefinedOnElement (element_id.Nr ()))
+        {
+          auto &mapped_trafo = trafo.AddDeformation (
+              bfi->GetDeformation ().get (), local_heap);
+          try
+            {
+              if (mixed_mode)
+                {
+                  const auto &mixed_fel
+                      = MixedFiniteElement (trial_fel, test_fel);
+                  bfi->CalcElementMatrixAdd (mixed_fel, mapped_trafo, elmat,
+                                             symmetric_so_far, local_heap);
+                }
+              else
+                {
+                  bfi->CalcElementMatrixAdd (test_fel, mapped_trafo, elmat,
+                                             symmetric_so_far, local_heap);
+                }
+            }
+          catch (ExceptionNOSIMD e)
+            {
+              elmat = 0.0;
+              cout << IM (6) << "ExceptionNOSIMD " << e.What () << endl
+                   << "switching to scalar evaluation" << endl;
+              bfi->SetSimdEvaluate (false);
+              bfi_ind = 0;
+            }
+        }
+    }
+}
+
+#endif
