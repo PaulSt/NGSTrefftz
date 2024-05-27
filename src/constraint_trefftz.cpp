@@ -201,10 +201,10 @@ namespace ngcomp
             return;
 
           // #TODO: does array construction work this way?
-          Array<DofId> dofs = Array<DofId> ();
+          Array<DofId> dofs;
           fes->GetDofNrs (el_id, dofs);
 
-          Array<DofId> dofs_constraint = Array<DofId> ();
+          Array<DofId> dofs_constraint;
           fes_constraint->GetDofNrs (el_id, dofs_constraint);
 
           // #TODO: does this work this way?
