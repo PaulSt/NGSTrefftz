@@ -60,61 +60,8 @@ namespace ngcomp
     const size_t num_elements = mesh_access->GetNE (VOL);
     const size_t ndof = fes->GetNDof ();
     const size_t dim = fes->GetDimension ();
-
-    //// let L be the matrix corrensponding to
-    //// the differential operator op
-    // T_BilinearForm<SCAL> opbf
-    //     = T_BilinearForm<SCAL> (fes, "Base FE Space", Flags ({}));
-
-    //// #TODO is there an easier way to add the whole
-    //// SumOfIntegrals at once?
-    //// ~~~~
-    //// iterate over each integral individually,
-    //// instead of the python way where one can add the whole sum at once
-    // for (auto integral : *op)
-    //   {
-    //     opbf.AddIntegrator (integral->MakeBilinearFormIntegrator ());
-    //   }
-
-    // opbf.Assemble (local_heap);
-    // const BaseMatrix &L = opbf.GetMatrix ();
-
-    //// let B1 be the matrix corrensponding to
-    //// the left hand side constraint operator cop_lhs
-    // T_BilinearForm<SCAL> copbf_lhs = T_BilinearForm<SCAL> (
-    //     fes, fes_constraint, "Mixed FE Space", Flags ({}));
-
-    // for (auto integral : *cop_lhs)
-    //   {
-    //     copbf_lhs.AddIntegrator (integral->MakeBilinearFormIntegrator ());
-    //   }
-
-    // copbf_lhs.Assemble (local_heap);
-    // const BaseMatrix &B1 = copbf_lhs.GetMatrix ();
-
-    //// let B2 be the matrix corrensponding to
-    //// the right hand side constraint operator cop_rhs
-    // T_BilinearForm<SCAL> copbf_rhs = T_BilinearForm<SCAL> (
-    //     fes_constraint, "Constraint FE Space", Flags ({}));
-
-    // for (auto integral : *cop_rhs)
-    //   {
-    //     copbf_rhs.AddIntegrator (integral->MakeBilinearFormIntegrator ());
-    //   }
-
-    // copbf_rhs.Assemble (local_heap);
-    // const BaseMatrix &B2 = copbf_lhs.GetMatrix ();
-
-    //// number of degrees of freedom of the contraint finite element space
-    // const size_t n_constr = fes_constraint->GetNDof ();
-
-    //// layout:
-    //// /    |    \
-    //// | P1 | P2 |
-    //// \    |    /
-    //// with P1 having shape (fes.ndof, n_constr),
-    // Matrix<SCAL> P = Matrix<SCAL> (fes->GetNDof (), n_constr);
-    // P = 0.0;
+    const size_t ndof_constraint = fes_constraint->GetNDof ();
+    const size_t dim_constraint = fes_constraint->GetDimension ();
 
     // calculate the integrators for the three bilinear forms,
     // each for VOL, BND, BBND, BBBND, hence 4 arrays per bilnear form
@@ -126,7 +73,9 @@ namespace ngcomp
 
     vector<Matrix<SCAL>> element_matrices (num_elements);
 
-    const bool has_hidden_dofs = fesHasHiddenDofs (*fes);
+    const bool fes_has_hidden_dofs = fesHasHiddenDofs (*fes);
+    const bool fes_constraint_has_hidden_dofs
+        = fesHasHiddenDofs (*fes_constraint);
 
     // solve the following linear system in an element-wise fashion:
     // L @ T1 = B for the unknown matrix T1,
@@ -138,30 +87,75 @@ namespace ngcomp
     mesh_access->IterateElements (
         VOL, local_heap,
         [&] (Ngs_Element mesh_element, LocalHeap &local_heap) {
-          const ElementId el_id = ElementId (mesh_element);
-          const FiniteElement &fes_element = fes->GetFE (el_id, local_heap);
+          const ElementId element_id = ElementId (mesh_element);
+          const FiniteElement &fes_element
+              = fes->GetFE (element_id, local_heap);
 
-          // skip this element, if the bilinear form is not defined
+          // skip this element, if the bilinear forms are not defined
           // on this element
-          if (!bfIsDefinedOnElement (*op, mesh_element))
+          if (!bfIsDefinedOnElement (*op, mesh_element)
+              || !bfIsDefinedOnElement (*cop_lhs, mesh_element)
+              || !bfIsDefinedOnElement (*cop_rhs, mesh_element))
             return;
 
-          // #TODO: does array construction work this way?
-          Array<DofId> dofs;
-          fes->GetDofNrs (el_id, dofs);
+          Array<DofId> dofs, dofs_constraint;
+          fes->GetDofNrs (element_id, dofs);
+          fes_constraint->GetDofNrs (element_id, dofs_constraint);
 
-          Array<DofId> dofs_constraint;
-          fes_constraint->GetDofNrs (el_id, dofs_constraint);
+          //     /   \    /   \
+          //  A= |B_1| B= |B_2|
+          //     | L |    | 0 |
+          //     \   /    \   /
+          // with B_1.shape == (ndof_constraint, ndof), L.shape == (ndof, ndof)
+          // thus A.shape == (ndof + ndof_constraint, ndof)
+          auto elmat_a = FlatMatrix<SCAL> (
+              dofs.Size () + dofs_constraint.Size (), dofs.Size (),
+              local_heap); // #TODO: define height and width
+          tuple<FlatMatrix<SCAL>, FlatMatrix<SCAL>> b1_vstack_l
+              = elmat_a.SplitRows (dofs_constraint.Size ());
+          // elmat_l and elmat_b1 are views into elamt_a
+          FlatMatrix<SCAL> elmat_b1 = get<0> (b1_vstack_l);
+          FlatMatrix<SCAL> elmat_l = get<1> (b1_vstack_l);
 
-          // #TODO: does this work this way?
-          // auto el_l = opbf.GetInnerMatrix ();
-          // auto el_b1 = copbf_lhs.GetInnerMatrix ();
-          // auto el_b2 = copbf_rhs.GetInnerMatrix ();
+          //     /   \    /   \
+          //  A= |B_1| B= |B_2|
+          //     | L |    | 0 |
+          //     \   /    \   /
+          // with B_2.shape == (ndof_constraint, ndof_constraint),
+          // and B.shape == ( ndof_constraint + ndof, ndof_constraint)
+          auto elmat_b = FlatMatrix<SCAL> (
+              dofs_constraint.Size (), dofs_constraint.Size () + dofs.Size (),
+              local_heap
 
-          auto el_a = FlatMatrix<SCAL> (); // #TODO: define height and width
-          FlatMatrix<SCAL> elmat_op (dofs.Size (), dofs.Size (), local_heap);
-          calculateElementMatrix (elmat_op, op_integrators[VOL], *mesh_access,
-                                  el_id, *fes, *fes, local_heap);
+          );
+          // elmat_b2 is a view into elamt_b
+          FlatMatrix<SCAL> elmat_b2
+              = get<0> (elmat_b.SplitRows (dofs_constraint.Size ()));
+
+          calculateElementMatrix (elmat_l, op_integrators[VOL], *mesh_access,
+                                  element_id, *fes, *fes, local_heap);
+          calculateElementMatrix (elmat_b1, op_integrators[VOL], *mesh_access,
+                                  element_id, *fes, *fes_constraint,
+                                  local_heap);
+          calculateElementMatrix (elmat_b2, op_integrators[VOL], *mesh_access,
+                                  element_id, *fes_constraint, *fes_constraint,
+                                  local_heap);
+          if (fes_has_hidden_dofs)
+            extractVisibleDofs (elmat_l, element_id, *fes, *fes, dofs, dofs,
+                                local_heap);
+
+          // singular value decomposition of elmat_op:
+          // U * sigma * V = elmat_op
+          // elmat_a gets overwritten with sigma
+          FlatMatrix<SCAL, ColMajor> U (dofs.Size (), local_heap),
+              V (dofs.Size (), local_heap);
+          GetSVD<SCAL> (elmat_a, U, V);
+
+          FlatMatrix<SCAL> U_T = Trans (U);
+          FlatMatrix<SCAL> V_T = Trans (V);
+          // #TODO: check dimensions again
+          FlatMatrix<SCAL> Sigma_inv (dofs_constraint.Size (),
+                                      dofs_constraint.Size (), local_heap);
         });
 
     return element_matrices;
