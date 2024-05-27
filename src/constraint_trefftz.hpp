@@ -1,3 +1,6 @@
+#ifndef FILE_CONSTRAINT_TREFFTZ_HPP
+#define FILE_CONSTRAINT_TREFFTZ_HPP
+
 #include <expr.hpp>
 #include <fespace.hpp>
 #include <memory>
@@ -17,3 +20,5 @@ namespace ngcomp
 }
 
 void ExportConstraintTrefftzEmbedding (py::module m);
+
+#endif
