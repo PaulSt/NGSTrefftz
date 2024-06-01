@@ -2,6 +2,11 @@ FROM python:3.10-slim-bullseye
 
 WORKDIR /home/app
 
+#RUN apt --yes update && apt --yes install git pandoc sphinx
+#COPY . /home/app/ngstrefftz
+#RUN cd /home/app/ngstrefftz/docs && pip install -r requirements.txt
+#RUN cd /home/app/ngstrefftz/docs && sphinx-build -M html . _build -vvv
+
 RUN pip install ngstrefftz 
 ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python3.10/site-packages/
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
