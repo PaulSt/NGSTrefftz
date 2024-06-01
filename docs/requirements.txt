@@ -1,11 +1,11 @@
-
-setuptools
+setuptools>=61
 setuptools_scm 
 jupyter>=1.0.0
 
 matplotlib>=3.6.1
 matplotlib-inline>=0.1.6
 
+pandoc>=2.3
 nbconvert>=7.2.1
 nbformat>=5.7.0
 nbsphinx>=0.8.9
@@ -20,6 +20,6 @@ myst_parser>=0.15.0
 numpy>=1.23.4
 scipy>=1.11.1 
 ngsolve>=6.2.2403
-xfem>=2.1.2303.post72.dev0
-ngstrefftz>=0.2.2401
+xfem==2.1.2303.post137.dev0
+ngstrefftz>=0.2.2402
 webgui-jupyter-widgets>=0.2.31

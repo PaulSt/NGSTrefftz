@@ -221,27 +221,18 @@ namespace ngcomp
     static Timer t ("QTEll - GetEWSolution");
     RegionTimer reg (t);
     LocalHeap lh (1000 * 1000 * 1000);
-    if (eqtyp != "qtelliptic")
-      throw Exception ("TrefftzFESpace::GetEWSolution: elementwise particular "
-                       "solution not available for eqtyp");
 
     Flags flags;
     flags.SetFlag ("order", order);
-    flags.SetFlag ("usescale", 1);
+    flags.SetFlag ("usescale", this->usescale);
+    if (eqtyp == "qtheat" && usescale != 0)
+      flags.SetFlag ("usescale", 2);
     shared_ptr<FESpace> fes = make_shared<MonomialFESpace> (ma, flags);
     auto pws = CreateGridFunction (fes, "pws", flags);
     pws->Update ();
     // pws->ConnectAutoUpdate();
 
-    switch (D)
-      {
-      case 2:
-        static_cast<QTEllipticBasis<2> *> (basis)->SetRHS (acoeffF);
-        break;
-      case 3:
-        static_cast<QTEllipticBasis<3> *> (basis)->SetRHS (acoeffF);
-        break;
-      }
+    basis->SetRHS (acoeffF);
 
     // for (auto ei : ma->Elements (VOL))
     ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
@@ -261,13 +252,27 @@ namespace ngcomp
       switch (D)
         {
         case 2:
-          static_cast<QTEllipticBasis<2> *> (basis)->GetParticularSolution (
-              ElCenter<2> (ei), ElSize<2> (ei), elvec, mlh);
-          break;
+          {
+            Vec<2> scale = 1.0;
+            if (eqtyp == "qtheat")
+              scale
+                  = { ElSize<2> (ei, { 1.0, 0 }), ElSize<2> (ei, { 0, 1.0 }) };
+            else if (usescale != 0)
+              scale = ElSize<2> (ei);
+            basis->GetParticularSolution (ElCenter<2> (ei), scale, elvec, mlh);
+            break;
+          }
         case 3:
-          static_cast<QTEllipticBasis<3> *> (basis)->GetParticularSolution (
-              ElCenter<3> (ei), ElSize<3> (ei), elvec, mlh);
-          break;
+          {
+            Vec<3> scale = 1.0;
+            if (eqtyp == "qtheat")
+              scale = { ElSize<3> (ei, { 1.0, 1.0, 0 }), 0,
+                        ElSize<3> (ei, { 0, 0, 1.0 }) };
+            else if (usescale != 0)
+              scale = ElSize<3> (ei);
+            basis->GetParticularSolution (ElCenter<3> (ei), scale, elvec, mlh);
+            break;
+          }
         }
 
       pws->SetElementVector (dofs, elvec);
@@ -429,6 +434,17 @@ namespace ngcomp
                       local_ndof, order, basismat, eltype, ElCenter<3> (ei),
                       scale));
                 }
+              else if (eqtyp == "qtheat")
+                {
+                  double hx = ElSize<3> (ei, { 1.0, 1.0, 0 });
+                  double ht = ElSize<3> (ei, { 0, 0, 1.0 });
+                  Vec<3> scale ({ 1.0 / hx, 1.0 / hx, 1.0 / ht });
+                  CSR basismat = static_cast<QTHeatBasis<3> *> (basis)->Basis (
+                      ElCenter<3> (ei), hx, ht);
+                  return *(new (alloc) ScalarMappedElement<3> (
+                      local_ndof, order, basismat, eltype, ElCenter<3> (ei),
+                      scale));
+                }
               else
                 {
                   Vec<3> scale = 1.0;
@@ -464,7 +480,8 @@ namespace ngcomp
     docu.short_docu = "Trefftz space for different PDEs. Use kwarg 'eq' to "
                       "choose the PDE, currently implemented are:\n"
                       " - laplace - for Laplace equation\n"
-                      " - qtelliptic - for the quasi-Trefftz space for an elliptic problem\n"
+                      " - qtelliptic - for the quasi-Trefftz space for an "
+                      "elliptic problem\n"
                       " - wave - for the second order acoustic wave equation\n"
                       " - qtwave - for the quasi-Trefftz space\n"
                       " - fowave - for the first order acoustic wave "
@@ -950,7 +967,7 @@ namespace ngcomp
                     qtbasis.Col (indexmap)
                         -= factorial (mii + ej) / factorial (mil)
                            * (AA[IndexMap2<D> (mil, order - 1)]) (j, m)
-                           / pow (elsize, vsum<D, int> (-mil))
+                           * pow (elsize, vsum<D, int> (mil))
                            * (mii[m] + ej[m] - mil[m] + 1)
                            * qtbasis.Col (PolBasis::IndexMap2<D> (
                                mii + ej - mil + em, order));
@@ -958,8 +975,8 @@ namespace ngcomp
                 // vec coeff B
                 qtbasis.Col (indexmap)
                     += factorial (mii + ej) / factorial (mil)
-                       * (BB[IndexMap2<D> (mil, order - 1)]) (j)
-                       / pow (elsize, vsum<D, int> (-mil) - 1)
+                       * (BB[IndexMap2<D> (mil, order - 1)]) (j)*pow (
+                           elsize, vsum<D, int> (mil) + 1)
                        * qtbasis.Col (
                            PolBasis::IndexMap2<D> (mii + ej - mil, order));
 
@@ -968,7 +985,7 @@ namespace ngcomp
                   qtbasis.Col (indexmap)
                       += factorial (mii) / factorial (mil)
                          * CC[IndexMap2<D> (mil, order - 1)]
-                         / pow (elsize, vsum<D, int> (-mil) - 2)
+                         * pow (elsize, vsum<D, int> (mil) + 2)
                          * qtbasis.Col (
                              PolBasis::IndexMap2<D> (mii - mil, order));
               });
@@ -996,9 +1013,10 @@ namespace ngcomp
 
   template <int D>
   void
-  QTEllipticBasis<D>::GetParticularSolution (Vec<D> ElCenter, double elsize,
+  QTEllipticBasis<D>::GetParticularSolution (Vec<D> ElCenter, Vec<D> elsize,
                                              FlatVector<> sol, LocalHeap &lh)
   {
+    double hx = elsize[0];
     static Timer t ("QTEll - GetParticularSolution");
     RegionTimer reg (t);
     IntegrationPoint ip (ElCenter, 0);
@@ -1054,7 +1072,7 @@ namespace ngcomp
                 em[m] = 1;
                 sol (indexmap) -= factorial (mii + ej) / factorial (mil)
                                   * (AA[IndexMap2<D> (mil, order - 1)]) (j, m)
-                                  * pow (elsize, vsum<D, int> (mil))
+                                  * pow (hx, vsum<D, int> (mil))
                                   * (mii[m] + ej[m] - mil[m] + 1)
                                   * sol (PolBasis::IndexMap2<D> (
                                       mii + ej - mil + em, order));
@@ -1063,7 +1081,7 @@ namespace ngcomp
             sol (indexmap)
                 += factorial (mii + ej) / factorial (mil)
                    * (BB[IndexMap2<D> (mil, order - 1)]) (j)*pow (
-                       elsize, vsum<D, int> (mil) + 1)
+                       hx, vsum<D, int> (mil) + 1)
                    * sol (PolBasis::IndexMap2<D> (mii + ej - mil, order));
 
             // scal coeff C
@@ -1071,12 +1089,12 @@ namespace ngcomp
               sol (indexmap)
                   += factorial (mii) / factorial (mil)
                      * CC[IndexMap2<D> (mil, order - 1)]
-                     * pow (elsize, vsum<D, int> (mil) + 2)
+                     * pow (hx, vsum<D, int> (mil) + 2)
                      * sol (PolBasis::IndexMap2<D> (mii - mil, order));
           });
         }
       sol (indexmap) += -FF[PolBasis::IndexMap2<D> (mii, order)]
-                        * pow (elsize, vsum<D, int> (mii) + 2);
+                        * pow (hx, vsum<D, int> (mii) + 2);
       Vec<D, int> eD = 0;
       eD[D - 1] = 2;
       sol (indexmap) *= 1.0 / factorial (mii + eD) / (AA[0](D - 1, D - 1));
@@ -1463,10 +1481,85 @@ namespace ngcomp
     // return gtbstore[encode];
   }
 
+  template <int D>
+  void QTHeatBasis<D>::GetParticularSolution (Vec<D> ElCenter, Vec<D> elsize,
+                                              FlatVector<> sol, LocalHeap &lh)
+  {
+    double hx = elsize[0];
+    double ht = elsize[D - 1];
+    IntegrationPoint ip (ElCenter, 0);
+    Mat<D, D> dummy;
+    FE_ElementTransformation<D, D> et (D == 3 ? ET_TET : ET_TRIG, dummy);
+    MappedIntegrationPoint<D, D> mip (ip, et, 0);
+    for (int i = 0; i < D; i++)
+      mip.Point ()[i] = ElCenter[i];
+
+    int ndiffs = (BinCoeff (D + order - 1, order - 1));
+    Vector<Matrix<>> AA (ndiffs);
+    ndiffs = (BinCoeff (D + order, order));
+    FlatVector<> FF (ndiffs, lh);
+
+    TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
+      int index = PolBasis::IndexMap2<D> (coeff, order);
+      FF[index] = FFder[index]->Evaluate (mip);
+      if (vsum<D, int> (coeff) < order)
+        {
+          index = PolBasis::IndexMap2<D> (coeff, order - 1);
+          AA[index].SetSize (D - 1, D - 1);
+          AAder[index]->Evaluate (mip, AA[index].AsVector ());
+        }
+    });
+
+    const int ndof = (BinCoeff (D - 1 + order, order)
+                      + BinCoeff (D - 1 + order - 1, order - 1));
+    const int npoly = (BinCoeff (D + order, order));
+    sol = 0;
+    // start recursion
+    TraversePol2<D> (order, [&] (int i, Vec<D, int> coeff) {
+      if (coeff[0] <= 1)
+        return;
+      int indexmap = PolBasis::IndexMap2<D> (coeff, order);
+      Vec<D, int> mii = coeff;
+      mii[0] = mii[0] - 2;
+      Vec<D, int> et = 0;
+      et[D - 1] = 1;
+      sol (indexmap) += hx * hx / ht * (mii[D - 1] + 1) / coeff[0]
+                        / (coeff[0] - 1)
+                        * sol (PolBasis::IndexMap2<D> (mii + et, order));
+      for (int j = 0; j < D - 1; j++)
+        {
+          Vec<D, int> ej = 0;
+          ej[j] = 1;
+          TraversePol<D> (mii + ej, [&] (int i2, Vec<D, int> mil) {
+            // matrix coeff A
+            for (int m = 0; m < D - 1; m++)
+              {
+                if (i2 == 0 && m == 0 && j == 0)
+                  continue;
+                Vec<D, int> em = 0;
+                em[m] = 1;
+                sol (indexmap)
+                    -= (AA[IndexMap2<D> (mil, order - 1)]) (j, m)
+                       * pow (hx, vsum<D - 1, int> (mil))
+                       * pow (ht, mil[D - 1]) * (mii[m] + ej[m] - mil[m] + 1)
+                       * (mii[j] + 1) / (mii[0] + 2) / (mii[0] + 1)
+                       / factorial (mil)
+                       * sol (PolBasis::IndexMap2<D> (mii + ej - mil + em,
+                                                      order));
+              }
+          });
+        }
+      sol (indexmap) += -FF[PolBasis::IndexMap2<D> (mii, order)]
+                        * pow (hx, vsum<D - 1, int> (coeff))
+                        * pow (ht, coeff[D - 1]) / factorial (coeff);
+      sol (indexmap) *= 1.0 / (AA[0](0, 0));
+    });
+    // cout << sol << endl;
+  }
+
   // template class QTHeatBasis<1>;
   template class QTHeatBasis<2>;
   template class QTHeatBasis<3>;
-
 }
 
 #ifdef NGS_PYTHON

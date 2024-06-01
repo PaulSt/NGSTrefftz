@@ -51,47 +51,29 @@ namespace ngcomp
       MatToCSR (basis, tb);
       return tb;
     }
-
-    template <int D> double Adiam (ElementId ei) const
+    template <int D>
+    double ElSize (ElementId ei, Vec<D> coeff_const = 1.0) const
     {
-      if (usescale == 0)
-        return 1.0;
-      LocalHeap lh (1000 * 1000);
       double anisotropicdiam = 0.0;
       auto vertices_index = ma->GetElVertices (ei);
-
       for (auto vertex1 : vertices_index)
         {
           for (auto vertex2 : vertices_index)
             {
-              Vec<D> v1 = ma->GetPoint<D> (vertex1);
-              Vec<D> v2 = ma->GetPoint<D> (vertex2);
-              IntegrationRule ir (ma->GetElType (ei), 0);
-              ElementTransformation &trafo = ma->GetTrafo (ei, lh);
-              MappedIntegrationPoint<D, D> mip (ir[0], trafo);
-              mip.Point () = v1;
-              double c1 = coeff_cf ? coeff_cf->Evaluate (mip) : 1.0;
-              mip.Point () = v2;
-              double c2 = coeff_cf ? coeff_cf->Evaluate (mip) : 1.0;
-
-              anisotropicdiam = max (
-                  anisotropicdiam,
-                  sqrt (L2Norm2 (v1.Range (0, D - 1) - v2.Range (0, D - 1))
-                        + pow (c1 * v1 (D - 1) - c2 * v2 (D - 1), 2)));
+              Vec<D> v = ma->GetPoint<D> (vertex2) - ma->GetPoint<D> (vertex1);
+              vtimes (v, coeff_const);
+              anisotropicdiam = max (anisotropicdiam, sqrt (L2Norm2 (v)));
             }
         }
       return anisotropicdiam;
     }
-
     template <int D> Vec<D> ElCenter (ElementId ei) const
     {
-      if (useshift == 0)
-        return 1;
       Vec<D> center = 0;
       auto vertices_index = ma->GetElVertices (ei);
       for (auto vertex : vertices_index)
         center += ma->GetPoint<D> (vertex);
-      center *= (1.0 / vertices_index.Size ());
+      center *= (1.0 / vertices_index.Size ()) * useshift;
       return center;
     }
   };

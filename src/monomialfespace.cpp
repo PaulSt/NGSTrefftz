@@ -98,9 +98,15 @@ namespace ngcomp
           case ET_QUAD:
           case ET_TRIG:
             {
+              Vec<2> scale = 1.0;
+              if (usescale == 2)
+                scale = { 1.0 / ElSize<2> (ei, { 1.0, 0 }),
+                          1.0 / ElSize<2> (ei, { 0, 1.0 }) };
+              else if (usescale != 0)
+                scale = 1.0 / ElSize<2> (ei);
               return *(new (alloc) ScalarMappedElement<2> (
                   local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                  1.0 / Adiam<2> (ei)));
+                  scale));
               break;
             }
           case ET_HEX:
@@ -108,9 +114,18 @@ namespace ngcomp
           case ET_PYRAMID:
           case ET_TET:
             {
+              Vec<3> scale = 1.0;
+              if (usescale == 2)
+                {
+                  double hx = ElSize<3> (ei, { 1.0, 1.0, 0 });
+                  double ht = ElSize<3> (ei, { 0, 0, 1.0 });
+                  scale = { 1.0 / hx, 1.0 / hx, 1.0 / ht };
+                }
+              else if (usescale != 0)
+                scale = 1.0 / ElSize<3> (ei);
               return *(new (alloc) ScalarMappedElement<3> (
                   local_ndof, order, basismat, eltype, ElCenter<3> (ei),
-                  1.0 / Adiam<3> (ei)));
+                  scale));
               break;
             }
           }
