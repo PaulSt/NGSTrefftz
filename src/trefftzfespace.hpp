@@ -15,6 +15,26 @@ namespace ngcomp
   public:
     PolBasis () { ; }
     PolBasis (int aorder) : order (aorder) { ; }
+
+    virtual void SetRHS (shared_ptr<CoefficientFunction> coeffF)
+    {
+      throw Exception ("SetRHS not implemented for this basis");
+    }
+    virtual void GetParticularSolution (Vec<1> ElCenter, Vec<1> elsize,
+                                        FlatVector<> sol, LocalHeap &lh)
+    {
+      throw Exception ("GetParticularSolution not implemented for this basis");
+    }
+    virtual void GetParticularSolution (Vec<2> ElCenter, Vec<2> elsize,
+                                        FlatVector<> sol, LocalHeap &lh)
+    {
+      throw Exception ("GetParticularSolution not implemented for this basis");
+    }
+    virtual void GetParticularSolution (Vec<3> ElCenter, Vec<3> elsize,
+                                        FlatVector<> sol, LocalHeap &lh)
+    {
+      throw Exception ("GetParticularSolution not implemented for this basis");
+    }
     template <int D>
     void ComputeDerivs (int order, shared_ptr<CoefficientFunction> acoeff,
                         Vector<shared_ptr<CoefficientFunction>> &ders)
@@ -225,12 +245,12 @@ namespace ngcomp
       this->ComputeDerivs<D> (order - 1, coeffC, CCder);
     }
     CSR Basis (Vec<D> ElCenter, double elsize = 1.0);
-    void SetRHS (shared_ptr<CoefficientFunction> coeffF)
+    void SetRHS (shared_ptr<CoefficientFunction> coeffF) override
     {
       this->ComputeDerivs<D> (order, coeffF, FFder);
     }
-    void GetParticularSolution (Vec<D> ElCenter, double elsize,
-                                FlatVector<> sol, LocalHeap &lh);
+    void GetParticularSolution (Vec<D> ElCenter, Vec<D> elsize,
+                                FlatVector<> sol, LocalHeap &lh) override;
   };
 
   template <int D> class QTWaveBasis : public PolBasis
@@ -303,6 +323,7 @@ namespace ngcomp
     std::map<string, CSR> gtbstore;
 
     Vector<shared_ptr<CoefficientFunction>> AAder;
+    Vector<shared_ptr<CoefficientFunction>> FFder;
 
   public:
     QTHeatBasis (int aorder, shared_ptr<CoefficientFunction> coeffA)
@@ -314,6 +335,12 @@ namespace ngcomp
       this->ComputeDerivs<D> (order - 1, coeffA, AAder);
     }
     CSR Basis (Vec<D> ElCenter, double hx, double ht);
+    void SetRHS (shared_ptr<CoefficientFunction> coeffF) override
+    {
+      this->ComputeDerivs<D> (order, coeffF, FFder);
+    }
+    void GetParticularSolution (Vec<D> ElCenter, Vec<D> elsize,
+                                FlatVector<> sol, LocalHeap &lh);
   };
 }
 
