@@ -94,8 +94,10 @@ namespace ngcomp
                 }
 
             Array<int> els = GetElNeighbours (ma, ei);
-            for (auto elnr : els)
+            int nels = els.Size ();
+            for (int i = 0; i < nels; i++)
               {
+                int elnr = els[i];
                 dnums.SetSize0 ();
                 fes->GetDofNrs (ElementId (elnr), dnums, VISIBLE_DOF);
                 for (DofId d : dnums)
@@ -107,6 +109,7 @@ namespace ngcomp
                   {
                     if (elnr2 == ei.Nr () || els.Contains (elnr2))
                       continue;
+                    els.Append (elnr2);
                     dnums.SetSize0 ();
                     fes->GetDofNrs (ElementId (elnr2), dnums, VISIBLE_DOF);
                     for (DofId d : dnums)
