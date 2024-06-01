@@ -180,14 +180,15 @@ namespace ngcomp
         nz = tndof;
       else
         {
-          nz = dofs.Size () - test_dofs.Size ();
-          nz = max (nz, 0);
+          nz = max<size_t> (dofs.Size () - test_dofs.Size (), 0);
           for (int i = 0; i < min (elmat.Width (), elmat.Height ()); i++)
             if (abs (elmat (i, i)) < eps)
               nz++;
         }
-      if (dofs.Size () - test_dofs.Size () > nz)
-        throw Exception ("test fes not large enough for given tndof");
+      if (dofs.Size () < nz)
+        throw Exception ("tndof too large, nz: " + to_string (nz)
+                         + ", dofs:" + to_string (dofs.Size ())
+                         + ", test_dofs:" + to_string (test_dofs.Size ()));
 
       if (getrange)
         ETmats[ei.Nr ()]
