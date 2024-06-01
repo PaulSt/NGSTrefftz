@@ -147,6 +147,7 @@ namespace ngcomp
 
     vector<shared_ptr<Matrix<SCAL>>> ETmats (ne);
     auto lfvec = make_shared<VVector<SCAL>> (ndof);
+    lfvec->operator= (0.0);
 
     size_t active_elements = 0;
     size_t test_local_ndof = test_fes->GetNDof () / ne;
