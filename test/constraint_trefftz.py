@@ -152,7 +152,7 @@ def PySVDConstraintTrefftz(
 
         # Place the local solution T1
         # into the global solution P.
-        P[np.ix_(dofs, dofs_c)] += T1[:, 0 : len(dofs_c)]
+        P[np.ix_(dofs, dofs_c)] += T1
 
         ## matplotlib and netgen do not like to be opened at the same time,
         ## so the plotting of the singular values is disabled for now
