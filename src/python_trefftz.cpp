@@ -4,6 +4,7 @@
 #include <comp.hpp>
 // using namespace ngsolve;
 // #include <tents.hpp>
+#include "constraint_trefftz.hpp"
 #include "trefftzfespace.hpp"
 #include "specialcoefficientfunction.hpp"
 #include "specialintegrator.hpp"
@@ -28,6 +29,7 @@ PYBIND11_MODULE (_trefftz, m)
   ExportMesh1dTents (m);
   ExportMonomialFESpace (m);
   ExportCondenseDG (m);
+  ExportConstraintTrefftzEmbedding (m);
   // ExportStdMathFunction<GenericAiry>(m, "airy", "airy function");
   // ExportStdMathFunction<GenericAiryP>(m, "airyp", "airyp function");
 }
