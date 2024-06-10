@@ -7,6 +7,7 @@ from netgen.geom2d import unit_square
 import scipy as sp
 import numpy as np
 import netgen.gui
+import scipy.sparse
 
 # import matplotlib.pyplot as plt
 
@@ -223,7 +224,56 @@ def test_PySVDConstraintTrefftz(order: int = 2, debug: bool = False) -> float:
 
     a, f = dg.dgell(fes, dg.exactlap)
     rows, cols, vals = a.mat.COO()
-    A = sp.sparse.csr_matrix((vals, (rows, cols)))
+    A = scipy.sparse.csr_matrix((vals, (rows, cols)))
+    A = A.todense()
+
+    TA = P.transpose() @ A @ P
+    tsol = np.linalg.solve(TA, P.transpose() @ f.vec.FV())
+    tpgfu = GridFunction(fes)
+    tpgfu.vec.data = P @ tsol
+    if debug:
+        Draw(tpgfu)
+        input()
+    return sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d))
+
+
+def test_ConstraintTrefftzCpp(order: int = 2, debug: bool = False) -> float:
+    """
+    simple test case for PySVDConstraintTrefftz.
+
+    `order`: polynomial oder of the underlying space
+
+    `debug`: True: print debug info, default: False
+
+    >>> test_PySVDConstraintTrefftz(order=3, debug=False) # doctest:+ELLIPSIS
+    3.6...e-05
+    """
+    mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.4))
+
+    fes = L2(mesh2d, order=order, dgjumps=True)  # ,all_dofs_together=True)
+    u, v = fes.TnT()
+    uh = u.Operator("hesse")
+    vh = v.Operator("hesse")
+    op = (uh[0, 0] + uh[1, 1]) * (vh[0, 0] + vh[1, 1]) * dx
+
+    fes_constraint = FacetFESpace(mesh2d, order=0)  # ,all_dofs_together=True)
+    uF, vF = fes_constraint.TnT()
+    cop_lhs = u * vF * dx(element_boundary=True)
+    cop_rhs = uF * vF * dx(element_boundary=True)
+
+    P = ConstraintTrefftzEmbedding(
+        op, fes, cop_lhs, cop_rhs, fes_constraint, 2 * order + 1 - 3
+    )[0]
+
+    rows, cols, vals = P.COO()
+
+    P = scipy.sparse.csr_matrix((vals, (rows, cols)))
+    P.todense()
+    print(P)
+
+    a, f = dg.dgell(fes, dg.exactlap)
+    rows, cols, vals = a.mat.COO()
+    A = scipy.sparse.csr_matrix((vals, (rows, cols)))
     A = A.todense()
 
     TA = P.transpose() @ A @ P
