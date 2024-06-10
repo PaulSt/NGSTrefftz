@@ -1,5 +1,5 @@
 #include "constraint_trefftz.hpp"
-#include <basematrix.hpp>
+#include <matrix.hpp>
 #include <bilinearform.hpp>
 #include <core/array.hpp>
 #include <core/flags.hpp>
@@ -71,12 +71,12 @@ namespace ngcomp
   ///
   ///  @return P, represented as a vector of all element matrices
   template <class SCAL>
-  vector<ngbla::Matrix<SCAL>>
-  ConstraintTrefftzEmbedding (std::shared_ptr<ngfem::SumOfIntegrals> op,
-                              std::shared_ptr<FESpace> fes,
-                              std::shared_ptr<ngfem::SumOfIntegrals> cop_lhs,
-                              std::shared_ptr<ngfem::SumOfIntegrals> cop_rhs,
-                              std::shared_ptr<FESpace> fes_constraint,
+  tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<ngla::BaseVector>>
+  ConstraintTrefftzEmbedding (shared_ptr<SumOfIntegrals> op,
+                              shared_ptr<FESpace> fes,
+                              shared_ptr<ngfem::SumOfIntegrals> cop_lhs,
+                              shared_ptr<ngfem::SumOfIntegrals> cop_rhs,
+                              shared_ptr<FESpace> fes_constraint,
                               const size_t ndof_trefftz)
   {
     // #TODO what is a good size for the local heap??
@@ -96,7 +96,7 @@ namespace ngcomp
     calculateBilinearFormIntegrators (*cop_lhs, cop_lhs_integrators);
     calculateBilinearFormIntegrators (*cop_rhs, cop_rhs_integrators);
 
-    vector<Matrix<SCAL>> element_matrices (num_elements);
+    vector<shared_ptr<Matrix<SCAL>>> element_matrices (num_elements);
 
     const bool fes_has_hidden_dofs = fesHasHiddenDofs (*fes);
     const bool fes_constraint_has_hidden_dofs
@@ -207,22 +207,39 @@ namespace ngcomp
 
           elmat_t2 = Trans (V.Rows (ndof - ndof_trefftz, ndof));
 
-          element_matrices[element_id.Nr ()] = elmat_p;
+          element_matrices[element_id.Nr ()]
+              = make_shared<Matrix<SCAL>> (elmat_p);
         });
 
-    return element_matrices;
+    return make_tuple<> (element_matrices, shared_ptr<BaseVector> ());
   }
 }
 
 ////////////////////////// python interface ///////////////////////////
 
 #ifdef NGS_PYTHON
+
+/// call `ConstraintTrefftzEmbedding` and pack the resulting element matrices
+/// in a sparse matrix.
+tuple<shared_ptr<BaseMatrix>, shared_ptr<ngla::BaseVector>>
+python_constr_trefftz (shared_ptr<SumOfIntegrals> op, shared_ptr<FESpace> fes,
+                       shared_ptr<ngfem::SumOfIntegrals> cop_lhs,
+                       shared_ptr<ngfem::SumOfIntegrals> cop_rhs,
+                       shared_ptr<FESpace> fes_constraint,
+                       const size_t ndof_trefftz)
+{
+  auto P = ConstraintTrefftzEmbedding<double> (op, fes, cop_lhs, cop_rhs,
+                                               fes_constraint, ndof_trefftz);
+  return std::make_tuple (ngcomp::Elmats2Sparse<double> (std::get<0> (P), fes),
+                          std::get<1> (P));
+}
+
 void ExportConstraintTrefftzEmbedding (py::module m)
 {
-  m.def ("ConstraintTrefftzEmbedding",
-         &ngcomp::ConstraintTrefftzEmbedding<double>,
+  m.def ("ConstraintTrefftzEmbedding", &python_constr_trefftz,
          "creates the constraint Trefftz embedding matrix", py::arg ("op"),
          py::arg ("fes"), py::arg ("cop_lhs"), py::arg ("cop_rhs"),
-         py::arg ("fes_constraint"), py::arg ("trefftzndof"));
+         py::arg ("fes_constraint"), py::arg ("ndof_trefftz"));
 }
+
 #endif // NGS_PYTHON

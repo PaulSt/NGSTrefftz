@@ -3,6 +3,7 @@
 
 #include <expr.hpp>
 #include <fespace.hpp>
+#include <matrix.hpp>
 #include <memory>
 #include <fem.hpp>
 #include <pybind11/pybind11.h>
@@ -31,7 +32,7 @@ namespace ngcomp
   ///
   ///  @return P, represented as a vector of all element matrices
   template <class SCAL>
-  vector<ngbla::Matrix<SCAL>>
+  tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<BaseVector>>
   ConstraintTrefftzEmbedding (std::shared_ptr<ngfem::SumOfIntegrals> op,
                               std::shared_ptr<FESpace> fes,
                               std::shared_ptr<ngfem::SumOfIntegrals> cop_lhs,
