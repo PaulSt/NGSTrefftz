@@ -219,8 +219,11 @@ def test_PySVDConstraintTrefftz(order: int = 2, debug: bool = False) -> float:
     cop_rhs = uF * vF * dx(element_boundary=True)
 
     P = PySVDConstraintTrefftz(
-        op, fes, cop_lhs, cop_rhs, fes_constraint, 2 * order + 1 - 3, debug=debug
+        op, fes, cop_lhs, cop_rhs, fes_constraint, 2 * order + 1 - 3, debug=False
     )
+    print("P:")
+    print(P.shape)
+    print(P)
 
     a, f = dg.dgell(fes, dg.exactlap)
     rows, cols, vals = a.mat.COO()
@@ -271,6 +274,12 @@ def test_ConstraintTrefftzCpp(order: int = 2, debug: bool = False) -> float:
     P.todense()
     print(P)
 
+    if debug:
+        import matplotlib.pyplot as plt
+
+        plt.spy(P)
+        plt.show()
+
     a, f = dg.dgell(fes, dg.exactlap)
     rows, cols, vals = a.mat.COO()
     A = scipy.sparse.csr_matrix((vals, (rows, cols)))
@@ -287,5 +296,6 @@ def test_ConstraintTrefftzCpp(order: int = 2, debug: bool = False) -> float:
 
 
 if __name__ == "__main__":
-    error = test_PySVDConstraintTrefftz(order=2, debug=True)
+    # error = test_PySVDConstraintTrefftz(order=2, debug=True)
+    error = test_ConstraintTrefftzCpp(order=2, debug=True)
     print("error : ", error)

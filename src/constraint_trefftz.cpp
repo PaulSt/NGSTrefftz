@@ -1,4 +1,6 @@
 #include "constraint_trefftz.hpp"
+#include <cassert>
+#include <iostream>
 #include <matrix.hpp>
 #include <bilinearform.hpp>
 #include <core/array.hpp>
@@ -15,6 +17,7 @@
 #include <integratorcf.hpp>
 
 #include <fem.hpp>
+#include <stdexcept>
 #include <symbolicintegrator.hpp>
 #include <fespace.hpp>
 #include <vector>
@@ -102,6 +105,13 @@ namespace ngcomp
     const bool fes_constraint_has_hidden_dofs
         = fesHasHiddenDofs (*fes_constraint);
 
+    cout << "fes has ndof:" << fes->GetNDof () << std::endl;
+    cout << "fes_constraint has ndof:" << fes_constraint->GetNDof ()
+         << std::endl;
+    cout << "trefftz space has ndof:" << ndof_trefftz * mesh_access->GetNE ()
+         << std::endl;
+    // throw std::invalid_argument ("test");
+
     // solve the following linear system in an element-wise fashion:
     // L @ T1 = B for the unknown matrix T1,
     // with the given matrices:
@@ -123,6 +133,7 @@ namespace ngcomp
               || !bfIsDefinedOnElement (*cop_rhs, mesh_element))
             return;
 
+          // #TODO are the arrays really needed?
           Array<DofId> dofs, dofs_constraint;
           fes->GetDofNrs (element_id, dofs);
           fes_constraint->GetDofNrs (element_id, dofs_constraint);
@@ -160,14 +171,21 @@ namespace ngcomp
           FlatMatrix<SCAL> elmat_b2
               = get<0> (elmat_b.SplitRows (dofs_constraint.Size ()));
 
+          // the diff. operator L operates only on volume terms
           calculateElementMatrix (elmat_l, op_integrators[VOL], *mesh_access,
                                   element_id, *fes, *fes, local_heap);
-          calculateElementMatrix (elmat_b1, op_integrators[VOL], *mesh_access,
-                                  element_id, *fes, *fes_constraint,
-                                  local_heap);
-          calculateElementMatrix (elmat_b2, op_integrators[VOL], *mesh_access,
-                                  element_id, *fes_constraint, *fes_constraint,
-                                  local_heap);
+          for (const auto vorb : { VOL, BND, BBND, BBBND })
+            {
+              calculateElementMatrix (elmat_b1, cop_lhs_integrators[vorb],
+                                      *mesh_access, element_id, *fes,
+                                      *fes_constraint, local_heap);
+              calculateElementMatrix (
+                  elmat_b2, cop_rhs_integrators[vorb], *mesh_access,
+                  element_id, *fes_constraint, *fes_constraint, local_heap);
+            }
+          if (fes_has_hidden_dofs)
+            throw std::invalid_argument (
+                "fes has hidden dofs, not supported at the moment");
           if (fes_has_hidden_dofs)
             extractVisibleDofs (elmat_l, element_id, *fes, *fes, dofs, dofs,
                                 local_heap);
@@ -192,7 +210,7 @@ namespace ngcomp
           // P = (T1 | T2)
           Matrix<SCAL> elmat_p (ndof, ndof_trefftz + ndof_constraint);
           tuple<FlatMatrix<SCAL>, FlatMatrix<SCAL>> t1_hstack_t2
-              = elmat_a.SplitCols (ndof_constraint);
+              = elmat_p.SplitCols (ndof_constraint);
           // T1 has dimension (ndof, ndof_constraint)
           FlatMatrix<SCAL> elmat_t1 = get<0> (t1_hstack_t2);
           // T2 has dimension (ndof, ndof)
@@ -206,6 +224,11 @@ namespace ngcomp
           elmat_t1 = V_T * Sigma_inv * U_T * elmat_b;
 
           elmat_t2 = Trans (V.Rows (ndof - ndof_trefftz, ndof));
+
+          assert (elmat_p.Shape ()
+                  == tuple (ndof, ndof_constraint + ndof_trefftz));
+          cout << "elmat_p shape: (" << ndof << ", "
+               << ndof_constraint + ndof_trefftz << ")" << std::endl;
 
           element_matrices[element_id.Nr ()]
               = make_shared<Matrix<SCAL>> (elmat_p);
