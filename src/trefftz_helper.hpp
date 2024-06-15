@@ -6,8 +6,12 @@
 #include <expr.hpp>
 #include <fem.hpp>
 #include <fespace.hpp>
+#include <memory>
 #include <meshaccess.hpp>
 #include <meshing/localh.hpp>
+#include <meshing/meshing3.hpp>
+#include <sparsematrix.hpp>
+#include <vector>
 
 using namespace ngfem;
 using namespace ngcomp;
