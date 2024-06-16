@@ -6,6 +6,7 @@
 #include <expr.hpp>
 #include <fem.hpp>
 #include <fespace.hpp>
+#include <matrix.hpp>
 #include <memory>
 #include <meshaccess.hpp>
 #include <meshing/localh.hpp>
@@ -140,5 +141,4 @@ void extractVisibleDofs (FlatMatrix<SCAL> elmat, const ElementId &element_id,
   test_dofs = std::move (vtest_dofs);
   elmat.Assign (velmat);
 }
-
 #endif
