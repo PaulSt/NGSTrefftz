@@ -1,25 +1,25 @@
-setuptools>=61
-setuptools_scm 
-jupyter>=1.0.0
+setuptools==70
+setuptools_scm==8
+jupyter==1.0.0
 
-matplotlib>=3.6.1
-matplotlib-inline>=0.1.6
+matplotlib==3.9.0
+matplotlib-inline==0.1.6
 
-pandoc>=2.3
-nbconvert>=7.2.1
-nbformat>=5.7.0
+pandoc==2.3
+nbconvert==7.16.4
+nbformat==5.10.4
 nbsphinx>=0.8.9
-notebook>=6.5.1
+notebook==7.2.0
 
-Sphinx>=5.3.0
-sphinx-rtd-theme>=1.0.0
-sphinxemoji>=0.2.0
-jupyter_sphinx>=0.5.3
-myst_parser>=0.15.0
+Sphinx==7.3.7
+sphinx-rtd-theme==2.0.0
+sphinxemoji==0.3.1
+jupyter_sphinx==0.5.3
+myst_parser==3.0.1
 
-numpy>=1.23.4
-scipy>=1.11.1 
-ngsolve>=6.2.2403
-xfem==2.1.2303.post137.dev0
+numpy==1.26.4
+scipy==1.13.1 
+ngsolve>=6.2.2404
+xfem>=2.1.2404
 ngstrefftz>=0.2.2402
-webgui-jupyter-widgets>=0.2.31
+webgui-jupyter-widgets==0.2.33

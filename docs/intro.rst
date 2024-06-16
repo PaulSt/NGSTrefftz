@@ -75,7 +75,7 @@ where :math:`h` is the mesh size, :math:`p` is the polynomial degree and :math:`
 
     from ngsolve import *
     from ngstrefftz import *
-    from netgen.geom2d import unit_square
+    from netgen.occ import *
     p=5
 
 For a given mesh we construct the Trefftz finite element space as 
