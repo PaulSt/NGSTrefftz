@@ -13,135 +13,91 @@ env:
 
 jobs:
 
-  pypi-linux:
-    name: Build wheels for linux
+  test_linux:
+    name: Test on Linux
     runs-on: ubuntu-latest
-    #container:
-      #image: quay.io/pypa/manylinux2014_x86_64:latest
-      #image: sameli/manylinux2014_x86_64_cuda_11
     steps:
-      - name: clear cache
-        run: rm -rf /opt/hostedtoolcache
       - uses: actions/checkout@v4
         with:
           submodules: 'True'
           path: 'NGSTrefftz'
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
-      - name: pull manylinux
-        run: docker pull sameli/manylinux2014_x86_64_cuda_11.7
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: install ngstrefftz
+        run: cd NGSTrefftz && pip install . && pip install numpy
       - name: run test
-        run: docker run -v $GITHUB_WORKSPACE:/workspace sameli/manylinux2014_x86_64_cuda_11.7 /bin/sh /workspace/NGSTrefftz/.github/workflows/build_linux_test.sh
-      - name: build pip
-        run: docker run -v $GITHUB_WORKSPACE:/workspace sameli/manylinux2014_x86_64_cuda_11.7 /bin/sh /workspace/NGSTrefftz/.github/workflows/build_pip.sh 
-      - name: Store the binary wheel
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-package-distributions-linux
-          path: NGSTrefftz/wheelhouse
+        run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
 
-  pypi-mac:
-    name: Build wheels for macOS
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    needs: [ test_linux ]
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        py: ['3.8', '3.9', '3.10', '3.11', '3.12']
-    runs-on: macos-11
-    env:
-      MACOSX_DEPLOYMENT_TARGET: '10.15'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
-          path: 'NGSTrefftz'
-      - name: Get Python ${{ matrix.py }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.py }}
-      - name: Run build script
-        run: cd NGSTrefftz/.github/workflows && bash build_pip_mac.sh ${{ matrix.py }}
-      - name: Store the binary wheel
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-package-distributions-mac-${{ matrix.py }}
-          path: NGSTrefftz/wheelhouse
+        os: [ubuntu-latest, macos-13]
+        include:
+          - os: windows-2019
+            cibw-arch: AMD64
+            cmake-generator: "Visual Studio 16 2019"
+            cmake_generator_platform: "x64"
 
-  pypi-win:
-    name: Build wheels for Windows
-    strategy:
-      matrix:
-        py: ['3.8', '3.9', '3.10', '3.11', '3.12']
-    runs-on: windows-2019
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: 'True'
+          fetch-tags: 'true'
           fetch-depth: 0
-          path: 'NGSTrefftz'
-      - name: Get Python ${{ matrix.py }}
-        id: python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.py }}
-      - name: Run build script
-        run: Set-Location NGSTrefftz/.github/workflows; ./build_pip.ps1 ${{ env.pythonLocation }}
-      - name: Store the binary wheel
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-package-distributions-win-${{ matrix.py }}
-          path: NGSTrefftz/wheelhouse
 
-  pypi-src:
-    name: pypi src
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.19.0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: ./wheelhouse/*.whl
+
+  build_sdist:
+    name: Build source distribution
+    needs: [ test_linux ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: 'True'
+          fetch-tags: 'true'
           fetch-depth: 0
-          path: 'NGSTrefftz'
-      - name: install pkgs
-        run: |
-             sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install vim python3 python3-pip python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake git g++ libglu1-mesa-dev libblas-dev liblapack-dev
-      - name: Update pip and Install setuptools
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install -U pytest-check numpy wheel scikit-build mkl==2023.* mkl-devel==2023.* setuptools setuptools_scm
-          python3 -m pip install ngsolve --pre
-      - name: Package ngstrefftz sources for PyPI
-        run: cd NGSTrefftz && python3 setup.py sdist -d wheelhouse
-      #- name: pip install ngstrefftz
-        #run: pip install dist/*
-      - name: Store the sdist
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-package-distributions-src
-          path: NGSTrefftz/wheelhouse
 
-  publish-pypi:
-    name: Publish to PyPI
-    #if: github.event_name == 'release' && github.event.action == 'created' 
-    needs: [pypi-linux, pypi-mac, pypi-win, pypi-src]
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-sdist
+          path: dist/*.tar.gz
+
+  upload_pypi:
+    needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
     steps:
-    - name: Download all the dists
-      uses: actions/download-artifact@v4
-      with:
-        pattern: python-package-distributions-*
-        merge-multiple: true
-        path: NGSTrefftz/wheelhouse/
-    - name: Publish binary distributions to PyPI
-      if: github.ref == 'refs/heads/main' || github.event_name == 'release'
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        skip-existing: true
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        packages-dir: NGSTrefftz/wheelhouse/
-        #repository-url: https://test.pypi.org/legacy/
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cibw-*
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          # To test: repository-url: https://test.pypi.org/legacy/
 
   docker:
-    needs: [publish-pypi]
+    needs: [upload_pypi]
     runs-on: ubuntu-latest
     steps:
       - name: clear cache
@@ -211,7 +167,7 @@ jobs:
 
 
   docs:
-    needs: [publish-pypi]
+    needs: [upload_pypi]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
