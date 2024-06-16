@@ -26,7 +26,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: install ngstrefftz
-        run: cd NGSTrefftz && pip install . && pip install numpy
+        run: cd NGSTrefftz && pip install numpy mkl-devel==2024.* mkl==2024.* && pip install . 
       - name: run test
         run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
 
@@ -50,6 +50,8 @@ jobs:
           fetch-depth: 0
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.19.0
+        env:
+          CIBW_BUILD_VERBOSITY: 1
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
