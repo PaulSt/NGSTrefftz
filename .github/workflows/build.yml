@@ -42,17 +42,14 @@ jobs:
             cibw-arch: AMD64
             cmake-generator: "Visual Studio 16 2019"
             cmake_generator_platform: "x64"
-
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: 'True'
           fetch-tags: 'true'
           fetch-depth: 0
-
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.19.0
-
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
@@ -68,10 +65,8 @@ jobs:
           submodules: 'True'
           fetch-tags: 'true'
           fetch-depth: 0
-
       - name: Build sdist
         run: pipx run build --sdist
-
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-sdist
@@ -90,8 +85,8 @@ jobs:
           path: dist
           merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@release/v1
+        if: github.ref == 'refs/heads/main' || github.event_name == 'release'
         with:
-          if: github.ref == 'refs/heads/main' || github.event_name == 'release'
           skip-existing: true
           password: ${{ secrets.PYPI_API_TOKEN }}
           # To test: repository-url: https://test.pypi.org/legacy/
@@ -163,8 +158,6 @@ jobs:
         with:
           name: ngst-pyodide
           path: ./ngst-pyodide
-
-
 
   docs:
     needs: [upload_pypi]
