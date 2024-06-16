@@ -298,12 +298,19 @@ namespace ngcomp
 
     if (ei.IsVolume ())
       {
+        if (!DefinedOn (ngel))
+          {
+            return SwitchET(eltype,
+                            [&alloc] (auto et) -> FiniteElement&
+                            { return *new(alloc) ScalarDummyFE<et.ElementType()>(); });
+          }
+
         switch (ma->GetElType (ei))
           {
           case ET_POINT:
           case ET_SEGM:
             {
-              throw Exception ("illegal dim for space-time element");
+              //throw Exception ("illegal dim for space-time element");
               break;
             }
           case ET_QUAD:
@@ -469,7 +476,7 @@ namespace ngcomp
       }
     catch (Exception &e)
       {
-        throw Exception ("illegal element type in Trefftz::GetSurfaceFE");
+        throw Exception ("illegal element type in Trefftz::GetFE");
       }
   }
 
