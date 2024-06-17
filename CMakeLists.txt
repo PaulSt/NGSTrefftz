@@ -15,18 +15,18 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_BINARY_DIR}/cmake_modules"
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
 
 ### add ngstents dependency if needed
+include_directories(${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src)
+set(addon_name _pytents)
+project(_pytents)
+include(${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
+add_ngsolve_addon( _pytents 
+  ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/python_tents.cpp
+  ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp
+  )
+target_compile_definitions(_pytents PRIVATE NGSTENT_EXPORTS)
+set_target_properties(_pytents PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents")
 set(INSTALL_TENTS ON CACHE BOOL "Install ngstents")
 if (INSTALL_TENTS)# AND NOT TARGET _pytents)
-    include_directories(${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src)
-    set(addon_name _pytents)
-    project(_pytents)
-    include(${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
-    add_ngsolve_addon( _pytents 
-      ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/python_tents.cpp
-      ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp
-      )
-    target_compile_definitions(_pytents PRIVATE NGSTENT_EXPORTS)
-    set_target_properties(_pytents PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents")
     file(WRITE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents/__init__.py "from ._pytents import TentSlab, Tent")
     set(install_dir ${ADDON_INSTALL_DIR_PYTHON}/ngstents)
     install(TARGETS _pytents DESTINATION ${install_dir})
