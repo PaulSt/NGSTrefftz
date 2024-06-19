@@ -21,7 +21,7 @@ void invert_svd_sigma (const FlatMatrix<SCAL> &sigma,
   auto sigma_inv_el = sigma_inv_diag.begin ();
 
   // Sigma_inv.Diag () = 1.0 / elmat_a.Diag ();
-  while (sigma_el != sigma_diag.end () and *sigma_el > 0)
+  while (sigma_el != sigma_diag.end () and *sigma_el > 1e-10)
     {
       *sigma_inv_el = 1.0 / *sigma_el;
       // increment iterators
@@ -171,6 +171,7 @@ namespace ngcomp
             extractVisibleDofs (elmat_l, element_id, *fes, *fes, dofs, dofs,
                                 local_heap);
 
+          (*testout) << "elmat_a:\n" << elmat_a << std::endl;
           // singular value decomposition of elmat_a:
           // U * sigma * V = elmat_a
           // elmat_a gets overwritten with sigma
