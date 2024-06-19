@@ -163,8 +163,9 @@ namespace ngcomp
 
       FlatMatrix<SCAL> elmat (test_dofs.Size (), dofs.Size (), mlh);
 
-      calculateElementMatrix (elmat, bfis[VOL], *ma, ElementId (ei), *fes,
-                              *test_fes, mlh);
+      elmat = 0.;
+      addIntegrationToElementMatrix (elmat, bfis[VOL], *ma, ElementId (ei),
+                                     *fes, *test_fes, mlh);
 
       if (has_hidden_dofs) // extract visible dofs, if needed
         extractVisibleDofs (elmat, ei, *fes, *test_fes, dofs, test_dofs, mlh);
