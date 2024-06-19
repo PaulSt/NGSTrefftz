@@ -188,17 +188,20 @@ namespace ngcomp
           FlatMatrix<SCAL> Sigma_inv (ndof, ndof_constraint + ndof,
                                       local_heap);
           invert_svd_sigma (elmat_a, Sigma_inv);
-          (*testout) << "elmat a from element " << element_id << "\n"
-                     << elmat_a << std::endl;
+          (*testout) << "sigma from element " << element_id << "\n"
+                     << elmat_a.Diag () << "\nsigma inverse\n"
+                     << Sigma_inv << std::endl;
 
           // P = (T1 | T2)
-          Matrix<SCAL> elmat_p (ndof, ndof_trefftz + ndof_constraint);
-          tuple<FlatMatrix<SCAL>, FlatMatrix<SCAL>> t1_hstack_t2
-              = elmat_p.SplitCols (ndof_constraint);
+          Matrix<SCAL, ColMajor> elmat_p (ndof,
+                                          ndof_trefftz + ndof_constraint);
+          // SplitCols seems to be wrong in RowMajor mode
+          tuple<FlatMatrix<SCAL, ColMajor>, FlatMatrix<SCAL, ColMajor>>
+              t1_hstack_t2 = elmat_p.SplitCols (ndof_constraint);
           // T1 has dimension (ndof, ndof_constraint)
-          FlatMatrix<SCAL> elmat_t1 = get<0> (t1_hstack_t2);
+          FlatMatrix<SCAL, ColMajor> elmat_t1 = get<0> (t1_hstack_t2);
           // T2 has dimension (ndof, ndof)
-          FlatMatrix<SCAL> elmat_t2 = get<1> (t1_hstack_t2);
+          FlatMatrix<SCAL, ColMajor> elmat_t2 = get<1> (t1_hstack_t2);
 
           // T1 solves A @ T1 = B,
           // i.e. T1 = A^{-1} @ B.
@@ -206,14 +209,20 @@ namespace ngcomp
           // B has dimension (ndof + ndof_constraint, ndof_constraint),
           // so T1 has dimension (ndof, ndof_constraint)
           elmat_t1 = V_T * Sigma_inv * U_T * elmat_b;
+          (*testout) << "t1 from element " << element_id << "\n"
+                     << elmat_t1 << std::endl;
 
           elmat_t2 = Trans (V.Rows (ndof - ndof_trefftz, ndof));
+          (*testout) << "t2 from element " << element_id << "\n"
+                     << elmat_t2 << std::endl;
 
           assert (elmat_p.Shape ()
                   == tuple (ndof, ndof_constraint + ndof_trefftz));
-          cout << "elmat_p shape: (" << ndof << ", "
-               << ndof_constraint + ndof_trefftz << ")" << std::endl;
+          (*testout) << "elmat_p shape: (" << ndof << ", "
+                     << ndof_constraint + ndof_trefftz << ")" << std::endl;
 
+          (*testout) << "p from element " << element_id << "\n"
+                     << elmat_p << std::endl;
           element_matrices[element_id.Nr ()]
               = make_shared<Matrix<SCAL>> (elmat_p);
         });
