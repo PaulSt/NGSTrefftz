@@ -144,6 +144,7 @@ namespace ngcomp
                                            ndof_constraint, local_heap
 
           );
+          elmat_a = 0.;
           elmat_b = 0.;
 
           // elmat_b2 is a view into elamt_b
@@ -151,14 +152,15 @@ namespace ngcomp
               = get<0> (elmat_b.SplitRows (dofs_constraint.Size ()));
 
           // the diff. operator L operates only on volume terms
-          calculateElementMatrix (elmat_l, op_integrators[VOL], *mesh_access,
-                                  element_id, *fes, *fes, local_heap);
+          addIntegrationToElementMatrix (elmat_l, op_integrators[VOL],
+                                         *mesh_access, element_id, *fes, *fes,
+                                         local_heap);
           for (const auto vorb : { VOL, BND, BBND, BBBND })
             {
-              calculateElementMatrix (elmat_b1, cop_lhs_integrators[vorb],
-                                      *mesh_access, element_id, *fes,
-                                      *fes_constraint, local_heap);
-              calculateElementMatrix (
+              addIntegrationToElementMatrix (
+                  elmat_b1, cop_lhs_integrators[vorb], *mesh_access,
+                  element_id, *fes, *fes_constraint, local_heap);
+              addIntegrationToElementMatrix (
                   elmat_b2, cop_rhs_integrators[vorb], *mesh_access,
                   element_id, *fes_constraint, *fes_constraint, local_heap);
             }
@@ -185,6 +187,8 @@ namespace ngcomp
           FlatMatrix<SCAL> Sigma_inv (ndof, ndof_constraint + ndof,
                                       local_heap);
           invert_svd_sigma (elmat_a, Sigma_inv);
+          (*testout) << "elmat a from element " << element_id << "\n"
+                     << elmat_a << std::endl;
 
           // P = (T1 | T2)
           Matrix<SCAL> elmat_p (ndof, ndof_trefftz + ndof_constraint);
