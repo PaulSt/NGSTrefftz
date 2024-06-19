@@ -42,7 +42,7 @@ void invert_svd_sigma (const FlatMatrix<SCAL> &sigma,
   auto sigma_inv_el = sigma_inv_diag.begin ();
 
   // Sigma_inv.Diag () = 1.0 / elmat_a.Diag ();
-  while (sigma_el != sigma_diag.end ())
+  while (sigma_el != sigma_diag.end () and *sigma_el > 0)
     {
       *sigma_inv_el = 1.0 / *sigma_el;
       // increment iterators
@@ -253,8 +253,10 @@ python_constr_trefftz (shared_ptr<SumOfIntegrals> op, shared_ptr<FESpace> fes,
 {
   auto P = ConstraintTrefftzEmbedding<double> (op, fes, cop_lhs, cop_rhs,
                                                fes_constraint, ndof_trefftz);
-  return std::make_tuple (ngcomp::Elmats2Sparse<double> (std::get<0> (P), fes),
-                          std::get<1> (P));
+  return std::make_tuple (
+      ngcomp::Elmats2SparseConstraintTrefftz<double> (
+          std::get<0> (P), fes, fes_constraint, ndof_trefftz),
+      std::get<1> (P));
 }
 
 void ExportConstraintTrefftzEmbedding (py::module m)
