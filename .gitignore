@@ -9,3 +9,6 @@ compile_commands.json
 
 # Cache files
 .cache/
+
+# any debug output
+*.out
