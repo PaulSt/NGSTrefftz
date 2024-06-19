@@ -43,7 +43,8 @@ bool fesHasHiddenDofs (const FESpace &fes);
 bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
                            const Ngs_Element &mesh_element);
 
-/// calculates the element local matrix of a bilinear form.
+/// adds the integration of `bf_integrators` to the element local matrix of a
+/// bilinear form.
 ///
 /// @param elmat element matrix is written into this matrix. Should be of
 ///     dimension (ndof, ndof), where ndof is the number of local dofs of the
@@ -57,7 +58,7 @@ bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
 ///     same as `fes`.
 /// @param local_heap allocator. elmat will be allocated here, as well as
 template <class SCAL>
-inline void calculateElementMatrix (
+inline void addIntegrationToElementMatrix (
     FlatMatrix<SCAL> elmat,
     const Array<shared_ptr<BilinearFormIntegrator>> &bf_integrators,
     const MeshAccess &mesh_access, const ElementId &element_id,
