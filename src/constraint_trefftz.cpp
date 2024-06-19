@@ -30,6 +30,28 @@ void invert_svd_sigma (const FlatMatrix<SCAL> &sigma,
     }
 }
 
+/// Permutes the given `matrix` according to the ordering of the given
+/// `dof_nrs`.
+template <typename SCAL>
+void reorderArrayColumns (FlatMatrix<SCAL> &matrix,
+                          const Array<DofId> &dof_nrs, LocalHeap &local_heap)
+{
+  const auto heap_reset = HeapReset (local_heap);
+
+  const auto matrix_shape = matrix.Shape ();
+
+  FlatArray<int> map (dof_nrs.Size (), local_heap);
+  for (int i = 0; i < map.Size (); i++)
+    map[i] = i;
+
+  QuickSortI (dof_nrs, map);
+  auto elmat_b2_copy = FlatMatrix<SCAL> (get<0> (matrix_shape),
+                                         get<1> (matrix_shape), local_heap);
+  elmat_b2_copy = matrix;
+  for (auto i : Range (get<0> (matrix_shape)))
+    matrix.Col (i) = elmat_b2_copy.Col (map[i]);
+}
+
 namespace ngcomp
 {
   /// creates an embedding marix P for the given operation `op`.
@@ -170,6 +192,9 @@ namespace ngcomp
           if (fes_has_hidden_dofs)
             extractVisibleDofs (elmat_l, element_id, *fes, *fes, dofs, dofs,
                                 local_heap);
+
+          // reorder elmat_b2
+          reorderArrayColumns (elmat_b2, dofs_constraint, local_heap);
 
           (*testout) << "elmat_a:\n" << elmat_a << std::endl;
           // singular value decomposition of elmat_a:
