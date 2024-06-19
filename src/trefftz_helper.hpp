@@ -72,7 +72,6 @@ inline void calculateElementMatrix (
 
   const bool mixed_mode = std::addressof (test_fes) != std::addressof (fes);
 
-  elmat = 0.0;
   bool symmetric_so_far = true;
   int bfi_ind = 0;
   while (bfi_ind < bf_integrators.Size ())
