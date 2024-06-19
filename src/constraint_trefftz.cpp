@@ -197,7 +197,7 @@ namespace ngcomp
 
           // T1 solves A @ T1 = B,
           // i.e. T1 = A^{-1} @ B.
-          // A has dimenstion (ndof + ndof_constraint, ndof),
+          // A has dimension (ndof + ndof_constraint, ndof),
           // B has dimension (ndof + ndof_constraint, ndof_constraint),
           // so T1 has dimension (ndof, ndof_constraint)
           elmat_t1 = V_T * Sigma_inv * U_T * elmat_b;
