@@ -194,7 +194,7 @@ def PySVDConstraintTrefftz(
     return P
 
 
-def test_PySVDConstraintTrefftz(order: int = 2, debug: bool = False) -> float:
+def test_PySVDConstraintTrefftz(order: int = 2, debug: bool = False, maxh=0.4) -> float:
     """
     simple test case for PySVDConstraintTrefftz.
 
@@ -205,7 +205,7 @@ def test_PySVDConstraintTrefftz(order: int = 2, debug: bool = False) -> float:
     >>> test_PySVDConstraintTrefftz(order=3, debug=False) # doctest:+ELLIPSIS
     3.6...e-05
     """
-    mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.4))
+    mesh2d = Mesh(unit_square.GenerateMesh(maxh=maxh))
 
     fes = L2(mesh2d, order=order, dgjumps=True)  # ,all_dofs_together=True)
     u, v = fes.TnT()
@@ -224,6 +224,11 @@ def test_PySVDConstraintTrefftz(order: int = 2, debug: bool = False) -> float:
     print("P:")
     print(P.shape)
     print(P)
+    if debug:
+        import matplotlib.pyplot as plt
+
+        plt.spy(P)
+        plt.show()
 
     a, f = dg.dgell(fes, dg.exactlap)
     rows, cols, vals = a.mat.COO()
@@ -240,7 +245,7 @@ def test_PySVDConstraintTrefftz(order: int = 2, debug: bool = False) -> float:
     return sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d))
 
 
-def test_ConstraintTrefftzCpp(order: int = 2, debug: bool = False) -> float:
+def test_ConstraintTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) -> float:
     """
     simple test case for PySVDConstraintTrefftz.
 
@@ -251,7 +256,7 @@ def test_ConstraintTrefftzCpp(order: int = 2, debug: bool = False) -> float:
     >>> test_PySVDConstraintTrefftz(order=3, debug=False) # doctest:+ELLIPSIS
     3.6...e-05
     """
-    mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.4))
+    mesh2d = Mesh(unit_square.GenerateMesh(maxh=maxh))
 
     fes = L2(mesh2d, order=order, dgjumps=True)  # ,all_dofs_together=True)
     u, v = fes.TnT()
@@ -296,6 +301,8 @@ def test_ConstraintTrefftzCpp(order: int = 2, debug: bool = False) -> float:
 
 
 if __name__ == "__main__":
-    # error = test_PySVDConstraintTrefftz(order=2, debug=True)
-    error = test_ConstraintTrefftzCpp(order=2, debug=True)
+    SetTestoutFile("test.out")
+    maxh = 0.4
+    # error = test_PySVDConstraintTrefftz(order=2, debug=False, maxh=maxh)
+    error = test_ConstraintTrefftzCpp(order=2, debug=False, maxh=maxh)
     print("error : ", error)
