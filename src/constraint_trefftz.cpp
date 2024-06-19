@@ -1,28 +1,7 @@
 #include "constraint_trefftz.hpp"
-#include <cassert>
-#include <iostream>
-#include <matrix.hpp>
-#include <bilinearform.hpp>
-#include <core/array.hpp>
-#include <core/flags.hpp>
-#include <core/localheap.hpp>
-#include <cstddef>
-#include <elementtopology.hpp>
-#include <expr.hpp>
-#include <integrator.hpp>
-#include <matrix.hpp>
-#include <memory>
-#include <meshaccess.hpp>
-#include <pybind11/cast.h>
-#include <integratorcf.hpp>
-
-#include <fem.hpp>
-#include <stdexcept>
-#include <symbolicintegrator.hpp>
-#include <fespace.hpp>
-#include <vector>
-
 #include "trefftz_helper.hpp"
+
+#include <integratorcf.hpp>
 
 using namespace ngfem;
 
