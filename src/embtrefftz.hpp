@@ -38,11 +38,20 @@ namespace ngcomp
       this->name = "EmbTrefftzFESpace";
       this->type = "embt";
       this->needs_transform_vec = true;
+      shared_ptr<CompoundFESpace> cafes
+          = dynamic_pointer_cast<CompoundFESpace> (afes);
+      if (cafes)
+        for (auto space : cafes->Spaces ())
+          dynamic_cast<CompoundFESpace *> (this)->AddSpace (space);
       // this->Update();
       // this->UpdateDofTables();
       // this->UpdateCouplingDofArray();
       // this->FinalizeUpdate();
     }
+
+    void Update () override { ; };
+
+    void UpdateCouplingDofArray () override { ; }
 
     shared_ptr<BaseVector>
     SetOp (shared_ptr<SumOfIntegrals> bf, shared_ptr<SumOfIntegrals> lf,
@@ -55,6 +64,10 @@ namespace ngcomp
 
     virtual void VTransformVR (ElementId ei, const SliceVector<double> vec,
                                TRANSFORM_TYPE type) const override;
+
+    shared_ptr<GridFunction> Embed (shared_ptr<GridFunction> tgfu);
+
+    shared_ptr<BaseMatrix> GetEmbedding ();
   };
 }
 

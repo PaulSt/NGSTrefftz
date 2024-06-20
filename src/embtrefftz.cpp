@@ -329,7 +329,8 @@ namespace ngcomp
     this->ctofdof.SetSize (newndof);
     for (int i = 0; i < ndof; i++)
       if (all2comp[i] >= 0)
-        this->ctofdof[all2comp[i]] = T::GetDofCouplingType (i);
+        this->ctofdof[all2comp[i]] = fes->GetDofCouplingType (i);
+    // this->ctofdof[all2comp[i]] = T::GetDofCouplingType (i);
 
     T::FinalizeUpdate ();
     return std::get<1> (embtr);
@@ -370,7 +371,7 @@ namespace ngcomp
     if (type == TRANSFORM_MAT_LEFT_RIGHT)
       {
         temp_mat.Cols (0, nz) = mat * (*(ETmats[ei.Nr ()]));
-        mat.Rows (0, nz) = Trans (*(ETmats[ei.Nr ()])) * temp_mat;
+        mat.Cols (0, nz).Rows (0, nz) = Trans (*(ETmats[ei.Nr ()])) * temp_mat;
       }
   }
 
@@ -398,23 +399,55 @@ namespace ngcomp
       }
   }
 
-  template class EmbTrefftzFESpace<L2HighOrderFESpace,
-                                   shared_ptr<L2HighOrderFESpace>>;
-  static RegisterFESpace<
-      EmbTrefftzFESpace<L2HighOrderFESpace, shared_ptr<L2HighOrderFESpace>>>
-      initembt ("L2EmbTrefftzFESpace");
+  template <typename T, typename shrdT>
+  shared_ptr<GridFunction>
+  EmbTrefftzFESpace<T, shrdT>::Embed (shared_ptr<GridFunction> tgfu)
+  {
+    LocalHeap lh (1000 * 1000 * 1000);
+    Flags flags;
 
-  // template class EmbTrefftzFESpace<VectorL2FESpace,
-  // shared_ptr<VectorL2FESpace>>;
+    auto tvec = tgfu->GetVectorPtr ();
+
+    auto gfu = CreateGridFunction (this->fes, "pws", flags);
+    gfu->Update ();
+    auto vec = gfu->GetVectorPtr ();
+
+    this->ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
+      Array<DofId> dofs, tdofs;
+      this->fes->GetDofNrs (ei, dofs);
+      tdofs.SetSize (dofs.Size ());
+      tdofs.SetSize0 ();
+
+      for (DofId d : dofs)
+        if (all2comp[d] >= 0)
+          tdofs.Append (all2comp[d]);
+
+      FlatVector<> telvec (tdofs.Size (), mlh);
+      tvec->GetIndirect (tdofs, telvec);
+
+      FlatVector<> elvec (dofs.Size (), mlh);
+      elvec = (*(ETmats[ei.Nr ()])) * telvec;
+      vec->SetIndirect (dofs, elvec);
+    });
+    return gfu;
+  }
+
+  template <typename T, typename shrdT>
+  shared_ptr<BaseMatrix> EmbTrefftzFESpace<T, shrdT>::GetEmbedding ()
+  {
+    return Elmats2Sparse<double> (ETmats, this->fes);
+  }
+
+  // template class EmbTrefftzFESpace<L2HighOrderFESpace,
+  // shared_ptr<L2HighOrderFESpace>>;
   // static RegisterFESpace<
-  // EmbTrefftzFESpace<VectorL2FESpace, shared_ptr<VectorL2FESpace>>>
-  // initembt2 ("VL2EmbTrefftzFESpace");
-
-  template class EmbTrefftzFESpace<MonomialFESpace,
-                                   shared_ptr<MonomialFESpace>>;
-  static RegisterFESpace<
-      EmbTrefftzFESpace<MonomialFESpace, shared_ptr<MonomialFESpace>>>
-      initembt3 ("MonomialEmbTrefftzFESpace");
+  // EmbTrefftzFESpace<L2HighOrderFESpace, shared_ptr<L2HighOrderFESpace>>>
+  // initembt ("L2EmbTrefftzFESpace");
+  // template class EmbTrefftzFESpace<MonomialFESpace,
+  // shared_ptr<MonomialFESpace>>;
+  // static RegisterFESpace<
+  // EmbTrefftzFESpace<MonomialFESpace, shared_ptr<MonomialFESpace>>>
+  // initembt3 ("MonomialEmbTrefftzFESpace");
 }
 
 ////////////////////////// python interface ///////////////////////////
@@ -439,9 +472,13 @@ void ExportETSpace (py::module m, string label)
                }),
                py::arg ("fes"));
 
-  pyspace.def ("SetOp", &ngcomp::EmbTrefftzFESpace<T, shrdT>::SetOp,
-               py::arg ("bf"), py::arg ("lf") = nullptr, py::arg ("eps") = 0,
-               py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0);
+  pyspace
+      .def ("SetOp", &ngcomp::EmbTrefftzFESpace<T, shrdT>::SetOp,
+            py::arg ("bf"), py::arg ("lf") = nullptr, py::arg ("eps") = 0,
+            py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0)
+      .def ("Embed", &ngcomp::EmbTrefftzFESpace<T, shrdT>::Embed)
+      .def ("GetEmbedding",
+            &ngcomp::EmbTrefftzFESpace<T, shrdT>::GetEmbedding);
 }
 
 void ExportEmbTrefftz (py::module m)
@@ -453,6 +490,8 @@ void ExportEmbTrefftz (py::module m)
   // shared_ptr<ngcomp::VectorL2FESpace>> ( m, "VL2EmbTrefftzFESpace");
   ExportETSpace<ngcomp::MonomialFESpace, shared_ptr<ngcomp::MonomialFESpace>> (
       m, "MonomialEmbTrefftzFESpace");
+  ExportETSpace<ngcomp::CompoundFESpace, shared_ptr<ngcomp::CompoundFESpace>> (
+      m, "CompoundEmbTrefftzFESpace");
 
   m.def (
       "EmbeddedTrefftzFES",
@@ -471,6 +510,10 @@ void ExportEmbTrefftz (py::module m)
           nfes = make_shared<ngcomp::EmbTrefftzFESpace<
               ngcomp::MonomialFESpace, shared_ptr<ngcomp::MonomialFESpace>>> (
               dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes));
+        else if (dynamic_pointer_cast<ngcomp::CompoundFESpace> (fes))
+          nfes = make_shared<ngcomp::EmbTrefftzFESpace<
+              ngcomp::CompoundFESpace, shared_ptr<ngcomp::CompoundFESpace>>> (
+              dynamic_pointer_cast<ngcomp::CompoundFESpace> (fes));
         else
           throw Exception ("Unknown base fes");
         return nfes;
