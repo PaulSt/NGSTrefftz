@@ -2,37 +2,6 @@
 
 namespace ngfem
 {
-  class Monomial : public RecursivePolynomial<Monomial>
-  {
-  public:
-    Monomial () { ; }
-
-    template <class S, class T> inline Monomial (int n, S x, T &&values)
-    {
-      Eval (n, x, values);
-    }
-
-    template <class S> static INLINE double P0 (S x) { return 1.0; }
-    template <class S> static INLINE S P1 (S x) { return x; }
-    template <class S, class Sy> static INLINE S P1 (S x, Sy y)
-    {
-      return P1 (x);
-    }
-
-    static INLINE double A (int i) { return 1.0; }
-    static INLINE double B (int i) { return 0; }
-    static INLINE double C (int i) { return 0; }
-
-    static INLINE double CalcA (int i) { return 1.0; }
-    static INLINE double CalcB (int i) { return 0; }
-    static INLINE double CalcC (int i) { return 0; }
-
-    enum
-    {
-      ZERO_B = 1
-    };
-  };
-
   void
   BaseScalarMappedElement ::CalcShape (const BaseMappedIntegrationPoint &mip,
                                        BareSliceVector<Complex> shape) const
@@ -187,7 +156,7 @@ namespace ngfem
     sparsemat[2].SetSize (0);
     for (size_t i = 0; i < mat.Height (); i++)
       {
-        // guarantee sparsemat[0].Size() to be nbasis,
+        // guarantee sparsemat[0].Size() to be nbasis + 1,
         // could be shorter but easier for mat*vec
         sparsemat[0].Append (spsize);
         for (size_t j = 0; j < mat.Width (); j++)

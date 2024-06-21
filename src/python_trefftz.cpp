@@ -12,6 +12,7 @@
 #include "embtrefftz.hpp"
 #include "mesh1dtents.hpp"
 #include "monomialfespace.hpp"
+#include "pufespace.hpp"
 #include "condensedg.hpp"
 // #include "airy.cpp"
 
@@ -29,6 +30,7 @@ PYBIND11_MODULE (_trefftz, m)
   ExportEmbTrefftz (m);
   ExportMesh1dTents (m);
   ExportMonomialFESpace (m);
+  ExportPUFESpace (m);
   ExportCondenseDG (m);
   ExportConstraintTrefftzEmbedding (m);
   // ExportStdMathFunction<GenericAiry>(m, "airy", "airy function");

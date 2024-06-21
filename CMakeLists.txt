@@ -33,6 +33,8 @@ add_ngsolve_addon( _trefftz
     src/monomialfespace.cpp 
     src/mesh1dtents.cpp
     src/condensedg.cpp
+    src/pufe.cpp
+    src/pufespace.cpp
     #src/airy.cpp #for testing, requires boost
   )
 target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_EXPORTS)
@@ -178,9 +180,9 @@ message("${BoldCyan}
     LAPACK: ............ ${NGSTREFFTZ_USE_LAPACK} 
     MKL: ............... ${NGSTREFFTZ_USE_MKL}
 
-With 'make install' the package will be installed to: ${ADDON_INSTALL_DIR_PYTHON}
+With 'make install' the package will be installed to: ${CMAKE_INSTALL_PREFIX}
 Make sure to add it to the python path: 
--->   export PYTHONPATH=${ADDON_INSTALL_DIR_PYTHON}:$PYTHONPATH
+-->   export PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${python3_library_dir}:$PYTHONPATH
 ------------------------------------------------------------------------
 \n${ColourReset}")
 
