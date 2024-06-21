@@ -90,7 +90,7 @@ if (NGSTREFFTZ_USE_MKL)
 
     file(WRITE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/findmklconf.py 
         "from contextlib import suppress;import importlib.metadata; \
-        with suppress(PackageNotFoundError): [print( f.locate().parent.resolve().absolute().as_posix()) \
+        [print( f.locate().parent.resolve().absolute().as_posix()) \
         if f.match('MKLConfig.cmake') else 0 for f in importlib.metadata.files('mkl-devel')]")
     execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/findmklconf.py
         ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE MKL_CONF_FROM_PY)
