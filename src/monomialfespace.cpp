@@ -12,19 +12,19 @@ namespace ngcomp
   {
     type = "monomialfespace";
 
-    D = ma->GetDimension () - 1;
+    D = ma->GetDimension ();
 
     order = int (flags.GetNumFlag ("order", 3));
     useshift = flags.GetNumFlag ("useshift", 1);
     usescale = flags.GetNumFlag ("usescale", 1);
 
-    this->local_ndof = BinCoeff (D + 1 + order, order);
+    this->local_ndof = BinCoeff (D + order, order);
     this->nel = ma->GetNE ();
     this->ndof = local_ndof * nel;
 
     switch (D)
       {
-      case 1:
+      case 2:
         {
           evaluator[VOL]
               = make_shared<T_DifferentialOperator<DiffOpMapped<2>>> ();
@@ -33,10 +33,10 @@ namespace ngcomp
           additional_evaluators.Set (
               "hesse",
               make_shared<T_DifferentialOperator<DiffOpMappedHesse<2>>> ());
-          basismat = MonomialBasis<1> (order);
+          basismat = MonomialBasis<2> (order);
           break;
         }
-      case 2:
+      case 3:
         {
           evaluator[VOL]
               = make_shared<T_DifferentialOperator<DiffOpMapped<3>>> ();
@@ -45,7 +45,7 @@ namespace ngcomp
           additional_evaluators.Set (
               "hesse",
               make_shared<T_DifferentialOperator<DiffOpMappedHesse<3>>> ());
-          basismat = MonomialBasis<2> (order);
+          basismat = MonomialBasis<3> (order);
           break;
         }
       }

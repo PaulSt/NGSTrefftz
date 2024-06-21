@@ -42,7 +42,7 @@ namespace ngcomp
     template <int D> CSR MonomialBasis (int ord) const
     {
       CSR tb;
-      const int npoly = BinCoeff (D + 1 + ord, ord);
+      const int npoly = BinCoeff (D + ord, ord);
       Matrix<> basis (npoly, npoly);
       basis = 0.0;
       for (int i = 0; i < npoly; i++)
