@@ -14,30 +14,13 @@ file(DOWNLOAD https://raw.githubusercontent.com/NGSolve/ngsolve-addon-template/m
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_BINARY_DIR}/cmake_modules")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
 
-### add ngstents dependency if needed
-include_directories(${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src)
-set(addon_name _pytents)
-project(_pytents)
-include(${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
-add_ngsolve_addon( _pytents 
-  ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/python_tents.cpp
-  ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp
-  )
-target_compile_definitions(_pytents PRIVATE NGSTENT_EXPORTS)
-set_target_properties(_pytents PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents")
-set(INSTALL_TENTS ON CACHE BOOL "Install ngstents")
-if (INSTALL_TENTS)# AND NOT TARGET _pytents)
-    file(WRITE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents/__init__.py "from ._pytents import TentSlab, Tent")
-    set(install_dir ${ADDON_INSTALL_DIR_PYTHON}/ngstents)
-    install(TARGETS _pytents DESTINATION ${install_dir})
-    install(FILES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstents/__init__.py DESTINATION ${install_dir})
-endif(INSTALL_TENTS)
-
 ### ngstrefftz
 set(addon_name _trefftz)
 project(_trefftz)
+include_directories(${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src)
 include(${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
 add_ngsolve_addon( _trefftz 
+    ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp
     src/python_trefftz.cpp
     src/diffopmapped.hpp
     src/scalarmappedfe.cpp
@@ -52,81 +35,95 @@ add_ngsolve_addon( _trefftz
     src/condensedg.cpp
     #src/airy.cpp #for testing, requires boost
   )
-target_link_libraries(_trefftz PRIVATE _pytents)
 target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_EXPORTS)
+target_compile_definitions(_trefftz PRIVATE NGSTENT_EXPORTS)
 
 ### link LAPACK or MKL if possible
 set(NGSTREFFTZ_USE_MKL ${NGSOLVE_USE_MKL} CACHE BOOL "Try to use mkl")
 set(NGSTREFFTZ_USE_LAPACK ${NGSOLVE_USE_LAPACK} CACHE BOOL "Try to use lapack from ngsolve")
 if (NGSTREFFTZ_USE_MKL)
-    #list(GET NGSOLVE_INCLUDE_DIRS 0 NGSOLVE_MKL_INCLUDE_DIRS)
-    file(DOWNLOAD https://raw.githubusercontent.com/NGSolve/ngsolve/master/cmake/cmake_modules/FindMKL.cmake ${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake)
+    file(DOWNLOAD 
+    https://raw.githubusercontent.com/NGSolve/ngsolve/master/cmake/cmake_modules/FindMKL.cmake 
+    "${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake")
 
+    #file(COPY ${CMAKE_SOURCE_DIR}/FindMKL.cmake DESTINATION 
+    #"${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake")
+
+    #message(STATUS "MKL_ROOT=${MKL_ROOT}")
+    #message(STATUS "NGSOLVED=${NGSolve_DIR}")
+
+
+    #set(PIP_MKL_ROOT FALSE CACHE BOOL "Set to true if MKL_ROOT is set by pip")
+    #message(STATUS "PIP_MKL_ROOT=${PIP_MKL_ROOT}")
+    #if(PIP_MKL_ROOT AND LINUX)
+        #set(MKL_ROOT "${NGSolve_DIR}/../../.." CACHE PATH "MKL root directory" )
+        #set(MKL_LIBRARY "${MKL_ROOT}/lib/libmkl_rt.so.2" CACHE PATH "MKL library" )
+        #set(MKL_INCLUDE_DIR "${MKL_ROOT}/include" CACHE PATH "MKL include directory" )
+        #message(STATUS "set MKL_LIBRARY=${MKL_LIBRARY}")
+    #elseif(PIP_MKL_ROOT AND WIN32)
+        #set(MKL_ROOT "${NGSolve_DIR}/../../../.." CACHE PATH "MKL root directory" )
+        #set(MKL_LIBRARY "${MKL_ROOT}/Library/lib/mkl_rt.lib" CACHE PATH "MKL library" )
+        #set(MKL_INCLUDE_DIR "${MKL_ROOT}/Library/include" CACHE PATH "MKL include directory" )
+    #endif()
+
+    set(MKL_ARCH "intel64")
+    if(NOT MKL_INTERFACE)
+        set(MKL_INTERFACE "lp64")
+    endif(NOT MKL_INTERFACE)
     set(MKL_MULTI_THREADED ON CACHE BOOL "Use threaded MKL libs")
     if(NOT MKL_MULTI_THREADED)
       set(MKL_THREADING sequential)
     endif()
     set(MKL_STATIC OFF CACHE BOOL "Link static MKL")
     set(MKL_SDL ON CACHE BOOL "Link single dynamic MKL lib")
-    set(MKL_ARCH "intel64")
     if(NOT MKL_LINK)
       if(MKL_STATIC)
         set(MKL_LINK static)
-      elseif(MKL_SDL AND NOT USE_MPI)
+      elseif(MKL_SDL)
         set(MKL_LINK sdl)
       else()
         set(MKL_LINK dynamic)
       endif()
     endif()
-    #execute_process(COMMAND ${Python3_EXECUTABLE} -c "import sys; print(sys.prefix)"
-        #OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE rootdir)
-    #if(WIN32)
-        #set(MKL_ROOT ${rootdir})
-        #set(MKL_LIBRARY ${rootdir}/Library/lib/mkl_rt.lib)
-        #set(MKL_INCLUDE_DIR ${rootdir}/Library/include)
-    #elseif(UNIX AND NOT APPLE)
-        #set(MKL_ROOT ${rootdir})
-        #set(MKL_LIBRARY ${rootdir}/lib/libmkl_rt.so.2)
-        #set(MKL_INCLUDE_DIR ${rootdir}/include)
-    #endif()
-    find_package(MKL) # HINTS ${MKL_ROOT} ${CMAKE_INSTALL_PREFIX}/../../cmake/mkl ${Python3_ROOT_DIR}/lib/cmake/mkl)
-    #message("MKL minimal: ${MKL_MINIMAL_LIBRARIES}")
-    #message("MKL libraries: ${MKL_LIBRARIES}")
-    #message("MKL link flags: ${MKL_LINK_FLAGS}")
 
-    #if(MKL_FOUND)
-    if(MKL_MINIMAL_LIBRARIES)
-        set(LAPACK_LIBRARIES "${MKL_LIBRARIES}")
-        message(STATUS "Setting LAPACK_LIBRARIES=${LAPACK_LIBRARIES}")
-        target_include_directories(_trefftz PRIVATE "${MKL_INCLUDE_DIRS}")
+    file(WRITE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/findmklconf.py 
+        "from contextlib import suppress;import importlib.metadata; \
+        with suppress(PackageNotFoundError): [print( f.locate().parent.resolve().absolute().as_posix()) \
+        if f.match('MKLConfig.cmake') else 0 for f in importlib.metadata.files('mkl-devel')]")
+    execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/findmklconf.py
+        ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE MKL_CONF_FROM_PY)
+    if(MKL_CONF_FROM_PY)
+        message(STATUS "MKL_CONF_FROM_PY=${MKL_CONF_FROM_PY}")
+        message(STATUS "pylibdir=${python3_library_dir}")
+        set(MKL_ROOT "${MKL_CONF_FROM_PY}/../../.." CACHE PATH "MKL root directory" )
+        set(MKL_LIBRARY "${MKL_ROOT}/lib/libmkl_rt.so.2" CACHE PATH "MKL library" )
+        set(MKL_INCLUDE_DIR "${MKL_ROOT}/include" CACHE PATH "MKL include directory" )
     endif()
-    if(MKL_LIBRARY)
-        message(STATUS "MKL_LIBRARY=${MKL_LIBRARY}")
-        #if(WIN32)
-            #set(LAPACK_LIBRARIES "${MKL_MINIMAL_LIBRARIES}")
-        #else()
-            #set(LAPACK_LIBRARIES "${MKL_LIBRARIES}")
-        #endif()
-    #if(NOT MKL_LIBRARIES)
-        #if(APPLE OR WIN32)
-          #set(MKL_RT_NAME mkl_rt.2)
-        #else()
-          #set(MKL_RT_NAME libmkl_rt.so.2)
-        #endif()
-        get_filename_component(MKL_RT_NAME ${MKL_LIBRARY} NAME)
-        message(STATUS "MKL_RT_NAME=${MKL_RT_NAME}")
-        find_library(MKLRT ${MKL_RT_NAME} HINTS ${MKL_ROOT}/lib ${MKL_LIBRARY})
-        message(STATUS "MKLRT=${MKLRT}")
-        if(MKLRT)
-            set(LAPACK_LIBRARIES ${MKLRT})
-            message(STATUS "MKLRT setting LAPACK_LIBRARIES=${LAPACK_LIBRARIES}")
-        endif()
-    #else()
-        #message("${Red}MKL not found, switching off NGSTREFFTZ_USE_LAPACK!${ColourReset}")
-        #set(NGSTREFFTZ_USE_LAPACK OFF)
+    #set(MKL_VERSION_H "${MKL_ROOT}/include/mkl_version.h")
+
+    #set(d lib/cmake/mkl)
+    #find_package(MKL CONFIG REQUIRED HINTS ${MKL_CONF} ${MKL_ROOT}/${d} PATHS /opt/intel/oneapi/mkl/latest/${d} ~/.local/${d})
+
+    unset(USE_MPI CACHE)
+    find_package(MKL)
+
+    #if(USE_MUMPS)
+        ## include scalapack
+        #set( LAPACK_LIBRARIES "${MKL_LIBRARIES}")
+        #set( ENABLE_SCALAPACK ON)
+    #else(USE_MUMPS)
+        #set( LAPACK_LIBRARIES "${MKL_MINIMAL_LIBRARIES}")
+    #endif(USE_MUMPS)
+
+    if(MKL_FOUND)
+        message(STATUS "Found MKL_MINIMAL_LIBRARIES=${MKL_MINIMAL_LIBRARIES}")
+        set( LAPACK_LIBRARIES "${MKL_MINIMAL_LIBRARIES}")
+    else()
+        message("${Red}MKL not found!${ColourReset}")
     endif()
 endif (NGSTREFFTZ_USE_MKL)
 if(NGSTREFFTZ_USE_LAPACK AND NOT LAPACK_LIBRARIES)
+    message(STATUS "Looking for LAPACK")
     find_package(LAPACK)
 endif(NGSTREFFTZ_USE_LAPACK AND NOT LAPACK_LIBRARIES)
 if(LAPACK_LIBRARIES)
@@ -180,11 +177,10 @@ message("${BoldCyan}
   Enabled functionality:
     LAPACK: ............ ${NGSTREFFTZ_USE_LAPACK} 
     MKL: ............... ${NGSTREFFTZ_USE_MKL}
-    ngstents: .......... ${INSTALL_TENTS}
 
-With 'make install' the package will be installed to: ${CMAKE_INSTALL_PREFIX}
+With 'make install' the package will be installed to: ${ADDON_INSTALL_DIR_PYTHON}
 Make sure to add it to the python path: 
--->   export PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${ADDON_INSTALL_DIR_PYTHON}:$PYTHONPATH
+-->   export PYTHONPATH=${ADDON_INSTALL_DIR_PYTHON}:$PYTHONPATH
 ------------------------------------------------------------------------
 \n${ColourReset}")
 
