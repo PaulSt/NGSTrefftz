@@ -11,8 +11,8 @@ using namespace ngfem;
 ///     dimensions `(n,m)`
 /// @tparam SCAL the scalar type
 template <class SCAL>
-void invert_svd_sigma (const FlatMatrix<SCAL> &sigma,
-                       FlatMatrix<SCAL> &sigma_inv)
+void invertSvdSigma (const FlatMatrix<SCAL> &sigma,
+                     FlatMatrix<SCAL> &sigma_inv)
 {
   sigma_inv = 0.;
   SliceVector<SCAL> sigma_diag = sigma.Diag ();
@@ -208,7 +208,7 @@ namespace ngcomp
           FlatMatrix<SCAL> V_T = Trans (V);
           FlatMatrix<SCAL> Sigma_inv (ndof, ndof_constraint + ndof,
                                       local_heap);
-          invert_svd_sigma (elmat_a, Sigma_inv);
+          invertSvdSigma (elmat_a, Sigma_inv);
           (*testout) << "sigma from element " << element_id << "\n"
                      << elmat_a.Diag () << "\nsigma inverse\n"
                      << Sigma_inv << std::endl;
