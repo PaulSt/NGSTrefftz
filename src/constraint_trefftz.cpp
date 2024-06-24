@@ -54,7 +54,8 @@ void reorderArrayColumns (FlatMatrix<SCAL> &matrix,
 
 namespace ngcomp
 {
-  /// creates an embedding marix P for the given operation `op`.
+  /// creates an embedding marix P for the given operations `op`,
+  /// `cop_lhs`, `cop_rhs`.
   ///
   /// The embedding is subject to the constraints specified in
   /// `cop_lhs` and `cop_rhs`.
@@ -87,9 +88,7 @@ namespace ngcomp
     LocalHeap local_heap = LocalHeap (1000 * 1000 * 1000);
     auto mesh_access = fes->GetMeshAccess ();
     const size_t num_elements = mesh_access->GetNE (VOL);
-    // const size_t ndof = fes->GetNDof ();
     const size_t dim = fes->GetDimension ();
-    // const size_t ndof_constraint = fes_constraint->GetNDof ();
     const size_t dim_constraint = fes_constraint->GetDimension ();
 
     // calculate the integrators for the three bilinear forms,
@@ -109,9 +108,8 @@ namespace ngcomp
     (*testout) << "fes has ndof:" << fes->GetNDof () << std::endl;
     (*testout) << "fes_constraint has ndof:" << fes_constraint->GetNDof ()
                << std::endl;
-    (*testout) << "trefftz space has ndof:"
-               << ndof_trefftz * mesh_access->GetNE () << std::endl;
-    // throw std::invalid_argument ("test");
+    (*testout) << "trefftz space has ndof:" << ndof_trefftz * num_elements
+               << std::endl;
 
     // solve the following linear system in an element-wise fashion:
     // L @ T1 = B for the unknown matrix T1,
@@ -134,7 +132,6 @@ namespace ngcomp
               || !bfIsDefinedOnElement (*cop_rhs, mesh_element))
             return;
 
-          // #TODO are the arrays really needed?
           Array<DofId> dofs, dofs_constraint;
           fes->GetDofNrs (element_id, dofs);
           fes_constraint->GetDofNrs (element_id, dofs_constraint);
@@ -171,7 +168,7 @@ namespace ngcomp
 
           // elmat_b2 is a view into elamt_b
           FlatMatrix<SCAL> elmat_b2
-              = get<0> (elmat_b.SplitRows (dofs_constraint.Size ()));
+              = get<0> (elmat_b.SplitRows (ndof_constraint));
 
           // the diff. operator L operates only on volume terms
           addIntegrationToElementMatrix (elmat_l, op_integrators[VOL],
@@ -209,7 +206,6 @@ namespace ngcomp
 
           FlatMatrix<SCAL> U_T = Trans (U);
           FlatMatrix<SCAL> V_T = Trans (V);
-          // #TODO: check dimensions again
           FlatMatrix<SCAL> Sigma_inv (ndof, ndof_constraint + ndof,
                                       local_heap);
           invert_svd_sigma (elmat_a, Sigma_inv);
