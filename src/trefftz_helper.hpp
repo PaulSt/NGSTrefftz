@@ -1,20 +1,9 @@
 #ifndef FILE_TREFFTZ_HELPER_HPP
 #define FILE_TREFFTZ_HELPER_HPP
 
-#include <core/localheap.hpp>
-#include <elementtopology.hpp>
-#include <expr.hpp>
 #include <fem.hpp>
 #include <fespace.hpp>
-#include <iostream>
-#include <matrix.hpp>
-#include <memory>
 #include <meshaccess.hpp>
-#include <meshing/localh.hpp>
-#include <meshing/meshing3.hpp>
-#include <ostream>
-#include <sparsematrix.hpp>
-#include <vector>
 
 using namespace ngfem;
 using namespace ngcomp;

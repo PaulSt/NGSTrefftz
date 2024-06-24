@@ -1,8 +1,4 @@
-#include <fem.hpp>
-#include <fespace.hpp>
 #include <integratorcf.hpp>
-#include <memory>
-#include <meshaccess.hpp>
 
 #include "trefftz_helper.hpp"
 
@@ -41,7 +37,6 @@ void calculateLinearFormIntegrators (
 bool fesHasHiddenDofs (const FESpace &fes)
 {
   const size_t ndof = fes.GetNDof ();
-  bool has_hidden_dofs = false;
   for (DofId d = 0; d < ndof; d++)
     if (HIDDEN_DOF == fes.GetDofCouplingType (d))
       return true;
