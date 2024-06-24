@@ -77,17 +77,17 @@ namespace ngcomp
   ///  @return P, represented as a vector of all element matrices
   template <class SCAL>
   tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<ngla::BaseVector>>
-  ConstraintTrefftzEmbedding (shared_ptr<SumOfIntegrals> op,
-                              shared_ptr<FESpace> fes,
-                              shared_ptr<ngfem::SumOfIntegrals> cop_lhs,
-                              shared_ptr<ngfem::SumOfIntegrals> cop_rhs,
-                              shared_ptr<FESpace> fes_constraint,
+  ConstraintTrefftzEmbedding (shared_ptr<const SumOfIntegrals> op,
+                              shared_ptr<const FESpace> fes,
+                              shared_ptr<const ngfem::SumOfIntegrals> cop_lhs,
+                              shared_ptr<const ngfem::SumOfIntegrals> cop_rhs,
+                              shared_ptr<const FESpace> fes_constraint,
                               const size_t ndof_trefftz)
   {
-    // #TODO what is a good size for the local heap??
-    LocalHeap local_heap = LocalHeap (1000 * 1000 * 1000);
     auto mesh_access = fes->GetMeshAccess ();
     const size_t num_elements = mesh_access->GetNE (VOL);
+    // #TODO what is a good size for the local heap??
+    LocalHeap local_heap = LocalHeap (1000 * 1000 * num_elements);
     const size_t dim = fes->GetDimension ();
     const size_t dim_constraint = fes_constraint->GetDimension ();
 
