@@ -181,7 +181,7 @@ namespace ngcomp
         nz = tndof;
       else
         {
-          nz = max<size_t> (dofs.Size () - test_dofs.Size (), 0);
+          nz = max<int> (dofs.Size () - test_dofs.Size (), 0);
           for (int i = 0; i < min (elmat.Width (), elmat.Height ()); i++)
             if (abs (elmat (i, i)) < eps)
               nz++;
