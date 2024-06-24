@@ -221,10 +221,11 @@ def test_PySVDConstraintTrefftz(order: int = 2, debug: bool = False, maxh=0.4) -
     P = PySVDConstraintTrefftz(
         op, fes, cop_lhs, cop_rhs, fes_constraint, 2 * order + 1 - 3, debug=False
     )
-    print("P:")
-    print(P.shape)
-    print(P)
     if debug:
+        print("P:")
+        print(P.shape)
+        print(P)
+
         import matplotlib.pyplot as plt
 
         plt.spy(P)
@@ -277,7 +278,8 @@ def test_ConstraintTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) -> 
 
     P = scipy.sparse.csr_matrix((vals, (rows, cols)))
     P.todense()
-    print(P)
+    if debug:
+        print(P)
 
     if debug:
         import matplotlib.pyplot as plt
