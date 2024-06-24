@@ -106,11 +106,11 @@ namespace ngcomp
     const bool fes_constraint_has_hidden_dofs
         = fesHasHiddenDofs (*fes_constraint);
 
-    cout << "fes has ndof:" << fes->GetNDof () << std::endl;
-    cout << "fes_constraint has ndof:" << fes_constraint->GetNDof ()
-         << std::endl;
-    cout << "trefftz space has ndof:" << ndof_trefftz * mesh_access->GetNE ()
-         << std::endl;
+    (*testout) << "fes has ndof:" << fes->GetNDof () << std::endl;
+    (*testout) << "fes_constraint has ndof:" << fes_constraint->GetNDof ()
+               << std::endl;
+    (*testout) << "trefftz space has ndof:"
+               << ndof_trefftz * mesh_access->GetNE () << std::endl;
     // throw std::invalid_argument ("test");
 
     // solve the following linear system in an element-wise fashion:
