@@ -191,9 +191,14 @@ namespace ngcomp
                                 local_heap);
 
           // reorder elmat_b2
+          // #TODO is this really necessary?
           reorderArrayColumns (elmat_b2, dofs_constraint, local_heap);
 
           (*testout) << "elmat_a:\n" << elmat_a << std::endl;
+          // #TODO is ColMajor Layout really necessary?
+          // It seems for the moment (June 2024), that SplitCols
+          // only works on ColMajor Layout.
+          //
           // singular value decomposition of elmat_a:
           // U * sigma * V = elmat_a
           // elmat_a gets overwritten with sigma
