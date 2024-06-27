@@ -293,9 +293,21 @@ namespace ngcomp
     // shared_ptr<FESpace> use_as_l2 =
     // dynamic_pointer_cast<FESpace>(const_cast<EmbTrefftzFESpace*>(this)->shared_from_this());
 
-    auto embtr = EmbTrefftz<double> (bf, fes, lf, eps, test_fes, tndof, false,
-                                     nullptr);
-    this->ETmats = std::get<0> (embtr);
+    shared_ptr<BaseVector> lfvec;
+    if (!this->IsComplex ())
+      {
+        auto embtr = EmbTrefftz<double> (bf, fes, lf, eps, test_fes, tndof,
+                                         false, nullptr);
+        this->ETmats = std::get<0> (embtr);
+        lfvec = std::get<1> (embtr);
+      }
+    else
+      {
+        auto embtr = EmbTrefftz<Complex> (bf, fes, lf, eps, test_fes, tndof,
+                                          false, nullptr);
+        this->ETmatsC = std::get<0> (embtr);
+        lfvec = std::get<1> (embtr);
+      }
 
     T::Update ();
     int ndof = fes->GetNDof ();
@@ -304,7 +316,8 @@ namespace ngcomp
 
     for (auto ei : this->ma->Elements (VOL))
       {
-        int nz = (ETmats[ei.Nr ()])->Width ();
+        int nz = this->IsComplex () ? (ETmatsC[ei.Nr ()])->Width ()
+                                    : (ETmats[ei.Nr ()])->Width ();
         Array<DofId> dofs;
         T::GetDofNrs (ei, dofs);
         for (int i = nz; i < dofs.Size (); i++)
@@ -333,7 +346,7 @@ namespace ngcomp
     // this->ctofdof[all2comp[i]] = T::GetDofCouplingType (i);
 
     T::FinalizeUpdate ();
-    return std::get<1> (embtr);
+    return lfvec;
   }
 
   template <typename T, typename shrdT>
@@ -376,6 +389,35 @@ namespace ngcomp
   }
 
   template <typename T, typename shrdT>
+  void EmbTrefftzFESpace<T, shrdT>::VTransformMC (ElementId ei,
+                                                  SliceMatrix<Complex> mat,
+                                                  TRANSFORM_TYPE type) const
+  {
+    static Timer timer ("EmbTrefftz: MTransform");
+    RegionTimer reg (timer);
+
+    size_t nz = (ETmatsC[ei.Nr ()])->Width ();
+    Matrix<Complex> temp_mat (mat.Height (), mat.Width ());
+
+    if (type == TRANSFORM_MAT_LEFT)
+      {
+        temp_mat.Rows (0, nz) = Trans (*(ETmatsC[ei.Nr ()])) * mat;
+        mat = temp_mat;
+      }
+    if (type == TRANSFORM_MAT_RIGHT)
+      {
+        temp_mat.Cols (0, nz) = mat * (*(ETmatsC[ei.Nr ()]));
+        mat = temp_mat;
+      }
+    if (type == TRANSFORM_MAT_LEFT_RIGHT)
+      {
+        temp_mat.Cols (0, nz) = mat * (*(ETmatsC[ei.Nr ()]));
+        mat.Cols (0, nz).Rows (0, nz)
+            = Trans (*(ETmatsC[ei.Nr ()])) * temp_mat;
+      }
+  }
+
+  template <typename T, typename shrdT>
   void EmbTrefftzFESpace<T, shrdT>::VTransformVR (ElementId ei,
                                                   SliceVector<double> vec,
                                                   TRANSFORM_TYPE type) const
@@ -395,6 +437,30 @@ namespace ngcomp
       {
         Vector<double> new_vec (vec.Size ());
         new_vec = (*(ETmats[ei.Nr ()])) * vec.Range (0, nz);
+        vec = new_vec;
+      }
+  }
+
+  template <typename T, typename shrdT>
+  void EmbTrefftzFESpace<T, shrdT>::VTransformVC (ElementId ei,
+                                                  SliceVector<Complex> vec,
+                                                  TRANSFORM_TYPE type) const
+  {
+    static Timer timer ("EmbTrefftz: VTransform");
+    RegionTimer reg (timer);
+
+    size_t nz = (ETmatsC[ei.Nr ()])->Width ();
+
+    if (type == TRANSFORM_RHS)
+      {
+        Vector<Complex> new_vec (nz);
+        new_vec = Trans (*(ETmatsC[ei.Nr ()])) * vec;
+        vec = new_vec;
+      }
+    else if (type == TRANSFORM_SOL)
+      {
+        Vector<Complex> new_vec (vec.Size ());
+        new_vec = (*(ETmatsC[ei.Nr ()])) * vec.Range (0, nz);
         vec = new_vec;
       }
   }
@@ -422,12 +488,22 @@ namespace ngcomp
         if (all2comp[d] >= 0)
           tdofs.Append (all2comp[d]);
 
-      FlatVector<> telvec (tdofs.Size (), mlh);
-      tvec->GetIndirect (tdofs, telvec);
-
-      FlatVector<> elvec (dofs.Size (), mlh);
-      elvec = (*(ETmats[ei.Nr ()])) * telvec;
-      vec->SetIndirect (dofs, elvec);
+      if (this->IsComplex ())
+        {
+          FlatVector<Complex> telvec (tdofs.Size (), mlh);
+          tvec->GetIndirect (tdofs, telvec);
+          FlatVector<Complex> elvec (dofs.Size (), mlh);
+          elvec = (*(ETmatsC[ei.Nr ()])) * telvec;
+          vec->SetIndirect (dofs, elvec);
+        }
+      else
+        {
+          FlatVector<> telvec (tdofs.Size (), mlh);
+          tvec->GetIndirect (tdofs, telvec);
+          FlatVector<> elvec (dofs.Size (), mlh);
+          elvec = (*(ETmats[ei.Nr ()])) * telvec;
+          vec->SetIndirect (dofs, elvec);
+        }
     });
     return gfu;
   }
@@ -435,7 +511,10 @@ namespace ngcomp
   template <typename T, typename shrdT>
   shared_ptr<BaseMatrix> EmbTrefftzFESpace<T, shrdT>::GetEmbedding ()
   {
-    return Elmats2Sparse<double> (ETmats, this->fes);
+    if (this->IsComplex ())
+      return Elmats2Sparse<Complex> (ETmatsC, this->fes);
+    else
+      return Elmats2Sparse<double> (ETmats, this->fes);
   }
 
   // template class EmbTrefftzFESpace<L2HighOrderFESpace,

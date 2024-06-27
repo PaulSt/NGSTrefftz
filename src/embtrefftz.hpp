@@ -21,6 +21,7 @@ namespace ngcomp
       : public T //, public std::enable_shared_from_this<EmbTrefftzFESpace>
   {
     vector<shared_ptr<Matrix<double>>> ETmats;
+    vector<shared_ptr<Matrix<Complex>>> ETmatsC;
     shrdT fes;
     Array<DofId> all2comp;
 
@@ -38,6 +39,7 @@ namespace ngcomp
       this->name = "EmbTrefftzFESpace";
       this->type = "embt";
       this->needs_transform_vec = true;
+      this->iscomplex = afes->IsComplex ();
       shared_ptr<CompoundFESpace> cafes
           = dynamic_pointer_cast<CompoundFESpace> (afes);
       if (cafes)
@@ -62,7 +64,13 @@ namespace ngcomp
     virtual void VTransformMR (ElementId ei, const SliceMatrix<double> mat,
                                TRANSFORM_TYPE type) const override;
 
+    virtual void VTransformMC (ElementId ei, const SliceMatrix<Complex> mat,
+                               TRANSFORM_TYPE type) const override;
+
     virtual void VTransformVR (ElementId ei, const SliceVector<double> vec,
+                               TRANSFORM_TYPE type) const override;
+
+    virtual void VTransformVC (ElementId ei, const SliceVector<Complex> vec,
                                TRANSFORM_TYPE type) const override;
 
     shared_ptr<GridFunction> Embed (shared_ptr<GridFunction> tgfu);
