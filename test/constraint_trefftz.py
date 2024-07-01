@@ -6,7 +6,6 @@ import dg
 from netgen.geom2d import unit_square
 import scipy as sp
 import numpy as np
-import netgen.gui
 import scipy.sparse
 
 # import matplotlib.pyplot as plt
@@ -184,6 +183,8 @@ def PySVDConstraintTrefftz(
         ] += V[nonzero_dofs:, :].T
 
     if debug:
+        import netgen.gui
+
         print(P)
         gfu = GridFunction(fes)
         for i in range(P.shape[1]):
@@ -241,6 +242,8 @@ def test_PySVDConstraintTrefftz(order: int = 2, debug: bool = False, maxh=0.4) -
     tpgfu = GridFunction(fes)
     tpgfu.vec.data = P @ tsol
     if debug:
+        import netgen.gui
+
         Draw(tpgfu)
         input()
     return sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d))
@@ -295,6 +298,8 @@ def test_ConstraintTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) -> 
     tpgfu = GridFunction(fes)
     tpgfu.vec.data = P @ tsol
     if debug:
+        import netgen.gui
+
         Draw(tpgfu)
         input()
     return sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d))
