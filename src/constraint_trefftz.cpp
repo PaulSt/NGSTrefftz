@@ -86,8 +86,9 @@ namespace ngcomp
   {
     auto mesh_access = fes->GetMeshAccess ();
     const size_t num_elements = mesh_access->GetNE (VOL);
-    // #TODO what is a good size for the local heap??
-    LocalHeap local_heap = LocalHeap (1000 * 1000 * num_elements);
+    // #TODO what is a good size for the local heap?
+    // For the moment: large enough constant size.
+    LocalHeap local_heap = LocalHeap (1000 * 1000 * 1000);
     const size_t dim = fes->GetDimension ();
     const size_t dim_constraint = fes_constraint->GetDimension ();
 
