@@ -9,7 +9,7 @@
 namespace ngcomp
 {
 
-  template <class SCAL>
+  template <typename SCAL>
   std::tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<BaseVector>>
   EmbTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
               shared_ptr<SumOfIntegrals> lf, double eps,
@@ -37,7 +37,7 @@ namespace ngcomp
   ///      (i.e. the local dimension of the kernel of `op` on one element)
   ///
   ///  @return P, represented as a vector of all element matrices
-  template <class SCAL>
+  template <typename SCAL>
   tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<ngla::BaseVector>>
   ConstraintTrefftzEmbedding (shared_ptr<const SumOfIntegrals> op,
                               shared_ptr<const FESpace> fes,

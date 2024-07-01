@@ -6,7 +6,7 @@
 using namespace ngbla;
 using namespace ngcomp;
 
-template <class SCAL>
+template <typename SCAL>
 void invertSvdSigma (const FlatMatrix<SCAL> &sigma,
                      FlatMatrix<SCAL> &sigma_inv)
 {
@@ -46,7 +46,7 @@ void reorderArrayColumns (FlatMatrix<SCAL> &matrix,
     matrix.Col (i) = elmat_b2_copy.Col (map[i]);
 }
 
-template <class SCAL>
+template <typename SCAL>
 inline void addIntegrationToElementMatrix (
     FlatMatrix<SCAL> elmat,
     const Array<shared_ptr<BilinearFormIntegrator>> &bf_integrators,
@@ -99,7 +99,7 @@ inline void addIntegrationToElementMatrix (
     }
 }
 
-template <class SCAL>
+template <typename SCAL>
 void extractVisibleDofs (FlatMatrix<SCAL> elmat, const ElementId &element_id,
                          const FESpace &fes, const FESpace &test_fes,
                          Array<DofId> &dofs, Array<DofId> &test_dofs,
@@ -126,7 +126,7 @@ void extractVisibleDofs (FlatMatrix<SCAL> elmat, const ElementId &element_id,
 
 /// Fills the two creators with the sparsity pattern needed for
 /// the Trefftz embedding.
-template <class SCAL, typename NZ_FUNC>
+template <typename SCAL, typename NZ_FUNC>
 INLINE size_t fillTrefftzTableCreators (
     TableCreator<int> &creator, TableCreator<int> &creator2,
     const vector<shared_ptr<Matrix<SCAL>>> &ETmats, const MeshAccess &ma,
@@ -171,7 +171,7 @@ INLINE size_t fillTrefftzTableCreators (
 /// creates two tables, used in `Elmats2Sparse`,
 /// with a block-diagonal pattern, i.e. no overlap of dofs between two
 /// elements.
-template <class SCAL>
+template <typename SCAL>
 INLINE size_t
 createTrefftzTables (Table<int> &table, Table<int> &table2,
                      const vector<shared_ptr<Matrix<SCAL>>> &ETmats,
@@ -195,7 +195,7 @@ createTrefftzTables (Table<int> &table, Table<int> &table2,
   return prevdofs;
 }
 
-template <class SCAL>
+template <typename SCAL>
 INLINE size_t createConstraintTrefftzTables (
     Table<int> &table, Table<int> &table2,
     const vector<shared_ptr<Matrix<SCAL>>> &ETmats, const FESpace &fes,
@@ -259,7 +259,7 @@ INLINE size_t createConstraintTrefftzTables (
   return trefftz_ndof + constraint_ndof;
 }
 
-template <class SCAL>
+template <typename SCAL>
 INLINE void
 fillSparseMatrixWithData (SparseMatrix<SCAL> &P,
                           const vector<shared_ptr<Matrix<SCAL>>> &ETmats,
@@ -299,7 +299,7 @@ namespace ngcomp
   /// @param ETMats vector of all element matrices
   /// @param fes non-Trefftz finite element space
   /// @tparam SCAL scalar type of the matrix entries
-  template <class SCAL>
+  template <typename SCAL>
   shared_ptr<BaseMatrix>
   Elmats2Sparse (const vector<shared_ptr<Matrix<SCAL>>> ETmats,
                  shared_ptr<const FESpace> fes)
@@ -323,7 +323,7 @@ namespace ngcomp
   /// @param ETMats vector of all element matrices
   /// @param fes non-Trefftz finite element space
   /// @tparam SCAL scalar type of the matrix entries
-  template <class SCAL>
+  template <typename SCAL>
   shared_ptr<BaseMatrix> Elmats2SparseConstraintTrefftz (
       const vector<shared_ptr<Matrix<SCAL>>> ETmats,
       shared_ptr<const FESpace> fes, shared_ptr<const FESpace> fes_constraint,
@@ -445,7 +445,7 @@ namespace ngbla
   }
 #endif
 
-  template <class SCAL>
+  template <typename SCAL>
   void getSVD (SliceMatrix<SCAL> A, SliceMatrix<SCAL, ColMajor> U,
                SliceMatrix<SCAL, ColMajor> V)
   {
@@ -471,7 +471,7 @@ namespace ngcomp
 {
   mutex stats_mutex;
 
-  template <class SCAL>
+  template <typename SCAL>
   std::tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<BaseVector>>
   EmbTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
               shared_ptr<SumOfIntegrals> lf, double eps,
@@ -644,7 +644,7 @@ namespace ngcomp
                        shared_ptr<FESpace> test_fes, int tndof, bool getrange,
                        std::map<std::string, Vector<Complex>> *stats);
 
-  template <class SCAL>
+  template <typename SCAL>
   tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<ngla::BaseVector>>
   ConstraintTrefftzEmbedding (shared_ptr<const SumOfIntegrals> op,
                               shared_ptr<const FESpace> fes,
