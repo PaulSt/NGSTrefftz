@@ -17,7 +17,7 @@ void invertSvdSigma (const FlatMatrix<SCAL> &sigma,
   auto sigma_inv_el = sigma_inv_diag.begin ();
 
   // Sigma_inv.Diag () = 1.0 / elmat_a.Diag ();
-  while (sigma_el != sigma_diag.end () and *sigma_el > 1e-10)
+  while (sigma_el != sigma_diag.end () && *sigma_el > 1e-10)
     {
       *sigma_inv_el = 1.0 / *sigma_el;
       // increment iterators
