@@ -26,7 +26,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: install ngstrefftz
-        run: cd NGSTrefftz && pip install numpy mkl-devel==2024.* mkl==2024.* && pip install . -v
+        run: cd NGSTrefftz && pip install numpy scipy mkl-devel==2024.* mkl==2024.* && pip install . -v
       - name: run test
         run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
 
