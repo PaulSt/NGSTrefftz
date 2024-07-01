@@ -646,12 +646,12 @@ namespace ngcomp
 
   template <typename SCAL>
   tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<ngla::BaseVector>>
-  ConstraintTrefftzEmbedding (shared_ptr<const SumOfIntegrals> op,
-                              shared_ptr<const FESpace> fes,
-                              shared_ptr<const ngfem::SumOfIntegrals> cop_lhs,
-                              shared_ptr<const ngfem::SumOfIntegrals> cop_rhs,
-                              shared_ptr<const FESpace> fes_constraint,
-                              const size_t ndof_trefftz)
+  EmbTrefftz (shared_ptr<const SumOfIntegrals> op,
+              shared_ptr<const FESpace> fes,
+              shared_ptr<const ngfem::SumOfIntegrals> cop_lhs,
+              shared_ptr<const ngfem::SumOfIntegrals> cop_rhs,
+              shared_ptr<const FESpace> fes_constraint,
+              const size_t ndof_trefftz)
   {
     auto mesh_access = fes->GetMeshAccess ();
     const size_t num_elements = mesh_access->GetNE (VOL);
@@ -1092,21 +1092,118 @@ void ExportETSpace (py::module m, string label)
             &ngcomp::EmbTrefftzFESpace<T, shrdT>::GetEmbedding);
 }
 
-/// call `ConstraintTrefftzEmbedding` and pack the resulting element matrices
-/// in a sparse matrix.
+/// call `EmbTrefftz` for the ConstraintTrefftz procedure and pack the
+/// resulting element matrices in a sparse matrix.
 tuple<shared_ptr<BaseMatrix>, shared_ptr<ngla::BaseVector>>
+pythonConstrTrefftzWithLf (shared_ptr<SumOfIntegrals> op,
+                           shared_ptr<FESpace> fes,
+                           shared_ptr<ngfem::SumOfIntegrals> cop_lhs,
+                           shared_ptr<ngfem::SumOfIntegrals> cop_rhs,
+                           shared_ptr<FESpace> fes_constraint,
+                           const size_t ndof_trefftz)
+{
+  auto P = EmbTrefftz<double> (op, fes, cop_lhs, cop_rhs, fes_constraint,
+                               ndof_trefftz);
+  return std::make_tuple (
+      ngcomp::Elmats2SparseConstraintTrefftz<double> (
+          std::get<0> (P), fes, fes_constraint, ndof_trefftz),
+      std::get<1> (P));
+}
+
+/// call `EmbTrefftz` for the ConstraintTrefftz procedure and pack the
+/// resulting element matrices in a sparse matrix.
+shared_ptr<BaseMatrix>
 pythonConstrTrefftz (shared_ptr<SumOfIntegrals> op, shared_ptr<FESpace> fes,
                      shared_ptr<ngfem::SumOfIntegrals> cop_lhs,
                      shared_ptr<ngfem::SumOfIntegrals> cop_rhs,
                      shared_ptr<FESpace> fes_constraint,
                      const size_t ndof_trefftz)
 {
-  auto P = ConstraintTrefftzEmbedding<double> (op, fes, cop_lhs, cop_rhs,
-                                               fes_constraint, ndof_trefftz);
-  return std::make_tuple (
-      ngcomp::Elmats2SparseConstraintTrefftz<double> (
-          std::get<0> (P), fes, fes_constraint, ndof_trefftz),
-      std::get<1> (P));
+  auto P = EmbTrefftz<double> (op, fes, cop_lhs, cop_rhs, fes_constraint,
+                               ndof_trefftz);
+  return ngcomp::Elmats2SparseConstraintTrefftz<double> (
+      std::get<0> (P), fes, fes_constraint, ndof_trefftz);
+}
+
+/// call `EmbTrefftz` for the plain embedded Trefftz procedure and pack the
+/// resulting element matrices in a sparse matrix.
+std::tuple<shared_ptr<ngcomp::BaseMatrix>, shared_ptr<ngcomp::BaseVector>>
+pythonEmbTrefftzWithLf (shared_ptr<ngfem::SumOfIntegrals> bf,
+                        shared_ptr<ngcomp::FESpace> fes,
+                        shared_ptr<ngfem::SumOfIntegrals> lf, double eps,
+                        shared_ptr<ngcomp::FESpace> test_fes, int tndof,
+                        bool getrange, optional<py::dict> stats_dict)
+{
+  shared_ptr<py::dict> pystats = nullptr;
+  if (stats_dict)
+    pystats = make_shared<py::dict> (*stats_dict);
+
+  if (fes->IsComplex ())
+    {
+      std::map<std::string, ngcomp::Vector<Complex>> *stats = nullptr;
+      if (pystats)
+        stats = new std::map<std::string, ngcomp::Vector<Complex>>;
+      auto P = ngcomp::EmbTrefftz<Complex> (bf, fes, lf, eps, test_fes, tndof,
+                                            getrange, stats);
+      if (pystats)
+        for (auto const &x : *stats)
+          (*pystats)[py::cast (x.first)] = py::cast (x.second);
+      return std::make_tuple (
+          ngcomp::Elmats2Sparse<Complex> (std::get<0> (P), fes),
+          std::get<1> (P));
+    }
+  else
+    {
+      std::map<std::string, ngcomp::Vector<double>> *stats = nullptr;
+      if (pystats)
+        stats = new std::map<std::string, ngcomp::Vector<double>>;
+      auto P = ngcomp::EmbTrefftz<double> (bf, fes, lf, eps, test_fes, tndof,
+                                           getrange, stats);
+      if (pystats)
+        for (auto const &x : *stats)
+          (*pystats)[py::cast (x.first)] = py::cast (x.second);
+      return std::make_tuple (
+          ngcomp::Elmats2Sparse<double> (std::get<0> (P), fes),
+          std::get<1> (P));
+    }
+}
+
+/// call `EmbTrefftz` for the plain embedded Trefftz procedure and pack the
+/// resulting element matrices in a sparse matrix.
+shared_ptr<ngcomp::BaseMatrix>
+pythonEmbTrefftz (shared_ptr<ngfem::SumOfIntegrals> bf,
+                  shared_ptr<ngcomp::FESpace> fes, double eps,
+                  shared_ptr<ngcomp::FESpace> test_fes, int tndof,
+                  bool getrange, optional<py::dict> stats_dict)
+{
+  shared_ptr<py::dict> pystats = nullptr;
+  if (stats_dict)
+    pystats = make_shared<py::dict> (*stats_dict);
+
+  if (fes->IsComplex ())
+    {
+      std::map<std::string, ngcomp::Vector<Complex>> *stats = nullptr;
+      if (pystats)
+        stats = new std::map<std::string, ngcomp::Vector<Complex>>;
+      auto P = std::get<0> (ngcomp::EmbTrefftz<Complex> (
+          bf, fes, nullptr, eps, test_fes, tndof, getrange, stats));
+      if (pystats)
+        for (auto const &x : *stats)
+          (*pystats)[py::cast (x.first)] = py::cast (x.second);
+      return ngcomp::Elmats2Sparse<Complex> (P, fes);
+    }
+  else
+    {
+      std::map<std::string, ngcomp::Vector<double>> *stats = nullptr;
+      if (pystats)
+        stats = new std::map<std::string, ngcomp::Vector<double>>;
+      auto P = std::get<0> (ngcomp::EmbTrefftz<double> (
+          bf, fes, nullptr, eps, test_fes, tndof, getrange, stats));
+      if (pystats)
+        for (auto const &x : *stats)
+          (*pystats)[py::cast (x.first)] = py::cast (x.second);
+      return ngcomp::Elmats2Sparse<double> (P, fes);
+    }
 }
 
 void ExportEmbTrefftz (py::module m)
@@ -1155,49 +1252,8 @@ void ExportEmbTrefftz (py::module m)
                         )mydelimiter",
       py::arg ("fes"));
 
-  m.def (
-      "TrefftzEmbedding",
-      [] (shared_ptr<ngfem::SumOfIntegrals> bf,
-          shared_ptr<ngcomp::FESpace> fes,
-          shared_ptr<ngfem::SumOfIntegrals> lf, double eps,
-          shared_ptr<ngcomp::FESpace> test_fes, int tndof, bool getrange,
-          optional<py::dict> stats_dict)
-          -> std::tuple<shared_ptr<ngcomp::BaseMatrix>,
-                        shared_ptr<ngcomp::BaseVector>> {
-        shared_ptr<py::dict> pystats = nullptr;
-        if (stats_dict)
-          pystats = make_shared<py::dict> (*stats_dict);
-
-        if (fes->IsComplex ())
-          {
-            std::map<std::string, ngcomp::Vector<Complex>> *stats = nullptr;
-            if (pystats)
-              stats = new std::map<std::string, ngcomp::Vector<Complex>>;
-            auto P = ngcomp::EmbTrefftz<Complex> (bf, fes, lf, eps, test_fes,
-                                                  tndof, getrange, stats);
-            if (pystats)
-              for (auto const &x : *stats)
-                (*pystats)[py::cast (x.first)] = py::cast (x.second);
-            return std::make_tuple (
-                ngcomp::Elmats2Sparse<Complex> (std::get<0> (P), fes),
-                std::get<1> (P));
-          }
-        else
-          {
-            std::map<std::string, ngcomp::Vector<double>> *stats = nullptr;
-            if (pystats)
-              stats = new std::map<std::string, ngcomp::Vector<double>>;
-            auto P = ngcomp::EmbTrefftz<double> (bf, fes, lf, eps, test_fes,
-                                                 tndof, getrange, stats);
-            if (pystats)
-              for (auto const &x : *stats)
-                (*pystats)[py::cast (x.first)] = py::cast (x.second);
-            return std::make_tuple (
-                ngcomp::Elmats2Sparse<double> (std::get<0> (P), fes),
-                std::get<1> (P));
-          }
-      },
-      R"mydelimiter(
+  m.def ("TrefftzEmbedding", &pythonEmbTrefftzWithLf,
+         R"mydelimiter(
                 Computes the Trefftz embedding and particular solution.
 
                 :param bf: operator for which the Trefftz embedding is computed.
@@ -1209,57 +1265,23 @@ void ExportEmbTrefftz (py::module m)
                 :param getrange: If True, extract the range instead of the kernel
                 :param stats_dict: Pass a dictionary to fill it with stats on the singular values.
 
-                :return: [Trefftz embeddint, particular solution]
+                :return: [Trefftz embedding, particular solution]
             )mydelimiter",
-      py::arg ("bf"), py::arg ("fes"), py::arg ("lf"), py::arg ("eps") = 0,
-      py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0,
-      py::arg ("getrange") = false, py::arg ("stats_dict") = nullopt);
+         py::arg ("bf"), py::arg ("fes"), py::arg ("lf"), py::arg ("eps") = 0,
+         py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0,
+         py::arg ("getrange") = false, py::arg ("stats_dict") = nullopt);
 
-  m.def (
-      "TrefftzEmbedding",
-      [] (shared_ptr<ngfem::SumOfIntegrals> bf,
-          shared_ptr<ngcomp::FESpace> fes, double eps,
-          shared_ptr<ngcomp::FESpace> test_fes, int tndof, bool getrange,
-          optional<py::dict> stats_dict) -> shared_ptr<ngcomp::BaseMatrix> {
-        shared_ptr<py::dict> pystats = nullptr;
-        if (stats_dict)
-          pystats = make_shared<py::dict> (*stats_dict);
-
-        if (fes->IsComplex ())
-          {
-            std::map<std::string, ngcomp::Vector<Complex>> *stats = nullptr;
-            if (pystats)
-              stats = new std::map<std::string, ngcomp::Vector<Complex>>;
-            auto P = std::get<0> (ngcomp::EmbTrefftz<Complex> (
-                bf, fes, nullptr, eps, test_fes, tndof, getrange, stats));
-            if (pystats)
-              for (auto const &x : *stats)
-                (*pystats)[py::cast (x.first)] = py::cast (x.second);
-            return ngcomp::Elmats2Sparse<Complex> (P, fes);
-          }
-        else
-          {
-            std::map<std::string, ngcomp::Vector<double>> *stats = nullptr;
-            if (pystats)
-              stats = new std::map<std::string, ngcomp::Vector<double>>;
-            auto P = std::get<0> (ngcomp::EmbTrefftz<double> (
-                bf, fes, nullptr, eps, test_fes, tndof, getrange, stats));
-            if (pystats)
-              for (auto const &x : *stats)
-                (*pystats)[py::cast (x.first)] = py::cast (x.second);
-            return ngcomp::Elmats2Sparse<double> (P, fes);
-          }
-      },
-      R"mydelimiter(
+  m.def ("TrefftzEmbedding", &pythonEmbTrefftz,
+         R"mydelimiter(
                 Used without the parameter lf as input the function only returns the Trefftz embedding.
 
                 :return: Trefftz embedding
             )mydelimiter",
-      py::arg ("bf"), py::arg ("fes"), py::arg ("eps") = 0,
-      py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0,
-      py::arg ("getrange") = false, py::arg ("stats_dict") = py::none ());
+         py::arg ("bf"), py::arg ("fes"), py::arg ("eps") = 0,
+         py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0,
+         py::arg ("getrange") = false, py::arg ("stats_dict") = py::none ());
 
-  m.def ("ConstraintTrefftzEmbedding", &pythonConstrTrefftz,
+  m.def ("TrefftzEmbedding", &pythonConstrTrefftz,
          "creates the constraint Trefftz embedding matrix", py::arg ("op"),
          py::arg ("fes"), py::arg ("cop_lhs"), py::arg ("cop_rhs"),
          py::arg ("fes_constraint"), py::arg ("ndof_trefftz"));

@@ -270,9 +270,7 @@ def test_ConstraintTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) -> 
     cop_lhs = u * vF * dx(element_boundary=True)
     cop_rhs = uF * vF * dx(element_boundary=True)
 
-    P = ConstraintTrefftzEmbedding(
-        op, fes, cop_lhs, cop_rhs, fes_constraint, 2 * order + 1 - 3
-    )[0]
+    P = TrefftzEmbedding(op, fes, cop_lhs, cop_rhs, fes_constraint, 2 * order + 1 - 3)
 
     rows, cols, vals = P.COO()
 
