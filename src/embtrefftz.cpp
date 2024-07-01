@@ -196,7 +196,7 @@ createTrefftzTables (Table<int> &table, Table<int> &table2,
 }
 
 template <typename SCAL>
-INLINE size_t createConstraintTrefftzTables (
+INLINE size_t createConstrainedTrefftzTables (
     Table<int> &table, Table<int> &table2,
     const vector<shared_ptr<Matrix<SCAL>>> &ETmats, const FESpace &fes,
     const FESpace &fes_constraint, const size_t ndof_trefftz,
@@ -324,7 +324,7 @@ namespace ngcomp
   /// @param fes non-Trefftz finite element space
   /// @tparam SCAL scalar type of the matrix entries
   template <typename SCAL>
-  shared_ptr<BaseMatrix> Elmats2SparseConstraintTrefftz (
+  shared_ptr<BaseMatrix> Elmats2SparseConstrainedTrefftz (
       const vector<shared_ptr<Matrix<SCAL>>> ETmats,
       shared_ptr<const FESpace> fes, shared_ptr<const FESpace> fes_constraint,
       size_t ndof_trefftz)
@@ -335,9 +335,10 @@ namespace ngcomp
 
     Table<int> table, table2;
     // #TODO write the method
-    const size_t constraint_plus_trefftz_dofs = createConstraintTrefftzTables (
-        table, table2, ETmats, *fes, *fes_constraint, ndof_trefftz,
-        hidden_dofs);
+    const size_t constraint_plus_trefftz_dofs
+        = createConstrainedTrefftzTables (table, table2, ETmats, *fes,
+                                          *fes_constraint, ndof_trefftz,
+                                          hidden_dofs);
 
     auto P = make_shared<SparseMatrix<SCAL>> (
         fes->GetNDof (), constraint_plus_trefftz_dofs, table, table2, false);
@@ -1092,7 +1093,7 @@ void ExportETSpace (py::module m, string label)
             &ngcomp::EmbTrefftzFESpace<T, shrdT>::GetEmbedding);
 }
 
-/// call `EmbTrefftz` for the ConstraintTrefftz procedure and pack the
+/// call `EmbTrefftz` for the ConstrainedTrefftz procedure and pack the
 /// resulting element matrices in a sparse matrix.
 tuple<shared_ptr<BaseMatrix>, shared_ptr<ngla::BaseVector>>
 pythonConstrTrefftzWithLf (shared_ptr<SumOfIntegrals> op,
@@ -1105,12 +1106,12 @@ pythonConstrTrefftzWithLf (shared_ptr<SumOfIntegrals> op,
   auto P = EmbTrefftz<double> (op, fes, cop_lhs, cop_rhs, fes_constraint,
                                ndof_trefftz);
   return std::make_tuple (
-      ngcomp::Elmats2SparseConstraintTrefftz<double> (
+      ngcomp::Elmats2SparseConstrainedTrefftz<double> (
           std::get<0> (P), fes, fes_constraint, ndof_trefftz),
       std::get<1> (P));
 }
 
-/// call `EmbTrefftz` for the ConstraintTrefftz procedure and pack the
+/// call `EmbTrefftz` for the ConstrainedTrefftz procedure and pack the
 /// resulting element matrices in a sparse matrix.
 shared_ptr<BaseMatrix>
 pythonConstrTrefftz (shared_ptr<SumOfIntegrals> op, shared_ptr<FESpace> fes,
@@ -1121,7 +1122,7 @@ pythonConstrTrefftz (shared_ptr<SumOfIntegrals> op, shared_ptr<FESpace> fes,
 {
   auto P = EmbTrefftz<double> (op, fes, cop_lhs, cop_rhs, fes_constraint,
                                ndof_trefftz);
-  return ngcomp::Elmats2SparseConstraintTrefftz<double> (
+  return ngcomp::Elmats2SparseConstrainedTrefftz<double> (
       std::get<0> (P), fes, fes_constraint, ndof_trefftz);
 }
 
