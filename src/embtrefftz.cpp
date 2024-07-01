@@ -124,7 +124,6 @@ void extractVisibleDofs (FlatMatrix<SCAL> elmat, const ElementId &element_id,
   elmat.Assign (velmat);
 }
 
-
 /// Fills the two creators with the sparsity pattern needed for
 /// the Trefftz embedding.
 template <class SCAL, typename NZ_FUNC>
@@ -391,10 +390,8 @@ bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
   return false;
 }
 
-
 namespace ngbla
 {
-
 #ifdef NGSTREFFTZ_USE_LAPACK
   void
   LapackSVD (SliceMatrix<double, ColMajor> A, SliceMatrix<double, ColMajor> U,
@@ -448,6 +445,26 @@ namespace ngbla
   }
 #endif
 
+  template <class SCAL>
+  void getSVD (SliceMatrix<SCAL> A, SliceMatrix<SCAL, ColMajor> U,
+               SliceMatrix<SCAL, ColMajor> V)
+  {
+    Matrix<SCAL, ColMajor> AA = A;
+    // Matrix<SCAL,ColMajor> AA(A.Height(),A.Width());
+    // for(int i=0;i<A.Height();i++)
+    // for(int j=0;j<A.Width();j++)
+    // AA(i,j)= A(i,j);
+#ifdef NGSTREFFTZ_USE_LAPACK
+    LapackSVD (AA, U, V);
+#else
+    cout << "No Lapack, using CalcSVD" << endl;
+    CalcSVD (AA, U, V);
+#endif
+    A = 0.0;
+    // A.Diag(0)=AA.Diag();
+    for (int i = 0; i < min (A.Width (), A.Height ()); i++)
+      A (i, i) = AA (i, i);
+  }
 }
 
 namespace ngcomp
