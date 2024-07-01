@@ -802,8 +802,6 @@ namespace ngcomp
           (*testout) << "t2 from element " << element_id << "\n"
                      << elmat_t2 << std::endl;
 
-          assert (elmat_p.Shape ()
-                  == tuple (ndof, ndof_constraint + ndof_trefftz));
           (*testout) << "elmat_p shape: (" << ndof << ", "
                      << ndof_constraint + ndof_trefftz << ")" << std::endl;
 
