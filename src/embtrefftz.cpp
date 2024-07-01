@@ -27,8 +27,8 @@ void invertSvdSigma (const FlatMatrix<SCAL> &sigma,
 }
 
 template <typename SCAL>
-void reorderArrayColumns (FlatMatrix<SCAL> &matrix,
-                          const Array<DofId> &dof_nrs, LocalHeap &local_heap)
+void reorderMatrixColumns (MatrixView<SCAL> &matrix,
+                           const Array<DofId> &dof_nrs, LocalHeap &local_heap)
 {
   const auto heap_reset = HeapReset (local_heap);
 
@@ -46,9 +46,9 @@ void reorderArrayColumns (FlatMatrix<SCAL> &matrix,
     matrix.Col (i) = elmat_b2_copy.Col (map[i]);
 }
 
-template <typename SCAL>
+template <typename SCAL, typename TDIST>
 inline void addIntegrationToElementMatrix (
-    FlatMatrix<SCAL> elmat,
+    MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> elmat,
     const Array<shared_ptr<BilinearFormIntegrator>> &bf_integrators,
     const MeshAccess &mesh_access, const ElementId &element_id,
     const FESpace &fes, const FESpace &test_fes, LocalHeap &local_heap)
@@ -733,8 +733,7 @@ namespace ngcomp
           elmat_b = 0.;
 
           // elmat_b2 is a view into elamt_b
-          FlatMatrix<SCAL> elmat_b2
-              = get<0> (elmat_b.SplitRows (ndof_constraint));
+          MatrixView<SCAL> elmat_b2 = elmat_b.Rows (ndof_constraint);
 
           // the diff. operator L operates only on volume terms
           addIntegrationToElementMatrix (elmat_l, op_integrators[VOL],
@@ -758,7 +757,7 @@ namespace ngcomp
 
           // reorder elmat_b2
           // #TODO is this really necessary?
-          reorderArrayColumns (elmat_b2, dofs_constraint, local_heap);
+          reorderMatrixColumns (elmat_b2, dofs_constraint, local_heap);
 
           (*testout) << "elmat_a:\n" << elmat_a << std::endl;
           // #TODO is ColMajor Layout really necessary?
