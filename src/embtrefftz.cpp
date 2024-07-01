@@ -789,15 +789,10 @@ namespace ngcomp
                      << Sigma_inv << std::endl;
 
           // P = (T1 | T2)
-          Matrix<SCAL, ColMajor> elmat_p (ndof,
-                                          ndof_trefftz + ndof_constraint);
-          // SplitCols seems to be wrong in RowMajor mode
-          tuple<FlatMatrix<SCAL, ColMajor>, FlatMatrix<SCAL, ColMajor>>
-              t1_hstack_t2 = elmat_p.SplitCols (ndof_constraint);
+          Matrix<SCAL> elmat_p (ndof, ndof_trefftz + ndof_constraint);
           // T1 has dimension (ndof, ndof_constraint)
-          FlatMatrix<SCAL, ColMajor> elmat_t1 = get<0> (t1_hstack_t2);
           // T2 has dimension (ndof, ndof)
-          FlatMatrix<SCAL, ColMajor> elmat_t2 = get<1> (t1_hstack_t2);
+          auto [elmat_t1, elmat_t2] = elmat_p.SplitCols (ndof_constraint);
 
           // T1 solves A @ T1 = B,
           // i.e. T1 = A^{-1} @ B.
