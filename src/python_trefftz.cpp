@@ -32,7 +32,6 @@ PYBIND11_MODULE (_trefftz, m)
   ExportMonomialFESpace (m);
   ExportPUFESpace (m);
   ExportCondenseDG (m);
-  ExportConstraintTrefftzEmbedding (m);
   // ExportStdMathFunction<GenericAiry>(m, "airy", "airy function");
   // ExportStdMathFunction<GenericAiryP>(m, "airyp", "airyp function");
 }
