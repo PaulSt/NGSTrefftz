@@ -717,11 +717,7 @@ namespace ngcomp
           const size_t ndof_constraint = dofs_constraint.Size ();
           auto elmat_a
               = FlatMatrix<SCAL> (ndof + ndof_constraint, ndof, local_heap);
-          tuple<FlatMatrix<SCAL>, FlatMatrix<SCAL>> b1_vstack_l
-              = elmat_a.SplitRows (ndof_constraint);
-          // elmat_l and elmat_b1 are views into elmat_a
-          FlatMatrix<SCAL> elmat_b1 = get<0> (b1_vstack_l);
-          FlatMatrix<SCAL> elmat_l = get<1> (b1_vstack_l);
+          auto [elmat_b1, elmat_l] = elmat_a.SplitRows (ndof_constraint);
 
           //     /   \    /   \
           //  A= |B_1| B= |B_2|
