@@ -179,15 +179,15 @@ Make sure to add it to the python path:
 ### tests 
 include(CTest)
 file(COPY 
-    ${CMAKE_SOURCE_DIR}/../test/dg.py
-    ${CMAKE_SOURCE_DIR}/../test/embt.py
-    ${CMAKE_SOURCE_DIR}/../test/trefftz.py
-    ${CMAKE_SOURCE_DIR}/../test/tents.py
-    ${CMAKE_SOURCE_DIR}/../test/constraint_trefftz.py
+    ${CMAKE_SOURCE_DIR}/test/dg.py
+    ${CMAKE_SOURCE_DIR}/test/embt.py
+    ${CMAKE_SOURCE_DIR}/test/trefftz.py
+    ${CMAKE_SOURCE_DIR}/test/tents.py
+    ${CMAKE_SOURCE_DIR}/test/constrained_trefftz.py
     DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing)
 add_test(NAME embtrefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/embt.py)
+add_test(NAME constrained_trefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/constrained_trefftz.py)
 add_test(NAME trefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/trefftz.py)
-add_test(NAME constraint_trefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/constraint_trefftz.py)
 add_test(NAME tents COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/tents.py)
 #WORKING_DIRECTORY ${ CMAKE_CURRENT_SOURCE_DIR }
 set_tests_properties(embtrefftz trefftz tents

@@ -14,7 +14,7 @@ import scipy.sparse
 SetNumThreads(3)
 
 
-def PySVDConstraintTrefftz(
+def PySVDConstrainedTrefftz(
     op: comp.SumOfIntegrals,
     fes: FESpace,
     cop_lhs: comp.SumOfIntegrals,
@@ -195,15 +195,17 @@ def PySVDConstraintTrefftz(
     return P
 
 
-def test_PySVDConstraintTrefftz(order: int = 2, debug: bool = False, maxh=0.4) -> float:
+def test_PySVDConstrainedTrefftz(
+    order: int = 2, debug: bool = False, maxh=0.4
+) -> float:
     """
-    simple test case for PySVDConstraintTrefftz.
+    simple test case for PySVDConstrainedTrefftz.
 
     `order`: polynomial oder of the underlying space
 
     `debug`: True: print debug info, default: False
 
-    >>> test_PySVDConstraintTrefftz(order=3, debug=False) # doctest:+ELLIPSIS
+    >>> test_PySVDConstrainedTrefftz(order=3, debug=False) # doctest:+ELLIPSIS
     3.6...e-05
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=maxh))
@@ -219,7 +221,7 @@ def test_PySVDConstraintTrefftz(order: int = 2, debug: bool = False, maxh=0.4) -
     cop_lhs = u * vF * dx(element_boundary=True)
     cop_rhs = uF * vF * dx(element_boundary=True)
 
-    P = PySVDConstraintTrefftz(
+    P = PySVDConstrainedTrefftz(
         op, fes, cop_lhs, cop_rhs, fes_constraint, 2 * order + 1 - 3, debug=False
     )
     if debug:
@@ -249,15 +251,15 @@ def test_PySVDConstraintTrefftz(order: int = 2, debug: bool = False, maxh=0.4) -
     return sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d))
 
 
-def test_ConstraintTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) -> float:
+def test_ConstrainedTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) -> float:
     """
-    simple test case for PySVDConstraintTrefftz.
+    simple test case for PySVDConstrainedTrefftz.
 
     `order`: polynomial oder of the underlying space
 
     `debug`: True: print debug info, default: False
 
-    >>> test_PySVDConstraintTrefftz(order=3, debug=False) # doctest:+ELLIPSIS
+    >>> test_PySVDConstrainedTrefftz(order=3, debug=False) # doctest:+ELLIPSIS
     3.6...e-05
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=maxh))
@@ -308,6 +310,6 @@ def test_ConstraintTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) -> 
 if __name__ == "__main__":
     SetTestoutFile("test.out")
     maxh = 0.4
-    # error = test_PySVDConstraintTrefftz(order=2, debug=False, maxh=maxh)
-    error = test_ConstraintTrefftzCpp(order=2, debug=False, maxh=maxh)
+    # error = test_PySVDConstrainedTrefftz(order=2, debug=False, maxh=maxh)
+    error = test_ConstrainedTrefftzCpp(order=2, debug=False, maxh=maxh)
     print("error : ", error)
