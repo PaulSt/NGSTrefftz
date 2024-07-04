@@ -35,7 +35,7 @@ pip install ngstrefftz
 ```bash
 git clone --recursive https://github.com/PaulSt/NGSTrefftz
 mkdir ./NGSTrefftz/make && cd ./NGSTrefftz/make
-cmake ../src && make install
+cmake ../ && make install
 ```
 
 ### Dependencies
