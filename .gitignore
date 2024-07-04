@@ -3,6 +3,7 @@ make/
 
 # python
 __pycache__/
+jupyter_execute/
 
 # Clangd support file
 compile_commands.json
