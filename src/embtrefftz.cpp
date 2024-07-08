@@ -2,6 +2,7 @@
 #include "monomialfespace.hpp"
 #include <cfloat>
 #include <meshaccess.hpp>
+#include <mutex>
 
 using namespace ngbla;
 using namespace ngcomp;
@@ -360,7 +361,7 @@ void calculateBilinearFormIntegrators (
 }
 
 void calculateLinearFormIntegrators (
-    SumOfIntegrals &lf, Array<shared_ptr<LinearFormIntegrator>> lfis[4])
+    const SumOfIntegrals &lf, Array<shared_ptr<LinearFormIntegrator>> lfis[4])
 {
   for (auto icf : lf.icfs)
     {
@@ -673,40 +674,44 @@ namespace ngcomp
 
   template <typename SCAL>
   tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<ngla::BaseVector>>
-  EmbTrefftz (shared_ptr<const SumOfIntegrals> op,
-              shared_ptr<const FESpace> fes,
-              shared_ptr<const ngfem::SumOfIntegrals> cop_lhs,
-              shared_ptr<const ngfem::SumOfIntegrals> cop_rhs,
-              shared_ptr<const FESpace> fes_constraint,
+  EmbTrefftz (const SumOfIntegrals &op, const FESpace &fes,
+              const ngfem::SumOfIntegrals &cop_lhs,
+              const ngfem::SumOfIntegrals &cop_rhs,
+              const FESpace &fes_constraint,
+              shared_ptr<const ngfem::SumOfIntegrals> linear_form,
               const size_t ndof_trefftz)
   {
-    auto mesh_access = fes->GetMeshAccess ();
+    auto mesh_access = fes.GetMeshAccess ();
     const size_t num_elements = mesh_access->GetNE (VOL);
     // #TODO what is a good size for the local heap?
     // For the moment: large enough constant size.
     LocalHeap local_heap = LocalHeap (1000 * 1000 * 1000);
-    const size_t dim = fes->GetDimension ();
-    const size_t dim_constraint = fes_constraint->GetDimension ();
+    const size_t dim = fes.GetDimension ();
+    const size_t dim_constraint = fes_constraint.GetDimension ();
 
     // calculate the integrators for the three bilinear forms,
     // each for VOL, BND, BBND, BBBND, hence 4 arrays per bilnear form
     Array<shared_ptr<BilinearFormIntegrator>> op_integrators[4],
         cop_lhs_integrators[4], cop_rhs_integrators[4];
-    calculateBilinearFormIntegrators (*op, op_integrators);
-    calculateBilinearFormIntegrators (*cop_lhs, cop_lhs_integrators);
-    calculateBilinearFormIntegrators (*cop_rhs, cop_rhs_integrators);
+    calculateBilinearFormIntegrators (op, op_integrators);
+    calculateBilinearFormIntegrators (cop_lhs, cop_lhs_integrators);
+    calculateBilinearFormIntegrators (cop_rhs, cop_rhs_integrators);
 
     vector<shared_ptr<Matrix<SCAL>>> element_matrices (num_elements);
 
-    const bool fes_has_hidden_dofs = fesHasHiddenDofs (*fes);
+    const bool fes_has_hidden_dofs = fesHasHiddenDofs (fes);
     const bool fes_constraint_has_hidden_dofs
-        = fesHasHiddenDofs (*fes_constraint);
+        = fesHasHiddenDofs (fes_constraint);
 
-    (*testout) << "fes has ndof:" << fes->GetNDof () << std::endl;
-    (*testout) << "fes_constraint has ndof:" << fes_constraint->GetNDof ()
+    (*testout) << "fes has ndof:" << fes.GetNDof () << std::endl;
+    (*testout) << "fes_constraint has ndof:" << fes_constraint.GetNDof ()
                << std::endl;
     (*testout) << "trefftz space has ndof:" << ndof_trefftz * num_elements
                << std::endl;
+
+    auto particular_solution_vec = make_shared<VVector<SCAL>> (fes.GetNDof ());
+    particular_solution_vec->operator= (0.0);
+    std::mutex particular_solution_vec_mutex;
 
     // solve the following linear system in an element-wise fashion:
     // L @ T1 = B for the unknown matrix T1,
@@ -720,18 +725,18 @@ namespace ngcomp
         [&] (Ngs_Element mesh_element, LocalHeap &local_heap) {
           const ElementId element_id = ElementId (mesh_element);
           const FiniteElement &fes_element
-              = fes->GetFE (element_id, local_heap);
+              = fes.GetFE (element_id, local_heap);
 
           // skip this element, if the bilinear forms are not defined
           // on this element
-          if (!bfIsDefinedOnElement (*op, mesh_element)
-              || !bfIsDefinedOnElement (*cop_lhs, mesh_element)
-              || !bfIsDefinedOnElement (*cop_rhs, mesh_element))
+          if (!bfIsDefinedOnElement (op, mesh_element)
+              || !bfIsDefinedOnElement (cop_lhs, mesh_element)
+              || !bfIsDefinedOnElement (cop_rhs, mesh_element))
             return;
 
           Array<DofId> dofs, dofs_constraint;
-          fes->GetDofNrs (element_id, dofs);
-          fes_constraint->GetDofNrs (element_id, dofs_constraint);
+          fes.GetDofNrs (element_id, dofs);
+          fes_constraint.GetDofNrs (element_id, dofs_constraint);
 
           //     /   \    /   \
           //  A= |B_1| B= |B_2|
@@ -764,22 +769,22 @@ namespace ngcomp
 
           // the diff. operator L operates only on volume terms
           addIntegrationToElementMatrix (elmat_l, op_integrators[VOL],
-                                         *mesh_access, element_id, *fes, *fes,
+                                         *mesh_access, element_id, fes, fes,
                                          local_heap);
           for (const auto vorb : { VOL, BND, BBND, BBBND })
             {
               addIntegrationToElementMatrix (
                   elmat_b1, cop_lhs_integrators[vorb], *mesh_access,
-                  element_id, *fes, *fes_constraint, local_heap);
+                  element_id, fes, fes_constraint, local_heap);
               addIntegrationToElementMatrix (
                   elmat_b2, cop_rhs_integrators[vorb], *mesh_access,
-                  element_id, *fes_constraint, *fes_constraint, local_heap);
+                  element_id, fes_constraint, fes_constraint, local_heap);
             }
           if (fes_has_hidden_dofs)
             throw std::invalid_argument (
                 "fes has hidden dofs, not supported at the moment");
           if (fes_has_hidden_dofs)
-            extractVisibleDofs (elmat_l, element_id, *fes, *fes, dofs, dofs,
+            extractVisibleDofs (elmat_l, element_id, fes, fes, dofs, dofs,
                                 local_heap);
 
           // reorder elmat_b2
@@ -797,15 +802,7 @@ namespace ngcomp
           FlatMatrix<SCAL, ColMajor> U (ndof_constraint + ndof, local_heap),
               V (ndof, local_heap);
           getSVD<SCAL> (elmat_a, U, V);
-
-          FlatMatrix<SCAL> U_T = Trans (U);
-          FlatMatrix<SCAL> V_T = Trans (V);
-          FlatMatrix<SCAL> Sigma_inv (ndof, ndof_constraint + ndof,
-                                      local_heap);
-          invertSvdSigma (elmat_a, Sigma_inv);
-          (*testout) << "sigma from element " << element_id << "\n"
-                     << elmat_a.Diag () << "\nsigma inverse\n"
-                     << Sigma_inv << std::endl;
+          const auto elmat_a_inv = invertSVD (U, elmat_a, V, local_heap);
 
           // P = (T1 | T2)
           Matrix<SCAL> elmat_p (ndof, ndof_trefftz + ndof_constraint);
@@ -818,7 +815,7 @@ namespace ngcomp
           // A has dimension (ndof + ndof_constraint, ndof),
           // B has dimension (ndof + ndof_constraint, ndof_constraint),
           // so T1 has dimension (ndof, ndof_constraint)
-          elmat_t1 = V_T * Sigma_inv * U_T * elmat_b;
+          elmat_t1 = elmat_a_inv * elmat_b;
           (*testout) << "t1 from element " << element_id << "\n"
                      << elmat_t1 << std::endl;
 
@@ -833,9 +830,23 @@ namespace ngcomp
                      << elmat_p << std::endl;
           element_matrices[element_id.Nr ()]
               = make_shared<Matrix<SCAL>> (elmat_p);
+
+          if (linear_form)
+            {
+              Array<shared_ptr<LinearFormIntegrator>> lfis[4];
+              calculateLinearFormIntegrators (*linear_form, lfis);
+              const auto part_sol = calculateParticularSolution<SCAL> (
+                  lfis, fes, element_id, *mesh_access, dofs, ndof,
+                  ndof_trefftz, elmat_a_inv, local_heap);
+              // the solution might have overlapping dofs with other
+              // elements. Therefore, use a mutex to synchronize write-access
+              // to the global solution vector.
+              const std::lock_guard guard (particular_solution_vec_mutex);
+              particular_solution_vec->SetIndirect (dofs, part_sol);
+            }
         });
 
-    return make_tuple<> (element_matrices, shared_ptr<BaseVector> ());
+    return make_tuple<> (element_matrices, particular_solution_vec);
   }
 
   ////////////////////////// EmbTrefftzFESpace ///////////////////////////
@@ -1122,15 +1133,16 @@ void ExportETSpace (py::module m, string label)
 /// call `EmbTrefftz` for the ConstrainedTrefftz procedure and pack the
 /// resulting element matrices in a sparse matrix.
 tuple<shared_ptr<BaseMatrix>, shared_ptr<ngla::BaseVector>>
-pythonConstrTrefftzWithLf (shared_ptr<SumOfIntegrals> op,
-                           shared_ptr<FESpace> fes,
-                           shared_ptr<ngfem::SumOfIntegrals> cop_lhs,
-                           shared_ptr<ngfem::SumOfIntegrals> cop_rhs,
-                           shared_ptr<FESpace> fes_constraint,
+pythonConstrTrefftzWithLf (shared_ptr<const SumOfIntegrals> op,
+                           shared_ptr<const FESpace> fes,
+                           shared_ptr<const ngfem::SumOfIntegrals> cop_lhs,
+                           shared_ptr<const ngfem::SumOfIntegrals> cop_rhs,
+                           shared_ptr<const FESpace> fes_constraint,
+                           shared_ptr<ngfem::SumOfIntegrals> linear_form,
                            const size_t ndof_trefftz)
 {
-  auto P = EmbTrefftz<double> (op, fes, cop_lhs, cop_rhs, fes_constraint,
-                               ndof_trefftz);
+  auto P = EmbTrefftz<double> (*op, *fes, *cop_lhs, *cop_rhs, *fes_constraint,
+                               linear_form, ndof_trefftz);
   return std::make_tuple (
       ngcomp::Elmats2SparseConstrainedTrefftz<double> (
           std::get<0> (P), fes, fes_constraint, ndof_trefftz),
@@ -1146,8 +1158,8 @@ pythonConstrTrefftz (shared_ptr<SumOfIntegrals> op, shared_ptr<FESpace> fes,
                      shared_ptr<FESpace> fes_constraint,
                      const size_t ndof_trefftz)
 {
-  auto P = EmbTrefftz<double> (op, fes, cop_lhs, cop_rhs, fes_constraint,
-                               ndof_trefftz);
+  auto P = EmbTrefftz<double> (*op, *fes, *cop_lhs, *cop_rhs, *fes_constraint,
+                               nullptr, ndof_trefftz);
   return ngcomp::Elmats2SparseConstrainedTrefftz<double> (
       std::get<0> (P), fes, fes_constraint, ndof_trefftz);
 }
