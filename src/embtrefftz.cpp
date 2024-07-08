@@ -17,7 +17,7 @@ void invertSvdSigma (const FlatMatrix<SCAL> &sigma,
   auto sigma_inv_el = sigma_inv_diag.begin ();
 
   // Sigma_inv.Diag () = 1.0 / elmat_a.Diag ();
-  while (sigma_el != sigma_diag.end () && *sigma_el > 1e-10)
+  while (sigma_el != sigma_diag.end () && abs (*sigma_el) > 1e-10)
     {
       *sigma_inv_el = 1.0 / *sigma_el;
       // increment iterators
@@ -447,8 +447,8 @@ namespace ngbla
 #endif
 
   template <typename SCAL>
-  void getSVD (SliceMatrix<SCAL> A, SliceMatrix<SCAL, ColMajor> U,
-               SliceMatrix<SCAL, ColMajor> V)
+  void getSVD (FlatMatrix<SCAL> A, FlatMatrix<SCAL, ColMajor> U,
+               FlatMatrix<SCAL, ColMajor> V)
   {
     Matrix<SCAL, ColMajor> AA = A;
     // Matrix<SCAL,ColMajor> AA(A.Height(),A.Width());
@@ -461,11 +461,63 @@ namespace ngbla
     cout << "No Lapack, using CalcSVD" << endl;
     CalcSVD (AA, U, V);
 #endif
-    A = 0.0;
+    A = static_cast<SCAL> (0.0);
     // A.Diag(0)=AA.Diag();
     for (int i = 0; i < min (A.Width (), A.Height ()); i++)
       A (i, i) = AA (i, i);
   }
+}
+
+/// `A = U * Sigma * V`
+/// @return `A^{-1}` (as some `ngbla::Expr` type to avoid allocations)
+template <typename SCAL>
+auto invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
+                const FlatMatrix<SCAL> &Sigma,
+                const FlatMatrix<SCAL, ColMajor> &V, LocalHeap &local_heap)
+{
+  // let Sigma have dimension (m, n)
+  // then U has dimension (m, m),
+  // and V has dimension (n, n)
+
+  auto U_T = Trans (U);
+  auto V_T = Trans (V);
+  const auto [m, n] = Sigma.Shape ();
+  FlatMatrix<SCAL> Sigma_inv (n, m, local_heap);
+  invertSvdSigma (Sigma, Sigma_inv);
+  return V_T * Sigma_inv * U_T;
+}
+
+/// @return the element-local solution, allocated on the local heap `mlh`
+template <typename SCAL, typename T>
+FlatVector<SCAL>
+calculateParticularSolution (Array<shared_ptr<LinearFormIntegrator>> lfis[4],
+                             const FESpace &test_fes, const ElementId ei,
+                             const MeshAccess &ma, const Array<DofId> &dofs,
+                             const size_t ndof_test, const size_t trefftz_ndof,
+                             const Expr<T> &inverse_elmat, LocalHeap &mlh)
+{
+  int nnz = dofs.Size () - trefftz_ndof;
+  auto &test_fel = test_fes.GetFE (ei, mlh);
+  auto &trafo = ma.GetTrafo (ei, mlh);
+  FlatVector<SCAL> elvec (ndof_test, mlh), elveci (ndof_test, mlh);
+  elvec = 0.0;
+  for (const auto vorb : { VOL, BND, BBND, BBBND })
+    {
+      for (auto &lfi : lfis[vorb])
+        {
+          if (lfi->DefinedOnElement (ei.Nr ()))
+            {
+              auto &mapped_trafo
+                  = trafo.AddDeformation (lfi->GetDeformation ().get (), mlh);
+              lfi->CalcElementVector (test_fel, mapped_trafo, elveci, mlh);
+              // lfi -> CalcElementVector(fel, mapped_trafo, elveci, mlh);
+              elvec += elveci;
+            }
+        }
+    }
+  FlatVector<SCAL> elsol (dofs.Size (), mlh);
+  elsol = inverse_elmat * elvec;
+  return elsol;
 }
 
 namespace ngcomp
@@ -587,36 +639,10 @@ namespace ngcomp
 
       if (lf)
         {
-          int nnz = dofs.Size () - nz;
-          auto &test_fel = test_fes->GetFE (ei, mlh);
-          auto &trafo = ma->GetTrafo (ei, mlh);
-          FlatVector<SCAL> elvec (test_dofs.Size (), mlh),
-              elveci (test_dofs.Size (), mlh);
-          elvec = 0.0;
-          for (auto &lfi : lfis[VOL])
-            {
-              if (lfi->DefinedOnElement (ei.Nr ()))
-                {
-                  auto &mapped_trafo = trafo.AddDeformation (
-                      lfi->GetDeformation ().get (), mlh);
-                  lfi->CalcElementVector (test_fel, mapped_trafo, elveci, mlh);
-                  // lfi -> CalcElementVector(fel, mapped_trafo, elveci, mlh);
-                  elvec += elveci;
-                }
-            }
-          Matrix<SCAL> Ut = Trans (U).Rows (0, nnz);
-          Matrix<SCAL> V = Trans (Vt).Cols (0, nnz);
-          Matrix<SCAL> SigI (nnz, nnz);
-
-          SigI = static_cast<SCAL> (0.0);
-          // SigI = 0.0;
-          for (int i = 0; i < nnz; i++)
-            SigI (i, i) = 1.0 / elmat (i, i);
-          Matrix<SCAL> elinverse = V * SigI * Ut;
-
+          auto elsol = calculateParticularSolution<SCAL> (
+              lfis, *test_fes, ei, *ma, dofs, test_dofs.Size (), nz,
+              invertSVD (U, elmat, Vt, mlh), mlh);
           // lfvec.FV () (dofs) = elinverse * elvec;
-          FlatVector<SCAL> elsol (dofs.Size (), mlh);
-          elsol = elinverse * elvec;
           lfvec->SetIndirect (dofs, elsol);
         }
     });
