@@ -1141,12 +1141,12 @@ pythonConstrTrefftzWithLf (shared_ptr<const SumOfIntegrals> op,
                            shared_ptr<ngfem::SumOfIntegrals> linear_form,
                            const size_t ndof_trefftz)
 {
-    auto [P, u_lf] = EmbTrefftz<double> (*op, *fes, *cop_lhs, *cop_rhs, *fes_constraint,
-                               linear_form, ndof_trefftz);
-  return std::make_tuple (
-      ngcomp::Elmats2SparseConstrainedTrefftz<double> (
-          P, fes, fes_constraint, ndof_trefftz),
-      u_lf);
+  auto [P, u_lf]
+      = EmbTrefftz<double> (*op, *fes, *cop_lhs, *cop_rhs, *fes_constraint,
+                            linear_form, ndof_trefftz);
+  return std::make_tuple (ngcomp::Elmats2SparseConstrainedTrefftz<double> (
+                              P, fes, fes_constraint, ndof_trefftz),
+                          u_lf);
 }
 
 /// call `EmbTrefftz` for the ConstrainedTrefftz procedure and pack the
@@ -1158,10 +1158,8 @@ pythonConstrTrefftz (shared_ptr<SumOfIntegrals> op, shared_ptr<FESpace> fes,
                      shared_ptr<FESpace> fes_constraint,
                      const size_t ndof_trefftz)
 {
-  auto P = EmbTrefftz<double> (*op, *fes, *cop_lhs, *cop_rhs, *fes_constraint,
-                               nullptr, ndof_trefftz);
-  return ngcomp::Elmats2SparseConstrainedTrefftz<double> (
-      std::get<0> (P), fes, fes_constraint, ndof_trefftz);
+  return std::get<0> (pythonConstrTrefftzWithLf (
+      op, fes, cop_lhs, cop_rhs, fes_constraint, nullptr, ndof_trefftz));
 }
 
 /// call `EmbTrefftz` for the plain embedded Trefftz procedure and pack the
