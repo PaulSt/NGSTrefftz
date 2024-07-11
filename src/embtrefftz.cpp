@@ -1132,6 +1132,8 @@ void ExportETSpace (py::module m, string label)
 
 /// call `EmbTrefftz` for the ConstrainedTrefftz procedure and pack the
 /// resulting element matrices in a sparse matrix.
+/// Assumption: all shared pointers come from python, so they *should* be safe to dereference.
+/// Exception to that: the `linear_form` can be the `nullptr`.
 tuple<shared_ptr<BaseMatrix>, shared_ptr<ngla::BaseVector>>
 pythonConstrTrefftzWithLf (shared_ptr<const SumOfIntegrals> op,
                            shared_ptr<const FESpace> fes,
