@@ -2,7 +2,6 @@
 #include "monomialfespace.hpp"
 #include <cfloat>
 #include <meshaccess.hpp>
-#include <mutex>
 
 using namespace ngbla;
 using namespace ngcomp;
@@ -214,16 +213,16 @@ INLINE size_t createConstrainedTrefftzTables (
 
   for (; !creator.Done (); creator++, creator2++)
     {
-      // first compute the Trefftz dofs
+      // first compute the Trefftz dofs. The dof numbers of the Trefftz dofs
+      // are shifted up by constraint_ndof, to avoid conflicts between Trefftz
+      // and Constraint dofs.
       trefftz_ndof = fillTrefftzTableCreators (
           creator, creator2, ETmats, *ma, fes,
           [ndof_trefftz] (size_t _) { return ndof_trefftz; }, constraint_ndof);
       (*testout) << "created " << trefftz_ndof << " many trefftz dofs"
                  << std::endl;
 
-      // then compute the Constraint dofs. The dof numbers of the constraints
-      // are shifted up by trefftz_ndof, to avoid conflicts between Trefftz and
-      // Constraint dofs.
+      // then compute the Constraint dofs.
       for (auto ei : ma->Elements (VOL))
         {
           if (!ETmats[ei.Nr ()])
@@ -335,7 +334,6 @@ namespace ngcomp
     size_t hidden_dofs = countHiddenDofs (*fes);
 
     Table<int> table, table2;
-    // #TODO write the method
     const size_t constraint_plus_trefftz_dofs
         = createConstrainedTrefftzTables (table, table2, ETmats, *fes,
                                           *fes_constraint, ndof_trefftz,
@@ -488,7 +486,12 @@ auto invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
   return V_T * Sigma_inv * U_T;
 }
 
+/// calculates from the given space and linear form integrators a particular
+/// solution. note: allocates the solution on the given local heap.
+/// @param lfis arrays of linear form integrators, for `VOL`, `BND`, `BBND`,
+/// `BBBND`
 /// @return the element-local solution, allocated on the local heap `mlh`
+/// @tparam T type of matrix expression
 template <typename SCAL, typename T>
 FlatVector<SCAL>
 calculateParticularSolution (Array<shared_ptr<LinearFormIntegrator>> lfis[4],
@@ -497,26 +500,27 @@ calculateParticularSolution (Array<shared_ptr<LinearFormIntegrator>> lfis[4],
                              const size_t ndof_test, const size_t trefftz_ndof,
                              const Expr<T> &inverse_elmat, LocalHeap &mlh)
 {
-  int nnz = dofs.Size () - trefftz_ndof;
-  auto &test_fel = test_fes.GetFE (ei, mlh);
-  auto &trafo = ma.GetTrafo (ei, mlh);
+  // shall not be deallocated after function scope ends
+  FlatVector<SCAL> elsol (dofs.Size (), mlh);
+
+  const HeapReset hr (mlh);
+  const auto &test_fel = test_fes.GetFE (ei, mlh);
+  const auto &trafo = ma.GetTrafo (ei, mlh);
   FlatVector<SCAL> elvec (ndof_test, mlh), elveci (ndof_test, mlh);
-  elvec = 0.0;
+  elvec = static_cast<SCAL>(0.0);
   for (const auto vorb : { VOL, BND, BBND, BBBND })
     {
-      for (auto &lfi : lfis[vorb])
+      for (const auto &lfi : lfis[vorb])
         {
           if (lfi->DefinedOnElement (ei.Nr ()))
             {
               auto &mapped_trafo
                   = trafo.AddDeformation (lfi->GetDeformation ().get (), mlh);
               lfi->CalcElementVector (test_fel, mapped_trafo, elveci, mlh);
-              // lfi -> CalcElementVector(fel, mapped_trafo, elveci, mlh);
               elvec += elveci;
             }
         }
     }
-  FlatVector<SCAL> elsol (dofs.Size (), mlh);
   elsol = inverse_elmat * elvec;
   return elsol;
 }
@@ -643,7 +647,6 @@ namespace ngcomp
           auto elsol = calculateParticularSolution<SCAL> (
               lfis, *test_fes, ei, *ma, dofs, test_dofs.Size (), nz,
               invertSVD (U, elmat, Vt, mlh), mlh);
-          // lfvec.FV () (dofs) = elinverse * elvec;
           lfvec->SetIndirect (dofs, elsol);
         }
     });
@@ -711,7 +714,6 @@ namespace ngcomp
 
     auto particular_solution_vec = make_shared<VVector<SCAL>> (fes.GetNDof ());
     particular_solution_vec->operator= (0.0);
-    std::mutex particular_solution_vec_mutex;
 
     // solve the following linear system in an element-wise fashion:
     // L @ T1 = B for the unknown matrix T1,
@@ -761,8 +763,8 @@ namespace ngcomp
                                            ndof_constraint, local_heap
 
           );
-          elmat_a = static_cast<SCAL>(0.);
-          elmat_b = static_cast<SCAL>(0.);
+          elmat_a = static_cast<SCAL> (0.);
+          elmat_b = static_cast<SCAL> (0.);
 
           // elmat_b2 is a view into elamt_b
           MatrixView<SCAL> elmat_b2 = elmat_b.Rows (ndof_constraint);
@@ -802,7 +804,16 @@ namespace ngcomp
           FlatMatrix<SCAL, ColMajor> U (ndof_constraint + ndof, local_heap),
               V (ndof, local_heap);
           getSVD<SCAL> (elmat_a, U, V);
-          const auto elmat_a_inv = invertSVD (U, elmat_a, V, local_heap);
+
+          // We use the inverse of `elmat_a` twice. In the calculation
+          // of the particular solution, we only use the right block of the matrix.
+          // Therefore, it is beneficial to store the whole matrix,
+          // not just the multiplication expression.
+          const auto elmat_a_inv_expr = invertSVD (U, elmat_a, V, local_heap);
+          FlatMatrix<SCAL> elmat_a_inv (ndof, ndof_constraint + ndof,
+                                        local_heap);
+          // Calculate the matrix entries and write them to memory.
+          elmat_a_inv = elmat_a_inv_expr;
 
           // P = (T1 | T2)
           Matrix<SCAL> elmat_p (ndof, ndof_trefftz + ndof_constraint);
@@ -833,15 +844,16 @@ namespace ngcomp
 
           if (linear_form)
             {
+              // the particular solution only needs to be computed for the
+              // Trefftz part of the element diff. operator.
+              const auto [_, elmat_l_inv]
+                  = elmat_a_inv.SplitCols (ndof_constraint);
+
               Array<shared_ptr<LinearFormIntegrator>> lfis[4];
               calculateLinearFormIntegrators (*linear_form, lfis);
               const auto part_sol = calculateParticularSolution<SCAL> (
                   lfis, fes, element_id, *mesh_access, dofs, ndof,
-                  ndof_trefftz, elmat_a_inv, local_heap);
-              // the solution might have overlapping dofs with other
-              // elements. Therefore, use a mutex to synchronize write-access
-              // to the global solution vector.
-              const std::lock_guard guard (particular_solution_vec_mutex);
+                  ndof_trefftz, elmat_l_inv, local_heap);
               particular_solution_vec->SetIndirect (dofs, part_sol);
             }
         });
@@ -1132,8 +1144,8 @@ void ExportETSpace (py::module m, string label)
 
 /// call `EmbTrefftz` for the ConstrainedTrefftz procedure and pack the
 /// resulting element matrices in a sparse matrix.
-/// Assumption: all shared pointers come from python, so they *should* be safe to dereference.
-/// Exception to that: the `linear_form` can be the `nullptr`.
+/// Assumption: all shared pointers come from python, so they *should* be safe
+/// to dereference. Exception to that: the `linear_form` can be the `nullptr`.
 tuple<shared_ptr<BaseMatrix>, shared_ptr<ngla::BaseVector>>
 pythonConstrTrefftzWithLf (shared_ptr<const SumOfIntegrals> op,
                            shared_ptr<const FESpace> fes,
@@ -1364,8 +1376,7 @@ void ExportEmbTrefftz (py::module m)
    )mydelimiter",
          py::arg ("op"), py::arg ("fes"), py::arg ("cop_lhs"),
          py::arg ("cop_rhs"), py::arg ("fes_constraint"),
-         py::arg("linear_form"),
-         py::arg ("ndof_trefftz"));
+         py::arg ("linear_form"), py::arg ("ndof_trefftz"));
 }
 
 #endif // NGS_PYTHON
