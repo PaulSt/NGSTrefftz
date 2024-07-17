@@ -7,26 +7,6 @@ using namespace ngbla;
 using namespace ngcomp;
 
 template <typename SCAL>
-void invertSvdSigma (const FlatMatrix<SCAL> &sigma,
-                     FlatMatrix<SCAL> &sigma_inv)
-{
-  sigma_inv = 0.;
-  SliceVector<SCAL> sigma_diag = sigma.Diag ();
-  SliceVector<SCAL> sigma_inv_diag = sigma_inv.Diag ();
-  auto sigma_el = sigma_diag.begin ();
-  auto sigma_inv_el = sigma_inv_diag.begin ();
-
-  // Sigma_inv.Diag () = 1.0 / elmat_a.Diag ();
-  while (sigma_el != sigma_diag.end () && abs (*sigma_el) > 1e-10)
-    {
-      *sigma_inv_el = 1.0 / *sigma_el;
-      // increment iterators
-      sigma_el++;
-      sigma_inv_el++;
-    }
-}
-
-template <typename SCAL>
 void reorderMatrixColumns (MatrixView<SCAL> &matrix,
                            const Array<DofId> &dof_nrs, LocalHeap &local_heap)
 {
@@ -468,11 +448,12 @@ namespace ngbla
 }
 
 /// `A = U * Sigma * V`
-/// @return `A^{-1}` (as some `ngbla::Expr` type to avoid allocations)
+/// @return pseudo inverse of A (as some `ngbla::Expr` type to avoid
+/// allocations)
 template <typename SCAL>
 auto invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
                 const FlatMatrix<SCAL> &Sigma,
-                const FlatMatrix<SCAL, ColMajor> &V, LocalHeap &local_heap)
+                const FlatMatrix<SCAL, ColMajor> &V, size_t nz, LocalHeap &lh)
 {
   // let Sigma have dimension (m, n)
   // then U has dimension (m, m),
@@ -481,8 +462,20 @@ auto invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
   auto U_T = Trans (U);
   auto V_T = Trans (V);
   const auto [m, n] = Sigma.Shape ();
-  FlatMatrix<SCAL> Sigma_inv (n, m, local_heap);
-  invertSvdSigma (Sigma, Sigma_inv);
+  FlatMatrix<SCAL> Sigma_inv (n, m, lh);
+  Sigma_inv = 0.;
+  auto Sigma_el = Sigma.Diag ().begin ();
+  auto Sigma_inv_el = Sigma_inv.Diag ().begin ();
+
+  // Sigma_inv.Diag () = 1.0 / elmat_a.Diag ();
+  size_t i = 0;
+  while (Sigma_el != Sigma.Diag ().end () && i < min (m, n) - nz)
+    {
+      *Sigma_inv_el = 1.0 / *Sigma_el;
+      i++;
+      Sigma_el++;
+      Sigma_inv_el++;
+    }
   return V_T * Sigma_inv * U_T;
 }
 
@@ -497,7 +490,7 @@ FlatVector<SCAL>
 calculateParticularSolution (Array<shared_ptr<LinearFormIntegrator>> lfis[4],
                              const FESpace &test_fes, const ElementId ei,
                              const MeshAccess &ma, const Array<DofId> &dofs,
-                             const size_t ndof_test, const size_t trefftz_ndof,
+                             const size_t ndof_test,
                              const Expr<T> &inverse_elmat, LocalHeap &mlh)
 {
   // shall not be deallocated after function scope ends
@@ -507,7 +500,7 @@ calculateParticularSolution (Array<shared_ptr<LinearFormIntegrator>> lfis[4],
   const auto &test_fel = test_fes.GetFE (ei, mlh);
   const auto &trafo = ma.GetTrafo (ei, mlh);
   FlatVector<SCAL> elvec (ndof_test, mlh), elveci (ndof_test, mlh);
-  elvec = static_cast<SCAL>(0.0);
+  elvec = static_cast<SCAL> (0.0);
   for (const auto vorb : { VOL, BND, BBND, BBBND })
     {
       for (const auto &lfi : lfis[vorb])
@@ -645,8 +638,8 @@ namespace ngcomp
       if (lf)
         {
           auto elsol = calculateParticularSolution<SCAL> (
-              lfis, *test_fes, ei, *ma, dofs, test_dofs.Size (), nz,
-              invertSVD (U, elmat, Vt, mlh), mlh);
+              lfis, *test_fes, ei, *ma, dofs, test_dofs.Size (),
+              invertSVD (U, elmat, Vt, nz, mlh), mlh);
           lfvec->SetIndirect (dofs, elsol);
         }
     });
@@ -806,10 +799,11 @@ namespace ngcomp
           getSVD<SCAL> (elmat_a, U, V);
 
           // We use the inverse of `elmat_a` twice. In the calculation
-          // of the particular solution, we only use the right block of the matrix.
-          // Therefore, it is beneficial to store the whole matrix,
-          // not just the multiplication expression.
-          const auto elmat_a_inv_expr = invertSVD (U, elmat_a, V, local_heap);
+          // of the particular solution, we only use the right block of the
+          // matrix. Therefore, it is beneficial to store the whole matrix, not
+          // just the multiplication expression.
+          const auto elmat_a_inv_expr
+              = invertSVD (U, elmat_a, V, ndof_trefftz, local_heap);
           FlatMatrix<SCAL> elmat_a_inv (ndof, ndof_constraint + ndof,
                                         local_heap);
           // Calculate the matrix entries and write them to memory.
@@ -852,8 +846,8 @@ namespace ngcomp
               Array<shared_ptr<LinearFormIntegrator>> lfis[4];
               calculateLinearFormIntegrators (*linear_form, lfis);
               const auto part_sol = calculateParticularSolution<SCAL> (
-                  lfis, fes, element_id, *mesh_access, dofs, ndof,
-                  ndof_trefftz, elmat_l_inv, local_heap);
+                  lfis, fes, element_id, *mesh_access, dofs, ndof, elmat_l_inv,
+                  local_heap);
               particular_solution_vec->SetIndirect (dofs, part_sol);
             }
         });
