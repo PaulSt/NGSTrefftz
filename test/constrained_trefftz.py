@@ -1,6 +1,8 @@
 from typing import Final, List
 from ngsolve import *
 from ngstrefftz import *
+from dg import *
+import time
 
 import dg
 from netgen.geom2d import unit_square
@@ -305,6 +307,42 @@ def test_ConstrainedTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) ->
         Draw(tpgfu)
         input()
     return sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d))
+
+
+def test_constrainted_trefftz_with_rhs(order, order_constraint):
+    """
+    >>> test_constrainted_trefftz_with_rhs(5, 3) # doctest:+ELLIPSIS
+    4...e-09
+    """
+    mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
+    fes = L2(mesh2d, order=order, dgjumps=True)
+    mesh = fes.mesh
+    start = time.time()
+    u, v = fes.TnT()
+    uh = u.Operator("hesse")
+    vh = v.Operator("hesse")
+    op = (uh[0, 0] + uh[1, 1]) * (vh[0, 0] + vh[1, 1]) * dx
+    rhs = -exactpoi.Diff(x).Diff(x) - exactpoi.Diff(y).Diff(y)
+    lop = -rhs * (vh[0, 0] + vh[1, 1]) * dx
+
+    fes_constraint = FacetFESpace(
+        mesh2d, order=order_constraint
+    )  # ,all_dofs_together=True)
+    uF, vF = fes_constraint.TnT()
+    cop_lhs = u * vF * dx(element_boundary=True)
+    cop_rhs = uF * vF * dx(element_boundary=True)
+
+    with TaskManager():
+        PP, ufv = TrefftzEmbedding(
+            op, fes, cop_lhs, cop_rhs, fes_constraint, lop, 2 * order + 3 - 1
+        )
+    PPT = PP.CreateTranspose()
+    a, f = dgell(fes, exactpoi, rhs)
+    TA = PPT @ a.mat @ PP
+    TU = TA.Inverse() * (PPT * (f.vec - a.mat * ufv))
+    tpgfu = GridFunction(fes)
+    tpgfu.vec.data = PP * TU + ufv
+    return sqrt(Integrate((tpgfu - exactpoi) ** 2, mesh))
 
 
 if __name__ == "__main__":

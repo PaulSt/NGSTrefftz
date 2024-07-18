@@ -40,11 +40,11 @@ namespace ngcomp
   ///  represented as a vector of all element matrices.
   template <typename SCAL>
   tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<ngla::BaseVector>>
-  EmbTrefftz (shared_ptr<const SumOfIntegrals> op,
-              shared_ptr<const FESpace> fes,
-              shared_ptr<const ngfem::SumOfIntegrals> cop_lhs,
-              shared_ptr<const ngfem::SumOfIntegrals> cop_rhs,
-              shared_ptr<const FESpace> fes_constraint,
+  EmbTrefftz (const SumOfIntegrals &op, const FESpace &fes,
+              const ngfem::SumOfIntegrals &cop_lhs,
+              const ngfem::SumOfIntegrals &cop_rhs,
+              const FESpace &fes_constraint,
+              shared_ptr<const ngfem::SumOfIntegrals> linear_form,
               const size_t ndof_trefftz);
 
   template <typename T, typename shrdT>
