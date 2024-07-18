@@ -119,6 +119,12 @@ namespace ngcomp
     UpdateBasis ();
   }
 
+  TrefftzFESpace ::~TrefftzFESpace ()
+  {
+    delete basis;
+    this->GetMeshAccess ()->updateSignal.Remove (this);
+  }
+
   void TrefftzFESpace ::UpdateBasis ()
   {
     string eqtyp = this->eqtyp;

@@ -139,10 +139,11 @@ namespace ngcomp
 
     CSR basismat;
     Vector<CSR> basismats;
-    PolBasis *basis;
+    PolBasis *basis = NULL;
 
   public:
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
+    ~TrefftzFESpace ();
     void SetCoeff (double acoeff_const);
     void SetCoeff (shared_ptr<CoefficientFunction> acoeffA,
                    shared_ptr<CoefficientFunction> acoeffB = nullptr,
