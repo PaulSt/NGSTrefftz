@@ -119,11 +119,29 @@ namespace ngcomp
     UpdateBasis ();
   }
 
-  TrefftzFESpace ::~TrefftzFESpace ()
+  void TrefftzFESpace ::Update ()
   {
-    delete basis;
-    this->GetMeshAccess ()->updateSignal.Remove (this);
+    // FESpace::Update();
+    nel = ma->GetNE ();
+    ndof = local_ndof * nel;
+    SetNDof (ndof);
+    UpdateCouplingDofArray ();
   }
+
+  void TrefftzFESpace ::UpdateCouplingDofArray ()
+  {
+    ctofdof.SetSize (ndof);
+    for (auto i : Range (ma->GetNE ()))
+      {
+        bool definedon = DefinedOn (ElementId (VOL, i));
+        Array<DofId> dofs;
+        this->GetDofNrs (i, dofs);
+        for (auto r : dofs)
+          ctofdof[r] = definedon ? LOCAL_DOF : UNUSED_DOF;
+      }
+  }
+
+  TrefftzFESpace ::~TrefftzFESpace () { delete basis; }
 
   void TrefftzFESpace ::UpdateBasis ()
   {
@@ -1582,7 +1600,6 @@ void ExportTrefftzFESpace (py::module m)
 
   ExportFESpace<TrefftzFESpace> (m, "trefftzfespace")
       .def ("GetDocu", &TrefftzFESpace::GetDocu)
-      .def ("GetNDof", &TrefftzFESpace::GetNDof)
       .def ("SetCoeff",
             static_cast<void (TrefftzFESpace::*) (double)> (
                 &TrefftzFESpace::SetCoeff),

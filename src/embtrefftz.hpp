@@ -82,10 +82,6 @@ namespace ngcomp
       // this->FinalizeUpdate();
     }
 
-    void Update () override { ; };
-
-    void UpdateCouplingDofArray () override { ; }
-
     shared_ptr<BaseVector>
     SetOp (shared_ptr<SumOfIntegrals> bf, shared_ptr<SumOfIntegrals> lf,
            double eps, shared_ptr<FESpace> test_fes, int tndof);

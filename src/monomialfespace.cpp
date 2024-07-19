@@ -54,6 +54,9 @@ namespace ngcomp
   void MonomialFESpace ::Update ()
   {
     FESpace::Update ();
+    nel = ma->GetNE ();
+    ndof = local_ndof * nel;
+    SetNDof (ndof);
     UpdateCouplingDofArray ();
   }
 

@@ -26,16 +26,13 @@ namespace ngcomp
       coeff_cf = acoeff_cf;
     }
 
-    string GetClassName () const override { return "monomialfespace"; }
-
     void Update () override;
-
-    void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
-
     virtual void UpdateCouplingDofArray () override;
 
+    void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
     FiniteElement &GetFE (ElementId ei, Allocator &alloc) const override;
 
+    string GetClassName () const override { return "monomialfespace"; }
     static DocInfo GetDocu ();
 
   protected:

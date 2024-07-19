@@ -139,11 +139,13 @@ namespace ngcomp
 
     CSR basismat;
     Vector<CSR> basismats;
-    PolBasis *basis = NULL;
+    PolBasis *basis = nullptr;
 
   public:
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
     ~TrefftzFESpace ();
+    void Update () override;
+    void UpdateCouplingDofArray () override;
     void SetCoeff (double acoeff_const);
     void SetCoeff (shared_ptr<CoefficientFunction> acoeffA,
                    shared_ptr<CoefficientFunction> acoeffB = nullptr,
@@ -154,7 +156,6 @@ namespace ngcomp
     string GetClassName () const override { return "trefftz"; }
     void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
     FiniteElement &GetFE (ElementId ei, Allocator &alloc) const override;
-    size_t GetNDof () const override { return ndof; }
     static DocInfo GetDocu ();
 
   protected:
