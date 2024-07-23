@@ -469,7 +469,7 @@ auto invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
 
   // Sigma_inv.Diag () = 1.0 / elmat_a.Diag ();
   size_t i = 0;
-  while (Sigma_el != Sigma.Diag ().end () && i < min (m, n) - nz)
+  while (Sigma_el != Sigma.Diag ().end () && i < max (m, n) - nz)
     {
       *Sigma_inv_el = 1.0 / *Sigma_el;
       i++;
