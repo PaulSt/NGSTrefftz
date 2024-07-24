@@ -243,6 +243,116 @@ def testembtrefftzhelm(fes):
 
 
 ########################################################################
+# Stokes
+########################################################################
+
+def SolveStokes(mesh, k, nu, coeff, trefftz=True, ubnd=None, bndname="inflow"):
+    """
+    >>> nu = 1.0
+    >>> zeta = cos(pi*x*(1-x)*y*(1-y))
+    >>> pexact = sin(pi*(x+y))
+    >>> uexact = CF((zeta.Diff(y), - zeta.Diff(x)))
+    >>> graduexact = CF((uexact.Diff(x),uexact.Diff(y)),dims=(2,2)).trans
+    >>> f1 = - nu*uexact[0].Diff(x).Diff(x) - nu*uexact[0].Diff(y).Diff(y) + pexact.Diff(x)
+    >>> f2 = - nu*uexact[1].Diff(x).Diff(x) - nu*uexact[1].Diff(y).Diff(y) + pexact.Diff(y)
+    >>> f = CF((f1,f2))
+
+    >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3) )
+    >>> k = 5
+    >>> uh, ph = SolveStokes(mesh, k, nu, f, trefftz=True) 
+    >>> sqrt(Integrate(InnerProduct(uexact-uh,uexact-uh),mesh)) # doctest:+ELLIPSIS
+    1...e-05
+    >>> sqrt(Integrate(InnerProduct(pexact-ph,pexact-ph),mesh)) # doctest:+ELLIPSIS
+    0.001...
+    """
+
+    V = VectorL2(mesh, order=k, dgjumps=True)
+    Q = L2(mesh, order=k - 1, dgjumps=True)
+    Z = NumberSpace(mesh)
+    fes = V * Q * Z
+    u, v = fes.TrialFunction()[0], fes.TestFunction()[0]
+    p, q = fes.TrialFunction()[1], fes.TestFunction()[1]
+    lam, mu = fes.TrialFunction()[-1], fes.TestFunction()[-1]
+
+    alpha = 20  # interior penalty param
+    stab = 1e-9
+
+    n = specialcf.normal(mesh.dim)
+    h = specialcf.mesh_size
+
+    jump_u = u - u.Other()
+    jump_v = v - v.Other()
+    mean_dudn = 0.5 * (grad(u) + grad(u.Other())) * n
+    mean_dvdn = 0.5 * (grad(v) + grad(v.Other())) * n
+    mean_q = 0.5 * n * (q + q.Other())
+    mean_p = 0.5 * n * (p + p.Other())
+
+    a = BilinearForm(fes)
+    a += nu * InnerProduct(grad(u), grad(v)) * dx
+    a += nu * alpha * k**2 / h * jump_u * jump_v * dx(skeleton=True)
+    a += nu * (-mean_dudn * jump_v - mean_dvdn * jump_u) * dx(skeleton=True)
+    a += nu * alpha * k**2 / h * u * v * ds(skeleton=True)
+    a += nu * (-grad(u) * n * v - grad(v) * n * u) * ds(skeleton=True)
+    a += (mean_p * jump_v + mean_q * jump_u) * dx(skeleton=True)
+    a += (p * v * n + q * u * n) * ds(skeleton=True)
+    if not trefftz:
+        a += (-div(u) * q - div(v) * p) * dx
+    a += (p * mu + q * lam) * dx
+    a.Assemble()
+
+    c = BilinearForm(fes)
+    for i in a.integrators:
+        c += i
+    c += -stab * p * q * dx
+    c += stab * lam * mu * dx
+    c.Assemble()
+
+    f = LinearForm(fes)
+    f += coeff * v * dx(bonus_intorder=5)
+    if ubnd:
+        f += nu * alpha * k**2 / h * ubnd * v * ds(skeleton=True, definedon=mesh.Boundaries(bndname))
+        f += nu * (- grad(v) * n * ubnd) * ds(skeleton=True, definedon=mesh.Boundaries(bndname))
+    f.Assemble()
+
+    gfu = GridFunction(fes)
+    if trefftz:
+        for i in range(V.ndof + Q.ndof, fes.ndof):
+            fes.SetCouplingType(i, COUPLING_TYPE.HIDDEN_DOF)
+        # ignoredofs = BitArray(fes.ndof)
+        # ignoredofs[:] = False
+        # for i in range(V.ndof + Q.ndof, fes.ndof):
+            # ignoredofs[i] = True
+        Vs = VectorL2(mesh, order=k - 2)
+        Qs = L2(mesh, order=k - 1)
+        test_fes = Vs * Qs
+        wu, wp = test_fes.TestFunction()[0:2]
+
+        op = nu*InnerProduct( grad(u),grad(wu) ) * dx \
+            - nu*InnerProduct(grad(u)*n,wu) * dx(element_boundary=True) \
+            + InnerProduct(grad(p),wu) * dx + div(u)*wp*dx
+
+        timer = time.time()
+        lop = coeff * wu * dx(bonus_intorder=10)
+        PP, uf = TrefftzEmbedding(op,
+                                  fes,
+                                  lop,
+                                  test_fes=test_fes)#, ignoredofs=ignoredofs)
+        PPT = PP.CreateTranspose()
+        # print(f"Trefftz embedding setup {time.time() - timer:5f} seconds")
+
+        timer = time.time()
+        TA = PPT @ a.mat @ PP
+        TC = PPT @ c.mat @ PP
+        Tgfu = CGSolver(TA, TC.Inverse()) * (PPT * (f.vec - a.mat * uf))
+        gfu.vec.data = PP * Tgfu + uf
+        # print(f"Trefftz embedding solve {time.time() - timer:5f} seconds")
+    else:
+        gfu.vec.data = CGSolver(a.mat, c.mat.Inverse()) * f.vec
+
+    uh, ph = gfu.components[0:2]
+    return uh, ph
+
+########################################################################
 # EmbTrefftzFESpace
 ########################################################################
 
