@@ -80,13 +80,11 @@ inline void addIntegrationToElementMatrix (
 }
 
 template <typename SCAL>
-void extractVisibleDofs (FlatMatrix<SCAL> elmat, const ElementId &element_id,
+void extractVisibleDofs (FlatMatrix<SCAL> &elmat, const ElementId &element_id,
                          const FESpace &fes, const FESpace &test_fes,
                          Array<DofId> &dofs, Array<DofId> &test_dofs,
                          LocalHeap &local_heap)
 {
-  const HeapReset hr (local_heap);
-
   Array<DofId> vdofs, vtest_dofs;
   fes.GetDofNrs (element_id, vdofs, VISIBLE_DOF);
   test_fes.GetDofNrs (element_id, vtest_dofs, VISIBLE_DOF);
