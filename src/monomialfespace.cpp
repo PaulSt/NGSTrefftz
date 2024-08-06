@@ -90,16 +90,15 @@ namespace ngcomp
 
     if (ei.IsVolume ())
       {
-        switch (ma->GetElType (ei))
+        switch (D)
           {
-          case ET_POINT:
-          case ET_SEGM:
+          case 0:
+          case 1:
             {
-              throw Exception ("illegal dim for space-time element");
+              throw Exception ("dim not supported in MonomialFESpace");
               break;
             }
-          case ET_QUAD:
-          case ET_TRIG:
+          case 2:
             {
               Vec<2> scale = 1.0;
               if (usescale == 2)
@@ -112,10 +111,7 @@ namespace ngcomp
                   scale));
               break;
             }
-          case ET_HEX:
-          case ET_PRISM:
-          case ET_PYRAMID:
-          case ET_TET:
+          case 3:
             {
               Vec<3> scale = 1.0;
               if (usescale == 2)
