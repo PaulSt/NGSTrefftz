@@ -342,7 +342,7 @@ namespace ngcomp
       this->ComputeDerivs<D> (order, coeffF, FFder);
     }
     void GetParticularSolution (Vec<D> ElCenter, Vec<D> elsize,
-                                FlatVector<> sol, LocalHeap &lh);
+                                FlatVector<> sol, LocalHeap &lh) override;
   };
 }
 

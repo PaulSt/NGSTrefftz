@@ -329,16 +329,15 @@ namespace ngcomp
             });
           }
 
-        switch (ma->GetElType (ei))
+        switch (D)
           {
-          case ET_POINT:
-          case ET_SEGM:
+          case 0:
+          case 1:
             {
-              // throw Exception ("illegal dim for space-time element");
+              throw Exception ("dim not supported in TrefftzFESpace");
               break;
             }
-          case ET_QUAD:
-          case ET_TRIG:
+          case 2:
             {
               if (eqtyp == "qtwave")
                 {
@@ -415,10 +414,7 @@ namespace ngcomp
                 }
               break;
             }
-          case ET_HEX:
-          case ET_PRISM:
-          case ET_PYRAMID:
-          case ET_TET:
+          case 3:
             {
               if (eqtyp == "qtwave")
                 {
