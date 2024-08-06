@@ -451,7 +451,8 @@ namespace ngbla
 template <typename SCAL>
 auto invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
                 const FlatMatrix<SCAL> &Sigma,
-                const FlatMatrix<SCAL, ColMajor> &V, size_t nz, LocalHeap &lh)
+                const FlatMatrix<SCAL, ColMajor> &V, LocalHeap &lh,
+                size_t nz = 0)
 {
   // let Sigma have dimension (m, n)
   // then U has dimension (m, m),
@@ -467,7 +468,8 @@ auto invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
 
   // Sigma_inv.Diag () = 1.0 / elmat_a.Diag ();
   size_t i = 0;
-  while (Sigma_el != Sigma.Diag ().end () && i < max (m, n) - nz)
+  // while (Sigma_el != Sigma.Diag().end () && abs (*Sigma_el) > 1e-10)
+  while (nz > 0 ? i < max (m, n) - nz : abs (*Sigma_el) > 1e-10)
     {
       *Sigma_inv_el = 1.0 / *Sigma_el;
       i++;
@@ -637,7 +639,7 @@ namespace ngcomp
         {
           auto elsol = calculateParticularSolution<SCAL> (
               lfis, *test_fes, ei, *ma, dofs, test_dofs.Size (),
-              invertSVD (U, elmat, Vt, nz, mlh), mlh);
+              invertSVD (U, elmat, Vt, mlh, nz), mlh);
           lfvec->SetIndirect (dofs, elsol);
         }
     });
@@ -669,7 +671,7 @@ namespace ngcomp
   template <typename SCAL>
   tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<ngla::BaseVector>>
   EmbTrefftz (const SumOfIntegrals &op, const FESpace &fes,
-              const ngfem::SumOfIntegrals &cop_lhs,
+              const FESpace &fes_test, const ngfem::SumOfIntegrals &cop_lhs,
               const ngfem::SumOfIntegrals &cop_rhs,
               const FESpace &fes_constraint,
               shared_ptr<const ngfem::SumOfIntegrals> linear_form,
@@ -727,8 +729,9 @@ namespace ngcomp
               || !bfIsDefinedOnElement (cop_rhs, mesh_element))
             return;
 
-          Array<DofId> dofs, dofs_constraint;
+          Array<DofId> dofs, dofs_test, dofs_constraint;
           fes.GetDofNrs (element_id, dofs);
+          fes_test.GetDofNrs (element_id, dofs_test);
           fes_constraint.GetDofNrs (element_id, dofs_constraint);
 
           //     /   \    /   \
@@ -739,9 +742,10 @@ namespace ngcomp
           // L.shape == (ndof, ndof)
           // thus A.shape == (ndof + ndof_constraint, ndof)
           const size_t ndof = dofs.Size ();
+          const size_t ndof_test = dofs_test.Size ();
           const size_t ndof_constraint = dofs_constraint.Size ();
-          auto elmat_a
-              = FlatMatrix<SCAL> (ndof + ndof_constraint, ndof, local_heap);
+          auto elmat_a = FlatMatrix<SCAL> (ndof_test + ndof_constraint, ndof,
+                                           local_heap);
           auto [elmat_b1, elmat_l] = elmat_a.SplitRows (ndof_constraint);
 
           //     /   \    /   \
@@ -750,7 +754,7 @@ namespace ngcomp
           //     \   /    \   /
           // with B_2.shape == (ndof_constraint, ndof_constraint),
           // and B.shape == ( ndof_constraint + ndof, ndof_constraint)
-          auto elmat_b = FlatMatrix<SCAL> (ndof + ndof_constraint,
+          auto elmat_b = FlatMatrix<SCAL> (ndof_test + ndof_constraint,
                                            ndof_constraint, local_heap
 
           );
@@ -762,8 +766,8 @@ namespace ngcomp
 
           // the diff. operator L operates only on volume terms
           addIntegrationToElementMatrix (elmat_l, op_integrators[VOL],
-                                         *mesh_access, element_id, fes, fes,
-                                         local_heap);
+                                         *mesh_access, element_id, fes,
+                                         fes_test, local_heap);
           for (const auto vorb : { VOL, BND, BBND, BBBND })
             {
               addIntegrationToElementMatrix (
@@ -784,7 +788,9 @@ namespace ngcomp
           // #TODO is this really necessary?
           reorderMatrixColumns (elmat_b2, dofs_constraint, local_heap);
 
-          (*testout) << "elmat_a:\n" << elmat_a << std::endl;
+          //(*testout) << "elmat_a:\n" << elmat_a << std::endl;
+          (*testout) << "calculated elmat_a on element:\n"
+                     << element_id << std::endl;
 
           // singular value decomposition of elmat_a:
           // U * sigma * V = elmat_a
@@ -792,7 +798,8 @@ namespace ngcomp
           // let elmat_a have dimension (m, n)
           // the U has dimension (m, m),
           // and V has dimension (n, n)
-          FlatMatrix<SCAL, ColMajor> U (ndof_constraint + ndof, local_heap),
+          FlatMatrix<SCAL, ColMajor> U (ndof_constraint + ndof_test,
+                                        local_heap),
               V (ndof, local_heap);
           getSVD<SCAL> (elmat_a, U, V);
 
@@ -800,9 +807,8 @@ namespace ngcomp
           // of the particular solution, we only use the right block of the
           // matrix. Therefore, it is beneficial to store the whole matrix, not
           // just the multiplication expression.
-          const auto elmat_a_inv_expr
-              = invertSVD (U, elmat_a, V, ndof_trefftz, local_heap);
-          FlatMatrix<SCAL> elmat_a_inv (ndof, ndof_constraint + ndof,
+          const auto elmat_a_inv_expr = invertSVD (U, elmat_a, V, local_heap);
+          FlatMatrix<SCAL> elmat_a_inv (ndof, ndof_constraint + ndof_test,
                                         local_heap);
           // Calculate the matrix entries and write them to memory.
           elmat_a_inv = elmat_a_inv_expr;
@@ -819,20 +825,29 @@ namespace ngcomp
           // B has dimension (ndof + ndof_constraint, ndof_constraint),
           // so T1 has dimension (ndof, ndof_constraint)
           elmat_t1 = elmat_a_inv * elmat_b;
-          (*testout) << "t1 from element " << element_id << "\n"
-                     << elmat_t1 << std::endl;
+          //(*testout) << "t1 from element " << element_id << "\n"
+          //           << elmat_t1 << std::endl;
+          (*testout) << "calculated t1 from element " << element_id << "\n"
+                     << std::endl;
 
-          elmat_t2 = Trans (V.Rows (ndof - ndof_trefftz, ndof));
-          (*testout) << "t2 from element " << element_id << "\n"
-                     << elmat_t2 << std::endl;
+          elmat_t2 = Trans (V.Rows (ndof_test - ndof_trefftz, ndof_test));
+          //(*testout) << "t2 from element " << element_id << "\n"
+          //           << elmat_t2 << std::endl;
+          (*testout) << "calculated t2 from element " << element_id << "\n"
+                     << std::endl;
 
-          (*testout) << "elmat_p shape: (" << ndof << ", "
-                     << ndof_constraint + ndof_trefftz << ")" << std::endl;
+          //(*testout) << "elmat_p shape: (" << ndof << ", "
+          //           << ndof_constraint + ndof_trefftz << ")" << std::endl;
 
-          (*testout) << "p from element " << element_id << "\n"
-                     << elmat_p << std::endl;
+          //(*testout) << "p from element " << element_id << "\n"
+          //           << elmat_p << std::endl;
+          (*testout) << "calculated p from element " << element_id << "\n"
+                     << std::endl;
           element_matrices[element_id.Nr ()]
               = make_shared<Matrix<SCAL>> (elmat_p);
+          (*testout) << "allocated p as a shared pointer for element "
+                     << element_id << "\n"
+                     << std::endl;
 
           if (linear_form)
             {
@@ -840,13 +855,22 @@ namespace ngcomp
               // Trefftz part of the element diff. operator.
               const auto [_, elmat_l_inv]
                   = elmat_a_inv.SplitCols (ndof_constraint);
+              (*testout) << "got elmat_l pseudoinverse for element "
+                         << element_id << "\n"
+                         << std::endl;
 
               Array<shared_ptr<LinearFormIntegrator>> lfis[4];
               calculateLinearFormIntegrators (*linear_form, lfis);
               const auto part_sol = calculateParticularSolution<SCAL> (
-                  lfis, fes, element_id, *mesh_access, dofs, ndof, elmat_l_inv,
-                  local_heap);
+                  lfis, fes_test, element_id, *mesh_access, dofs, ndof_test,
+                  elmat_l_inv, local_heap);
+              (*testout) << "calculated particular solution on element "
+                         << element_id << "\n"
+                         << std::endl;
               particular_solution_vec->SetIndirect (dofs, part_sol);
+              (*testout) << "wrote particular solution on element "
+                         << element_id << "\n"
+                         << std::endl;
             }
         });
 
@@ -1145,11 +1169,16 @@ pythonConstrTrefftzWithLf (shared_ptr<const SumOfIntegrals> op,
                            shared_ptr<const ngfem::SumOfIntegrals> cop_rhs,
                            shared_ptr<const FESpace> fes_constraint,
                            shared_ptr<ngfem::SumOfIntegrals> linear_form,
-                           const size_t ndof_trefftz)
+                           const size_t ndof_trefftz,
+                           shared_ptr<FESpace> fes_test_ptr)
 {
+  // if fes_test is null, i.e. no test space is given, use fes as trial and
+  // test space
+  const FESpace &fes_test = (fes_test_ptr) ? *fes_test_ptr : *fes;
+
   auto [P, u_lf]
-      = EmbTrefftz<double> (*op, *fes, *cop_lhs, *cop_rhs, *fes_constraint,
-                            linear_form, ndof_trefftz);
+      = EmbTrefftz<double> (*op, *fes, fes_test, *cop_lhs, *cop_rhs,
+                            *fes_constraint, linear_form, ndof_trefftz);
   return std::make_tuple (ngcomp::Elmats2SparseConstrainedTrefftz<double> (
                               P, fes, fes_constraint, ndof_trefftz),
                           u_lf);
@@ -1162,10 +1191,11 @@ pythonConstrTrefftz (shared_ptr<SumOfIntegrals> op, shared_ptr<FESpace> fes,
                      shared_ptr<ngfem::SumOfIntegrals> cop_lhs,
                      shared_ptr<ngfem::SumOfIntegrals> cop_rhs,
                      shared_ptr<FESpace> fes_constraint,
-                     const size_t ndof_trefftz)
+                     const size_t ndof_trefftz, shared_ptr<FESpace> fes_test)
 {
-  return std::get<0> (pythonConstrTrefftzWithLf (
-      op, fes, cop_lhs, cop_rhs, fes_constraint, nullptr, ndof_trefftz));
+  return std::get<0> (pythonConstrTrefftzWithLf (op, fes, cop_lhs, cop_rhs,
+                                                 fes_constraint, nullptr,
+                                                 ndof_trefftz, fes_test));
 }
 
 /// call `EmbTrefftz` for the plain embedded Trefftz procedure and pack the
@@ -1344,7 +1374,7 @@ void ExportEmbTrefftz (py::module m)
    )mydelimiter",
          py::arg ("op"), py::arg ("fes"), py::arg ("cop_lhs"),
          py::arg ("cop_rhs"), py::arg ("fes_constraint"),
-         py::arg ("ndof_trefftz"));
+         py::arg ("ndof_trefftz"), py::arg ("fes_test") = nullptr);
 
   m.def ("TrefftzEmbedding", &pythonConstrTrefftzWithLf,
          R"mydelimiter(
@@ -1368,7 +1398,8 @@ void ExportEmbTrefftz (py::module m)
    )mydelimiter",
          py::arg ("op"), py::arg ("fes"), py::arg ("cop_lhs"),
          py::arg ("cop_rhs"), py::arg ("fes_constraint"),
-         py::arg ("linear_form"), py::arg ("ndof_trefftz"));
+         py::arg ("linear_form"), py::arg ("ndof_trefftz"),
+         py::arg ("fes_test") = nullptr);
 }
 
 #endif // NGS_PYTHON
