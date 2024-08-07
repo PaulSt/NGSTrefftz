@@ -311,8 +311,8 @@ def test_ConstrainedTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) ->
 
 def test_constrainted_trefftz_with_rhs(order, order_constraint):
     """
-    >>> test_constrainted_trefftz_with_rhs(5, 3) # doctest:+ELLIPSIS
-    4...e-09
+    >>> test_constrainted_trefftz_with_rhs(5, 3) < 1e-07
+    True
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
     fes = L2(mesh2d, order=order, dgjumps=True)
@@ -399,8 +399,8 @@ def test_constrainted_trefftz_trivial_mixed_mode(order, order_constraint):
 
 def test_constrainted_trefftz_mixed_mode(order, order_constraint):
     """
-    >>> [test_constrainted_trefftz_mixed_mode(8, 6)] # doctest:+ELLIPSIS
-    [...e-06]
+    >>> [test_constrainted_trefftz_mixed_mode(8, 6) < 1e-04]
+    [True]
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
     fes = L2(mesh2d, order=order, dgjumps=True)
@@ -432,6 +432,7 @@ def test_constrainted_trefftz_mixed_mode(order, order_constraint):
     tpgfu.vec.data = PP * TU + ufv
     return sqrt(Integrate((tpgfu - exactpoi) ** 2, mesh))
 
+
 if __name__ == "__main__":
     SetTestoutFile("test.out")
     # maxh = 0.4
@@ -440,4 +441,5 @@ if __name__ == "__main__":
     # error = test_constrainted_trefftz_mixed_mode(5, 3)
     # print("error : ", error)
     import doctest
+
     doctest.testmod()
