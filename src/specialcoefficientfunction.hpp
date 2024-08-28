@@ -61,6 +61,32 @@ namespace ngfem
     virtual double Evaluate (const BaseMappedIntegrationPoint &ip) const;
   };
 
+  /**
+   * \class PrintCF
+   * \brief A class that represents a coefficient function for printing
+   * integration point values to a CSV file.
+   *
+   * This class inherits from the CoefficientFunction class and provides
+   * functionality for writing the the world coordinates of evaluated mapped
+   * integration points to a CSV file.
+   */
+  class PrintCF : public CoefficientFunction
+  {
+    string filename = "printcf.csv";
+    shared_ptr<ofstream> ofs = nullptr;
+
+  public:
+    PrintCF (const string &a_filename)
+    {
+      filename = a_filename;
+      ofs = make_shared<ofstream> (filename);
+    }
+
+    double Evaluate (const BaseMappedIntegrationPoint &mip) const;
+
+    ~PrintCF () { ofs->close (); }
+  };
+
 }
 
 #ifdef NGS_PYTHON

@@ -3,8 +3,12 @@
 #include <comp.hpp>
 #include <python_comp.hpp>
 #include <fem.hpp>
-#include <integratorcf.hpp>
 #include <bla.hpp>
+
+#ifndef FILE_INTEGRATORCFHPP
+#include <integratorcf.hpp>
+#define FILE_INTEGRATORCFHPP
+#endif
 
 namespace ngcomp
 {

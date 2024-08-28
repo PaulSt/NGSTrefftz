@@ -256,6 +256,22 @@ namespace ngfem
   //}
   //};
 
+  double PrintCF::Evaluate (const BaseMappedIntegrationPoint &mip) const
+  {
+    if (ofs)
+      {
+        for (int i = 0; i < mip.GetTransformation ().SpaceDim (); i++)
+          {
+            if (i > 0)
+              *ofs << "\t";
+            *ofs << mip.GetPoint ()[i];
+          }
+        *ofs << "\t" << mip.GetWeight ();
+        *ofs << endl;
+      }
+    return 1.0;
+  }
+
 }
 
 #ifdef NGS_PYTHON
@@ -303,5 +319,18 @@ void ExportSpecialCoefficientFunction (py::module m)
   // shared_ptr<TrefftzCoefficientFunction>, CoefficientFunction> (m,
   //"TrefftzCoefficient", "") .def(py::init<>()) .def(py::init<int>())
   //;
+
+  py::class_<PrintCF, shared_ptr<PrintCF>, CoefficientFunction> (
+      m, "PrintCF", docu_string (R"raw_string(
+CoefficientFunction that writes integration point (in world coords.) 
+into a file whenever evaluated at one.
+)raw_string"))
+      .def (py::init ([] (const string &a_filename) -> shared_ptr<PrintCF> {
+              return make_shared<PrintCF> (a_filename);
+            }),
+            py::arg ("filename"), docu_string (R"raw_string(
+Constructor of PrintCF (integration point (in world coords.) printing coefficientfunction).
+  Argument: filename (string) : name of the file where the values shall be printed
+)raw_string"));
 }
 #endif // NGS_PYTHON

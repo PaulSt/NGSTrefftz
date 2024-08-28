@@ -14,6 +14,7 @@
 #include "monomialfespace.hpp"
 #include "pufespace.hpp"
 #include "condensedg.hpp"
+#include "boxintegral.hpp"
 // #include "airy.cpp"
 
 PYBIND11_MODULE (_trefftz, m)
@@ -32,6 +33,7 @@ PYBIND11_MODULE (_trefftz, m)
   ExportMonomialFESpace (m);
   ExportPUFESpace (m);
   ExportCondenseDG (m);
+  ExportBoxIntegral (m);
   // ExportStdMathFunction<GenericAiry>(m, "airy", "airy function");
   // ExportStdMathFunction<GenericAiryP>(m, "airyp", "airyp function");
 }

@@ -4,8 +4,6 @@ from ngsolve import *
 from ngstrefftz import *
 from dg import *
 import time
-from netgen.geom2d import unit_square
-from netgen.csg import unit_cube
 SetNumThreads(3)
 
 ########################################################################

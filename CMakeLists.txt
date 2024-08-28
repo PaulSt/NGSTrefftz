@@ -35,6 +35,7 @@ add_ngsolve_addon( _trefftz
     src/condensedg.cpp
     src/pufe.cpp
     src/pufespace.cpp
+    src/boxintegral.cpp
     #src/airy.cpp #for testing, requires boost
   )
 target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_EXPORTS)
@@ -184,11 +185,13 @@ file(COPY
     ${CMAKE_SOURCE_DIR}/test/trefftz.py
     ${CMAKE_SOURCE_DIR}/test/tents.py
     ${CMAKE_SOURCE_DIR}/test/constrained_trefftz.py
+    ${CMAKE_SOURCE_DIR}/test/boxint.py
     DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing)
 add_test(NAME embtrefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/embt.py)
 add_test(NAME constrained_trefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/constrained_trefftz.py)
 add_test(NAME trefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/trefftz.py)
 add_test(NAME tents COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/tents.py)
+add_test(NAME box COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/boxint.py)
 #WORKING_DIRECTORY ${ CMAKE_CURRENT_SOURCE_DIR }
 set_tests_properties(embtrefftz trefftz tents
     PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON}:$ENV{PYTHONPATH}")
