@@ -6,6 +6,13 @@
 using namespace ngbla;
 using namespace ngcomp;
 
+/// @returns the number of threads, that nngsolve might use.
+int getNumberOfThreads ()
+{
+  // if no task manager is available, ngsolve will run sequentially.
+  return (task_manager) ? task_manager->GetNumThreads () : 1;
+}
+
 template <typename SCAL>
 void reorderMatrixColumns (MatrixView<SCAL> &matrix,
                            const Array<DofId> &dof_nrs, LocalHeap &local_heap)
@@ -681,7 +688,7 @@ namespace ngcomp
     const size_t num_elements = mesh_access->GetNE (VOL);
     // #TODO what is a good size for the local heap?
     // For the moment: large enough constant size.
-    LocalHeap local_heap = LocalHeap (1000 * 1000 * 1000);
+    LocalHeap local_heap = LocalHeap (getNumberOfThreads () * 1000 * 1000);
     const size_t dim = fes.GetDimension ();
     const size_t dim_constraint = fes_constraint.GetDimension ();
 
