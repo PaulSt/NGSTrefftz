@@ -538,7 +538,7 @@ namespace ngcomp
   {
     static Timer svdtt ("svdtrefftz");
     RegionTimer reg (svdtt);
-    LocalHeap lh (1000 * 1000 * 1000);
+    LocalHeap lh (getNumberOfThreads () * 1000 * 1000);
 
     if (eps == 0 && tndof == 0 && test_fes == nullptr)
       throw Exception ("Need to specify eps, tndof, or test_fes");
