@@ -5,8 +5,103 @@
 #include "monomialfespace.hpp"
 #include "diffopmapped.hpp"
 
+/// @returns the corresponding `EqType`.
+/// @throws an `Exception`, if the input String has no associated `EqType`.
+EqType stringToEqType (const std::string str)
+{
+  if (str == "fowave")
+    return EqType::fowave;
+  else if (str == "foqtwave")
+    return EqType::foqtwave;
+  else if (str == "wave")
+    return EqType::wave;
+  else if (str == "fowave_reduced")
+    return EqType::fowave_reduced;
+  else if (str == "heat")
+    return EqType::heat;
+  else if (str == "qtheat")
+    return EqType::qtheat;
+  else if (str == "laplace")
+    return EqType::laplace;
+  else if (str == "qtelliptic")
+    return EqType::qtelliptic;
+  else if (str == "helmholtz")
+    return EqType::helmholtz;
+  else if (str == "helmholtzconj")
+    return EqType::helmholtzconj;
+  else if (str == "qtwave")
+    return EqType::qtwave;
+  else
+    throw Exception ("TrefftzFESpace: unknown EqType");
+}
+
 namespace ngcomp
 {
+  int TrefftzFESpace::calcLocalNdofs () const
+  {
+    switch (eqtype)
+      {
+      case EqType::fowave:
+      case EqType::foqtwave:
+        return (D)*BinCoeff (D - 1 + order, D - 1);
+      case EqType::wave:
+        return BinCoeff (D - 1 + order, order)
+               + BinCoeff (D - 1 + order - 1, order - 1);
+      case EqType::fowave_reduced:
+        return BinCoeff (D - 1 + order, order)
+               + BinCoeff (D - 1 + order - 1, order - 1) - 1;
+      case EqType::heat:
+        return BinCoeff (D - 1 + order, order);
+      case EqType::qtheat:
+        return BinCoeff (D - 1 + order, order)
+               + BinCoeff (D - 1 + order - 1, order - 1);
+      case EqType::laplace:
+        return BinCoeff (D - 1 + order, order)
+               + BinCoeff (D - 1 + order - 1, order - 1);
+      case EqType::qtelliptic:
+        return BinCoeff (D - 1 + order, order)
+               + BinCoeff (D - 1 + order - 1, order - 1);
+      case EqType::helmholtz:
+      case EqType::helmholtzconj:
+        return 2 * order + 1;
+      case EqType::qtwave:
+        return BinCoeff (D - 1 + order, order)
+               + BinCoeff (D - 1 + order - 1, order - 1);
+      }
+  }
+
+  template <int Dim> void TrefftzFESpace::setupEvaluators ()
+  {
+    if (eqtype == EqType::fowave || eqtype == EqType::foqtwave)
+      {
+        evaluator[VOL] = make_shared<T_DifferentialOperator<
+            DiffOpMappedGradient<Dim, BlockMappedElement<Dim>>>> ();
+        // flux_evaluator[VOL] =
+        // make_shared<T_DifferentialOperator<DiffOpMappedHesse<2>>>();
+        additional_evaluators.Set (
+            "grad",
+            make_shared<T_DifferentialOperator<DiffOpMappedHesse<Dim>>> ());
+      }
+    else if (Dim == 2
+             && (eqtype == EqType::helmholtz
+                 || eqtype == EqType::helmholtzconj))
+      {
+        evaluator[VOL] = make_shared<
+            T_DifferentialOperatorC<DiffOpMappedComplex<Dim>>> ();
+        flux_evaluator[VOL] = make_shared<
+            T_DifferentialOperatorC<DiffOpMappedGradientComplex<Dim>>> ();
+      }
+    else
+      {
+        evaluator[VOL]
+            = make_shared<T_DifferentialOperator<DiffOpMapped<Dim>>> ();
+        flux_evaluator[VOL] = make_shared<
+            T_DifferentialOperator<DiffOpMappedGradient<Dim>>> ();
+        additional_evaluators.Set (
+            "hesse",
+            make_shared<T_DifferentialOperator<DiffOpMappedHesse<Dim>>> ());
+      }
+  }
   TrefftzFESpace ::TrefftzFESpace (shared_ptr<MeshAccess> ama,
                                    const Flags &flags)
       : FESpace (ama, flags)
@@ -23,29 +118,9 @@ namespace ngcomp
     usescale = flags.GetNumFlag ("usescale", 1);
     DefineNumListFlag ("eq");
     eqtyp = flags.GetStringFlag ("eq");
+    eqtype = stringToEqType (eqtyp);
 
-    if (eqtyp == "fowave" || eqtyp == "foqtwave")
-      local_ndof = (D)*BinCoeff (D - 1 + order, D - 1);
-    else if (eqtyp == "wave" || eqtyp == "fowave_reduced")
-      local_ndof = BinCoeff (D - 1 + order, order)
-                   + BinCoeff (D - 1 + order - 1, order - 1)
-                   - (eqtyp == "fowave_reduced");
-    else if (eqtyp == "heat")
-      local_ndof = BinCoeff (D - 1 + order, order);
-    else if (eqtyp == "qtheat")
-      local_ndof = BinCoeff (D - 1 + order, order)
-                   + BinCoeff (D - 1 + order - 1, order - 1);
-    else if (eqtyp == "laplace")
-      local_ndof = BinCoeff (D - 1 + order, order)
-                   + BinCoeff (D - 1 + order - 1, order - 1);
-    else if (eqtyp == "qtelliptic")
-      local_ndof = BinCoeff (D - 1 + order, order)
-                   + BinCoeff (D - 1 + order - 1, order - 1);
-    else if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
-      local_ndof = 2 * order + 1;
-    else
-      local_ndof = BinCoeff (D - 1 + order, order)
-                   + BinCoeff (D - 1 + order - 1, order - 1);
+    local_ndof = calcLocalNdofs ();
 
     nel = ma->GetNE ();
     ndof = local_ndof * nel;
@@ -53,68 +128,10 @@ namespace ngcomp
     SetDefinedOn (BND, BitArray (ma->GetNRegions (BND)).Clear ());
 
     // evaluators
-    switch (D)
-      {
-      case 2:
-        {
-          if (eqtyp == "fowave" || eqtyp == "foqtwave")
-            {
-              evaluator[VOL] = make_shared<T_DifferentialOperator<
-                  DiffOpMappedGradient<2, BlockMappedElement<2>>>> ();
-              // flux_evaluator[VOL] =
-              // make_shared<T_DifferentialOperator<DiffOpMappedHesse<2>>>();
-              additional_evaluators.Set (
-                  "grad",
-                  make_shared<
-                      T_DifferentialOperator<DiffOpMappedHesse<2>>> ());
-            }
-          else if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
-            {
-              evaluator[VOL] = make_shared<
-                  T_DifferentialOperatorC<DiffOpMappedComplex<2>>> ();
-              flux_evaluator[VOL] = make_shared<
-                  T_DifferentialOperatorC<DiffOpMappedGradientComplex<2>>> ();
-            }
-          else
-            {
-              evaluator[VOL]
-                  = make_shared<T_DifferentialOperator<DiffOpMapped<2>>> ();
-              flux_evaluator[VOL] = make_shared<
-                  T_DifferentialOperator<DiffOpMappedGradient<2>>> ();
-              additional_evaluators.Set (
-                  "hesse",
-                  make_shared<
-                      T_DifferentialOperator<DiffOpMappedHesse<2>>> ());
-            }
-          break;
-        }
-      case 3:
-        {
-          if (eqtyp == "fowave" || eqtyp == "foqtwave")
-            {
-              evaluator[VOL] = make_shared<T_DifferentialOperator<
-                  DiffOpMappedGradient<3, BlockMappedElement<3>>>> ();
-              // flux_evaluator[VOL] =
-              // make_shared<T_DifferentialOperator<DiffOpMappedHesse<3>>>();
-              additional_evaluators.Set (
-                  "grad",
-                  make_shared<
-                      T_DifferentialOperator<DiffOpMappedHesse<3>>> ());
-            }
-          else
-            {
-              evaluator[VOL]
-                  = make_shared<T_DifferentialOperator<DiffOpMapped<3>>> ();
-              flux_evaluator[VOL] = make_shared<
-                  T_DifferentialOperator<DiffOpMappedGradient<3>>> ();
-              additional_evaluators.Set (
-                  "hesse",
-                  make_shared<
-                      T_DifferentialOperator<DiffOpMappedHesse<3>>> ());
-            }
-          break;
-        }
-      }
+    if (D == 2)
+      setupEvaluators<2> ();
+    else if (D == 3)
+      setupEvaluators<3> ();
 
     UpdateBasis ();
   }
@@ -143,83 +160,47 @@ namespace ngcomp
 
   TrefftzFESpace ::~TrefftzFESpace () { delete basis; }
 
+  template <int Dim> void TrefftzFESpace::basisUpdate ()
+  {
+    switch (eqtype)
+      {
+      case EqType::laplace:
+        basismat = TLapBasis<Dim>::Basis (order, basistype);
+        break;
+      case EqType::qtelliptic:
+        basis = new QTEllipticBasis<Dim> (order, coeffA, coeffB, coeffC);
+        break;
+      case EqType::fowave:
+      case EqType::foqtwave:
+        basismats.SetSize (Dim);
+        for (int d = 0; d < Dim; d++)
+          basismats[d] = FOTWaveBasis<Dim>::Basis (order, d);
+        basis = new FOQTWaveBasis<Dim> (order, coeffA, coeffB);
+        break;
+      case EqType::heat:
+        basismat = THeatBasis<Dim>::Basis (order, 0, 0);
+        break;
+      case EqType::qtheat:
+        basis = new QTHeatBasis<Dim> (order, coeffA);
+        break;
+      case EqType::wave:
+      case EqType::qtwave:
+      case EqType::fowave_reduced:
+        basismat = TWaveBasis<Dim>::Basis (order, basistype,
+                                           eqtype == EqType::fowave_reduced);
+        basis = new QTWaveBasis<Dim> (order, coeffA, coeffB);
+        break;
+      case EqType::helmholtz:
+      case EqType::helmholtzconj:
+        break;
+      }
+  }
   void TrefftzFESpace ::UpdateBasis ()
   {
-    string eqtyp = this->eqtyp;
-    switch (D)
-      {
-      case 2:
-        {
-          if (eqtyp == "laplace")
-            basismat = TLapBasis<2>::Basis (order, basistype);
-          else if (eqtyp == "qtelliptic")
-            {
-              basis = new QTEllipticBasis<2> (order, coeffA, coeffB, coeffC);
-            }
-          else if (eqtyp == "fowave" || eqtyp == "foqtwave")
-            {
-              basismats.SetSize (D);
-              for (int d = 0; d < D; d++)
-                basismats[d] = FOTWaveBasis<2>::Basis (order, d);
-              basis = new FOQTWaveBasis<2> (order, coeffA, coeffB);
-            }
-          else if (eqtyp == "heat")
-            {
-              basismat = THeatBasis<2>::Basis (order, 0, 0);
-            }
-          else if (eqtyp == "qtheat")
-            {
-              basis = new QTHeatBasis<2> (order, coeffA);
-            }
-          else if (eqtyp == "wave" || eqtyp == "qtwave"
-                   || eqtyp == "fowave_reduced")
-            {
-              basismat = TWaveBasis<2>::Basis (order, basistype,
-                                               eqtyp == "fowave_reduced");
-              basis = new QTWaveBasis<2> (order, coeffA, coeffB);
-            }
-          else if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
-            {
-            }
-          else
-            throw Exception ("TrefftzFESpace::UpdateBasis: unknown eqtyp");
-          break;
-        }
-      case 3:
-        {
-          if (eqtyp == "laplace")
-            basismat = TLapBasis<3>::Basis (order, basistype);
-          else if (eqtyp == "qtelliptic")
-            {
-              basis = new QTEllipticBasis<3> (order, coeffA, coeffB, coeffC);
-            }
-          else if (eqtyp == "fowave" || eqtyp == "foqtwave")
-            {
-              basismats.SetSize (D);
-              for (int d = 0; d < D; d++)
-                basismats[d] = FOTWaveBasis<3>::Basis (order, d);
-              basis = new FOQTWaveBasis<3> (order, coeffA, coeffB);
-            }
-          else if (eqtyp == "heat")
-            {
-              basismat = THeatBasis<3>::Basis (order, 0, 0);
-            }
-          else if (eqtyp == "qtheat")
-            {
-              basis = new QTHeatBasis<3> (order, coeffA);
-            }
-          else if (eqtyp == "wave" || eqtyp == "qtwave"
-                   || eqtyp == "fowave_reduced")
-            {
-              basismat = TWaveBasis<3>::Basis (order, basistype,
-                                               eqtyp == "fowave_reduced");
-              basis = new QTWaveBasis<3> (order, coeffA, coeffB);
-            }
-          else
-            throw Exception ("TrefftzFESpace::UpdateBasis: unknown eqtyp");
-          break;
-        }
-      }
+    if (D == 2)
+      basisUpdate<2> ();
+    else if (D == 3)
+      basisUpdate<3> ();
   }
 
   void TrefftzFESpace ::SetCoeff (double acoeff_const)
@@ -249,7 +230,7 @@ namespace ngcomp
     Flags flags;
     flags.SetFlag ("order", order);
     flags.SetFlag ("usescale", this->usescale);
-    if (eqtyp == "qtheat" && usescale != 0)
+    if (eqtype == EqType::qtheat && usescale != 0)
       flags.SetFlag ("usescale", 2);
     shared_ptr<FESpace> fes = make_shared<MonomialFESpace> (ma, flags);
     auto pws = CreateGridFunction (fes, "pws", flags);
@@ -278,7 +259,7 @@ namespace ngcomp
         case 2:
           {
             Vec<2> scale = 1.0;
-            if (eqtyp == "qtheat")
+            if (eqtype == EqType::qtheat)
               scale
                   = { ElSize<2> (ei, { 1.0, 0 }), ElSize<2> (ei, { 0, 1.0 }) };
             else if (usescale != 0)
@@ -289,7 +270,7 @@ namespace ngcomp
         case 3:
           {
             Vec<3> scale = 1.0;
-            if (eqtyp == "qtheat")
+            if (eqtype == EqType::qtheat)
               scale = { ElSize<3> (ei, { 1.0, 1.0, 0 }), 0,
                         ElSize<3> (ei, { 0, 0, 1.0 }) };
             else if (usescale != 0)
@@ -315,6 +296,89 @@ namespace ngcomp
       dnums.Append (j);
   }
 
+  template <int Dim>
+  FiniteElement &TrefftzFESpace::getFe (ElementId ei, Allocator &alloc) const
+  {
+    Ngs_Element ngel = ma->GetElement (ei);
+    ELEMENT_TYPE eltype = ngel.GetType ();
+    if (eqtype == (EqType::qtwave))
+      {
+        CSR basismat = static_cast<QTWaveBasis<Dim> *> (basis)->Basis (
+            order, ElCenter<Dim> (ei));
+        return *(new (alloc) ScalarMappedElement<Dim> (
+            local_ndof, order, basismat, eltype, ElCenter<Dim> (ei)));
+      }
+    else if (eqtype == (EqType::qtelliptic))
+      {
+        double scale = 1.0 / ElSize<Dim> (ei);
+        CSR basismat = static_cast<QTEllipticBasis<Dim> *> (basis)->Basis (
+            ElCenter<Dim> (ei), ElSize<Dim> (ei));
+        return *(new (alloc) ScalarMappedElement<Dim> (
+            local_ndof, order, basismat, eltype, ElCenter<Dim> (ei), scale));
+      }
+    else if (eqtype == (EqType::foqtwave))
+      {
+        Vec<2, CSR> qtbasis;
+        for (int d = 0; d < Dim; d++)
+          qtbasis[d] = static_cast<FOQTWaveBasis<Dim> *> (basis)->Basis (
+              order, d, ElCenter<Dim> (ei));
+        return *(new (alloc) BlockMappedElement<Dim> (
+            local_ndof, order, qtbasis, eltype, ElCenter<Dim> (ei)));
+      }
+    else if (eqtype == (EqType::fowave))
+      {
+        Vec<Dim> scale = 1.0;
+        scale[Dim - 1] = coeff_const;
+        scale = 1.0 / ElSize<Dim> (ei, scale);
+        scale[Dim - 1] *= coeff_const;
+        return *(new (alloc) BlockMappedElement<Dim> (
+            local_ndof, order, basismats, eltype, ElCenter<Dim> (ei), scale));
+      }
+    else if (Dim == 2
+             && (eqtype == EqType::helmholtz
+                 || eqtype == EqType::helmholtzconj))
+      {
+        return *(new (alloc) PlaneWaveElement<Dim> (
+            local_ndof, order, eltype, ElCenter<Dim> (ei), ElSize<Dim> (ei),
+            coeff_const, (eqtype == EqType::helmholtz ? 1 : -1)));
+      }
+    else if (eqtype == (EqType::heat))
+      {
+        Vec<Dim> scale = 1.0 / sqrt (ElSize<Dim> (ei));
+        scale[Dim - 1] = coeff_const * scale[Dim - 1] * scale[Dim - 1];
+        return *(new (alloc) ScalarMappedElement<Dim> (
+            local_ndof, order, basismat, eltype, ElCenter<Dim> (ei), scale));
+      }
+    else if (Dim == 2 && eqtype == (EqType::qtheat))
+      {
+        double hx = ElSize<2> (ei, { 1.0, 0 });
+        double ht = ElSize<2> (ei, { 0, 1.0 });
+        Vec<2> scale ({ 1.0 / hx, 1.0 / ht });
+        CSR basismat = static_cast<QTHeatBasis<Dim> *> (basis)->Basis (
+            ElCenter<2> (ei), hx, ht);
+        return *(new (alloc) ScalarMappedElement<2> (
+            local_ndof, order, basismat, eltype, ElCenter<2> (ei), scale));
+      }
+    else if (Dim == 3 && eqtype == (EqType::qtheat))
+      {
+        double hx = ElSize<3> (ei, { 1.0, 1.0, 0 });
+        double ht = ElSize<3> (ei, { 0, 0, 1.0 });
+        Vec<3> scale ({ 1.0 / hx, 1.0 / hx, 1.0 / ht });
+        CSR basismat = static_cast<QTHeatBasis<3> *> (basis)->Basis (
+            ElCenter<3> (ei), hx, ht);
+        return *(new (alloc) ScalarMappedElement<3> (
+            local_ndof, order, basismat, eltype, ElCenter<Dim> (ei), scale));
+      }
+    else
+      {
+        Vec<Dim> scale = 1.0;
+        scale[Dim - 1] = coeff_const;
+        scale = 1.0 / ElSize<Dim> (ei, scale);
+        scale[Dim - 1] *= coeff_const;
+        return *(new (alloc) ScalarMappedElement<Dim> (
+            local_ndof, order, basismat, eltype, ElCenter<Dim> (ei), scale));
+      }
+  }
   FiniteElement &TrefftzFESpace ::GetFE (ElementId ei, Allocator &alloc) const
   {
     Ngs_Element ngel = ma->GetElement (ei);
@@ -338,152 +402,9 @@ namespace ngcomp
               break;
             }
           case 2:
-            {
-              if (eqtyp == "qtwave")
-                {
-                  CSR basismat = static_cast<QTWaveBasis<2> *> (basis)->Basis (
-                      order, ElCenter<2> (ei));
-                  return *(new (alloc) ScalarMappedElement<2> (
-                      local_ndof, order, basismat, eltype, ElCenter<2> (ei)));
-                }
-              else if (eqtyp == "qtelliptic")
-                {
-                  double scale = 1.0 / ElSize<2> (ei);
-                  CSR basismat
-                      = static_cast<QTEllipticBasis<2> *> (basis)->Basis (
-                          ElCenter<2> (ei), ElSize<2> (ei));
-                  return *(new (alloc) ScalarMappedElement<2> (
-                      local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                      scale));
-                }
-              else if (eqtyp == "foqtwave")
-                {
-                  Vec<2, CSR> qtbasis;
-                  for (int d = 0; d < D; d++)
-                    qtbasis[d]
-                        = static_cast<FOQTWaveBasis<2> *> (basis)->Basis (
-                            order, d, ElCenter<2> (ei));
-                  return *(new (alloc) BlockMappedElement<2> (
-                      local_ndof, order, qtbasis, eltype, ElCenter<2> (ei)));
-                }
-              else if (eqtyp == "fowave")
-                {
-                  Vec<2> scale = 1.0;
-                  scale[1] = coeff_const;
-                  scale = 1.0 / ElSize<2> (ei, scale);
-                  scale[1] *= coeff_const;
-                  return *(new (alloc) BlockMappedElement<2> (
-                      local_ndof, order, basismats, eltype, ElCenter<2> (ei),
-                      scale));
-                }
-              else if (eqtyp == "helmholtz" || eqtyp == "helmholtzconj")
-                {
-                  return *(new (alloc) PlaneWaveElement<2> (
-                      local_ndof, order, eltype, ElCenter<2> (ei),
-                      ElSize<2> (ei), coeff_const,
-                      (eqtyp == "helmholtz" ? 1 : -1)));
-                }
-              else if (eqtyp == "heat")
-                {
-                  Vec<2> scale = 1.0 / sqrt (ElSize<2> (ei));
-                  scale[1] = coeff_const * scale[1] * scale[1];
-                  return *(new (alloc) ScalarMappedElement<2> (
-                      local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                      scale));
-                }
-              else if (eqtyp == "qtheat")
-                {
-                  double hx = ElSize<2> (ei, { 1.0, 0 });
-                  double ht = ElSize<2> (ei, { 0, 1.0 });
-                  Vec<2> scale ({ 1.0 / hx, 1.0 / ht });
-                  CSR basismat = static_cast<QTHeatBasis<2> *> (basis)->Basis (
-                      ElCenter<2> (ei), hx, ht);
-                  return *(new (alloc) ScalarMappedElement<2> (
-                      local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                      scale));
-                }
-              else
-                {
-                  Vec<2> scale = 1.0;
-                  scale[1] = coeff_const;
-                  scale = 1.0 / ElSize<2> (ei, scale);
-                  scale[1] *= coeff_const;
-                  return *(new (alloc) ScalarMappedElement<2> (
-                      local_ndof, order, basismat, eltype, ElCenter<2> (ei),
-                      scale));
-                }
-              break;
-            }
+            return getFe<2> (ei, alloc);
           case 3:
-            {
-              if (eqtyp == "qtwave")
-                {
-                  CSR basismat = static_cast<QTWaveBasis<3> *> (basis)->Basis (
-                      order, ElCenter<3> (ei));
-                  return *(new (alloc) ScalarMappedElement<3> (
-                      local_ndof, order, basismat, eltype, ElCenter<3> (ei)));
-                }
-              else if (eqtyp == "qtelliptic")
-                {
-                  double scale = 1.0 / ElSize<3> (ei);
-                  CSR basismat
-                      = static_cast<QTEllipticBasis<3> *> (basis)->Basis (
-                          ElCenter<3> (ei), ElSize<3> (ei));
-                  return *(new (alloc) ScalarMappedElement<3> (
-                      local_ndof, order, basismat, eltype, ElCenter<3> (ei),
-                      scale));
-                }
-              else if (eqtyp == "foqtwave")
-                {
-                  Vec<3, CSR> qtbasis;
-                  for (int d = 0; d < D; d++)
-                    qtbasis[d]
-                        = static_cast<FOQTWaveBasis<3> *> (basis)->Basis (
-                            order, d, ElCenter<3> (ei));
-                  return *(new (alloc) BlockMappedElement<3> (
-                      local_ndof, order, qtbasis, eltype, ElCenter<3> (ei)));
-                }
-              else if (eqtyp == "fowave")
-                {
-                  Vec<3> scale = 1.0;
-                  scale[2] = coeff_const;
-                  scale = 1.0 / ElSize<3> (ei, scale);
-                  scale[2] *= coeff_const;
-                  return *(new (alloc) BlockMappedElement<3> (
-                      local_ndof, order, basismats, eltype, ElCenter<3> (ei),
-                      scale));
-                }
-              else if (eqtyp == "heat")
-                {
-                  Vec<3> scale = 1.0 / sqrt (ElSize<3> (ei));
-                  scale[2] = coeff_const * scale[2] * scale[2];
-                  return *(new (alloc) ScalarMappedElement<3> (
-                      local_ndof, order, basismat, eltype, ElCenter<3> (ei),
-                      scale));
-                }
-              else if (eqtyp == "qtheat")
-                {
-                  double hx = ElSize<3> (ei, { 1.0, 1.0, 0 });
-                  double ht = ElSize<3> (ei, { 0, 0, 1.0 });
-                  Vec<3> scale ({ 1.0 / hx, 1.0 / hx, 1.0 / ht });
-                  CSR basismat = static_cast<QTHeatBasis<3> *> (basis)->Basis (
-                      ElCenter<3> (ei), hx, ht);
-                  return *(new (alloc) ScalarMappedElement<3> (
-                      local_ndof, order, basismat, eltype, ElCenter<3> (ei),
-                      scale));
-                }
-              else
-                {
-                  Vec<3> scale = 1.0;
-                  scale[2] = coeff_const;
-                  scale = 1.0 / ElSize<3> (ei, scale);
-                  scale[2] *= coeff_const;
-                  return *(new (alloc) ScalarMappedElement<3> (
-                      local_ndof, order, basismat, eltype, ElCenter<3> (ei),
-                      scale));
-                }
-            }
-            break;
+            return getFe<3> (ei, alloc);
           }
       }
     // else
@@ -579,8 +500,8 @@ namespace ngcomp
   template <int D, typename TFunc>
   void TraversePol (Vec<D, size_t> order, const TFunc &func)
   {
-    // traverse polynomials increasing smaller dimensions first, up to order in
-    // each dimension
+    // traverse polynomials increasing smaller dimensions first, up to order
+    // in each dimension
     switch (D)
       {
       case 0:
@@ -834,8 +755,8 @@ namespace ngcomp
             {
               if (tracker > basis)
                 {
-                  // trefftzbasis( i, setbasis++ ) = 1.0; //set the l-th coeff
-                  // to 1
+                  // trefftzbasis( i, setbasis++ ) = 1.0; //set the l-th
+                  // coeff to 1
                   trefftzbasis (basis, indexmap) = 1;
                   tracker = -1;
                 }
@@ -922,7 +843,8 @@ namespace ngcomp
   template class FOTWaveBasis<3>;
   template class FOTWaveBasis<4>;
 
-  //////////////////////////// quasi-Trefftz basis ////////////////////////////
+  //////////////////////////// quasi-Trefftz basis
+  ///////////////////////////////
 
   template <int D>
   CSR QTEllipticBasis<D>::Basis (Vec<D> ElCenter, double elsize)
@@ -1606,7 +1528,7 @@ void ExportTrefftzFESpace (py::module m)
               shared_ptr<CoefficientFunction>, shared_ptr<CoefficientFunction>,
               shared_ptr<CoefficientFunction>)> (&TrefftzFESpace::SetCoeff),
           R"mydelimiter(
-                Set coefficient of Trefftz space. 
+                Set coefficient of Trefftz space.
 
                 For an elliptic problem, the coefficients are given by
                 - div(coeffA*grad(u)) + coeffB*grad(u) + coeffC u = 0

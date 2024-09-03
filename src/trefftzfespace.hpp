@@ -167,6 +167,7 @@ namespace ngcomp
     int local_ndof;
     double coeff_const = 1;
     string eqtyp = "wave";
+    EqType eqtype = EqType::wave;
     int useshift = 1;
     int usescale = 1;
     int basistype = 0;
@@ -177,6 +178,15 @@ namespace ngcomp
     CSR basismat;
     Vector<CSR> basismats;
     PolBasis *basis = nullptr;
+
+    /// @returns the local number of dofs for this TrefftzFESpace
+    int calcLocalNdofs () const;
+    template <int Dim> void setupEvaluators ();
+    /// templated version of UpdateBasis
+    template <int Dim> void basisUpdate ();
+    /// templated version of GetFe
+    template <int Dim>
+    FiniteElement &getFe (ElementId ei, Allocator &alloc) const;
 
   public:
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
