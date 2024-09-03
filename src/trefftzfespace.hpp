@@ -4,6 +4,43 @@
 #include "scalarmappedfe.hpp"
 #include "planewavefe.hpp"
 
+/// Denotes the types of equations supported by the TrefftzFESpace.
+enum class EqType
+{
+  /// for the first order acoustic wave equation
+  fowave,
+
+  /// for the quasi-Trefftz space related to fowave
+  foqtwave,
+
+  /// for the second order acoustic wave equation
+  wave,
+
+  /// for the quasi-Trefftz space related to wave
+  qtwave,
+
+  /// TODO
+  fowave_reduced,
+
+  /// TODO
+  heat,
+
+  /// TODO
+  qtheat,
+
+  /// for Laplace equation
+  laplace,
+
+  /// TODO
+  qtelliptic,
+
+  /// plane waves for the Helmholtz equation
+  helmholtz,
+
+  /// complex conjugate of Helmholtz
+  helmholtzconj,
+};
+
 namespace ngcomp
 {
 
