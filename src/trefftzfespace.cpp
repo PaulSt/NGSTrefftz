@@ -117,8 +117,7 @@ namespace ngcomp
     useshift = flags.GetNumFlag ("useshift", 1);
     usescale = flags.GetNumFlag ("usescale", 1);
     DefineNumListFlag ("eq");
-    eqtyp = flags.GetStringFlag ("eq");
-    eqtype = stringToEqType (eqtyp);
+    eqtype = stringToEqType (flags.GetStringFlag ("eq"));
 
     local_ndof = calcLocalNdofs ();
 

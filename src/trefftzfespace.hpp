@@ -166,7 +166,6 @@ namespace ngcomp
     int nel;
     int local_ndof;
     double coeff_const = 1;
-    string eqtyp = "wave";
     EqType eqtype = EqType::wave;
     int useshift = 1;
     int usescale = 1;
