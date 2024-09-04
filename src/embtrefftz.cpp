@@ -107,7 +107,7 @@ void extractVisibleDofs (FlatMatrix<SCAL> &elmat, const ElementId &element_id,
 template <typename SCAL, typename NZ_FUNC>
 INLINE size_t fillTrefftzTableCreators (
     TableCreator<int> &creator, TableCreator<int> &creator2,
-    const vector<shared_ptr<Matrix<SCAL>>> &ETmats, const MeshAccess &ma,
+    const vector<optional<Matrix<SCAL>>> &ETmats, const MeshAccess &ma,
     const FESpace &fes, NZ_FUNC nz_from_elnr, const size_t offset)
 {
   const size_t ndof = fes.GetNDof ();
@@ -152,7 +152,7 @@ INLINE size_t fillTrefftzTableCreators (
 template <typename SCAL>
 INLINE size_t
 createTrefftzTables (Table<int> &table, Table<int> &table2,
-                     const vector<shared_ptr<Matrix<SCAL>>> &ETmats,
+                     const vector<optional<Matrix<SCAL>>> &ETmats,
                      shared_ptr<const FESpace> fes, const size_t hidden_dofs)
 {
   const auto ma = fes->GetMeshAccess ();
@@ -176,7 +176,7 @@ createTrefftzTables (Table<int> &table, Table<int> &table2,
 template <typename SCAL>
 INLINE size_t createConstrainedTrefftzTables (
     Table<int> &table, Table<int> &table2,
-    const vector<shared_ptr<Matrix<SCAL>>> &ETmats, const FESpace &fes,
+    const vector<optional<Matrix<SCAL>>> &ETmats, const FESpace &fes,
     const FESpace &fes_constraint, const size_t ndof_trefftz,
     const size_t hidden_dofs)
 {
@@ -240,7 +240,7 @@ INLINE size_t createConstrainedTrefftzTables (
 template <typename SCAL>
 INLINE void
 fillSparseMatrixWithData (SparseMatrix<SCAL> &P,
-                          const vector<shared_ptr<Matrix<SCAL>>> &ETmats,
+                          const vector<optional<Matrix<SCAL>>> &ETmats,
                           const Table<int> &table, const Table<int> &table2,
                           const MeshAccess &ma, const size_t hidden_dofs)
 {
@@ -279,7 +279,7 @@ namespace ngcomp
   /// @tparam SCAL scalar type of the matrix entries
   template <typename SCAL>
   shared_ptr<BaseMatrix>
-  Elmats2Sparse (const vector<shared_ptr<Matrix<SCAL>>> ETmats,
+  Elmats2Sparse (const vector<optional<Matrix<SCAL>>> ETmats,
                  shared_ptr<const FESpace> fes)
   {
     const auto ma = fes->GetMeshAccess ();
@@ -302,10 +302,11 @@ namespace ngcomp
   /// @param fes non-Trefftz finite element space
   /// @tparam SCAL scalar type of the matrix entries
   template <typename SCAL>
-  shared_ptr<BaseMatrix> Elmats2SparseConstrainedTrefftz (
-      const vector<shared_ptr<Matrix<SCAL>>> ETmats,
-      shared_ptr<const FESpace> fes, shared_ptr<const FESpace> fes_constraint,
-      size_t ndof_trefftz)
+  shared_ptr<BaseMatrix>
+  Elmats2SparseConstrainedTrefftz (const vector<optional<Matrix<SCAL>>> ETmats,
+                                   shared_ptr<const FESpace> fes,
+                                   shared_ptr<const FESpace> fes_constraint,
+                                   size_t ndof_trefftz)
   {
     const auto ma = fes->GetMeshAccess ();
 
@@ -523,7 +524,7 @@ namespace ngcomp
   mutex stats_mutex;
 
   template <typename SCAL>
-  std::tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<BaseVector>>
+  std::tuple<vector<optional<Matrix<SCAL>>>, shared_ptr<BaseVector>>
   EmbTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
               shared_ptr<SumOfIntegrals> lf, double eps,
               shared_ptr<FESpace> test_fes, int tndof, bool getrange,
@@ -555,7 +556,7 @@ namespace ngcomp
     if (lf)
       calculateLinearFormIntegrators (*lf, lfis);
 
-    vector<shared_ptr<Matrix<SCAL>>> ETmats (ne);
+    vector<optional<Matrix<SCAL>>> ETmats (ne);
     auto lfvec = make_shared<VVector<SCAL>> (ndof);
     lfvec->operator= (0.0);
 
@@ -609,9 +610,9 @@ namespace ngcomp
 
       if (getrange)
         ETmats[ei.Nr ()]
-            = make_shared<Matrix<SCAL>> (U.Cols (0, dofs.Size () - nz));
+            = make_optional<Matrix<SCAL>> (U.Cols (0, dofs.Size () - nz));
       else
-        ETmats[ei.Nr ()] = make_shared<Matrix<SCAL>> (
+        ETmats[ei.Nr ()] = make_optional<Matrix<SCAL>> (
             Trans (Vt.Rows (dofs.Size () - nz, dofs.Size ())));
 
       if (stats)
@@ -655,13 +656,12 @@ namespace ngcomp
     return std::make_tuple (ETmats, lfvec);
   }
 
-  template std::tuple<vector<shared_ptr<Matrix<double>>>,
-                      shared_ptr<BaseVector>>
+  template std::tuple<vector<optional<Matrix<double>>>, shared_ptr<BaseVector>>
   EmbTrefftz<double> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                       shared_ptr<SumOfIntegrals> lf, double eps,
                       shared_ptr<FESpace> test_fes, int tndof, bool getrange,
                       std::map<std::string, Vector<double>> *stats);
-  template std::tuple<vector<shared_ptr<Matrix<Complex>>>,
+  template std::tuple<vector<optional<Matrix<Complex>>>,
                       shared_ptr<BaseVector>>
   EmbTrefftz<Complex> (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
                        shared_ptr<SumOfIntegrals> lf, double eps,
@@ -669,7 +669,7 @@ namespace ngcomp
                        std::map<std::string, Vector<Complex>> *stats);
 
   template <typename SCAL>
-  tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<ngla::BaseVector>>
+  tuple<vector<optional<Matrix<SCAL>>>, shared_ptr<ngla::BaseVector>>
   EmbTrefftz (const SumOfIntegrals &op, const FESpace &fes,
               const FESpace &fes_test, const ngfem::SumOfIntegrals &cop_lhs,
               const ngfem::SumOfIntegrals &cop_rhs,
@@ -693,7 +693,7 @@ namespace ngcomp
     calculateBilinearFormIntegrators (cop_lhs, cop_lhs_integrators);
     calculateBilinearFormIntegrators (cop_rhs, cop_rhs_integrators);
 
-    vector<shared_ptr<Matrix<SCAL>>> element_matrices (num_elements);
+    vector<optional<Matrix<SCAL>>> element_matrices (num_elements);
 
     const bool fes_has_hidden_dofs = fesHasHiddenDofs (fes);
     const bool fes_constraint_has_hidden_dofs
@@ -844,7 +844,7 @@ namespace ngcomp
           (*testout) << "calculated p from element " << element_id << "\n"
                      << std::endl;
           element_matrices[element_id.Nr ()]
-              = make_shared<Matrix<SCAL>> (elmat_p);
+              = make_optional<Matrix<SCAL>> (elmat_p);
           (*testout) << "allocated p as a shared pointer for element "
                      << element_id << "\n"
                      << std::endl;

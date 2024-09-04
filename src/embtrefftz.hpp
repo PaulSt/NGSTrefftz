@@ -14,7 +14,7 @@ namespace ngcomp
 {
 
   template <typename SCAL>
-  std::tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<BaseVector>>
+  std::tuple<vector<optional<Matrix<SCAL>>>, shared_ptr<BaseVector>>
   EmbTrefftz (shared_ptr<SumOfIntegrals> bf, shared_ptr<FESpace> fes,
               shared_ptr<SumOfIntegrals> lf, double eps,
               shared_ptr<FESpace> test_fes, int tndof, bool getrange,
@@ -51,7 +51,7 @@ namespace ngcomp
   ///  @return (P, f), the embedding `P` and particlar solution `f`. `P` is
   ///  represented as a vector of all element matrices.
   template <typename SCAL>
-  tuple<vector<shared_ptr<Matrix<SCAL>>>, shared_ptr<ngla::BaseVector>>
+  tuple<vector<optional<Matrix<SCAL>>>, shared_ptr<ngla::BaseVector>>
   EmbTrefftz (const SumOfIntegrals &op, const FESpace &fes,
               const FESpace &fes_test, const ngfem::SumOfIntegrals &cop_lhs,
               const ngfem::SumOfIntegrals &cop_rhs,
@@ -63,8 +63,8 @@ namespace ngcomp
   class EmbTrefftzFESpace
       : public T //, public std::enable_shared_from_this<EmbTrefftzFESpace>
   {
-    vector<shared_ptr<Matrix<double>>> ETmats;
-    vector<shared_ptr<Matrix<Complex>>> ETmatsC;
+    vector<optional<Matrix<double>>> ETmats;
+    vector<optional<Matrix<Complex>>> ETmatsC;
     shrdT fes;
     Array<DofId> all2comp;
 
