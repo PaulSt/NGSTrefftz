@@ -178,6 +178,10 @@ namespace ngcomp
     Vector<CSR> basismats;
     PolBasis *basis = nullptr;
 
+    // The following functions are helper functions, that capture behavior
+    // which strongly depends on the dimension and the eqtype of the
+    // TrefftzFESpace.
+
     /// @returns the local number of dofs for this TrefftzFESpace
     int calcLocalNdofs () const;
     template <int Dim> void setupEvaluators ();
