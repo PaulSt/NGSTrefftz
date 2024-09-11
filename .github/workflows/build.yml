@@ -13,6 +13,20 @@ env:
 
 jobs:
 
+  check_formatting:
+    name: Check Formatting with Clang Format
+    runs-on: ubuntu-latest 
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'True'
+          path: 'NGSTrefftz'
+          fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
+      - uses: RafikFarhad/clang-format-github-action@v4
+        with:
+          sources: "src/**/*.hpp,src/**/*.cpp,test/**/*.cpp"
+          style: file
+      
   test_linux:
     name: Test on Linux
     runs-on: ubuntu-latest
