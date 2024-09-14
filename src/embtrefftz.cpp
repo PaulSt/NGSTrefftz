@@ -1170,21 +1170,33 @@ void ExportETSpace (py::module m, string label)
 /// Assumption: all shared pointers come from python, so they *should* be safe
 /// to dereference. Exception to that: the `linear_form` can be the `nullptr`.
 tuple<shared_ptr<BaseMatrix>, shared_ptr<ngla::BaseVector>>
-pythonConstrTrefftzWithLf (shared_ptr<const SumOfIntegrals> op,
+pythonConstrTrefftzWithLf (optional<const SumOfIntegrals> op_maybe,
                            shared_ptr<const FESpace> fes,
                            shared_ptr<const ngfem::SumOfIntegrals> cop_lhs,
                            shared_ptr<const ngfem::SumOfIntegrals> cop_rhs,
                            shared_ptr<const FESpace> fes_constraint,
                            shared_ptr<ngfem::SumOfIntegrals> linear_form,
-                           const size_t ndof_trefftz,
+                           size_t ndof_trefftz,
                            shared_ptr<FESpace> fes_test_ptr)
 {
+  // guard against unwanted segfaults by checking that the pointers are not
+  // null.
+  if (!fes || !cop_lhs || !cop_rhs || !fes_constraint)
+    throw std::invalid_argument (
+        "Some arguments passed were None, which are required to be not-None.");
+
   // if fes_test is null, i.e. no test space is given, use fes as trial and
   // test space
   const FESpace &fes_test = (fes_test_ptr) ? *fes_test_ptr : *fes;
 
+  // if op_maybe is empty, we need a default op to pass to the C++ code
+  const SumOfIntegrals op_default{};
+  if (!op_maybe)
+    ndof_trefftz = 0;
+  const SumOfIntegrals &op = (op_maybe) ? *op_maybe : op_default;
+
   auto [P, u_lf]
-      = EmbTrefftz<double> (*op, *fes, fes_test, *cop_lhs, *cop_rhs,
+      = EmbTrefftz<double> (op, *fes, fes_test, *cop_lhs, *cop_rhs,
                             *fes_constraint, linear_form, ndof_trefftz);
   return std::make_tuple (ngcomp::Elmats2SparseConstrainedTrefftz<double> (
                               P, fes, fes_constraint, ndof_trefftz),
@@ -1194,7 +1206,7 @@ pythonConstrTrefftzWithLf (shared_ptr<const SumOfIntegrals> op,
 /// call `EmbTrefftz` for the ConstrainedTrefftz procedure and pack the
 /// resulting element matrices in a sparse matrix.
 shared_ptr<BaseMatrix>
-pythonConstrTrefftz (shared_ptr<SumOfIntegrals> op, shared_ptr<FESpace> fes,
+pythonConstrTrefftz (optional<SumOfIntegrals> op, shared_ptr<FESpace> fes,
                      shared_ptr<ngfem::SumOfIntegrals> cop_lhs,
                      shared_ptr<ngfem::SumOfIntegrals> cop_rhs,
                      shared_ptr<FESpace> fes_constraint,
@@ -1368,7 +1380,7 @@ void ExportEmbTrefftz (py::module m)
                 The embedding is subject to the constraints specified in
                 `cop_lhs` and `cop_rhs`.
 
-                 :param op: the differential operation
+                 :param op: the differential operation. Can be None
                  :param fes: the finite element space of `op`
                  :param cop_lhs: left hand side of the constraint operation
                  :param cop_rhs: right hand side of the constraint operation
@@ -1381,7 +1393,7 @@ void ExportEmbTrefftz (py::module m)
    )mydelimiter",
          py::arg ("op"), py::arg ("fes"), py::arg ("cop_lhs"),
          py::arg ("cop_rhs"), py::arg ("fes_constraint"),
-         py::arg ("ndof_trefftz"), py::arg ("fes_test") = nullptr);
+         py::arg ("ndof_trefftz"), py::arg ("fes_test") = py::none ());
 
   m.def ("TrefftzEmbedding", &pythonConstrTrefftzWithLf,
          R"mydelimiter(
@@ -1391,7 +1403,7 @@ void ExportEmbTrefftz (py::module m)
                 `cop_lhs` and `cop_rhs`.
                 Also generates a particular solution `u_lf`.
 
-                 :param op: the differential operation
+                 :param op: the differential operation. Can be None
                  :param fes: the finite element space of `op`
                  :param cop_lhs: left hand side of the constraint operation
                  :param cop_rhs: right hand side of the constraint operation
@@ -1406,7 +1418,7 @@ void ExportEmbTrefftz (py::module m)
          py::arg ("op"), py::arg ("fes"), py::arg ("cop_lhs"),
          py::arg ("cop_rhs"), py::arg ("fes_constraint"),
          py::arg ("linear_form"), py::arg ("ndof_trefftz"),
-         py::arg ("fes_test") = nullptr);
+         py::arg ("fes_test") = py::none ());
 }
 
 #endif // NGS_PYTHON
