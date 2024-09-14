@@ -90,7 +90,7 @@ public:
   BoxLinearFormIntegrator (shared_ptr<CoefficientFunction> acf, VorB vb = VOL,
                            double _reference_box_length = 0.5);
 
-  virtual string Name () const { return string ("BoxInt-LFI"); }
+  virtual string Name () const override { return string ("BoxInt-LFI"); }
 
   virtual void
   CalcElementVector (const FiniteElement &fel,
