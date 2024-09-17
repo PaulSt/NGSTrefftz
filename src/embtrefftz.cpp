@@ -925,24 +925,31 @@ namespace ngcomp
                                shared_ptr<const FESpace> fes_constraint,
                                shared_ptr<const FESpace> fes_test,
                                shared_ptr<const SumOfIntegrals> linear_form,
-                               const size_t ndof_trefftz)
+                               size_t ndof_trefftz)
   {
     static Timer timer ("EmbTrefftz: SetOp");
 
     shared_ptr<BaseVector> particular_solution = nullptr;
 
-    if (!op || !fes || !cop_lhs || !cop_rhs || !fes_constraint)
-      throw std::invalid_argument (
-          "All pointers except for fes_test and linear_form may not be null.");
+    if (!fes || !cop_lhs || !cop_rhs || !fes_constraint)
+      throw std::invalid_argument ("All pointers except for op, fes_test and "
+                                   "linear_form may not be null.");
+
     // fes_test may be null. If it is null, then choose the trial space as the
     // test space as well.
     const FESpace &fes_test_ref = (fes_test) ? *fes_test : *fes;
 
+    // if op is null, set op to be an empty sum.
+    const SumOfIntegrals op_default{};
+    if (!op)
+      ndof_trefftz = 0;
+    const SumOfIntegrals &op_ref = (op) ? *op : op_default;
+
     if (!this->IsComplex ())
       {
-        std::tie (this->ETmats, particular_solution)
-            = EmbTrefftz<double> (*op, *fes, fes_test_ref, *cop_lhs, *cop_rhs,
-                                  *fes_constraint, linear_form, ndof_trefftz);
+        std::tie (this->ETmats, particular_solution) = EmbTrefftz<double> (
+            op_ref, *fes, fes_test_ref, *cop_lhs, *cop_rhs, *fes_constraint,
+            linear_form, ndof_trefftz);
       }
     else
       {
@@ -1225,12 +1232,12 @@ template <typename T> void ExportETSpace (py::module m, string label)
 tuple<shared_ptr<BaseMatrix>, shared_ptr<ngla::BaseVector>>
 pythonConstrTrefftzWithLf (optional<const SumOfIntegrals> op_maybe,
                            shared_ptr<const FESpace> fes,
-                           shared_ptr<const ngfem::SumOfIntegrals> cop_lhs,
-                           shared_ptr<const ngfem::SumOfIntegrals> cop_rhs,
+                           shared_ptr<const SumOfIntegrals> cop_lhs,
+                           shared_ptr<const SumOfIntegrals> cop_rhs,
                            shared_ptr<const FESpace> fes_constraint,
-                           shared_ptr<ngfem::SumOfIntegrals> linear_form,
+                           shared_ptr<const SumOfIntegrals> linear_form,
                            size_t ndof_trefftz,
-                           shared_ptr<FESpace> fes_test_ptr)
+                           shared_ptr<const FESpace> fes_test_ptr)
 {
   // guard against unwanted segfaults by checking that the pointers are not
   // null.
@@ -1259,11 +1266,13 @@ pythonConstrTrefftzWithLf (optional<const SumOfIntegrals> op_maybe,
 /// call `EmbTrefftz` for the ConstrainedTrefftz procedure and pack the
 /// resulting element matrices in a sparse matrix.
 shared_ptr<BaseMatrix>
-pythonConstrTrefftz (optional<SumOfIntegrals> op, shared_ptr<FESpace> fes,
-                     shared_ptr<ngfem::SumOfIntegrals> cop_lhs,
-                     shared_ptr<ngfem::SumOfIntegrals> cop_rhs,
-                     shared_ptr<FESpace> fes_constraint,
-                     const size_t ndof_trefftz, shared_ptr<FESpace> fes_test)
+pythonConstrTrefftz (optional<const SumOfIntegrals> op,
+                     shared_ptr<const FESpace> fes,
+                     shared_ptr<const SumOfIntegrals> cop_lhs,
+                     shared_ptr<const SumOfIntegrals> cop_rhs,
+                     shared_ptr<const FESpace> fes_constraint,
+                     const size_t ndof_trefftz,
+                     shared_ptr<const FESpace> fes_test)
 {
   return std::get<0> (pythonConstrTrefftzWithLf (op, fes, cop_lhs, cop_rhs,
                                                  fes_constraint, nullptr,
