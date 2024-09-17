@@ -255,13 +255,13 @@ def test_PySVDConstrainedTrefftz(
 
 def test_ConstrainedTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) -> float:
     """
-    simple test case for PySVDConstrainedTrefftz.
+    simple test case for Constrained Trefftz C++ implementation.
 
     `order`: polynomial oder of the underlying space
 
     `debug`: True: print debug info, default: False
 
-    >>> test_PySVDConstrainedTrefftz(order=3, debug=False) # doctest:+ELLIPSIS
+    >>> test_ConstrainedTrefftzCpp(order=3, debug=False) # doctest:+ELLIPSIS
     3.6...e-05
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=maxh))
@@ -466,6 +466,54 @@ def test_constrainted_trefftz_without_op(order, order_constraint):
     tpgfu = GridFunction(fes)
     tpgfu.vec.data = PP * TU + ufv
     return sqrt(Integrate((tpgfu - exactpoi) ** 2, mesh))
+
+
+def test_ConstrainedTrefftzFESpace(
+    order: int = 2, debug: bool = False, maxh=0.4
+) -> float:
+    """
+    simple test case for EmbTrefftzFESpace with constrained Trefftz.
+
+    `order`: polynomial oder of the underlying space
+
+    `debug`: True: print debug info, default: False
+
+    >>> test_ConstrainedTrefftzFESpace(order=3, debug=False) # doctest:+ELLIPSIS
+    3...e-05
+    """
+    mesh2d = Mesh(unit_square.GenerateMesh(maxh=maxh))
+
+    fes = L2(mesh2d, order=order, dgjumps=True)  # ,all_dofs_together=True)
+
+    u, v = fes.TnT()
+    uh = u.Operator("hesse")
+    vh = v.Operator("hesse")
+    op = (uh[0, 0] + uh[1, 1]) * (vh[0, 0] + vh[1, 1]) * dx
+
+    fes_constraint = FacetFESpace(mesh2d, order=0)  # ,all_dofs_together=True)
+    uF, vF = fes_constraint.TnT()
+    cop_lhs = u * vF * dx(element_boundary=True)
+    cop_rhs = uF * vF * dx(element_boundary=True)
+
+    fes_trefftz = EmbeddedTrefftzFES(fes)
+    # P = TrefftzEmbedding(op, fes, cop_lhs, cop_rhs, fes_constraint, 2 * order + 1 - 3)
+    fes_trefftz.SetOp(
+        op, cop_lhs, cop_rhs, fes_constraint, ndof_trefftz=2 * order + 1 - 3
+    )
+
+    a, f = dg.dgell(fes_trefftz, dg.exactlap)
+    a.Assemble()
+    f.Assemble()
+
+    A_inv = a.mat.Inverse()
+    tpgfu = GridFunction(fes_trefftz)
+    tpgfu.vec.data = A_inv * f.vec
+    if debug:
+        import netgen.gui
+
+        Draw(tpgfu)
+        input()
+    return sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d))
 
 
 if __name__ == "__main__":
