@@ -920,10 +920,10 @@ namespace ngcomp
   template <typename T>
   shared_ptr<BaseVector>
   EmbTrefftzFESpace<T>::SetOp (shared_ptr<const SumOfIntegrals> op,
-                               shared_ptr<const FESpace> fes_test,
                                shared_ptr<const SumOfIntegrals> cop_lhs,
                                shared_ptr<const SumOfIntegrals> cop_rhs,
                                shared_ptr<const FESpace> fes_constraint,
+                               shared_ptr<const FESpace> fes_test,
                                shared_ptr<const SumOfIntegrals> linear_form,
                                const size_t ndof_trefftz)
   {
@@ -936,7 +936,7 @@ namespace ngcomp
           "All pointers except for fes_test and linear_form may not be null.");
     // fes_test may be null. If it is null, then choose the trial space as the
     // test space as well.
-    const auto fes_test_ref = (fes_test) ? *fes_test : *fes;
+    const FESpace &fes_test_ref = (fes_test) ? *fes_test : *fes;
 
     if (!this->IsComplex ())
       {
@@ -1204,6 +1204,16 @@ template <typename T> void ExportETSpace (py::module m, string label)
                 &ngcomp::EmbTrefftzFESpace<T>::SetOp),
             py::arg ("bf"), py::arg ("lf") = nullptr, py::arg ("eps") = 0,
             py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0)
+      .def ("SetOp",
+            static_cast<shared_ptr<BaseVector> (EmbTrefftzFESpace<T>::*) (
+                shared_ptr<const SumOfIntegrals>,
+                shared_ptr<const SumOfIntegrals>,
+                shared_ptr<const SumOfIntegrals>, shared_ptr<const FESpace>,
+                shared_ptr<const FESpace>, shared_ptr<const SumOfIntegrals>,
+                const size_t)> (&ngcomp::EmbTrefftzFESpace<T>::SetOp),
+            py::arg ("op"), py::arg ("cop_lhs"), py::arg ("cop_rhs"),
+            py::arg ("fes_constraint"), py::arg ("fes_test") = nullptr,
+            py::arg ("linear_form") = nullptr, py::arg ("ndof_trefftz") = 0)
       .def ("Embed", &ngcomp::EmbTrefftzFESpace<T>::Embed)
       .def ("GetEmbedding", &ngcomp::EmbTrefftzFESpace<T>::GetEmbedding);
 }
