@@ -913,6 +913,51 @@ namespace ngcomp
         lfvec = std::get<1> (embtr);
       }
 
+    adjustDofsAfterSetOp ();
+    return lfvec;
+  }
+
+  template <typename T>
+  shared_ptr<BaseVector>
+  EmbTrefftzFESpace<T>::SetOp (shared_ptr<const SumOfIntegrals> op,
+                               shared_ptr<const FESpace> fes_test,
+                               shared_ptr<const SumOfIntegrals> cop_lhs,
+                               shared_ptr<const SumOfIntegrals> cop_rhs,
+                               shared_ptr<const FESpace> fes_constraint,
+                               shared_ptr<const SumOfIntegrals> linear_form,
+                               const size_t ndof_trefftz)
+  {
+    static Timer timer ("EmbTrefftz: SetOp");
+
+    shared_ptr<BaseVector> particular_solution = nullptr;
+
+    if (!op || !fes || !cop_lhs || !cop_rhs || !fes_constraint)
+      throw std::invalid_argument (
+          "All pointers except for fes_test and linear_form may not be null.");
+    // fes_test may be null. If it is null, then choose the trial space as the
+    // test space as well.
+    const auto fes_test_ref = (fes_test) ? *fes_test : *fes;
+
+    if (!this->IsComplex ())
+      {
+        std::tie (this->ETmats, particular_solution)
+            = EmbTrefftz<double> (*op, *fes, fes_test_ref, *cop_lhs, *cop_rhs,
+                                  *fes_constraint, linear_form, ndof_trefftz);
+      }
+    else
+      {
+        std::tie (this->ETmatsC, particular_solution)
+            = EmbTrefftz<Complex> (*op, *fes, fes_test_ref, *cop_lhs, *cop_rhs,
+                                   *fes_constraint, linear_form, ndof_trefftz);
+      }
+
+    adjustDofsAfterSetOp ();
+
+    return particular_solution;
+  }
+
+  template <typename T> void EmbTrefftzFESpace<T>::adjustDofsAfterSetOp ()
+  {
     T::Update ();
     int ndof = fes->GetNDof ();
     all2comp.SetSize (ndof);
@@ -950,7 +995,6 @@ namespace ngcomp
     // this->ctofdof[all2comp[i]] = T::GetDofCouplingType (i);
 
     T::FinalizeUpdate ();
-    return lfvec;
   }
 
   template <typename T>
