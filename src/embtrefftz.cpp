@@ -886,12 +886,11 @@ namespace ngcomp
 
   ////////////////////////// EmbTrefftzFESpace ///////////////////////////
 
-  template <typename T, typename shrdT>
+  template <typename T>
   shared_ptr<BaseVector>
-  EmbTrefftzFESpace<T, shrdT>::SetOp (shared_ptr<SumOfIntegrals> bf,
-                                      shared_ptr<SumOfIntegrals> lf,
-                                      double eps, shared_ptr<FESpace> test_fes,
-                                      int tndof)
+  EmbTrefftzFESpace<T>::SetOp (shared_ptr<SumOfIntegrals> bf,
+                               shared_ptr<SumOfIntegrals> lf, double eps,
+                               shared_ptr<FESpace> test_fes, int tndof)
   {
     static Timer timer ("EmbTrefftz: SetOp");
 
@@ -954,9 +953,8 @@ namespace ngcomp
     return lfvec;
   }
 
-  template <typename T, typename shrdT>
-  void EmbTrefftzFESpace<T, shrdT>::GetDofNrs (ElementId ei,
-                                               Array<int> &dnums) const
+  template <typename T>
+  void EmbTrefftzFESpace<T>::GetDofNrs (ElementId ei, Array<int> &dnums) const
   {
     T::GetDofNrs (ei, dnums);
     if (all2comp.Size () == fes->GetNDof ())
@@ -965,10 +963,10 @@ namespace ngcomp
           d = all2comp[d];
   }
 
-  template <typename T, typename shrdT>
-  void EmbTrefftzFESpace<T, shrdT>::VTransformMR (ElementId ei,
-                                                  SliceMatrix<double> mat,
-                                                  TRANSFORM_TYPE type) const
+  template <typename T>
+  void
+  EmbTrefftzFESpace<T>::VTransformMR (ElementId ei, SliceMatrix<double> mat,
+                                      TRANSFORM_TYPE type) const
   {
     static Timer timer ("EmbTrefftz: MTransform");
     RegionTimer reg (timer);
@@ -993,10 +991,10 @@ namespace ngcomp
       }
   }
 
-  template <typename T, typename shrdT>
-  void EmbTrefftzFESpace<T, shrdT>::VTransformMC (ElementId ei,
-                                                  SliceMatrix<Complex> mat,
-                                                  TRANSFORM_TYPE type) const
+  template <typename T>
+  void
+  EmbTrefftzFESpace<T>::VTransformMC (ElementId ei, SliceMatrix<Complex> mat,
+                                      TRANSFORM_TYPE type) const
   {
     static Timer timer ("EmbTrefftz: MTransform");
     RegionTimer reg (timer);
@@ -1022,10 +1020,10 @@ namespace ngcomp
       }
   }
 
-  template <typename T, typename shrdT>
-  void EmbTrefftzFESpace<T, shrdT>::VTransformVR (ElementId ei,
-                                                  SliceVector<double> vec,
-                                                  TRANSFORM_TYPE type) const
+  template <typename T>
+  void
+  EmbTrefftzFESpace<T>::VTransformVR (ElementId ei, SliceVector<double> vec,
+                                      TRANSFORM_TYPE type) const
   {
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
@@ -1046,10 +1044,10 @@ namespace ngcomp
       }
   }
 
-  template <typename T, typename shrdT>
-  void EmbTrefftzFESpace<T, shrdT>::VTransformVC (ElementId ei,
-                                                  SliceVector<Complex> vec,
-                                                  TRANSFORM_TYPE type) const
+  template <typename T>
+  void
+  EmbTrefftzFESpace<T>::VTransformVC (ElementId ei, SliceVector<Complex> vec,
+                                      TRANSFORM_TYPE type) const
   {
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
@@ -1070,9 +1068,9 @@ namespace ngcomp
       }
   }
 
-  template <typename T, typename shrdT>
+  template <typename T>
   shared_ptr<GridFunction>
-  EmbTrefftzFESpace<T, shrdT>::Embed (shared_ptr<GridFunction> tgfu)
+  EmbTrefftzFESpace<T>::Embed (shared_ptr<GridFunction> tgfu)
   {
     LocalHeap lh (1000 * 1000 * 1000);
     Flags flags;
@@ -1113,8 +1111,8 @@ namespace ngcomp
     return gfu;
   }
 
-  template <typename T, typename shrdT>
-  shared_ptr<BaseMatrix> EmbTrefftzFESpace<T, shrdT>::GetEmbedding ()
+  template <typename T>
+  shared_ptr<BaseMatrix> EmbTrefftzFESpace<T>::GetEmbedding ()
   {
     if (this->IsComplex ())
       return Elmats2Sparse<Complex> (ETmatsC, this->fes);
@@ -1137,18 +1135,16 @@ namespace ngcomp
 ////////////////////////// python interface ///////////////////////////
 
 #ifdef NGS_PYTHON
-template <typename T, typename shrdT>
-void ExportETSpace (py::module m, string label)
+template <typename T> void ExportETSpace (py::module m, string label)
 {
   auto pyspace
-      = ngcomp::ExportFESpace<ngcomp::EmbTrefftzFESpace<T, shrdT>> (m, label);
+      = ngcomp::ExportFESpace<ngcomp::EmbTrefftzFESpace<T>> (m, label);
 
-  pyspace.def (py::init ([pyspace] (shrdT fes) {
+  pyspace.def (py::init ([pyspace] (shared_ptr<T> fes) {
                  py::list info;
                  auto ma = fes->GetMeshAccess ();
                  info.append (ma);
-                 auto nfes
-                     = make_shared<ngcomp::EmbTrefftzFESpace<T, shrdT>> (fes);
+                 auto nfes = make_shared<ngcomp::EmbTrefftzFESpace<T>> (fes);
                  nfes->Update ();
                  nfes->FinalizeUpdate ();
                  connect_auto_update (nfes.get ());
@@ -1157,12 +1153,15 @@ void ExportETSpace (py::module m, string label)
                py::arg ("fes"));
 
   pyspace
-      .def ("SetOp", &ngcomp::EmbTrefftzFESpace<T, shrdT>::SetOp,
+      .def ("SetOp",
+            static_cast<shared_ptr<BaseVector> (EmbTrefftzFESpace<T>::*) (
+                shared_ptr<SumOfIntegrals>, shared_ptr<SumOfIntegrals>, double,
+                shared_ptr<FESpace>, int)> (
+                &ngcomp::EmbTrefftzFESpace<T>::SetOp),
             py::arg ("bf"), py::arg ("lf") = nullptr, py::arg ("eps") = 0,
             py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0)
-      .def ("Embed", &ngcomp::EmbTrefftzFESpace<T, shrdT>::Embed)
-      .def ("GetEmbedding",
-            &ngcomp::EmbTrefftzFESpace<T, shrdT>::GetEmbedding);
+      .def ("Embed", &ngcomp::EmbTrefftzFESpace<T>::Embed)
+      .def ("GetEmbedding", &ngcomp::EmbTrefftzFESpace<T>::GetEmbedding);
 }
 
 /// call `EmbTrefftz` for the ConstrainedTrefftz procedure and pack the
@@ -1300,36 +1299,31 @@ pythonEmbTrefftz (shared_ptr<ngfem::SumOfIntegrals> bf,
 
 void ExportEmbTrefftz (py::module m)
 {
-  ExportETSpace<ngcomp::L2HighOrderFESpace,
-                shared_ptr<ngcomp::L2HighOrderFESpace>> (
-      m, "L2EmbTrefftzFESpace");
+  ExportETSpace<ngcomp::L2HighOrderFESpace> (m, "L2EmbTrefftzFESpace");
   // ExportETSpace<ngcomp::VectorL2FESpace,
   // shared_ptr<ngcomp::VectorL2FESpace>> ( m, "VL2EmbTrefftzFESpace");
-  ExportETSpace<ngcomp::MonomialFESpace, shared_ptr<ngcomp::MonomialFESpace>> (
-      m, "MonomialEmbTrefftzFESpace");
-  ExportETSpace<ngcomp::CompoundFESpace, shared_ptr<ngcomp::CompoundFESpace>> (
-      m, "CompoundEmbTrefftzFESpace");
+  ExportETSpace<ngcomp::MonomialFESpace> (m, "MonomialEmbTrefftzFESpace");
+  ExportETSpace<ngcomp::CompoundFESpace> (m, "CompoundEmbTrefftzFESpace");
 
   m.def (
       "EmbeddedTrefftzFES",
       [] (shared_ptr<ngcomp::FESpace> fes) -> shared_ptr<ngcomp::FESpace> {
         shared_ptr<ngcomp::FESpace> nfes;
         if (dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes))
-          nfes = make_shared<ngcomp::EmbTrefftzFESpace<
-              ngcomp::L2HighOrderFESpace,
-              shared_ptr<ngcomp::L2HighOrderFESpace>>> (
+          nfes = make_shared<
+              ngcomp::EmbTrefftzFESpace<ngcomp::L2HighOrderFESpace>> (
               dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes));
         // else if (dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes))
         // nfes = make_shared<ngcomp::EmbTrefftzFESpace<
         // ngcomp::VectorL2FESpace, shared_ptr<ngcomp::VectorL2FESpace>>> (
         // dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes));
         else if (dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes))
-          nfes = make_shared<ngcomp::EmbTrefftzFESpace<
-              ngcomp::MonomialFESpace, shared_ptr<ngcomp::MonomialFESpace>>> (
+          nfes = make_shared<
+              ngcomp::EmbTrefftzFESpace<ngcomp::MonomialFESpace>> (
               dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes));
         else if (dynamic_pointer_cast<ngcomp::CompoundFESpace> (fes))
-          nfes = make_shared<ngcomp::EmbTrefftzFESpace<
-              ngcomp::CompoundFESpace, shared_ptr<ngcomp::CompoundFESpace>>> (
+          nfes = make_shared<
+              ngcomp::EmbTrefftzFESpace<ngcomp::CompoundFESpace>> (
               dynamic_pointer_cast<ngcomp::CompoundFESpace> (fes));
         else
           throw Exception ("Unknown base fes");
