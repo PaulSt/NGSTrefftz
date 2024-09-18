@@ -12,14 +12,13 @@ endif()
 
 file(DOWNLOAD https://raw.githubusercontent.com/NGSolve/ngsolve-addon-template/main/ngsolve_addon.cmake ${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_BINARY_DIR}/cmake_modules")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
 
 ### ngstrefftz
 set(addon_name _trefftz)
 project(_trefftz)
 include_directories(${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src)
 include(${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
-add_ngsolve_addon( _trefftz 
+add_ngsolve_addon( _trefftz
     ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp
     src/python_trefftz.cpp
     src/diffopmapped.hpp
@@ -30,7 +29,7 @@ add_ngsolve_addon( _trefftz
     src/specialintegrator.cpp
     src/twavetents.cpp
     src/embtrefftz.cpp
-    src/monomialfespace.cpp 
+    src/monomialfespace.cpp
     src/mesh1dtents.cpp
     src/condensedg.cpp
     src/pufe.cpp
@@ -41,20 +40,23 @@ add_ngsolve_addon( _trefftz
 target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_EXPORTS)
 target_compile_definitions(_trefftz PRIVATE NGSTENT_EXPORTS)
 
-### link LAPACK or MKL if possible
+### user options
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
+set(NGSTREFFTZ_USE_GTEST OFF CACHE BOOL "Try to use gtest")
 set(NGSTREFFTZ_USE_MKL ${NGSOLVE_USE_MKL} CACHE BOOL "Try to use mkl")
 set(NGSTREFFTZ_USE_LAPACK ${NGSOLVE_USE_LAPACK} CACHE BOOL "Try to use lapack from ngsolve")
+
+### link LAPACK or MKL if possible
 if (NGSTREFFTZ_USE_MKL)
-    file(DOWNLOAD 
-    https://raw.githubusercontent.com/NGSolve/ngsolve/master/cmake/cmake_modules/FindMKL.cmake 
+    file(DOWNLOAD
+    https://raw.githubusercontent.com/NGSolve/ngsolve/master/cmake/cmake_modules/FindMKL.cmake
     "${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake")
 
-    #file(COPY ${CMAKE_SOURCE_DIR}/FindMKL.cmake DESTINATION 
+    #file(COPY ${CMAKE_SOURCE_DIR}/FindMKL.cmake DESTINATION
     #"${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake")
 
     #message(STATUS "MKL_ROOT=${MKL_ROOT}")
     #message(STATUS "NGSOLVED=${NGSolve_DIR}")
-
 
     #set(PIP_MKL_ROOT FALSE CACHE BOOL "Set to true if MKL_ROOT is set by pip")
     #message(STATUS "PIP_MKL_ROOT=${PIP_MKL_ROOT}")
@@ -89,7 +91,7 @@ if (NGSTREFFTZ_USE_MKL)
       endif()
     endif()
 
-    file(WRITE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/findmklconf.py 
+    file(WRITE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/findmklconf.py
         "from contextlib import suppress;import importlib.metadata; \
         [print( f.locate().parent.resolve().absolute().as_posix()) \
         if f.match('MKLConfig.cmake') else 0 for f in importlib.metadata.files('mkl-devel')]")
@@ -138,9 +140,9 @@ else(LAPACK_LIBRARIES)
     message("${Red}LAPACK not found, restricted usage${ColourReset}")
 endif(LAPACK_LIBRARIES)
 
-### doc 
-option(BUILD_DOC "Build documentation" OFF)
-if (BUILD_DOC)
+### doc
+option(NGSTREFFTZ_BUILD_DOC "Build documentation" OFF)
+if (NGSTREFFTZ_BUILD_DOC)
     find_package(Doxygen REQUIRED)
     set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
     set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
@@ -150,7 +152,7 @@ if (BUILD_DOC)
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Generating API documentation with Doxygen"
         VERBATIM )
-endif (BUILD_DOC)
+endif (NGSTREFFTZ_BUILD_DOC)
 
 ### install
 set_target_properties(_trefftz PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz")
@@ -167,19 +169,23 @@ message("${BoldCyan}
   Flags: ${flags}
 
   Enabled functionality:
-    LAPACK: ............ ${NGSTREFFTZ_USE_LAPACK} 
+    LAPACK: ............ ${NGSTREFFTZ_USE_LAPACK}
     MKL: ............... ${NGSTREFFTZ_USE_MKL}
-    Doxygen: ........... ${BUILD_DOC}
+    Doxygen: ........... ${NGSTREFFTZ_BUILD_DOC}
+    GTest: ............. ${NGSTREFFTZ_USE_GTEST}
 
 With 'make install' the package will be installed to: ${CMAKE_INSTALL_PREFIX}
-Make sure to add it to the python path: 
+Make sure to add it to the python path:
 -->   export PYTHONPATH=${CMAKE_INSTALL_PREFIX}/${python3_library_dir}:$PYTHONPATH
 ------------------------------------------------------------------------
 \n${ColourReset}")
 
-### tests 
+### tests
+set(CMAKE_BUILD_TYPE Debug)
+enable_testing()
 include(CTest)
-file(COPY 
+# set up python integration tests
+file(COPY
     ${CMAKE_SOURCE_DIR}/test/dg.py
     ${CMAKE_SOURCE_DIR}/test/embt.py
     ${CMAKE_SOURCE_DIR}/test/trefftz.py
@@ -195,6 +201,49 @@ add_test(NAME box COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/T
 #WORKING_DIRECTORY ${ CMAKE_CURRENT_SOURCE_DIR }
 set_tests_properties(embtrefftz trefftz tents
     PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON}:$ENV{PYTHONPATH}")
+
+if(NGSTREFFTZ_USE_GTEST)
+    #set(CMAKE_VERBOSE_MAKEFILE ON)
+    #target_link_options(trefftz_gtest PRIVATE "-v")
+    # Dowload and include googletest
+    # currently version 1.15.2
+    # For newer version, replace the file name with the newer commit hash.
+    include(FetchContent)
+    FetchContent_Declare(
+      googletest
+      URL https://github.com/google/googletest/archive/b514bdc898e2951020cbdca1304b75f5950d1f59.zip
+      DOWNLOAD_EXTRACT_TIMESTAMP NEW
+    )
+     #For Windows: Prevent overriding the parent project's compiler/linker settings
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+
+    add_executable(
+      trefftz_gtest
+      ${CMAKE_SOURCE_DIR}/test/embtrefftz_gtest.cpp
+    )
+
+    target_link_libraries(trefftz_gtest PRIVATE ${LAPACK_LIBRARIES})
+    target_compile_definitions(trefftz_gtest PRIVATE NGSTREFFTZ_USE_LAPACK)
+
+    target_include_directories(
+      trefftz_gtest PRIVATE
+      ${CMAKE_SOURCE_DIR}/src
+    )
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+    include(GoogleTest)
+    target_link_libraries(
+      trefftz_gtest
+      PRIVATE
+      Python3::Python
+      ngsolve
+      _trefftz
+      GTest::gtest_main
+    )
+    #target_compile_definitions(trefftz_gtest INTERFACE NG_PYTHON NETGEN_PYTHON)
+    set(GTEST_DISABLE_AUTO_DISCOVER 1)
+    gtest_discover_tests(trefftz_gtest)
+endif(NGSTREFFTZ_USE_GTEST)
 
 # make uninstall
 add_custom_target("uninstall" COMMENT "Uninstall installed files")

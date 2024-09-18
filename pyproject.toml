@@ -8,14 +8,14 @@ requires-python = ">=3.8"
 classifiers = [
   "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
 ]
-dependencies = [ "mkl>=2024.2.0", "ngsolve>=6.2.2404.post51", ]
+dependencies = [ "mkl>=2024.2.0", "ngsolve>=6.2.2404.post157.dev0", ]
 
 [project.urls]
 Documentation = "https://paulst.github.io/NGSTrefftz"
 Repository = "https://github.com/PaulSt/ngstrefftz"
 
 [build-system]
-requires = ["ngsolve>=6.2.2404.post51",
+requires = ["ngsolve>=6.2.2404.post157.dev0",
             "setuptools>=45", "setuptools_scm[toml]>=8", "toml", "scikit-build-core>=0.3.3", "pybind11_stubgen", "cmake>=3.26.1",  
             'mkl==2024.* ; platform_system != "Darwin"', 'mkl-devel==2024.* ; platform_system != "Darwin"']
 build-backend = "scikit_build_core.build"

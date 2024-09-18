@@ -13,24 +13,29 @@ int getNumberOfThreads ()
   return (task_manager) ? task_manager->GetNumThreads () : 1;
 }
 
-template <typename SCAL>
-void reorderMatrixColumns (MatrixView<SCAL> &matrix,
-                           const Array<DofId> &dof_nrs, LocalHeap &local_heap)
+/// @throw std::invalid_argument The number of columns in the matrix must be
+///   equal to the number of DofIds in `dof_nrs`
+template <typename SCAL, typename TDIST>
+void reorderMatrixColumns (
+    MatrixView<SCAL, ngbla::RowMajor, size_t, size_t, TDIST> &matrix,
+    const Array<DofId> &dof_nrs, LocalHeap &local_heap)
 {
+  const auto [n, m] = matrix.Shape ();
+  if (m != dof_nrs.Size ())
+    throw std::invalid_argument (
+        "the width of the matrix must match the length of the dof_nrs");
+
   const auto heap_reset = HeapReset (local_heap);
 
-  const auto matrix_shape = matrix.Shape ();
-
-  FlatArray<int> map (dof_nrs.Size (), local_heap);
+  FlatArray<int> map (m, local_heap);
   for (int i = 0; i < map.Size (); i++)
     map[i] = i;
 
   QuickSortI (dof_nrs, map);
-  auto elmat_b2_copy = FlatMatrix<SCAL> (get<0> (matrix_shape),
-                                         get<1> (matrix_shape), local_heap);
-  elmat_b2_copy = matrix;
-  for (auto i : Range (get<0> (matrix_shape)))
-    matrix.Col (i) = elmat_b2_copy.Col (map[i]);
+  auto matrix_copy = FlatMatrix<SCAL> (n, m, local_heap);
+  matrix_copy = matrix;
+  for (auto j : Range (m))
+    matrix.Col (j) = matrix_copy.Col (map[j]);
 }
 
 template <typename SCAL, typename TDIST>
