@@ -296,7 +296,7 @@ namespace ngcomp
   }
 
   template <int Dim>
-  FiniteElement &TrefftzFESpace::getFe (ElementId ei, Allocator &alloc) const
+  FiniteElement &TrefftzFESpace::TGetFE (ElementId ei, Allocator &alloc) const
   {
     Ngs_Element ngel = ma->GetElement (ei);
     ELEMENT_TYPE eltype = ngel.GetType ();
@@ -401,9 +401,9 @@ namespace ngcomp
               break;
             }
           case 2:
-            return getFe<2> (ei, alloc);
+            return TGetFE<2> (ei, alloc);
           case 3:
-            return getFe<3> (ei, alloc);
+            return TGetFE<3> (ei, alloc);
           }
       }
     // else

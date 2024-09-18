@@ -19,19 +19,19 @@ enum class EqType
   /// for the quasi-Trefftz space related to wave
   qtwave,
 
-  /// TODO
+  /// derivatives of Trefftz second order wave equation basis without constants
   fowave_reduced,
 
-  /// TODO
+  /// caloric polynomials
   heat,
 
-  /// TODO
+  /// quasi-Trefftz space for the heat equation
   qtheat,
 
   /// for Laplace equation
   laplace,
 
-  /// TODO
+  /// quasi-Trefftz space for a general elliptic problem
   qtelliptic,
 
   /// plane waves for the Helmholtz equation
@@ -189,7 +189,7 @@ namespace ngcomp
     template <int Dim> void basisUpdate ();
     /// templated version of GetFe
     template <int Dim>
-    FiniteElement &getFe (ElementId ei, Allocator &alloc) const;
+    FiniteElement &TGetFE (ElementId ei, Allocator &alloc) const;
 
   public:
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
