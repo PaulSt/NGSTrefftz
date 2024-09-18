@@ -4,6 +4,43 @@
 #include "scalarmappedfe.hpp"
 #include "planewavefe.hpp"
 
+/// Denotes the types of equations supported by the TrefftzFESpace.
+enum class EqType
+{
+  /// for the first order acoustic wave equation
+  fowave,
+
+  /// for the quasi-Trefftz space related to fowave
+  foqtwave,
+
+  /// for the second order acoustic wave equation
+  wave,
+
+  /// for the quasi-Trefftz space related to wave
+  qtwave,
+
+  /// derivatives of Trefftz second order wave equation basis without constants
+  fowave_reduced,
+
+  /// caloric polynomials
+  heat,
+
+  /// quasi-Trefftz space for the heat equation
+  qtheat,
+
+  /// for Laplace equation
+  laplace,
+
+  /// quasi-Trefftz space for a general elliptic problem
+  qtelliptic,
+
+  /// plane waves for the Helmholtz equation
+  helmholtz,
+
+  /// complex conjugate of Helmholtz
+  helmholtzconj,
+};
+
 namespace ngcomp
 {
 
@@ -129,7 +166,7 @@ namespace ngcomp
     int nel;
     int local_ndof;
     double coeff_const = 1;
-    string eqtyp = "wave";
+    EqType eqtype = EqType::wave;
     int useshift = 1;
     int usescale = 1;
     int basistype = 0;
@@ -140,6 +177,19 @@ namespace ngcomp
     CSR basismat;
     Vector<CSR> basismats;
     PolBasis *basis = nullptr;
+
+    // The following functions are helper functions, that capture behavior
+    // which strongly depends on the dimension and the eqtype of the
+    // TrefftzFESpace.
+
+    /// @returns the local number of dofs for this TrefftzFESpace
+    int calcLocalNdofs () const;
+    template <int Dim> void setupEvaluators ();
+    /// templated version of UpdateBasis
+    template <int Dim> void basisUpdate ();
+    /// templated version of GetFe
+    template <int Dim>
+    FiniteElement &TGetFE (ElementId ei, Allocator &alloc) const;
 
   public:
     TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
