@@ -1204,15 +1204,14 @@ template <typename T> void ExportETSpace (py::module m, string label)
                py::arg ("fes"));
 
   pyspace
-      .def (
-          "SetOp",
-          static_cast<shared_ptr<BaseVector> (EmbTrefftzFESpace<T>::*) (
-              shared_ptr<SumOfIntegrals>, shared_ptr<SumOfIntegrals>, double,
-              shared_ptr<FESpace>, int)> (
-              &ngcomp::EmbTrefftzFESpace<T>::SetOp),
-          "Sets the operators for the embedded Trefftz method." py::arg ("bf"),
-          py::arg ("lf") = nullptr, py::arg ("eps") = 0,
-          py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0)
+      .def ("SetOp",
+            static_cast<shared_ptr<BaseVector> (EmbTrefftzFESpace<T>::*) (
+                shared_ptr<SumOfIntegrals>, shared_ptr<SumOfIntegrals>, double,
+                shared_ptr<FESpace>, int)> (
+                &ngcomp::EmbTrefftzFESpace<T>::SetOp),
+            "Sets the operators for the embedded Trefftz method.",
+            py::arg ("bf"), py::arg ("lf") = nullptr, py::arg ("eps") = 0,
+            py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0)
       .def ("SetOp",
             static_cast<shared_ptr<BaseVector> (EmbTrefftzFESpace<T>::*) (
                 shared_ptr<const SumOfIntegrals>,
