@@ -736,8 +736,7 @@ namespace ngcomp
 
           // skip this element, if the bilinear forms are not defined
           // on this element
-          if (!bfIsDefinedOnElement (op, mesh_element)
-              || !bfIsDefinedOnElement (cop_lhs, mesh_element)
+          if (!bfIsDefinedOnElement (cop_lhs, mesh_element)
               || !bfIsDefinedOnElement (cop_rhs, mesh_element))
             return;
 
@@ -754,7 +753,10 @@ namespace ngcomp
           // L.shape == (ndof, ndof)
           // thus A.shape == (ndof + ndof_constraint, ndof)
           const size_t ndof = dofs.Size ();
-          const size_t ndof_test = dofs_test.Size ();
+          const bool opIsDefinedOnElement
+              = bfIsDefinedOnElement (op, mesh_element);
+          const size_t ndof_test
+              = (opIsDefinedOnElement) ? dofs_test.Size () : 0;
           const size_t ndof_constraint = dofs_constraint.Size ();
           auto elmat_a = FlatMatrix<SCAL> (ndof_test + ndof_constraint, ndof,
                                            local_heap);
@@ -766,10 +768,8 @@ namespace ngcomp
           //     \   /    \   /
           // with B_2.shape == (ndof_constraint, ndof_constraint),
           // and B.shape == ( ndof_constraint + ndof, ndof_constraint)
-          auto elmat_b = FlatMatrix<SCAL> (ndof_test + ndof_constraint,
-                                           ndof_constraint, local_heap
-
-          );
+          auto elmat_b = FlatMatrix<SCAL> (ndof_test + ndof_constraint, ndof,
+                                           local_heap);
           elmat_a = static_cast<SCAL> (0.);
           elmat_b = static_cast<SCAL> (0.);
 
