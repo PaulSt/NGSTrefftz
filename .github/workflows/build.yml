@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [main]
+    branches: ["main**"]
   pull_request:
     branches: ["main**"]
   release:
@@ -57,8 +57,8 @@ jobs:
             cibw-arch: AMD64
             cmake-generator: "Visual Studio 16 2019"
             cmake_generator_platform: "x64"
-    #env:
-      #CIBW_BUILD: cp312-*
+    env:
+      CIBW_BUILD: cp39-* cp310-* cp311-* cp312-*
     steps:
       - uses: actions/checkout@v4
         with:
