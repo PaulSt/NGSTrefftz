@@ -86,8 +86,8 @@ namespace ngcomp
              && (eqtype == EqType::helmholtz
                  || eqtype == EqType::helmholtzconj))
       {
-        evaluator[VOL] = make_shared<
-            T_DifferentialOperatorC<DiffOpMappedComplex<2>>> ();
+        evaluator[VOL]
+            = make_shared<T_DifferentialOperatorC<DiffOpMappedComplex<2>>> ();
         flux_evaluator[VOL] = make_shared<
             T_DifferentialOperatorC<DiffOpMappedGradientComplex<2>>> ();
       }
@@ -102,6 +102,7 @@ namespace ngcomp
             make_shared<T_DifferentialOperator<DiffOpMappedHesse<Dim>>> ());
       }
   }
+
   TrefftzFESpace ::TrefftzFESpace (shared_ptr<MeshAccess> ama,
                                    const Flags &flags)
       : FESpace (ama, flags)
@@ -170,10 +171,11 @@ namespace ngcomp
         basis = new QTEllipticBasis<Dim> (order, coeffA, coeffB, coeffC);
         break;
       case EqType::fowave:
-      case EqType::foqtwave:
         basismats.SetSize (Dim);
         for (int d = 0; d < Dim; d++)
           basismats[d] = FOTWaveBasis<Dim>::Basis (order, d);
+        break;
+      case EqType::foqtwave:
         basis = new FOQTWaveBasis<Dim> (order, coeffA, coeffB);
         break;
       case EqType::heat:
@@ -183,10 +185,11 @@ namespace ngcomp
         basis = new QTHeatBasis<Dim> (order, coeffA);
         break;
       case EqType::wave:
-      case EqType::qtwave:
       case EqType::fowave_reduced:
         basismat = TWaveBasis<Dim>::Basis (order, basistype,
                                            eqtype == EqType::fowave_reduced);
+        break;
+      case EqType::qtwave:
         basis = new QTWaveBasis<Dim> (order, coeffA, coeffB);
         break;
       case EqType::helmholtz:
@@ -317,7 +320,7 @@ namespace ngcomp
       }
     else if (eqtype == (EqType::foqtwave))
       {
-        Vec<2, CSR> qtbasis;
+        Vec<Dim, CSR> qtbasis;
         for (int d = 0; d < Dim; d++)
           qtbasis[d] = static_cast<FOQTWaveBasis<Dim> *> (basis)->Basis (
               order, d, ElCenter<Dim> (ei));
