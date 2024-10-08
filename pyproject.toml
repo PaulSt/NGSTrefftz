@@ -1,6 +1,6 @@
 [project]
 name = "ngstrefftz"
-dynamic = ["version", "dependencies"]
+dynamic = ["version"]
 authors = [ {name = "Paul Stocker", email = "paul.stocker@univie.ac.at"} ]
 description='NGSTrefftz is an add-on to NGSolve for Trefftz methods.'
 readme = "README.md"
@@ -8,20 +8,20 @@ requires-python = ">=3.8"
 classifiers = [
   "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
 ]
-dependencies = [] # ngsolve will be added automatically
+dependencies = ["ngsolve==6.2.2405"]
 
 [project.urls]
 Documentation = "https://paulst.github.io/NGSTrefftz"
 Repository = "https://github.com/PaulSt/ngstrefftz"
 
 [build-system]
-requires = ["ngsolve==6.2.2405", "scikit-build-core>=0.9.0", "pybind11_stubgen", "cmake", "setuptools>=45", "setuptools_scm[toml]>=8", "toml", 
+requires = ["ngsolve==6.2.2405", "scikit-build-core>=0.9.0", "pybind11_stubgen", "setuptools>=45", "setuptools_scm[toml]>=8", "toml", 
             'mkl==2024.* ; platform_system != "Darwin"', 'mkl-devel==2024.* ; platform_system != "Darwin"']
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
 experimental = true
-metadata.dependencies.provider="ngsolve._scikit_build_core_dependencies"
+#metadata.dependencies.provider="ngsolve._scikit_build_core_dependencies"
 metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
 sdist.include = ["_version.py"]
 
