@@ -15,7 +15,7 @@ Documentation = "https://paulst.github.io/NGSTrefftz"
 Repository = "https://github.com/PaulSt/ngstrefftz"
 
 [build-system]
-requires = ["ngsolve==6.2.2405", "scikit-build-core>=0.9.0", "pybind11_stubgen", "cmake", "toml",
+requires = ["ngsolve==6.2.2405", "scikit-build-core>=0.9.0", "pybind11_stubgen", "cmake", "setuptools>=45", "setuptools_scm[toml]>=8", "toml", 
             'mkl==2024.* ; platform_system != "Darwin"', 'mkl-devel==2024.* ; platform_system != "Darwin"']
 build-backend = "scikit_build_core.build"
 
