@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: "True"
+          submodules: true
           path: "NGSTrefftz"
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
       - uses: RafikFarhad/clang-format-github-action@v4
@@ -27,19 +27,21 @@ jobs:
   test_linux:
     name: Test on Linux
     runs-on: ubuntu-latest
+    #container: quay.io/pypa/manylinux_2_28_x86_64
+    container: python:3.12
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
           path: 'NGSTrefftz'
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      #- uses: actions/setup-python@v5
+        #with:
+          #python-version: "3.12"
       - name: install ngstrefftz
-        env:
-          NGSTREFFTZ_USE_GTEST: 'ON'
-        run: cd NGSTrefftz && pip install numpy scipy mkl-devel==2024.* mkl==2024.* && pip install . -v
+        #env:
+          #NGSTREFFTZ_USE_GTEST: 'ON'
+        run: cd NGSTrefftz && pip install numpy scipy && pip install . -v
       - name: run test
         run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
 
@@ -55,6 +57,8 @@ jobs:
             cibw-arch: AMD64
             cmake-generator: "Visual Studio 16 2019"
             cmake_generator_platform: "x64"
+    #env:
+      #CIBW_BUILD: cp312-*
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,7 +66,7 @@ jobs:
           fetch-tags: true
           fetch-depth: 0
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.19.0
+        uses: pypa/cibuildwheel@v2.21.2
         env:
           CIBW_BUILD_VERBOSITY: 1
       - uses: actions/upload-artifact@v4
@@ -74,6 +78,7 @@ jobs:
     name: Build source distribution
     needs: [test_linux]
     runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux_2_28_x86_64
     steps:
       - uses: actions/checkout@v4
         with:
@@ -104,7 +109,12 @@ jobs:
         with:
           skip-existing: true
           password: ${{ secrets.PYPI_API_TOKEN }}
-          # To test: repository-url: https://test.pypi.org/legacy/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        if: github.ref == 'refs/heads/main-dev'
+        with:
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
 
   docker:
     needs: [upload_pypi]

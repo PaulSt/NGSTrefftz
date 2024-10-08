@@ -87,9 +87,9 @@ namespace ngcomp
                  || eqtype == EqType::helmholtzconj))
       {
         evaluator[VOL] = make_shared<
-            T_DifferentialOperatorC<DiffOpMappedComplex<Dim>>> ();
+            T_DifferentialOperatorC<DiffOpMappedComplex<2>>> ();
         flux_evaluator[VOL] = make_shared<
-            T_DifferentialOperatorC<DiffOpMappedGradientComplex<Dim>>> ();
+            T_DifferentialOperatorC<DiffOpMappedGradientComplex<2>>> ();
       }
     else
       {
@@ -337,7 +337,7 @@ namespace ngcomp
              && (eqtype == EqType::helmholtz
                  || eqtype == EqType::helmholtzconj))
       {
-        return *(new (alloc) PlaneWaveElement<Dim> (
+        return *(new (alloc) PlaneWaveElement<2> (
             local_ndof, order, eltype, ElCenter<Dim> (ei), ElSize<Dim> (ei),
             coeff_const, (eqtype == EqType::helmholtz ? 1 : -1)));
       }

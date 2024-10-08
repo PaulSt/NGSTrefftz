@@ -1,3 +1,4 @@
+import ngsolve
 from ngsolve.fem import ET,IntegrationRule
 from ngsolve.comp import L2,BilinearForm,LinearForm,SymbolicBFI,SymbolicLFI,FESpace
 from ngsolve.fem import CoordCF
