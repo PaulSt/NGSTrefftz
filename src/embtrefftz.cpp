@@ -13,6 +13,15 @@ int getNumberOfThreads ()
   return (task_manager) ? task_manager->GetNumThreads () : 1;
 }
 
+/// Used for the constrained Trefftz method.
+/// The default value for ndof_trefftz is
+/// `max(ndof - ndof_constraint, 0)`.
+INLINE size_t calcDefaultNdofTrefftz (const size_t ndof,
+                                      const size_t ndof_constraint) noexcept
+{
+  return (ndof >= ndof_constraint) ? ndof - ndof_constraint : 0;
+}
+
 /// @throw std::invalid_argument The number of columns in the matrix must be
 ///   equal to the number of DofIds in `dof_nrs`
 template <typename SCAL, typename TDIST>
@@ -116,12 +125,19 @@ void extractVisibleDofs (FlatMatrix<SCAL> &elmat, const ElementId &element_id,
 
 /// Fills the two creators with the sparsity pattern needed for
 /// the Trefftz embedding.
+/// @tparam NZ_FUNC has signature `(ElementId) -> size_t`
 template <typename SCAL, typename NZ_FUNC>
 INLINE size_t fillTrefftzTableCreators (
     TableCreator<int> &creator, TableCreator<int> &creator2,
     const vector<optional<Matrix<SCAL>>> &ETmats, const MeshAccess &ma,
     const FESpace &fes, NZ_FUNC nz_from_elnr, const size_t offset)
 {
+  static_assert (std::is_invocable_v<NZ_FUNC, ElementId>,
+                 "NZ_FUNC must be invocable on (ElementId)");
+  static_assert (
+      std::is_same_v<std::invoke_result_t<NZ_FUNC, ElementId>, size_t>,
+      "NZ_FUNC must have return type size_t");
+
   const size_t ndof = fes.GetNDof ();
   const size_t ne = ma.GetNE (VOL);
   // number of the next Trefftz dof to create
@@ -131,7 +147,7 @@ INLINE size_t fillTrefftzTableCreators (
       if (!ETmats[ei.Nr ()])
         continue;
 
-      size_t nz = nz_from_elnr (ei.Nr ());
+      size_t nz = nz_from_elnr (ei);
       Array<DofId> dnums;
       fes.GetDofNrs (ei, dnums, VISIBLE_DOF);
       bool hasregdof = false;
@@ -178,7 +194,7 @@ createTrefftzTables (Table<int> &table, Table<int> &table2,
     {
       prevdofs = fillTrefftzTableCreators (
           creator, creator2, ETmats, *ma, *fes,
-          [&] (size_t el_nr) { return ETmats[el_nr]->Width (); }, 0);
+          [&] (ElementId ei) { return ETmats[ei.Nr ()]->Width (); }, 0);
     }
   table = creator.MoveTable ();
   table2 = creator2.MoveTable ();
@@ -189,7 +205,7 @@ template <typename SCAL>
 INLINE size_t createConstrainedTrefftzTables (
     Table<int> &table, Table<int> &table2,
     const vector<optional<Matrix<SCAL>>> &ETmats, const FESpace &fes,
-    const FESpace &fes_constraint, const size_t ndof_trefftz,
+    const FESpace &fes_constraint, const std::optional<size_t> ndof_trefftz,
     const size_t hidden_dofs)
 {
   const auto ma = fes.GetMeshAccess ();
@@ -201,6 +217,8 @@ INLINE size_t createConstrainedTrefftzTables (
   TableCreator<int> creator2 (ne + hidden_dofs);
   size_t trefftz_ndof = 0;
 
+  LocalHeap local_heap (1000 * 1000);
+
   for (; !creator.Done (); creator++, creator2++)
     {
       // first compute the Trefftz dofs. The dof numbers of the Trefftz dofs
@@ -208,7 +226,21 @@ INLINE size_t createConstrainedTrefftzTables (
       // and Constraint dofs.
       trefftz_ndof = fillTrefftzTableCreators (
           creator, creator2, ETmats, *ma, fes,
-          [ndof_trefftz] (size_t _) { return ndof_trefftz; }, constraint_ndof);
+          [&] (ElementId ei) {
+            if (ndof_trefftz)
+              {
+                return *ndof_trefftz;
+              }
+            else
+              {
+                Array<DofId> dofs, constraint_dofs;
+                fes.GetDofNrs (ei, dofs);
+                fes_constraint.GetDofNrs (ei, constraint_dofs);
+                return calcDefaultNdofTrefftz (dofs.Size (),
+                                               constraint_dofs.Size ());
+              }
+          },
+          constraint_ndof);
       (*testout) << "created " << trefftz_ndof << " many trefftz dofs"
                  << std::endl;
 
@@ -318,7 +350,7 @@ namespace ngcomp
   Elmats2SparseConstrainedTrefftz (const vector<optional<Matrix<SCAL>>> ETmats,
                                    shared_ptr<const FESpace> fes,
                                    shared_ptr<const FESpace> fes_constraint,
-                                   size_t ndof_trefftz)
+                                   const std::optional<size_t> ndof_trefftz)
   {
     const auto ma = fes->GetMeshAccess ();
 
@@ -687,7 +719,7 @@ namespace ngcomp
               const ngfem::SumOfIntegrals &cop_rhs,
               const FESpace &fes_constraint,
               shared_ptr<const ngfem::SumOfIntegrals> linear_form,
-              const size_t ndof_trefftz)
+              const std::optional<const size_t> ndof_trefftz)
   {
     auto mesh_access = fes.GetMeshAccess ();
     const size_t num_elements = mesh_access->GetNE (VOL);
@@ -714,8 +746,6 @@ namespace ngcomp
     (*testout) << "fes has ndof:" << fes.GetNDof () << std::endl;
     (*testout) << "fes_constraint has ndof:" << fes_constraint.GetNDof ()
                << std::endl;
-    (*testout) << "trefftz space has ndof:" << ndof_trefftz * num_elements
-               << std::endl;
 
     auto particular_solution_vec = make_shared<VVector<SCAL>> (fes.GetNDof ());
     particular_solution_vec->operator= (0.0);
@@ -736,8 +766,7 @@ namespace ngcomp
 
           // skip this element, if the bilinear forms are not defined
           // on this element
-          if (!bfIsDefinedOnElement (op, mesh_element)
-              || !bfIsDefinedOnElement (cop_lhs, mesh_element)
+          if (!bfIsDefinedOnElement (cop_lhs, mesh_element)
               || !bfIsDefinedOnElement (cop_rhs, mesh_element))
             return;
 
@@ -756,6 +785,10 @@ namespace ngcomp
           const size_t ndof = dofs.Size ();
           const size_t ndof_test = dofs_test.Size ();
           const size_t ndof_constraint = dofs_constraint.Size ();
+          const size_t ndof_trefftz_i
+              = (ndof_trefftz)
+                    ? *ndof_trefftz
+                    : calcDefaultNdofTrefftz (ndof, ndof_constraint);
           auto elmat_a = FlatMatrix<SCAL> (ndof_test + ndof_constraint, ndof,
                                            local_heap);
           auto [elmat_b1, elmat_l] = elmat_a.SplitRows (ndof_constraint);
@@ -767,9 +800,7 @@ namespace ngcomp
           // with B_2.shape == (ndof_constraint, ndof_constraint),
           // and B.shape == ( ndof_constraint + ndof, ndof_constraint)
           auto elmat_b = FlatMatrix<SCAL> (ndof_test + ndof_constraint,
-                                           ndof_constraint, local_heap
-
-          );
+                                           ndof_constraint, local_heap);
           elmat_a = static_cast<SCAL> (0.);
           elmat_b = static_cast<SCAL> (0.);
 
@@ -826,9 +857,9 @@ namespace ngcomp
           elmat_a_inv = elmat_a_inv_expr;
 
           // P = (T1 | T2)
-          Matrix<SCAL> elmat_p (ndof, ndof_trefftz + ndof_constraint);
+          Matrix<SCAL> elmat_p (ndof, ndof_trefftz_i + ndof_constraint);
           // T1 has dimension (ndof, ndof_constraint)
-          // T2 has dimension (ndof, ndof)
+          // T2 has dimension (ndof, ndof_trefftz_i)
           auto [elmat_t1, elmat_t2] = elmat_p.SplitCols (ndof_constraint);
 
           // T1 solves A @ T1 = B,
@@ -842,14 +873,14 @@ namespace ngcomp
           (*testout) << "calculated t1 from element " << element_id << "\n"
                      << std::endl;
 
-          elmat_t2 = Trans (V.Rows (ndof_test - ndof_trefftz, ndof_test));
+          elmat_t2 = Trans (V.Rows (ndof_test - ndof_trefftz_i, ndof_test));
           //(*testout) << "t2 from element " << element_id << "\n"
           //           << elmat_t2 << std::endl;
           (*testout) << "calculated t2 from element " << element_id << "\n"
                      << std::endl;
 
           //(*testout) << "elmat_p shape: (" << ndof << ", "
-          //           << ndof_constraint + ndof_trefftz << ")" << std::endl;
+          //           << ndof_constraint + ndof_trefftz_i << ")" << std::endl;
 
           //(*testout) << "p from element " << element_id << "\n"
           //           << elmat_p << std::endl;
@@ -1258,7 +1289,7 @@ pythonConstrTrefftzWithLf (optional<const SumOfIntegrals> op_maybe,
                            shared_ptr<const SumOfIntegrals> cop_rhs,
                            shared_ptr<const FESpace> fes_constraint,
                            shared_ptr<const SumOfIntegrals> linear_form,
-                           size_t ndof_trefftz,
+                           std::optional<const size_t> ndof_trefftz,
                            shared_ptr<const FESpace> fes_test_ptr)
 {
   // guard against unwanted segfaults by checking that the pointers are not
@@ -1273,8 +1304,6 @@ pythonConstrTrefftzWithLf (optional<const SumOfIntegrals> op_maybe,
 
   // if op_maybe is empty, we need a default op to pass to the C++ code
   const SumOfIntegrals op_default{};
-  if (!op_maybe)
-    ndof_trefftz = 0;
   const SumOfIntegrals &op = (op_maybe) ? *op_maybe : op_default;
 
   auto [P, u_lf]
@@ -1293,7 +1322,7 @@ pythonConstrTrefftz (optional<const SumOfIntegrals> op,
                      shared_ptr<const SumOfIntegrals> cop_lhs,
                      shared_ptr<const SumOfIntegrals> cop_rhs,
                      shared_ptr<const FESpace> fes_constraint,
-                     const size_t ndof_trefftz,
+                     std::optional<const size_t> ndof_trefftz,
                      shared_ptr<const FESpace> fes_test)
 {
   return std::get<0> (pythonConstrTrefftzWithLf (op, fes, cop_lhs, cop_rhs,
@@ -1472,7 +1501,8 @@ void ExportEmbTrefftz (py::module m)
    )mydelimiter",
          py::arg ("op"), py::arg ("fes"), py::arg ("cop_lhs"),
          py::arg ("cop_rhs"), py::arg ("fes_constraint"),
-         py::arg ("ndof_trefftz"), py::arg ("fes_test") = py::none ());
+         py::arg ("ndof_trefftz") = py::none (),
+         py::arg ("fes_test") = py::none ());
 
   m.def ("TrefftzEmbedding", &pythonConstrTrefftzWithLf,
          R"mydelimiter(
@@ -1496,7 +1526,7 @@ void ExportEmbTrefftz (py::module m)
    )mydelimiter",
          py::arg ("op"), py::arg ("fes"), py::arg ("cop_lhs"),
          py::arg ("cop_rhs"), py::arg ("fes_constraint"),
-         py::arg ("linear_form"), py::arg ("ndof_trefftz"),
+         py::arg ("linear_form"), py::arg ("ndof_trefftz") = py::none (),
          py::arg ("fes_test") = py::none ());
 }
 
