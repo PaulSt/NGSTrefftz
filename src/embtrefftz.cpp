@@ -1501,7 +1501,8 @@ void ExportEmbTrefftz (py::module m)
    )mydelimiter",
          py::arg ("op"), py::arg ("fes"), py::arg ("cop_lhs"),
          py::arg ("cop_rhs"), py::arg ("fes_constraint"),
-         py::arg ("ndof_trefftz"), py::arg ("fes_test") = py::none ());
+         py::arg ("ndof_trefftz") = py::none (),
+         py::arg ("fes_test") = py::none ());
 
   m.def ("TrefftzEmbedding", &pythonConstrTrefftzWithLf,
          R"mydelimiter(
@@ -1525,7 +1526,7 @@ void ExportEmbTrefftz (py::module m)
    )mydelimiter",
          py::arg ("op"), py::arg ("fes"), py::arg ("cop_lhs"),
          py::arg ("cop_rhs"), py::arg ("fes_constraint"),
-         py::arg ("linear_form"), py::arg ("ndof_trefftz"),
+         py::arg ("linear_form"), py::arg ("ndof_trefftz") = py::none (),
          py::arg ("fes_test") = py::none ());
 }
 
