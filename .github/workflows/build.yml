@@ -187,22 +187,18 @@ jobs:
   docs:
     needs: [upload_pypi]
     runs-on: ubuntu-latest
+    container: python:3.12
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
           submodules: true
           path: "NGSTrefftz"
-      - name: install pkgs
-        run: sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install libxmu-dev tk-dev tcl-dev git libglu1-mesa-dev libblas-dev liblapack-dev python3 python3-pip python3-distutils python3-tk libpython3-dev python3-testresources npm nodejs pandoc -y
-      #- name: pip pkgs
-      #run: python3 -m pip list
       - name: pip install requirements
-        run: pip install --user -r $GITHUB_WORKSPACE/NGSTrefftz/docs/requirements.txt
-      - name: set path
         run: |
-          echo "NETGENDIR=/usr/bin/" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=${{ env.LD_LIBRARY_PATH }}:/home/runner/.local/lib:/usr/local/lib/" >> $GITHUB_ENV
+          apt update -y && DEBIAN_FRONTEND="noninteractive" apt install -y git pandoc
+          pip install -r $GITHUB_WORKSPACE/NGSTrefftz/docs/requirements.txt
+          cd $GITHUB_WORKSPACE/NGSTrefftz && pip install .
       - name: Build and Commit
         uses: sphinx-notes/pages@v2
         with:
@@ -215,7 +211,7 @@ jobs:
         with:
           name: ngst-pyodide
           path: NGSTrefftz/ngst-pyodide
-      - run: tree -d .
+      #- run: tree -d .
       - name: Upload
         uses: actions/upload-pages-artifact@v3
         with:
