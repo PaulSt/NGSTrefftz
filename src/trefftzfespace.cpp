@@ -535,10 +535,12 @@ namespace ngcomp
       }
   }
 
-  template <int D, typename TFunc>
+  template <int D, int traverse_dir = 0, typename TFunc>
   void TraversePol2 (int order, const TFunc &func)
   {
     // traverse polynomials in order of increasing degree
+    // prioritize smaller dimensions for traverse_dir=0
+    // prioritize larger dimensions for traverse_dir=1
     switch (D)
       {
       case 0:
@@ -552,7 +554,10 @@ namespace ngcomp
           for (int i = 0; i <= ord; i++)
             {
               int j = ord - i;
-              func (ii++, Vec<2, int>{ j, i });
+              if (traverse_dir == 0)
+                func (ii++, Vec<2, int>{ j, i });
+              else
+                func (ii++, Vec<2, int>{ i, j });
             }
         break;
       case 3:
@@ -561,7 +566,10 @@ namespace ngcomp
             for (int j = 0; j <= ord - i; j++)
               {
                 int k = ord - i - j;
-                func (ii++, Vec<3, int>{ k, j, i });
+                if (traverse_dir == 0)
+                  func (ii++, Vec<3, int>{ k, j, i });
+                else
+                  func (ii++, Vec<3, int>{ i, j, k });
               }
         break;
       default:
@@ -889,6 +897,7 @@ namespace ngcomp
         Matrix<> qtbasis (ndof, npoly);
         qtbasis = 0;
         // init qtbasis
+        // TODO: for general direction this needs a counter (see qtheat)
         TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
           if (coeff[D - 1] > 1)
             return;
@@ -1378,7 +1387,7 @@ namespace ngcomp
         qtbasis (counter++, indexmap) = 1;
       });
       // start recursion
-      TraversePol2<D> (order, [&] (int i, Vec<D, int> coeff) {
+      TraversePol2<D, 1> (order, [&] (int i, Vec<D, int> coeff) {
         if (coeff[0] <= 1)
           return;
         int indexmap = PolBasis::IndexMap2<D> (coeff, order);
@@ -1466,7 +1475,7 @@ namespace ngcomp
     const int npoly = (BinCoeff (D + order, order));
     sol = 0;
     // start recursion
-    TraversePol2<D> (order, [&] (int i, Vec<D, int> coeff) {
+    TraversePol2<D, 1> (order, [&] (int i, Vec<D, int> coeff) {
       if (coeff[0] <= 1)
         return;
       int indexmap = PolBasis::IndexMap2<D> (coeff, order);
