@@ -1137,7 +1137,7 @@ namespace ngfem
       const SIMD_BaseMappedIntegrationRule &smir,
       BareSliceMatrix<SIMD<double>> dshape) const
   {
-    for (int imip = 0; imip < smir.Size (); imip++)
+    for (size_t imip = 0; imip < smir.Size (); imip++)
       {
         Vec<2, SIMD<double>> cpoint = smir[imip].GetPoint ();
         cpoint -= shift;
@@ -1146,7 +1146,7 @@ namespace ngfem
         STACK_ARRAY (SIMD<double>, mem, 2 * (order + 1) + 1);
         mem[0] = 0;
         Vec<2, SIMD<double> *> polxt;
-        for (size_t d = 0; d < 2; d++)
+        for (int d = 0; d < 2; d++)
           {
             polxt[d] = &mem[d * (order + 1) + 1];
             Monomial (order, cpoint[d], polxt[d]);
@@ -1155,8 +1155,8 @@ namespace ngfem
         for (int d = 0; d < 2; d++)
           {
             Vector<SIMD<double>> pol (npoly);
-            for (size_t i = 0, ii = 0; i <= order; i++)
-              for (size_t j = 0; j <= order - i; j++)
+            for (int i = 0, ii = 0; i <= order; i++)
+              for (int j = 0; j <= order - i; j++)
                 pol[ii++] = polxt[0][i] * polxt[1][j];
 
             CSR localmat = localmats[d];
@@ -1176,7 +1176,7 @@ namespace ngfem
       const SIMD_BaseMappedIntegrationRule &smir,
       BareSliceMatrix<SIMD<double>> dshape) const
   {
-    for (int imip = 0; imip < smir.Size (); imip++)
+    for (size_t imip = 0; imip < smir.Size (); imip++)
       {
         Vec<3, SIMD<double>> cpoint = smir[imip].GetPoint ();
         cpoint -= shift;
@@ -1186,7 +1186,7 @@ namespace ngfem
         STACK_ARRAY (SIMD<double>, mem, 3 * (order + 1) + 1);
         mem[0] = 0;
         Vec<3, SIMD<double> *> polxt;
-        for (size_t d = 0; d < 3; d++)
+        for (int d = 0; d < 3; d++)
           {
             polxt[d] = &mem[d * (order + 1) + 1];
             Monomial (order, cpoint[d], polxt[d]);
@@ -1195,9 +1195,9 @@ namespace ngfem
         for (int d = 0; d < 3; d++)
           {
             Vector<SIMD<double>> pol (npoly);
-            for (size_t i = 0, ii = 0; i <= order; i++)
-              for (size_t j = 0; j <= order - i; j++)
-                for (size_t k = 0; k <= order - i - j; k++)
+            for (int i = 0, ii = 0; i <= order; i++)
+              for (int j = 0; j <= order - i; j++)
+                for (int k = 0; k <= order - i - j; k++)
                   pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k];
 
             CSR localmat = localmats[d];
@@ -1217,7 +1217,7 @@ namespace ngfem
       const SIMD_BaseMappedIntegrationRule &smir,
       BareSliceMatrix<SIMD<double>> dshape) const
   {
-    for (int imip = 0; imip < smir.Size (); imip++)
+    for (size_t imip = 0; imip < smir.Size (); imip++)
       {
         Vec<4, SIMD<double>> cpoint = smir[imip].GetPoint ();
         cpoint -= shift;
@@ -1236,10 +1236,10 @@ namespace ngfem
         for (int d = 0; d < 4; d++)
           {
             Vector<SIMD<double>> pol (npoly);
-            for (size_t i = 0, ii = 0; i <= order; i++)
-              for (size_t j = 0; j <= order - i; j++)
-                for (size_t k = 0; k <= order - i - j; k++)
-                  for (size_t l = 0; l <= order - i - j - k; l++)
+            for (int i = 0, ii = 0; i <= order; i++)
+              for (int j = 0; j <= order - i; j++)
+                for (int k = 0; k <= order - i - j; k++)
+                  for (int l = 0; l <= order - i - j - k; l++)
                     pol[ii++] = polxt[0][i] * polxt[1][j] * polxt[2][k]
                                 * polxt[3][l];
 

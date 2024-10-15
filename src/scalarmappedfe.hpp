@@ -150,7 +150,7 @@ namespace ngfem
 
   void MatToCSR (Matrix<> mat, CSR &sparsemat);
 
-  constexpr inline size_t BinCoeff (size_t n, size_t k) noexcept
+  constexpr inline int BinCoeff (int n, int k) noexcept
   {
     return (k > n) ? 0 : // out of range
                (k == 0 || k == n) ? 1

@@ -10,8 +10,8 @@ namespace ngcomp
     // for (size_t si = mat->First[drow[i]], j = 0; si < mat->First[drow[i] +
     // 1]; si++) if (dcol.Contains (colnr[si])) out (i, j++) = data[si];
     auto smat = dynamic_pointer_cast<SparseMatrix<double>> (mat);
-    for (int i = 0; i < drow.Size (); i++)
-      for (int j = 0; j < dcol.Size (); j++)
+    for (size_t i = 0; i < drow.Size (); i++)
+      for (size_t j = 0; j < dcol.Size (); j++)
         out (i, j) = smat->operator() (drow[i], dcol[j]);
   }
 
@@ -72,8 +72,6 @@ namespace ngcomp
 
     auto ma = fes->GetMeshAccess ();
     size_t ne = ma->GetNE (VOL);
-    size_t ndof = fes->GetNDof ();
-    size_t dim = fes->GetDimension ();
 
     // prepare output matrix
     Table<int> table;

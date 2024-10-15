@@ -500,7 +500,7 @@ namespace ngcomp
   }
 
   template <int D, typename TFunc>
-  void TraversePol (Vec<D, size_t> order, const TFunc &func)
+  void TraversePol (Vec<D, int> order, const TFunc &func)
   {
     // traverse polynomials increasing smaller dimensions first, up to order
     // in each dimension
@@ -1470,9 +1470,6 @@ namespace ngcomp
         }
     });
 
-    const int ndof = (BinCoeff (D - 1 + order, order)
-                      + BinCoeff (D - 1 + order - 1, order - 1));
-    const int npoly = (BinCoeff (D + order, order));
     sol = 0;
     // start recursion
     TraversePol2<D, 1> (order, [&] (int i, Vec<D, int> coeff) {

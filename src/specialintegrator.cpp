@@ -45,7 +45,7 @@ namespace ngfem
     for (int i : fnums)
       {
         ma->GetFacetElements (i, elnums);
-        for (int elnr2 : elnums)
+        for (size_t elnr2 : elnums)
           {
             if (elnr2 != elnr.Nr ()
                 && PointContainedInElement (ma, mip, neighbourip, elnr2))
@@ -253,7 +253,7 @@ namespace ngfem
           }
       }
 
-    for (int l = 0; l < ir_facet.GetNIP () / (maxorder + 1); l++)
+    for (size_t l = 0; l < ir_facet.GetNIP () / (maxorder + 1); l++)
       {
 
         IntegrationPoint ip1 = transform1 (LocalFacetNr1, ir_facet[l]);
@@ -460,7 +460,7 @@ namespace ngfem
           }
       }
 
-    for (int l = 0; l < ir_facet.GetNIP () / (maxorder + 1); l++)
+    for (size_t l = 0; l < ir_facet.GetNIP () / (maxorder + 1); l++)
       {
 
         IntegrationPoint ip1 = transform1 (LocalFacetNr1, ir_facet[l]);
@@ -829,7 +829,7 @@ namespace ngfem
     ////modify intrule
     ELEMENT_TYPE etffacet = (D == 3 ? ET_SEGM : ET_POINT);
     IntegrationRule ir_ffacet (etffacet, 2 * maxorder);
-    int ir_size = ir_ffacet.GetNIP ();
+    size_t ir_size = ir_ffacet.GetNIP ();
     // int ir_size = ir_facet.GetNIP () / (maxorder + 1);
     // cout << "ir_size " << ir_size << " vs " << ir_facet.GetNIP () /
     // (maxorder + 1) << endl;
@@ -837,7 +837,7 @@ namespace ngfem
     ir_facet_vol2.SetSize (ir_size);
     BaseMappedIntegrationRule &mir1 = trafo1 (ir_facet_vol1, lh);
     BaseMappedIntegrationRule &mir2 = trafo2 (ir_facet_vol2, lh);
-    for (int i = 0; i < ir_size; i++)
+    for (size_t i = 0; i < ir_size; i++)
       {
         mir1[i].GetPoint ()[D - 1] = tfix;
         mir2[i].GetPoint ()[D - 1] = tfix;
@@ -881,8 +881,8 @@ namespace ngfem
           FlatTensor<3, TSCAL> proxyvalues (lh, ir_size, proxy2->Dimension (),
                                             proxy1->Dimension ());
 
-          for (int k = 0; k < proxy1->Dimension (); k++)
-            for (int l = 0; l < proxy2->Dimension (); l++)
+          for (size_t k = 0; k < proxy1->Dimension (); k++)
+            for (size_t l = 0; l < proxy2->Dimension (); l++)
               {
                 ud.trialfunction = proxy1;
                 ud.trial_comp = k;
@@ -893,7 +893,7 @@ namespace ngfem
                 proxyvalues (STAR, l, k) = val.Col (0).Rows (0, ir_size);
               }
 
-          for (int i = 0; i < ir_size; i++)
+          for (size_t i = 0; i < ir_size; i++)
             // proxyvalues(i,STAR,STAR) *= measure(i) * ir_facet[i].Weight();
             proxyvalues (i, STAR, STAR)
                 *= mir1[i].GetMeasure (); // * ir_facet[i].Weight ();
@@ -1003,10 +1003,10 @@ namespace ngfem
     ////modify intrule
     ELEMENT_TYPE etffacet = (D == 3 ? ET_SEGM : ET_POINT);
     IntegrationRule ir_ffacet (etffacet, 2 * maxorder);
-    int ir_size = ir_ffacet.GetNIP ();
+    size_t ir_size = ir_ffacet.GetNIP ();
     ir_facet_vol1.SetSize (ir_size);
     BaseMappedIntegrationRule &mir1 = trafo1 (ir_facet_vol1, lh);
-    for (int i = 0; i < ir_size; i++)
+    for (size_t i = 0; i < ir_size; i++)
       {
         mir1[i].GetPoint ()[D - 1] = tfix;
         double measure1 = slabwidth * ir_ffacet[i].Weight ();
@@ -1138,12 +1138,12 @@ namespace ngfem
     ////modify intrule
     ELEMENT_TYPE etffacet = (D == 3 ? ET_SEGM : ET_POINT);
     IntegrationRule ir_ffacet (etffacet, 2 * maxorder);
-    int ir_size = ir_ffacet.GetNIP ();
+    size_t ir_size = ir_ffacet.GetNIP ();
     ir_facet_vol1.SetSize (ir_size);
     ir_facet_vol2.SetSize (ir_size);
     BaseMappedIntegrationRule &mir1 = trafo1 (ir_facet_vol1, lh);
     BaseMappedIntegrationRule &mir2 = trafo2 (ir_facet_vol2, lh);
-    for (int i = 0; i < ir_size; i++)
+    for (size_t i = 0; i < ir_size; i++)
       {
         mir1[i].GetPoint ()[D - 1] = tfix;
         mir2[i].GetPoint ()[D - 1] = tfix;
@@ -1168,7 +1168,7 @@ namespace ngfem
         HeapReset hr (lh);
         FlatMatrix<TSCAL> proxyvalues (ir_size, proxy->Dimension (), lh);
 
-        for (int k = 0; k < proxy->Dimension (); k++)
+        for (size_t k = 0; k < proxy->Dimension (); k++)
           {
             ud.testfunction = proxy;
             ud.test_comp = k;
@@ -1177,7 +1177,7 @@ namespace ngfem
             proxyvalues.Col (k) = val.Col (0).Rows (0, ir_size);
           }
 
-        for (int i = 0; i < ir_size; i++)
+        for (size_t i = 0; i < ir_size; i++)
           proxyvalues.Row (i)
               *= mir1[i].GetMeasure (); // * ir_facet[i].Weight(); // use also
                                         // smir here ?
@@ -1235,10 +1235,10 @@ namespace ngfem
     ////modify intrule
     ELEMENT_TYPE etffacet = (D == 3 ? ET_SEGM : ET_POINT);
     IntegrationRule ir_ffacet (etffacet, 2 * maxorder);
-    int ir_size = ir_ffacet.GetNIP ();
+    size_t ir_size = ir_ffacet.GetNIP ();
     ir_facet_vol1.SetSize (ir_size);
     BaseMappedIntegrationRule &mir1 = trafo1 (ir_facet_vol1, lh);
-    for (int i = 0; i < ir_size; i++)
+    for (size_t i = 0; i < ir_size; i++)
       {
         mir1[i].GetPoint ()[D - 1] = tfix;
         double measure1 = slabwidth * ir_ffacet[i].Weight ();
@@ -1264,7 +1264,7 @@ namespace ngfem
         HeapReset hr (lh);
         FlatMatrix<TSCAL> proxyvalues (ir_size, proxy->Dimension (), lh);
 
-        for (int k = 0; k < proxy->Dimension (); k++)
+        for (size_t k = 0; k < proxy->Dimension (); k++)
           {
             ud.testfunction = proxy;
             ud.test_comp = k;
@@ -1274,7 +1274,7 @@ namespace ngfem
             proxyvalues.Col (k) = val.Col (0).Rows (0, ir_size);
           }
 
-        for (int i = 0; i < ir_size; i++)
+        for (size_t i = 0; i < ir_size; i++)
           proxyvalues.Row (i)
               *= mir1[i].GetMeasure (); // * ir_facet[i].Weight(); // use also
                                         // smir here ?

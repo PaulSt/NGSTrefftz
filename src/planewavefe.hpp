@@ -12,9 +12,9 @@ namespace ngfem
   private:
     Vec<D> GetDirection (int i) const;
     bool iscomplex = true;
-    int conj;
     double elsize;
     double c;
+    int conj;
 
   public:
     PlaneWaveElement (int andof, int aord, ELEMENT_TYPE aeltype,

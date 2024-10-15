@@ -46,7 +46,7 @@ INLINE void MapRefPoints (const ElementTransformation &trafo,
   double h = GetElementSizeCenter<D> (trafo, center, lh);
   const double reference_box_factor
       = pow (reference_box_length * h, element_vb == VOL ? D : D - 1);
-  for (int i = 0; i < pts_in.Height (); i++)
+  for (size_t i = 0; i < pts_in.Height (); i++)
     {
       for (int d = 0; d < D; d++)
         pts_out (i, d) = center (d) + reference_box_length * h * pts_in (i, d);
@@ -103,7 +103,6 @@ void FindIntegrationPoint (IntegrationPoint &ip,
   ip_vec_lin = ip.Point ().Range (0, D);
 
   int its = 0;
-  double w = 0;
   double first_diffnorm = 0;
 
   while (its == 0
@@ -378,7 +377,7 @@ TSCAL BoxIntegral ::T_BoxIntegrate (const ngcomp::MeshAccess &ma,
           FlatMatrix<SIMD<TSCAL>> val (simd_mir.Size (), 1, lh);
           cf->Evaluate (simd_mir, val);
           SIMD<TSCAL> lsum (0.0);
-          for (int i = 0; i < simd_mir.Size (); i++)
+          for (size_t i = 0; i < simd_mir.Size (); i++)
             lsum += simd_mir[i].GetWeight () * val (i, 0);
           if (element_wise.Size ())
             element_wise (el.Nr ()) += HSum (lsum); // problem?
@@ -387,7 +386,7 @@ TSCAL BoxIntegral ::T_BoxIntegrate (const ngcomp::MeshAccess &ma,
       });
       return ma.GetCommunicator ().AllReduce (sum, NG_MPI_SUM);
     }
-  catch (ExceptionNOSIMD e)
+  catch (ExceptionNOSIMD const& e)
     {
       cout << IM (6) << e.What () << "switching to non-SIMD evaluation"
            << endl;
@@ -521,7 +520,6 @@ void BoxLinearFormIntegrator ::T_CalcElementVector (
       auto &mip = *(new (lh) MappedIntegrationPoint<D, D> ((*ir)[i], trafo));
       (*ir)[i].SetWeight (wts_vec (i) / mip.GetMeasure ());
     }
-  auto et = trafo.GetElementType ();
 
   ProxyUserData ud (proxies.Size (), gridfunction_cfs.Size (), lh);
   const_cast<ElementTransformation &> (trafo).userdata = &ud;
@@ -559,7 +557,7 @@ void BoxLinearFormIntegrator ::T_CalcElementVector (
                                              elvec);
             }
         }
-      catch (ExceptionNOSIMD e)
+      catch (ExceptionNOSIMD const& e)
         {
           cout << IM (6) << e.What () << endl
                << "switching back to standard evaluation" << endl;
@@ -582,12 +580,12 @@ void BoxLinearFormIntegrator ::T_CalcElementVector (
   for (auto proxy : proxies)
     {
       FlatMatrix<SCAL> proxyvalues (mir.Size (), proxy->Dimension (), lh);
-      for (int k = 0; k < proxy->Dimension (); k++)
+      for (size_t k = 0; k < proxy->Dimension (); k++)
         {
           ud.testfunction = proxy;
           ud.test_comp = k;
           cf->Evaluate (mir, values);
-          for (int i = 0; i < mir.Size (); i++)
+          for (size_t i = 0; i < mir.Size (); i++)
             proxyvalues (i, k) = mir[i].GetWeight () * values (i, 0);
         }
       proxy->Evaluator ()->ApplyTrans (fel, mir, proxyvalues, elvec1, lh);
@@ -901,7 +899,7 @@ void BoxBilinearFormIntegrator ::T_CalcElementMatrixAdd (
 
         return;
       }
-    catch (const ExceptionNOSIMD &e)
+    catch (ExceptionNOSIMD const& e)
       {
         cout << IM (6) << e.What () << endl
              << "switching to scalar evaluation" << endl;
@@ -930,8 +928,8 @@ void BoxBilinearFormIntegrator ::T_CalcElementMatrixAdd (
           bool is_diagonal = proxy1->Dimension () == proxy2->Dimension ();
           bool is_nonzero = false;
 
-          for (int k = 0; k < proxy1->Dimension (); k++)
-            for (int l = 0; l < proxy2->Dimension (); l++)
+          for (size_t k = 0; k < proxy1->Dimension (); k++)
+            for (size_t l = 0; l < proxy2->Dimension (); l++)
               if (nonzeros (l1 + l, k1 + k))
                 {
                   if (k != l)
@@ -978,8 +976,8 @@ void BoxBilinearFormIntegrator ::T_CalcElementMatrixAdd (
               else
                 {
                   if (!is_diagonal)
-                    for (int k = 0; k < proxy1->Dimension (); k++)
-                      for (int l = 0; l < proxy2->Dimension (); l++)
+                    for (size_t k = 0; k < proxy1->Dimension (); k++)
+                      for (size_t l = 0; l < proxy2->Dimension (); l++)
                         {
                           if (nonzeros (l1 + l, k1 + k))
                             {
@@ -995,7 +993,7 @@ void BoxBilinearFormIntegrator ::T_CalcElementMatrixAdd (
                             proxyvalues (STAR, k, l) = 0.0;
                         }
                   else
-                    for (int k = 0; k < proxy1->Dimension (); k++)
+                    for (size_t k = 0; k < proxy1->Dimension (); k++)
                       {
                         ud.trialfunction = proxy1;
                         ud.trial_comp = k;
@@ -1021,10 +1019,10 @@ void BoxBilinearFormIntegrator ::T_CalcElementMatrixAdd (
               if (!mir.IsComplex ())
                 {
                   if (!is_diagonal)
-                    for (int i = 0; i < mir.Size (); i++)
+                    for (size_t i = 0; i < mir.Size (); i++)
                       proxyvalues (i, STAR, STAR) *= mir[i].GetWeight ();
                   else
-                    for (int i = 0; i < mir.Size (); i++)
+                    for (size_t i = 0; i < mir.Size (); i++)
                       diagproxyvalues.Range (proxy1->Dimension ()
                                              * IntRange (i, i + 1))
                           *= mir[i].GetWeight ();
@@ -1032,10 +1030,10 @@ void BoxBilinearFormIntegrator ::T_CalcElementMatrixAdd (
               else
                 { // pml
                   if (!is_diagonal)
-                    for (int i = 0; i < mir.Size (); i++)
+                    for (size_t i = 0; i < mir.Size (); i++)
                       proxyvalues (i, STAR, STAR) *= mir[i].GetWeight ();
                   else
-                    for (int i = 0; i < mir.Size (); i++)
+                    for (size_t i = 0; i < mir.Size (); i++)
                       diagproxyvalues.Range (proxy1->Dimension ()
                                              * IntRange (i, i + 1))
                           *= static_cast<
@@ -1119,8 +1117,8 @@ void BoxBilinearFormIntegrator ::T_CalcElementMatrixAdd (
                 }
 
               if (symmetric_so_far)
-                for (int i = 0; i < part_elmat.Height (); i++)
-                  for (int j = i + 1; j < part_elmat.Width (); j++)
+                for (size_t i = 0; i < part_elmat.Height (); i++)
+                  for (size_t j = i + 1; j < part_elmat.Width (); j++)
                     part_elmat (i, j) = part_elmat (j, i);
             }
 

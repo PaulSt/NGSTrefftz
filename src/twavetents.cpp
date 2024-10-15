@@ -186,7 +186,7 @@ namespace ngcomp
       {
         faceint.Evaluate (sir, linbasis, mirtimes);
       }
-    catch (ExceptionNOSIMD)
+    catch (ExceptionNOSIMD const&)
       {
         IntegrationRule ir (eltyp, order * 2);
         FlatVector<double> mirt (sir.Size (),
@@ -247,7 +247,7 @@ namespace ngcomp
       {
         faceint.Evaluate (sir, linbasis, mirtimes);
       }
-    catch (ExceptionNOSIMD)
+    catch (ExceptionNOSIMD const&)
       {
         IntegrationRule ir (eltyp, order * 2);
         FlatVector<double> mirt (sir.Size (),
@@ -537,7 +537,7 @@ namespace ngcomp
       {
         faceint.Evaluate (sir, linbasis, mirtimes);
       }
-    catch (ExceptionNOSIMD)
+    catch (ExceptionNOSIMD const&)
       {
         IntegrationRule ir (eltyp, order * 2);
         FlatVector<double> mirt (sir.Size (),
@@ -730,7 +730,7 @@ namespace ngcomp
         bdeval = 0;
         cf->Evaluate (smir, bdeval);
         for (size_t imip = 0; imip < snip; imip++)
-          for (int d = 0; d < cf->Dimension (); d++)
+          for (size_t d = 0; d < cf->Dimension (); d++)
             wf (elnr, d * snip + imip)
                 = bdeval (d, imip / nsimd)[imip % nsimd];
       }

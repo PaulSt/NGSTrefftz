@@ -7,38 +7,18 @@
 /// Denotes the types of equations supported by the TrefftzFESpace.
 enum class EqType
 {
-  /// for the first order acoustic wave equation
-  fowave,
-
-  /// for the quasi-Trefftz space related to fowave
-  foqtwave,
-
-  /// for the second order acoustic wave equation
-  wave,
-
-  /// for the quasi-Trefftz space related to wave
-  qtwave,
-
-  /// derivatives of Trefftz second order wave equation basis without constants
-  fowave_reduced,
-
-  /// caloric polynomials
-  heat,
-
-  /// quasi-Trefftz space for the heat equation
-  qtheat,
-
-  /// for Laplace equation
-  laplace,
-
-  /// quasi-Trefftz space for a general elliptic problem
-  qtelliptic,
-
-  /// plane waves for the Helmholtz equation
-  helmholtz,
-
-  /// complex conjugate of Helmholtz
-  helmholtzconj,
+  fowave,         /// for the first order acoustic wave equation
+  foqtwave,       /// for the quasi-Trefftz space related to fowave
+  wave,           /// for the second order acoustic wave equation
+  qtwave,         /// for the quasi-Trefftz space related to wave
+  fowave_reduced, /// derivatives of Trefftz second order wave equation basis
+                  /// without constants
+  heat,           /// caloric polynomials
+  qtheat,         /// quasi-Trefftz space for the heat equation
+  laplace,        /// for Laplace equation
+  qtelliptic,     /// quasi-Trefftz space for a general elliptic problem
+  helmholtz,      /// plane waves for the Helmholtz equation
+  helmholtzconj,  /// complex conjugate of Helmholtz
 };
 
 namespace ngcomp
@@ -88,7 +68,7 @@ namespace ngcomp
         case 0:
           break;
         case 1:
-          for (int i = 0, ii = 0; i <= order; i++)
+          for (int i = 0; i <= order; i++)
             {
               ders (i) = coeffx;
               coeffx = coeffx->Diff (
@@ -97,7 +77,7 @@ namespace ngcomp
             }
           break;
         case 2:
-          for (int i = 0, ii = 0; i <= order; i++)
+          for (int i = 0; i <= order; i++)
             {
               for (int j = 0; j <= order - i; j++)
                 {
@@ -114,7 +94,7 @@ namespace ngcomp
             }
           break;
         case 3:
-          for (int i = 0, ii = 0; i <= order; i++)
+          for (int i = 0; i <= order; i++)
             {
               for (int j = 0; j <= order - i; j++)
                 {

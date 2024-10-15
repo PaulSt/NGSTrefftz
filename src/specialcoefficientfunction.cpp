@@ -278,7 +278,6 @@ namespace ngfem
 void ExportSpecialCoefficientFunction (py::module m)
 {
   using namespace ngcomp;
-  typedef CoefficientFunction CF;
   typedef shared_ptr<CoefficientFunction> spCF;
 
   m.def (
