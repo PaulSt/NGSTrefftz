@@ -203,6 +203,9 @@ def testembtrefftzpoi_mixed(fes):
     TU = TA.Inverse()*(PPT*(f.vec-a.mat*ufv))
     tpgfu = GridFunction(fes)
     tpgfu.vec.data = PP*TU+ufv
+    #import netgen.gui
+    #Draw(tpgfu)
+    #input("")
     return sqrt(Integrate((tpgfu-exactpoi)**2, mesh))
 
 
@@ -391,3 +394,5 @@ def testembtrefftzfes(mesh,order):
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+    #fes = L2(mesh2d, order=5,  dgjumps=True)#,all_dofs_together=True)
+    #testembtrefftzpoi_mixed(fes) # doctest:+ELLIPSIS
