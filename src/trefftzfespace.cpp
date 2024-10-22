@@ -44,27 +44,19 @@ namespace ngcomp
       case EqType::fowave:
       case EqType::foqtwave:
         return (D)*BinCoeff (D - 1 + order, D - 1);
-      case EqType::wave:
-        return BinCoeff (D - 1 + order, order)
-               + BinCoeff (D - 1 + order - 1, order - 1);
       case EqType::fowave_reduced:
         return BinCoeff (D - 1 + order, order)
                + BinCoeff (D - 1 + order - 1, order - 1) - 1;
       case EqType::heat:
         return BinCoeff (D - 1 + order, order);
+      case EqType::wave:
       case EqType::qtheat:
-        return BinCoeff (D - 1 + order, order)
-               + BinCoeff (D - 1 + order - 1, order - 1);
       case EqType::laplace:
-        return BinCoeff (D - 1 + order, order)
-               + BinCoeff (D - 1 + order - 1, order - 1);
       case EqType::qtelliptic:
-        return BinCoeff (D - 1 + order, order)
-               + BinCoeff (D - 1 + order - 1, order - 1);
       case EqType::helmholtz:
       case EqType::helmholtzconj:
-        return 2 * order + 1;
       case EqType::qtwave:
+      default:
         return BinCoeff (D - 1 + order, order)
                + BinCoeff (D - 1 + order - 1, order - 1);
       }

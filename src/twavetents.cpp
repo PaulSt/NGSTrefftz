@@ -186,7 +186,7 @@ namespace ngcomp
       {
         faceint.Evaluate (sir, linbasis, mirtimes);
       }
-    catch (ExceptionNOSIMD const&)
+    catch (ExceptionNOSIMD const &)
       {
         IntegrationRule ir (eltyp, order * 2);
         FlatVector<double> mirt (sir.Size (),
@@ -247,7 +247,7 @@ namespace ngcomp
       {
         faceint.Evaluate (sir, linbasis, mirtimes);
       }
-    catch (ExceptionNOSIMD const&)
+    catch (ExceptionNOSIMD const &)
       {
         IntegrationRule ir (eltyp, order * 2);
         FlatVector<double> mirt (sir.Size (),
@@ -537,7 +537,7 @@ namespace ngcomp
       {
         faceint.Evaluate (sir, linbasis, mirtimes);
       }
-    catch (ExceptionNOSIMD const&)
+    catch (ExceptionNOSIMD const &)
       {
         IntegrationRule ir (eltyp, order * 2);
         FlatVector<double> mirt (sir.Size (),

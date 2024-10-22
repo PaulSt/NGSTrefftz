@@ -11,7 +11,7 @@ namespace ngcomp
   {
     int D;
     int order;
-    int local_ndof;
+    size_t local_ndof;
     int useshift = 1;
     int usescale = 1;
     shared_ptr<CoefficientFunction> coeff_cf = nullptr;

@@ -103,7 +103,6 @@ void FindIntegrationPoint (IntegrationPoint &ip,
   ip_vec_lin = ip.Point ().Range (0, D);
 
   int its = 0;
-  double first_diffnorm = 0;
 
   while (its == 0
          || (L2Norm (diff) > EPS_FIND_IP * h && its < NEWTON_ITER_TRESHOLD))
@@ -111,8 +110,6 @@ void FindIntegrationPoint (IntegrationPoint &ip,
       HeapReset hr (lh);
       auto mip_x0 = new (lh) MappedIntegrationPoint<D, D> (ip, trafo);
       diff = vec - mip_x0->GetPoint ();
-      if (its == 0)
-        first_diffnorm = L2Norm (diff);
       update = mip_x0->GetJacobianInverse () * diff;
       ip.Point ().Range (0, D) += update;
       its++;
@@ -386,7 +383,7 @@ TSCAL BoxIntegral ::T_BoxIntegrate (const ngcomp::MeshAccess &ma,
       });
       return ma.GetCommunicator ().AllReduce (sum, NG_MPI_SUM);
     }
-  catch (ExceptionNOSIMD const& e)
+  catch (ExceptionNOSIMD const &e)
     {
       cout << IM (6) << e.What () << "switching to non-SIMD evaluation"
            << endl;
@@ -557,7 +554,7 @@ void BoxLinearFormIntegrator ::T_CalcElementVector (
                                              elvec);
             }
         }
-      catch (ExceptionNOSIMD const& e)
+      catch (ExceptionNOSIMD const &e)
         {
           cout << IM (6) << e.What () << endl
                << "switching back to standard evaluation" << endl;
@@ -899,7 +896,7 @@ void BoxBilinearFormIntegrator ::T_CalcElementMatrixAdd (
 
         return;
       }
-    catch (ExceptionNOSIMD const& e)
+    catch (ExceptionNOSIMD const &e)
       {
         cout << IM (6) << e.What () << endl
              << "switching to scalar evaluation" << endl;

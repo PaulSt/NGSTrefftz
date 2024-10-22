@@ -230,7 +230,7 @@ namespace ngcomp
     // Matrix<shared_ptr<CoefficientFunction>> GGder;
     // Matrix<shared_ptr<CoefficientFunction>> BBder;
     double TentXdiam (const Tent *tent);
-    const int nsimd = SIMD<double>::Size ();
+    const size_t nsimd = SIMD<double>::Size ();
     static constexpr ELEMENT_TYPE eltyp
         = (D == 3) ? ET_TET : ((D == 2) ? ET_TRIG : ET_SEGM);
 

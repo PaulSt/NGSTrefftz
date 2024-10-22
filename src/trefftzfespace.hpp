@@ -32,6 +32,7 @@ namespace ngcomp
   public:
     PolBasis () { ; }
     PolBasis (int aorder) : order (aorder) { ; }
+    virtual ~PolBasis () { ; }
 
     virtual void SetRHS (shared_ptr<CoefficientFunction> coeffF)
     {
@@ -223,6 +224,7 @@ namespace ngcomp
   {
   public:
     TWaveBasis () { ; }
+    ~TWaveBasis () { ; }
     static CSR Basis (int ord, int basistype = 0, int fowave = 0);
   };
 
@@ -230,6 +232,7 @@ namespace ngcomp
   {
   public:
     THeatBasis () { ; }
+    ~THeatBasis () { ; }
     static CSR Basis (int ord, int basistype = 0, int fowave = 0);
   };
 
@@ -237,6 +240,7 @@ namespace ngcomp
   {
   public:
     TLapBasis () { ; }
+    ~TLapBasis () { ; }
     static CSR Basis (int ord, int basistype = 0);
   };
 
@@ -244,6 +248,7 @@ namespace ngcomp
   {
   public:
     FOTWaveBasis () { ; }
+    ~FOTWaveBasis () { ; }
     static CSR Basis (int ord, int rdim);
   };
 
@@ -276,6 +281,7 @@ namespace ngcomp
       this->ComputeDerivs<D> (order - 1, coeffB, BBder);
       this->ComputeDerivs<D> (order - 1, coeffC, CCder);
     }
+    ~QTEllipticBasis () { ; }
     CSR Basis (Vec<D> ElCenter, double elsize = 1.0);
     void SetRHS (shared_ptr<CoefficientFunction> coeffF) override
     {
@@ -315,6 +321,7 @@ namespace ngcomp
       this->ComputeDerivs<D - 1> (order - 2, coeffAA, AAder);
       this->ComputeDerivs<D - 1> (order - 1, coeffB, BBder);
     }
+    ~QTWaveBasis () { ; }
 
     CSR
     Basis (int ord, Vec<D> ElCenter, double elsize = 1.0, int basistype = 0);
@@ -345,6 +352,7 @@ namespace ngcomp
       this->ComputeDerivs<D - 1> (order - 1, coeffAA, AAder);
       this->ComputeDerivs<D - 1> (order - 1, coeffB, BBder);
     }
+    ~FOQTWaveBasis () { ; }
 
     CSR Basis (int ord, int rdim, Vec<D> ElCenter, double elsize = 1.0);
   };
@@ -366,6 +374,7 @@ namespace ngcomp
 
       this->ComputeDerivs<D> (order - 1, coeffA, AAder);
     }
+    ~QTHeatBasis () { ; }
     CSR Basis (Vec<D> ElCenter, double hx, double ht);
     void SetRHS (shared_ptr<CoefficientFunction> coeffF) override
     {
