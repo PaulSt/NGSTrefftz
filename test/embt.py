@@ -260,11 +260,13 @@ def SolveStokes(mesh, k, nu, coeff, trefftz=True, ubnd=None, bndname="inflow"):
 
     >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3) )
     >>> k = 5
-    >>> uh, ph = SolveStokes(mesh, k, nu, f, trefftz=True) 
+    >>> uh, ph, ndof = SolveStokes(mesh, k, nu, f, trefftz=True) 
     >>> sqrt(Integrate(InnerProduct(uexact-uh,uexact-uh),mesh)) # doctest:+ELLIPSIS
     1...e-05
     >>> sqrt(Integrate(InnerProduct(pexact-ph,pexact-ph),mesh)) # doctest:+ELLIPSIS
     0.001...
+    >>> ndof
+    529
     """
 
     V = VectorL2(mesh, order=k, dgjumps=True)
@@ -347,11 +349,13 @@ def SolveStokes(mesh, k, nu, coeff, trefftz=True, ubnd=None, bndname="inflow"):
         Tgfu = CGSolver(TA, TC.Inverse()) * (PPT * (f.vec - a.mat * uf))
         gfu.vec.data = PP * Tgfu + uf
         # print(f"Trefftz embedding solve {time.time() - timer:5f} seconds")
+        ndof = PP.shape[1]
     else:
         gfu.vec.data = CGSolver(a.mat, c.mat.Inverse()) * f.vec
+        ndof = fes.ndof
 
     uh, ph = gfu.components[0:2]
-    return uh, ph
+    return uh, ph, ndof
 
 ########################################################################
 # EmbTrefftzFESpace

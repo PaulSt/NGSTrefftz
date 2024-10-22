@@ -12,12 +12,6 @@ int getNumberOfThreads ()
   return (task_manager) ? task_manager->GetNumThreads () : 1;
 }
 
-/// @returns `max(a-b, 0)` without integer underflow risk, if `b > a`.
-INLINE size_t max_a_minus_b_or_0 (const size_t a, const size_t b) noexcept
-{
-  return (a >= b) ? a - b : 0;
-}
-
 /// Derives the correct local Trefftz ndof form several parameters.
 template <typename SCAL>
 size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
@@ -28,7 +22,7 @@ size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
 {
 
   if (trefftz_op_is_null)
-    max_a_minus_b_or_0 (ndof, ndof_conforming);
+    return max (ndof - ndof_conforming, size_t (0));
   if (holds_alternative<size_t> (ndof_trefftz))
     {
       return std::get<size_t> (ndof_trefftz);
@@ -37,7 +31,7 @@ size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
     {
       const double eps = std::get<double> (ndof_trefftz);
 
-      size_t tndof = max_a_minus_b_or_0 (ndof, ndof_test + ndof_conforming);
+      size_t tndof = max (ndof - (ndof_test + ndof_conforming), size_t (0));
 
       for (const SCAL sigma : singular_values)
         {
@@ -636,7 +630,7 @@ namespace ngcomp
           // with B_1.shape == (ndof_conforming, ndof),
           // L.shape == (ndof_test, ndof)
           // thus A.shape == (ndof_test + ndof_conforming, ndof)
-          const size_t ndof = dofs.Size ();
+          size_t ndof = dofs.Size ();
           const size_t ndof_test = dofs_test.Size ();
           const size_t ndof_conforming = dofs_conforming.Size ();
           auto elmat_a = FlatMatrix<SCAL> (ndof_test + ndof_conforming, ndof,
@@ -678,8 +672,11 @@ namespace ngcomp
           //   throw std::invalid_argument (
           //       "fes has hidden dofs, not supported at the moment");
           if (fes_has_hidden_dofs)
-            extractVisibleDofs (elmat_l, element_id, fes, fes, dofs, dofs_test,
-                                local_heap);
+            {
+              extractVisibleDofs (elmat_a, element_id, fes, fes_test, dofs,
+                                  dofs_test, local_heap);
+              ndof = dofs.Size ();
+            }
 
           // reorder elmat_b2
           // #TODO is this really necessary?
