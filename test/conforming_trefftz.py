@@ -405,7 +405,8 @@ def test_conformityed_trefftz_mixed_mode(order, order_conformity):
     fes_test = L2(mesh2d, order=order - 1, dgjumps=True)
     mesh = fes.mesh
     start = time.time()
-    u, v = fes.TnT()
+    u = fes.TrialFunction()
+    v = fes_test.TestFunction()
     uh = u.Operator("hesse")
     vh = v.Operator("hesse")
     op = (uh[0, 0] + uh[1, 1]) * (vh[0, 0] + vh[1, 1]) * dx

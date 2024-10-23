@@ -45,11 +45,11 @@ def embtbox(mesh,order):
         rhs = -sum( (A*CF((exact.Diff(x),exact.Diff(y),exact.Diff(z))))[i].Diff(var) for i,var in enumerate([x,y,z])) + B*CF((exact.Diff(x),exact.Diff(y),exact.Diff(z))) + C*exact
 
     fes = L2(mesh, order=order, dgjumps=True)
-    testfes = L2(mesh, order=order-2, dgjumps=True)
+    test_fes = L2(mesh, order=order-2, dgjumps=True)
     etfes = EmbeddedTrefftzFES(fes)
 
     u = fes.TrialFunction()
-    v = fes.TestFunction()
+    v = test_fes.TestFunction()
     if mesh.dim == 2:
         db = dbox(reference_box_length=1/3)
         op = -A*Lap(u)*v*db - CF((A.Diff(x),A.Diff(y)))*grad(u)*v*db + B*grad(u)*v*db + C*u*v*db
@@ -59,7 +59,7 @@ def embtbox(mesh,order):
     lop = rhs*v*db
 
     gfu = GridFunction(fes)
-    gfu.vec.data = etfes.SetOp(op,lop,test_fes=testfes)
+    gfu.vec.data = etfes.SetOp(op,lop,test_fes=test_fes)
 
     a,f = dgell(etfes,Dbndc=exact,A=A,B=B,C=C,rhs=rhs,uf=gfu)
 

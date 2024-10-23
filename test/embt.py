@@ -209,6 +209,49 @@ def testembtrefftzpoi_mixed(fes):
     return sqrt(Integrate((tpgfu-exactpoi)**2, mesh))
 
 
+def embtell(mesh,order):
+    """
+    >>> [embtell(mesh2d,5)] # doctest:+ELLIPSIS
+    [...e-06]
+    """
+
+    if mesh.dim == 2:
+        exact = sin(pi*(x+y))
+        A = 1+x+y
+        B = CF((x,-y))
+        C = 3/(1+x+y)
+        rhs = -sum( (A*CF((exact.Diff(x),exact.Diff(y))))[i].Diff(var) for i,var in enumerate([x,y])) + B*CF((exact.Diff(x),exact.Diff(y))) + C*exact
+    elif mesh.dim == 3:
+        exact = sin(pi*(x+y+z))
+        A = 1+x+y+z
+        B = CF((x,y,-2*z))
+        C = 4/(1+x+y+z)
+        rhs = -sum( (A*CF((exact.Diff(x),exact.Diff(y),exact.Diff(z))))[i].Diff(var) for i,var in enumerate([x,y,z])) + B*CF((exact.Diff(x),exact.Diff(y),exact.Diff(z))) + C*exact
+
+    fes = L2(mesh, order=order, dgjumps=True)
+    test_fes = L2(mesh, order=order-2, dgjumps=True)
+    # etfes = EmbeddedTrefftzFES(fes)
+
+    u = fes.TrialFunction()
+    v = test_fes.TestFunction()
+    if mesh.dim == 2:
+        op = (-A*Lap(u)*v - CF((A.Diff(x),A.Diff(y)))*grad(u)*v + B*grad(u)*v + C*u*v)*dx
+    elif mesh.dim == 3:
+        op = -A*Lap(u)*v*dx - CF((A.Diff(x),A.Diff(y),A.Diff(z)))*grad(u)*v*dx + B*grad(u)*v*dx + C*u*v*dx
+    lop = rhs*v*dx
+
+    with TaskManager():
+        PP,ufv = TrefftzEmbedding(op,fes,lop,test_fes=test_fes)
+    PPT = PP.CreateTranspose()
+    a,f = dgell(fes,Dbndc=exact,A=A,B=B,C=C,rhs=rhs)
+    TA = PPT@a.mat@PP
+    TU = TA.Inverse()*(PPT*(f.vec-a.mat*ufv))
+    gfu = GridFunction(fes)
+    gfu.vec.data = PP*TU+ufv
+
+    error = sqrt(Integrate((gfu-exact)**2, mesh))
+    return error
+
 ########################################################################
 # Helmholtz
 ########################################################################
