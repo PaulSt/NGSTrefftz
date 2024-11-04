@@ -3,6 +3,7 @@
 
 #include <comp.hpp>
 #include <stdexcept>
+#include <vector.hpp>
 #include "embtrefftz.cpp"
 
 TEST (reorderMatrixColumnsTest, throwOnDimensionMismatch)
@@ -65,4 +66,59 @@ TEST (reorderMatrixColumnsTest, sortProperly)
     {
       EXPECT_EQ (mat (0, j), mat_expected (0, j));
     }
+}
+
+TEST (max_a_minus_b_or_0_Test, aBiggerThanB)
+{
+  ASSERT_EQ (max_a_minus_b_or_0 (3, 2), 1);
+}
+
+TEST (max_a_minus_b_or_0_Test, aEqualsB)
+{
+  ASSERT_EQ (max_a_minus_b_or_0 (4, 4), 0);
+}
+
+TEST (max_a_minus_b_or_0_Test, aLessThanBNoUnderflow)
+{
+  ASSERT_EQ (max_a_minus_b_or_0 (3, 4), 0);
+}
+
+TEST (calcNdofTrefftzTest, noTrefftzOp)
+{
+  ASSERT_EQ (
+      calcNdofTrefftz (3, 3, 1, size_t (3), true, SliceVector<double>{}), 2);
+}
+
+TEST (calcNdofTrefftzTest, noTrefftzOpUnderflow)
+{
+  ASSERT_EQ (
+      calcNdofTrefftz (3, 3, 4, size_t (3), true, SliceVector<double>{}), 0);
+}
+
+TEST (calcNdofTrefftzTest, NdofTrefftzGiven)
+{
+  ASSERT_EQ (
+      calcNdofTrefftz (3, 4, 5, size_t (42), false, SliceVector<double>{}),
+      42);
+}
+
+TEST (calcNdofTrefftzTest, EpsilonGiven)
+{
+  ASSERT_EQ (
+      calcNdofTrefftz (42, 4, 5, double (1e-2), false, SliceVector<double>{}),
+      42 - 4 - 5);
+}
+
+TEST (calcNdofTrefftzTest, EpsilonGivenWithSingularValues)
+{
+  // two extra trefftz dofs from the singuar vlaues
+  // with eps == 1e-2.
+  auto singular_values = Vector<double> (3);
+  singular_values[0] = 1e2;
+  singular_values[1] = 1e-4;
+  singular_values[2] = 1e-3;
+
+  ASSERT_EQ (calcNdofTrefftz<double> (42, 4, 5, double (1e-2), false,
+                                      singular_values.View ()),
+             42 - 4 - 5 - 2);
 }
