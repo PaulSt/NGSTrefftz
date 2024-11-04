@@ -12,6 +12,12 @@ int getNumberOfThreads ()
   return (task_manager) ? task_manager->GetNumThreads () : 1;
 }
 
+/// @returns `max(a-b, 0)` without integer underflow risk, if `b > a`.
+INLINE size_t max_a_minus_b_or_0 (const size_t a, const size_t b) noexcept
+{
+  return (a >= b) ? a - b : 0;
+}
+
 /// Derives the correct local Trefftz ndof form several parameters.
 template <typename SCAL>
 size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
@@ -22,7 +28,10 @@ size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
 {
 
   if (trefftz_op_is_null)
-    return max (ndof - ndof_conforming, size_t (0));
+    {
+      // ndof - ndof_conforming might underflow
+      return max_a_minus_b_or_0 (ndof, ndof_conforming);
+    }
   if (holds_alternative<size_t> (ndof_trefftz))
     {
       return std::get<size_t> (ndof_trefftz);
@@ -31,7 +40,8 @@ size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
     {
       const double eps = std::get<double> (ndof_trefftz);
 
-      size_t tndof = max (ndof - (ndof_test + ndof_conforming), size_t (0));
+      // ndof - (ndof_test + ndof_conforming) might underflow
+      size_t tndof = max_a_minus_b_or_0 (ndof, ndof_test + ndof_conforming);
 
       for (const SCAL sigma : singular_values)
         {
@@ -40,20 +50,6 @@ size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
         }
       return tndof;
     }
-  // int nz = 0;
-  // if (tndof)
-  //   nz = tndof;
-  // else
-  //   {
-  //     nz = max<int> (dofs.Size () - test_dofs.Size (), 0);
-  //     for (int i = 0; i < min (elmat.Width (), elmat.Height ()); i++)
-  //       if (abs (elmat (i, i)) < eps)
-  //         nz++;
-  //   }
-  // if (dofs.Size () < nz)
-  //   throw Exception ("tndof too large, nz: " + to_string (nz)
-  //                    + ", dofs:" + to_string (dofs.Size ())
-  //                    + ", test_dofs:" + to_string (test_dofs.Size ()));
 }
 
 /// @throw std::invalid_argument The number of columns in the matrix must be
