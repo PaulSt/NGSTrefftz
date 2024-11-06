@@ -9,10 +9,9 @@ on:
     types: [created]
 
 jobs:
-
   check_formatting:
     name: Check Formatting with Clang Format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,21 +32,52 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          path: 'NGSTrefftz'
+          path: "NGSTrefftz"
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
       #- uses: actions/setup-python@v5
-        #with:
-          #python-version: "3.12"
+      #with:
+      #python-version: "3.12"
       - name: install ngstrefftz
         #env:
-          #NGSTREFFTZ_USE_GTEST: 'ON'
+        #NGSTREFFTZ_USE_GTEST: 'ON'
         run: cd NGSTrefftz && pip install numpy scipy && pip install . -v
       - name: run test
-        run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
+        run: |
+          cd $GITHUB_WORKSPACE/NGSTrefftz/test
+          python3 -m doctest -v *.py
+
+  gtest_linux:
+    name: Test GTest on Linux
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          path: "NGSTrefftz"
+          fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: Bacondish2023/setup-googletest@v1
+        with:
+          tag: v1.15.2
+      - name: install ngsolve
+        run: |
+          cd NGSTrefftz
+          pip install numpy scipy mkl-devel==2024.* mkl==2024.*
+          pip install --pre ngsolve
+      - name: build ngstrefftz gtest
+        run: |
+          mkdir $GITHUB_WORKSPACE/NGSTrefftz/make
+          cd $GITHUB_WORKSPACE/NGSTrefftz/make
+          cmake .. -DNGSTREFFTZ_USE_GTEST=ON
+          make
+      - name: run gtest
+        run: $GITHUB_WORKSPACE/NGSTrefftz/make/trefftz_gtest
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
-    needs: [test_linux]
+    needs: [test_linux, gtest_linux]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -58,7 +88,7 @@ jobs:
             cmake-generator: "Visual Studio 16 2019"
             cmake_generator_platform: "x64"
     #env:
-      #CIBW_BUILD: cp39-* cp310-* cp311-* cp312-*
+    #CIBW_BUILD: cp39-* cp310-* cp311-* cp312-*
     steps:
       - uses: actions/checkout@v4
         with:
@@ -76,7 +106,7 @@ jobs:
 
   build_sdist:
     name: Build source distribution
-    needs: [test_linux]
+    needs: [test_linux, gtest_linux]
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
     steps:

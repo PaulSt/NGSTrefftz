@@ -203,44 +203,29 @@ set_tests_properties(embtrefftz trefftz tents
     PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON}:$ENV{PYTHONPATH}")
 
 if(NGSTREFFTZ_USE_GTEST)
-    #set(CMAKE_VERBOSE_MAKEFILE ON)
-    #target_link_options(trefftz_gtest PRIVATE "-v")
-    # Dowload and include googletest
-    # currently version 1.15.2
-    # For newer version, replace the file name with the newer commit hash.
-    include(FetchContent)
-    FetchContent_Declare(
-      googletest
-      URL https://github.com/google/googletest/archive/b514bdc898e2951020cbdca1304b75f5950d1f59.zip
-      DOWNLOAD_EXTRACT_TIMESTAMP NEW
-    )
-     #For Windows: Prevent overriding the parent project's compiler/linker settings
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(googletest)
-
-    add_executable(
-      trefftz_gtest
+    #target_compile_options(_trefftz PRIVATE -Wall)# -Wextra -Wpedantic)
+    find_package(GTest REQUIRED)
+    include(GoogleTest)
+    add_executable( trefftz_gtest
       ${CMAKE_SOURCE_DIR}/test/embtrefftz_gtest.cpp
     )
-
-    target_link_libraries(trefftz_gtest PRIVATE ${LAPACK_LIBRARIES})
-    target_compile_definitions(trefftz_gtest PRIVATE NGSTREFFTZ_USE_LAPACK)
-
-    target_include_directories(
-      trefftz_gtest PRIVATE
+    target_include_directories( trefftz_gtest BEFORE PRIVATE
+      $<TARGET_PROPERTY:ngsolve,INTERFACE_INCLUDE_DIRECTORIES>
       ${CMAKE_SOURCE_DIR}/src
-    )
-    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-    include(GoogleTest)
-    target_link_libraries(
-      trefftz_gtest
-      PRIVATE
+      )
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
+      find_package(Python3 REQUIRED COMPONENTS Development.Embed)
+    endif()
+    target_link_libraries( trefftz_gtest PUBLIC
+      GTest::gtest
+      GTest::gtest_main
       Python3::Python
+      ${LAPACK_LIBRARIES}
       ngsolve
       _trefftz
-      GTest::gtest_main
     )
-    #target_compile_definitions(trefftz_gtest INTERFACE NG_PYTHON NETGEN_PYTHON)
+    target_compile_definitions(trefftz_gtest PRIVATE NGSTREFFTZ_USE_LAPACK)
+    set_target_properties(trefftz_gtest PROPERTIES PREFIX "" CXX_STANDARD 17)
     set(GTEST_DISABLE_AUTO_DISCOVER 1)
     gtest_discover_tests(trefftz_gtest)
 endif(NGSTREFFTZ_USE_GTEST)
