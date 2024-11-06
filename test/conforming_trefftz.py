@@ -309,12 +309,11 @@ def test_ConstrainedTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) ->
 
 def test_conformityed_trefftz_with_rhs(order, order_conformity):
     """
-    >>> test_conformityed_trefftz_with_rhs(5, 3) < 1e-07
-    True
+    >>> [test_conformityed_trefftz_with_rhs(6, 2)] # doctest:+ELLIPSIS
+    [...e-11]
     """
-    mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
-    fes = L2(mesh2d, order=order, dgjumps=True)
-    mesh = fes.mesh
+    mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
+    fes = L2(mesh, order=order, dgjumps=True)
     start = time.time()
     u, v = fes.TnT()
     uh = u.Operator("hesse")
@@ -324,14 +323,14 @@ def test_conformityed_trefftz_with_rhs(order, order_conformity):
     lop = -rhs * (vh[0, 0] + vh[1, 1]) * dx
 
     fes_conformity = FacetFESpace(
-        mesh2d, order=order_conformity
+        mesh, order=order_conformity
     )  # ,all_dofs_together=True)
     uF, vF = fes_conformity.TnT()
     cop_lhs = u * vF * dx(element_boundary=True)
     cop_rhs = uF * vF * dx(element_boundary=True)
 
     PP, ufv = TrefftzEmbedding(
-        op, fes, cop_lhs, cop_rhs, fes_conformity, lop, 2 * order + 3 - 1
+        op, fes, cop_lhs, cop_rhs, fes_conformity, lop, 2 * order + 1
     )
     PPT = PP.CreateTranspose()
     a, f = dgell(fes, exactpoi, rhs)
@@ -397,21 +396,21 @@ def test_conformityed_trefftz_trivial_mixed_mode(order, order_conformity):
 
 def test_conformityed_trefftz_mixed_mode(order, order_conformity):
     """
-    >>> test_conformityed_trefftz_mixed_mode(6, 2) # doctest:+ELLIPSIS
-    8...e-11
+    >>> [test_conformityed_trefftz_mixed_mode(6, 2)] # doctest:+ELLIPSIS
+    [...e-11]
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
     fes = L2(mesh2d, order=order, dgjumps=True)
-    fes_test = L2(mesh2d, order=order - 1, dgjumps=True)
+    fes_test = L2(mesh2d, order=order - 2, dgjumps=True)
     mesh = fes.mesh
     start = time.time()
     u = fes.TrialFunction()
     v = fes_test.TestFunction()
     uh = u.Operator("hesse")
-    vh = v.Operator("hesse")
-    op = (uh[0, 0] + uh[1, 1]) * (vh[0, 0] + vh[1, 1]) * dx
+    # vh = v.Operator("hesse")
+    op = (uh[0, 0] + uh[1, 1]) * v * dx
     rhs = -exactpoi.Diff(x).Diff(x) - exactpoi.Diff(y).Diff(y)
-    lop = -rhs * (vh[0, 0] + vh[1, 1]) * dx
+    lop = -rhs * v * dx
 
     fes_conformity = FacetFESpace(
         mesh2d, order=order_conformity

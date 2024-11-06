@@ -469,8 +469,7 @@ namespace ngbla
 template <typename SCAL, typename TDIST>
 auto invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
                 const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &Sigma,
-                const FlatMatrix<SCAL, ColMajor> &V, LocalHeap &lh,
-                size_t nz = 0)
+                const FlatMatrix<SCAL, ColMajor> &V, size_t nz, LocalHeap &lh)
 {
   auto U_T = Trans (U);
   auto V_T = Trans (V);
@@ -481,14 +480,12 @@ auto invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
   auto Sigma_inv_el = Sigma_inv.Diag ().begin ();
 
   // Sigma_inv.Diag () = 1.0 / elmat_a.Diag ();
-  size_t i = 0;
-  // while (Sigma_el != Sigma.Diag().end () && abs (*Sigma_el) > 1e-10)
-  while (nz > 0 ? i < max (m, n) - nz : abs (*Sigma_el) > 1e-10)
+  for (size_t i = 0; i < m; i++)
     {
-      *Sigma_inv_el = 1.0 / *Sigma_el;
-      i++;
-      Sigma_el++;
-      Sigma_inv_el++;
+      if (i < n - nz)
+        *(Sigma_inv_el++) = 1.0 / *(Sigma_el++);
+      else
+        *(Sigma_inv_el++) = 0.0;
     }
   return V_T * Sigma_inv * U_T;
 }
@@ -686,16 +683,17 @@ namespace ngcomp
               V (elmat_a.Width (), local_heap);
           getSVD<SCAL> (elmat_a, U, V);
 
-          const auto elmat_a_inv_expr = invertSVD (U, elmat_a, V, local_heap);
-          FlatMatrix<SCAL> elmat_a_inv (ndof, ndof_conforming + ndof_test,
-                                        local_heap);
-          // Calculate the matrix entries and write them to memory.
-          elmat_a_inv = elmat_a_inv_expr;
-
           // # TODO: incorporate the double variant
           const size_t ndof_trefftz_i
               = calcNdofTrefftz (ndof, ndof_test, ndof_conforming,
                                  ndof_trefftz, !op, elmat_a.Diag ());
+
+          const auto elmat_a_inv_expr
+              = invertSVD (U, elmat_a, V, ndof_trefftz_i, local_heap);
+          FlatMatrix<SCAL> elmat_a_inv (ndof, ndof_conforming + ndof_test,
+                                        local_heap);
+          // Calculate the matrix entries and write them to memory.
+          elmat_a_inv = elmat_a_inv_expr;
 
           // P = (T1 | T2)
           Matrix<SCAL> elmat_p (ndof, ndof_trefftz_i + ndof_conforming);
