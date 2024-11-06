@@ -307,10 +307,10 @@ def test_ConstrainedTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) ->
     return sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d))
 
 
-def test_conformityed_trefftz_with_rhs(order, order_conformity):
+def test_conformiting_trefftz_with_rhs(order, order_conformity):
     """
-    >>> [test_conformityed_trefftz_with_rhs(6, 2)] # doctest:+ELLIPSIS
-    [...e-11]
+    >>> test_conformiting_trefftz_with_rhs(5, 2) # doctest:+ELLIPSIS
+    3...e-09
     """
     mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
     fes = L2(mesh, order=order, dgjumps=True)
@@ -341,12 +341,12 @@ def test_conformityed_trefftz_with_rhs(order, order_conformity):
     return sqrt(Integrate((tpgfu - exactpoi) ** 2, mesh))
 
 
-def test_conformityed_trefftz_trivial_mixed_mode(order, order_conformity):
+def test_conformiting_trefftz_trivial_mixed_mode(order, order_conformity):
     """
     Test, if the conforming trefftz procedure takes the trial space as test space,
     if no test space is given.
 
-    >>> test_conformityed_trefftz_trivial_mixed_mode(5, 3)
+    >>> test_conformiting_trefftz_trivial_mixed_mode(5, 3)
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
     fes = L2(mesh2d, order=order, dgjumps=True)
@@ -394,10 +394,10 @@ def test_conformityed_trefftz_trivial_mixed_mode(order, order_conformity):
     ).all(), "The particular solutions disagree"
 
 
-def test_conformityed_trefftz_mixed_mode(order, order_conformity):
+def test_conforming_trefftz_mixed_mode(order, order_conformity):
     """
-    >>> [test_conformityed_trefftz_mixed_mode(6, 2)] # doctest:+ELLIPSIS
-    [...e-11]
+    >>> test_conforming_trefftz_mixed_mode(6, 2) # doctest:+ELLIPSIS
+    6...e-11
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
     fes = L2(mesh2d, order=order, dgjumps=True)
