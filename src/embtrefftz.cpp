@@ -596,10 +596,10 @@ namespace ngcomp
       calculateLinearFormIntegrators (*linear_form, lfis);
 
     // solve the following linear system in an element-wise fashion:
-    // L @ T1 = B for the unknown matrix T1,
+    // L @ T_t = B for the unknown matrix T_t,
     // with the given matrices:
     //     /   \    /   \    //
-    //  A= |B_1| B= |B_2|    //
+    //  A= |C_l| B= |C_r|    //
     //     | L |    | 0 |    //
     //     \   /    \   /    //
     mesh_access->IterateElements (
@@ -621,35 +621,35 @@ namespace ngcomp
             fes_conformity->GetDofNrs (element_id, dofs_conforming);
 
           //     /   \    /   \    //
-          //  A= |B_1| B= |B_2|    //
+          //  A= |C_l| B= |C_r|    //
           //     | L |    | 0 |    //
           //     \   /    \   /    //
-          // with B_1.shape == (ndof_conforming, ndof),
+          // with C_l.shape == (ndof_conforming, ndof),
           // L.shape == (ndof_test, ndof)
           // thus A.shape == (ndof_test + ndof_conforming, ndof)
           size_t ndof = dofs.Size ();
           const size_t ndof_test = dofs_test.Size ();
           const size_t ndof_conforming = dofs_conforming.Size ();
-          auto elmat_a = FlatMatrix<SCAL> (ndof_test + ndof_conforming, ndof,
+          auto elmat_A = FlatMatrix<SCAL> (ndof_test + ndof_conforming, ndof,
                                            local_heap);
-          auto [elmat_b1, elmat_l] = elmat_a.SplitRows (ndof_conforming);
+          auto [elmat_Cl, elmat_L] = elmat_A.SplitRows (ndof_conforming);
 
           //     /   \    /   \    //
-          //  A= |B_1| B= |B_2|    //
+          //  A= |C_l| B= |C_r|    //
           //     | L |    | 0 |    //
           //     \   /    \   /    //
-          // with B_2.shape == (ndof_conforming, ndof_conforming),
+          // with C_r.shape == (ndof_conforming, ndof_conforming),
           // and B.shape == ( ndof_conforming + ndof, ndof_conforming)
-          auto elmat_b = FlatMatrix<SCAL> (ndof_test + ndof_conforming,
+          auto elmat_B = FlatMatrix<SCAL> (ndof_test + ndof_conforming,
                                            ndof_conforming, local_heap);
-          elmat_a = static_cast<SCAL> (0.);
-          elmat_b = static_cast<SCAL> (0.);
+          elmat_A = static_cast<SCAL> (0.);
+          elmat_B = static_cast<SCAL> (0.);
 
-          // elmat_b2 is a view into elamt_b
-          MatrixView<SCAL> elmat_b2 = elmat_b.Rows (ndof_conforming);
+          // elmat_cr is a view into elamt_b
+          MatrixView<SCAL> elmat_Cr = elmat_B.Rows (ndof_conforming);
 
           // the diff. operator L operates only on volume terms
-          addIntegrationToElementMatrix (elmat_l, op_integrators[VOL],
+          addIntegrationToElementMatrix (elmat_L, op_integrators[VOL],
                                          *mesh_access, element_id, fes,
                                          fes_test, local_heap);
           if (fes_conformity)
@@ -657,10 +657,10 @@ namespace ngcomp
               for (const auto vorb : { VOL, BND, BBND, BBBND })
                 {
                   addIntegrationToElementMatrix (
-                      elmat_b1, cop_lhs_integrators[vorb], *mesh_access,
+                      elmat_Cl, cop_lhs_integrators[vorb], *mesh_access,
                       element_id, fes, *fes_conformity, local_heap);
                   addIntegrationToElementMatrix (
-                      elmat_b2, cop_rhs_integrators[vorb], *mesh_access,
+                      elmat_Cr, cop_rhs_integrators[vorb], *mesh_access,
                       element_id, *fes_conformity, *fes_conformity,
                       local_heap);
                 }
@@ -670,59 +670,59 @@ namespace ngcomp
           //       "fes has hidden dofs, not supported at the moment");
           if (fes_has_hidden_dofs)
             {
-              extractVisibleDofs (elmat_a, element_id, fes, fes_test, dofs,
+              extractVisibleDofs (elmat_A, element_id, fes, fes_test, dofs,
                                   dofs_test, local_heap);
               ndof = dofs.Size ();
             }
 
-          // reorder elmat_b2
+          // reorder elmat_cr
           // #TODO is this really necessary?
-          reorderMatrixColumns (elmat_b2, dofs_conforming, local_heap);
+          reorderMatrixColumns (elmat_Cr, dofs_conforming, local_heap);
 
-          FlatMatrix<SCAL, ColMajor> U (elmat_a.Height (), local_heap),
-              V (elmat_a.Width (), local_heap);
-          getSVD<SCAL> (elmat_a, U, V);
+          FlatMatrix<SCAL, ColMajor> U (elmat_A.Height (), local_heap),
+              V (elmat_A.Width (), local_heap);
+          getSVD<SCAL> (elmat_A, U, V);
 
           // # TODO: incorporate the double variant
           const size_t ndof_trefftz_i
               = calcNdofTrefftz (ndof, ndof_test, ndof_conforming,
-                                 ndof_trefftz, !op, elmat_a.Diag ());
+                                 ndof_trefftz, !op, elmat_A.Diag ());
 
-          const auto elmat_a_inv_expr
-              = invertSVD (U, elmat_a, V, ndof_trefftz_i, local_heap);
-          FlatMatrix<SCAL> elmat_a_inv (ndof, ndof_conforming + ndof_test,
+          const auto elmat_A_inv_expr
+              = invertSVD (U, elmat_A, V, ndof_trefftz_i, local_heap);
+          FlatMatrix<SCAL> elmat_A_inv (ndof, ndof_conforming + ndof_test,
                                         local_heap);
           // Calculate the matrix entries and write them to memory.
-          elmat_a_inv = elmat_a_inv_expr;
+          elmat_A_inv = elmat_A_inv_expr;
 
-          // P = (T1 | T2)
-          Matrix<SCAL> elmat_p (ndof, ndof_trefftz_i + ndof_conforming);
+          // T = (T_c | T_t)
+          Matrix<SCAL> elmat_T (ndof, ndof_trefftz_i + ndof_conforming);
           // T1 has dimension (ndof, ndof_conforming)
           // T2 has dimension (ndof, ndof_trefftz_i)
-          auto [elmat_t1, elmat_t2] = elmat_p.SplitCols (ndof_conforming);
+          auto [elmat_Tc, elmat_Tt] = elmat_T.SplitCols (ndof_conforming);
 
-          // T1 solves A @ T1 = B,
-          // i.e. T1 = A^{-1} @ B.
+          // T_c solves A @ T_c = B,
+          // i.e. T_c = A^{-1} @ B.
           // A has dimension (ndof + ndof_conforming, ndof),
           // B has dimension (ndof + ndof_conforming, ndof_conforming),
-          // so T1 has dimension (ndof, ndof_conforming)
-          elmat_t1 = elmat_a_inv * elmat_b;
+          // so T_c has dimension (ndof, ndof_conforming)
+          elmat_Tc = elmat_A_inv * elmat_B;
 
           // standard embedded Trefftz behaviour is get_range==false
           if (get_range)
-            elmat_t2 = U.Cols (0, dofs.Size () - ndof_trefftz_i);
+            elmat_Tt = U.Cols (0, dofs.Size () - ndof_trefftz_i);
           else
-            elmat_t2 = Trans (V.Rows (ndof - ndof_trefftz_i, ndof));
+            elmat_Tt = Trans (V.Rows (ndof - ndof_trefftz_i, ndof));
 
           element_matrices[element_id.Nr ()]
               = make_optional<ElmatWithTrefftzInfo<SCAL>> (
-                  { elmat_p, ndof_trefftz_i });
+                  { elmat_T, ndof_trefftz_i });
 
           if (linear_form)
             {
               const auto part_sol = calculateParticularSolution<SCAL> (
                   lfis, fes_test, element_id, *mesh_access, dofs, ndof_test,
-                  elmat_a_inv, local_heap);
+                  elmat_A_inv, local_heap);
               particular_solution_vec->SetIndirect (dofs, part_sol);
             }
           if (stats)
@@ -730,21 +730,21 @@ namespace ngcomp
               const lock_guard<mutex> lock (stats_mutex);
               if (sing_val_avg.Size () == 0)
                 {
-                  sing_val_avg.SetSize (elmat_a.Height ());
-                  sing_val_max.SetSize (elmat_a.Height ());
-                  sing_val_min.SetSize (elmat_a.Height ());
+                  sing_val_avg.SetSize (elmat_A.Height ());
+                  sing_val_max.SetSize (elmat_A.Height ());
+                  sing_val_min.SetSize (elmat_A.Height ());
                   sing_val_avg = 0;
                   sing_val_max = 0;
                   sing_val_min = DBL_MAX;
                 }
               active_elements += 1;
-              for (size_t i = 0; i < elmat_a.Height (); i++)
+              for (size_t i = 0; i < elmat_A.Height (); i++)
                 {
-                  sing_val_avg[i] += elmat_a (i, i);
+                  sing_val_avg[i] += elmat_A (i, i);
                   sing_val_max[i]
-                      = max (sing_val_max[i], abs (elmat_a (i, i)));
+                      = max (sing_val_max[i], abs (elmat_A (i, i)));
                   sing_val_min[i]
-                      = min (sing_val_min[i], abs (elmat_a (i, i)));
+                      = min (sing_val_min[i], abs (elmat_A (i, i)));
                 }
             }
 
@@ -753,9 +753,9 @@ namespace ngcomp
                      << "fes_test has ndof:" << ndof_test
                      << "fes_conformity has ndof:" << ndof_conforming << endl
                      << "elmat_t1" << endl
-                     << elmat_t1 << endl
+                     << elmat_Tc << endl
                      << "elmat_t2" << endl
-                     << elmat_t2 << endl;
+                     << elmat_Tt << endl;
         });
     if (stats)
       {
