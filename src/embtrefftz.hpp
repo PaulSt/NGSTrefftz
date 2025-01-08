@@ -18,7 +18,7 @@ template <typename SCAL> struct ElmatWithTrefftzInfo
 
 namespace ngcomp
 {
-  /// creates an embedding marix P for the given operations `op`,
+  /// creates an embedding marix T for the given operations `op`,
   /// `cop_lhs`, `cop_rhs`.
   ///
   /// The embedding is subject to the constraints specified in
@@ -49,7 +49,7 @@ namespace ngcomp
   ///      ndof_conforming` for each element. Thus it is assumed, that the
   ///      kernel of `op` is sufficiently big.
   ///
-  ///  @return (P, f), the embedding `P` and particlar solution `f`. `P` is
+  ///  @return (T, f), the embedding `T` and particlar solution `f`. `T` is
   ///  represented as a vector of all element matrices.
   template <typename SCAL>
   pair<vector<optional<ElmatWithTrefftzInfo<SCAL>>>,
