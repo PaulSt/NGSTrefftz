@@ -87,8 +87,8 @@ jobs:
             cibw-arch: AMD64
             cmake-generator: "Visual Studio 16 2019"
             cmake_generator_platform: "x64"
-    #env:
-    #CIBW_BUILD: cp39-* cp310-* cp311-* cp312-*
+    env:
+      CIBW_BUILD: cp39-* cp310-* cp311-* cp312-* cp313-*
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,7 +96,7 @@ jobs:
           fetch-tags: true
           fetch-depth: 0
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21.2
+        uses: pypa/cibuildwheel@v2.22.0
         env:
           CIBW_BUILD_VERBOSITY: 1
       - uses: actions/upload-artifact@v4

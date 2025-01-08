@@ -33,7 +33,7 @@ local_scheme = "no-local-version"
 
 [tool.cibuildwheel]
 #build-verbosity = 1
-manylinux-x86_64-image = "manylinux_2_28"
+manylinux-x86_64-image = "sameli/manylinux_2_28_x86_64_cuda_12.3"
 skip = """
   pp*
   *_i686
