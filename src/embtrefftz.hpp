@@ -8,8 +8,14 @@
 #define FILE_INTEGRATORCFHPP
 #endif
 
-/// For a mesh element, this struct holds the ndof for the Trefftz and
-/// conforming part of the conforming Trefftz space.
+/// For a mesh element, this struct holds the
+/// ndof for the Trefftz part of the conforming Trefftz space.
+/// Convention:
+/// elmat = (elmat_conforming | elmat_trefftz)
+/// where elmat_trefftz.width == ndof_trefftz
+///
+/// Then, for ndof_conforming there holds:
+/// ndof_confrming := elmat.width - ndof_trefftz
 template <typename SCAL> struct ElmatWithTrefftzInfo
 {
   ngla::Matrix<SCAL> elmat;
@@ -78,8 +84,10 @@ namespace ngcomp
     vector<optional<ElmatWithTrefftzInfo<double>>> ETmats;
     vector<optional<ElmatWithTrefftzInfo<Complex>>> ETmatsC;
     shared_ptr<T> fes;
-    shared_ptr<FESpace> fes_conformity;
-    Array<DofId> all2comp;
+    shared_ptr<const FESpace> fes_conformity;
+
+    /// contains the mapping of Element Number to the associated Dofs
+    Table<DofId> elnr_to_dofs;
 
   public:
     EmbTrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags,
@@ -138,14 +146,15 @@ namespace ngcomp
     /// @throws std::invalid_argument if `op`, `cop_lhs`, or `cop_rhs` are
     /// `null`.
     shared_ptr<BaseVector>
-    SetOp (shared_ptr<const SumOfIntegrals> op,
-           shared_ptr<const SumOfIntegrals> cop_lhs,
-           shared_ptr<const SumOfIntegrals> cop_rhs,
+    SetOp (optional<const SumOfIntegrals> op,
+           optional<const SumOfIntegrals> cop_lhs,
+           optional<const SumOfIntegrals> cop_rhs,
            shared_ptr<const FESpace> fes_conformity,
            shared_ptr<const FESpace> fes_test,
-           shared_ptr<const SumOfIntegrals> linear_form, size_t ndof_trefftz);
+           shared_ptr<const SumOfIntegrals> linear_form,
+           const std::variant<size_t, double> ndof_trefftz);
 
-    void GetDofNrs (ElementId ei, Array<int> &dnums) const override;
+    void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
 
     virtual void VTransformMR (ElementId ei, const SliceMatrix<double> mat,
                                TRANSFORM_TYPE type) const override;

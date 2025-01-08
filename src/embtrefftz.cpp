@@ -635,7 +635,7 @@ namespace ngcomp
           //     | L |    | 0 |    //
           //     \   /    \   /    //
           // with C_r.shape == (ndof_conforming, ndof_conforming),
-          // and B.shape == ( ndof_conforming + ndof, ndof_conforming)
+          // and B.shape == ( ndof_conforming + ndof_test, ndof_conforming)
           auto elmat_B = FlatMatrix<SCAL> (ndof_test + ndof_conforming,
                                            ndof_conforming, local_heap);
           elmat_A = static_cast<SCAL> (0.);
@@ -772,72 +772,56 @@ namespace ngcomp
                                shared_ptr<SumOfIntegrals> lf, double eps,
                                shared_ptr<FESpace> test_fes, int tndof)
   {
-    static Timer timer ("EmbTrefftz: SetOp");
-
-    // shared_ptr<FESpace> use_as_l2 =
-    // dynamic_pointer_cast<FESpace>(const_cast<EmbTrefftzFESpace*>(this)->shared_from_this());
-
-    shared_ptr<BaseVector> lfvec;
-    if (!this->IsComplex ())
-      {
-        auto embtr = EmbTrefftz<double> (
-            make_optional (*bf), *fes, (test_fes) ? *test_fes : *fes, nullopt,
-            nullopt, nullptr, lf, (tndof != 0) ? tndof : eps, nullptr, false);
-        this->ETmats = std::get<0> (embtr);
-        lfvec = std::get<1> (embtr);
-      }
-    else
-      {
-        auto embtr = EmbTrefftz<Complex> (
-            make_optional (*bf), *fes, (test_fes) ? *test_fes : *fes, nullopt,
-            nullopt, nullptr, lf, (tndof != 0) ? tndof : eps, nullptr, false);
-        this->ETmatsC = std::get<0> (embtr);
-        lfvec = std::get<1> (embtr);
-      }
-
-    adjustDofsAfterSetOp ();
-    return lfvec;
+    return SetOp (*bf, nullopt, nullopt, nullptr, test_fes, lf,
+                  (tndof != 0) ? size_t (tndof) : eps);
   }
 
   template <typename T>
   shared_ptr<BaseVector>
-  EmbTrefftzFESpace<T>::SetOp (shared_ptr<const SumOfIntegrals> op,
-                               shared_ptr<const SumOfIntegrals> cop_lhs,
-                               shared_ptr<const SumOfIntegrals> cop_rhs,
+  EmbTrefftzFESpace<T>::SetOp (optional<const SumOfIntegrals> op,
+                               optional<const SumOfIntegrals> cop_lhs,
+                               optional<const SumOfIntegrals> cop_rhs,
                                shared_ptr<const FESpace> fes_conformity,
                                shared_ptr<const FESpace> fes_test,
                                shared_ptr<const SumOfIntegrals> linear_form,
-                               size_t ndof_trefftz)
+                               const std::variant<size_t, double> ndof_trefftz)
   {
     static Timer timer ("EmbTrefftz: SetOp");
 
     shared_ptr<BaseVector> particular_solution = nullptr;
 
-    if (!fes || !cop_lhs || !cop_rhs || !fes_conformity)
-      throw std::invalid_argument ("All pointers except for op, fes_test and "
-                                   "linear_form may not be null.");
+    if (!fes)
+      throw std::invalid_argument ("fes may not be null");
+    this->fes_conformity = fes_conformity;
 
     // fes_test may be null. If it is null, then choose the trial space as the
     // test space as well.
     const FESpace &fes_test_ref = (fes_test) ? *fes_test : *fes;
 
-    // if op is null, set op to be an empty sum.
-    const SumOfIntegrals op_default{};
-    if (!op)
-      ndof_trefftz = 0;
-    const SumOfIntegrals &op_ref = (op) ? *op : op_default;
-
+    // #TODO: what about hidden dofs?
     if (!this->IsComplex ())
       {
         std::tie (this->ETmats, particular_solution) = EmbTrefftz<double> (
-            op_ref, *fes, fes_test_ref, *cop_lhs, *cop_rhs, fes_conformity,
+            op, *fes, fes_test_ref, cop_lhs, cop_rhs, fes_conformity,
             linear_form, ndof_trefftz, nullptr);
+        Table<DofId> _table_dummy{};
+        createConformingTrefftzTables (_table_dummy, elnr_to_dofs, ETmats,
+                                       *fes, fes_conformity, 0);
+        for (size_t i = 0; i < ETmats.size (); i++)
+          if (ETmats[i])
+            QuickSort (elnr_to_dofs[i]);
       }
     else
       {
         std::tie (this->ETmatsC, particular_solution) = EmbTrefftz<Complex> (
-            *op, *fes, fes_test_ref, *cop_lhs, *cop_rhs, fes_conformity,
+            op, *fes, fes_test_ref, cop_lhs, cop_rhs, fes_conformity,
             linear_form, ndof_trefftz, nullptr);
+        Table<DofId> _table_dummy{};
+        createConformingTrefftzTables (_table_dummy, elnr_to_dofs, ETmatsC,
+                                       *fes, fes_conformity, 0);
+        for (size_t i = 0; i < ETmatsC.size (); i++)
+          if (ETmatsC[i])
+            QuickSort (elnr_to_dofs[i]);
       }
 
     adjustDofsAfterSetOp ();
@@ -847,53 +831,68 @@ namespace ngcomp
 
   template <typename T> void EmbTrefftzFESpace<T>::adjustDofsAfterSetOp ()
   {
-    T::Update ();
-    int ndof = fes->GetNDof ();
-    all2comp.SetSize (ndof);
-    all2comp = 0;
+    static_assert (std::is_base_of_v<FESpace, T>, "T must be a FESpace");
 
+    const size_t ndof_conformity
+        = (fes_conformity) ? fes_conformity->GetNDof () : 0;
+
+    T::Update ();
+
+    size_t ndof_trefftz = 0;
     for (auto ei : this->ma->Elements (VOL))
       {
-        int nz = this->IsComplex () ? (ETmatsC[ei.Nr ()])->elmat.Width ()
-                                    : (ETmats[ei.Nr ()])->elmat.Width ();
-        Array<DofId> dofs;
-        T::GetDofNrs (ei, dofs);
-        for (size_t i = nz; i < dofs.Size (); i++)
-          all2comp[dofs[i]] = NO_DOF_NR_CONDENSE;
-        ////for(int i=0;i<dofs.Size()-nz;i++)
-        // for(int i=nz;i<dofs.Size();i++)
-        ////this->free_dofs->Clear(dofs[i]);
-        ////this->SetDofCouplingType(dofs[i],UNUSED_DOF );
-        // this->SetDofCouplingType(dofs[i],HIDDEN_DOF );
+        // skip this element, if there is no element matrix defined
+        if (this->IsComplex () && !ETmatsC[ei.Nr ()]
+            || !this->IsComplex () && !ETmats[ei.Nr ()])
+          continue;
+
+        const size_t ndof_trefftz_local
+            = this->IsComplex () ? (ETmatsC[ei.Nr ()])->ndof_trefftz
+                                 : (ETmats[ei.Nr ()])->ndof_trefftz;
+        ndof_trefftz += ndof_trefftz_local;
       }
 
-    int newndof = 0;
-    for (DofId &d : all2comp)
-      if (d == 0)
-        d = newndof++;
+    // The conformity dofs might overlap.
+    // Overall, they add up to exactly the number of
+    // dofs in the conformity space.
+    const size_t new_ndof = ndof_conformity + ndof_trefftz;
+    this->SetNDof (new_ndof);
 
-    this->SetNDof (newndof);
+    this->ctofdof.SetSize (new_ndof);
 
-    // this->UpdateDofTables();
-    // this->UpdateCouplingDofArray();
-
-    this->ctofdof.SetSize (newndof);
-    for (int i = 0; i < ndof; i++)
-      if (all2comp[i] >= 0)
-        this->ctofdof[all2comp[i]] = fes->GetDofCouplingType (i);
-    // this->ctofdof[all2comp[i]] = T::GetDofCouplingType (i);
+    // We start the numbering of the dofs with the conformity dofs,
+    // and continue with the Trefftz dofs.
+    for (size_t i = 0; i < ndof_conformity; i++)
+      this->ctofdof[i] = fes_conformity->GetDofCouplingType (i);
+    for (size_t i = ndof_conformity; i < new_ndof; i++)
+      this->ctofdof[i] = LOCAL_DOF;
 
     T::FinalizeUpdate ();
   }
 
   template <typename T>
-  void EmbTrefftzFESpace<T>::GetDofNrs (ElementId ei, Array<int> &dnums) const
+  void
+  EmbTrefftzFESpace<T>::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
   {
+    // 1. Provide the dof nrs of the conforming Trefftz space, that are
+    // associated to the element ei.
+    const FlatArray<DofId> tdofnrs = elnr_to_dofs[ei.Nr ()];
+
+    // 2. In order to properly hook into ngsolve's assembly routine,
+    // we need to provide as many dofs as the underlying space T has.
+    // So, we first provide tdofnrs, which may contain fewer dofs than
+    // required. The rest of the array dnums, we fill up with the non-regular
+    // DofId NO_DOF_NR_CONDENSE, which marks these excess dofs to be condensed
+    // out.
     T::GetDofNrs (ei, dnums);
-    if (all2comp.Size () == fes->GetNDof ())
-      for (DofId &d : dnums)
-        if (IsRegularDof (d))
-          d = all2comp[d];
+    for (size_t i = 0; i < dnums.Size (); i++)
+      if (IsRegularDof (dnums[i]))
+        {
+          if (i < tdofnrs.Size ())
+            dnums[i] = tdofnrs[i];
+          else
+            dnums[i] = NO_DOF_NR_CONDENSE;
+        }
   }
 
   template <typename T>
@@ -1016,14 +1015,9 @@ namespace ngcomp
     auto vec = gfu->GetVectorPtr ();
 
     this->ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
-      Array<DofId> dofs, tdofs;
+      Array<DofId> dofs;
+      FlatArray<DofId> tdofs = this->elnr_to_dofs[ei.Nr ()];
       this->fes->GetDofNrs (ei, dofs);
-      tdofs.SetSize (dofs.Size ());
-      tdofs.SetSize0 ();
-
-      for (DofId d : dofs)
-        if (all2comp[d] >= 0)
-          tdofs.Append (all2comp[d]);
 
       if (this->IsComplex ())
         {
@@ -1099,11 +1093,11 @@ template <typename T> void ExportETSpace (py::module m, string label)
             py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0)
       .def ("SetOp",
             static_cast<shared_ptr<BaseVector> (EmbTrefftzFESpace<T>::*) (
-                shared_ptr<const SumOfIntegrals>,
-                shared_ptr<const SumOfIntegrals>,
-                shared_ptr<const SumOfIntegrals>, shared_ptr<const FESpace>,
+                optional<const SumOfIntegrals>, optional<const SumOfIntegrals>,
+                optional<const SumOfIntegrals>, shared_ptr<const FESpace>,
                 shared_ptr<const FESpace>, shared_ptr<const SumOfIntegrals>,
-                const size_t)> (&ngcomp::EmbTrefftzFESpace<T>::SetOp),
+                const std::variant<size_t, double>)> (
+                &ngcomp::EmbTrefftzFESpace<T>::SetOp),
             R"mydelimiter(
             Sets the operators for the conforming Trefftz method.
 
@@ -1118,9 +1112,8 @@ template <typename T> void ExportETSpace (py::module m, string label)
                 (i.e. the local dimension of the kernel of `op` on one element)
 
             :return: the particular solution vector.)mydelimiter",
-            py::arg ("op").none (true), py::arg ("cop_lhs").none (false),
-            py::arg ("cop_rhs").none (false),
-            py::arg ("fes_conformity").none (false),
+            py::arg ("op").none (true), py::arg ("cop_lhs"),
+            py::arg ("cop_rhs"), py::arg ("fes_conformity"),
             py::arg ("fes_test") = nullptr, py::arg ("linear_form") = nullptr,
             py::arg ("ndof_trefftz") = 0)
       .def ("Embed", &ngcomp::EmbTrefftzFESpace<T>::Embed)
