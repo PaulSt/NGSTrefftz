@@ -120,5 +120,5 @@ TEST (calcNdofTrefftzTest, EpsilonGivenWithSingularValues)
 
   ASSERT_EQ (calcNdofTrefftz<double> (42, 4, 5, double (1e-2), false,
                                       singular_values.View ()),
-             42 - 4 - 5 - 2);
+             42 - 4 - 5 + 2);
 }

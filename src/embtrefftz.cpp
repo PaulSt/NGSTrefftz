@@ -32,7 +32,7 @@ size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
       // ndof - ndof_conforming might underflow
       return max_a_minus_b_or_0 (ndof, ndof_conforming);
     }
-  if (holds_alternative<size_t> (ndof_trefftz))
+  else if (holds_alternative<size_t> (ndof_trefftz))
     {
       return std::get<size_t> (ndof_trefftz);
     }
