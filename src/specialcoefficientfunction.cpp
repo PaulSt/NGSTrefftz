@@ -2,7 +2,6 @@
 #include <fem.hpp>
 #include <comp.hpp>
 #include <h1lofe.hpp>
-#include <regex>
 #include <multigrid.hpp>
 
 namespace ngfem
@@ -78,7 +77,7 @@ namespace ngfem
     size_t p = ip.GetIPNr ();
     int el = ip.GetTransformation ().GetElementNr ();
 
-    if (p < 0 || p >= values[el].size ())
+    if (p >= values[el].size ())
       {
         cout << "got illegal integration point number " << p << endl;
         return 0;
@@ -221,7 +220,7 @@ namespace ngfem
   {
     size_t el = ip.GetTransformation ().GetElementNr ();
 
-    if (el < 0 || el >= values.Size ())
+    if (el >= values.Size ())
       {
         cout << "got illegal element number " << el << endl;
         return 0;
@@ -321,7 +320,7 @@ void ExportSpecialCoefficientFunction (py::module m)
 
   py::class_<PrintCF, shared_ptr<PrintCF>, CoefficientFunction> (
       m, "PrintCF", docu_string (R"raw_string(
-CoefficientFunction that writes integration point (in world coords.) 
+CoefficientFunction that writes integration point (in world coords.)
 into a file whenever evaluated at one.
 )raw_string"))
       .def (py::init ([] (const string &a_filename) -> shared_ptr<PrintCF> {

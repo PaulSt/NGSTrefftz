@@ -1128,17 +1128,16 @@ void BoxBilinearFormIntegrator ::T_CalcElementMatrixAdd (
 }
 
 void BoxBilinearFormIntegrator ::ApplyElementMatrix (
-    const FiniteElement &fel, const ElementTransformation &trafo,
-    const FlatVector<double> elx, FlatVector<double> ely, void *precomputed,
-    LocalHeap &lh) const
+    const FiniteElement &, const ElementTransformation &,
+    const FlatVector<double>, FlatVector<double>, void *, LocalHeap &) const
 {
   throw Exception (
       "BoxBilinearFormIntegrator::ApplyElementMatrix not implemented");
 }
 
 void BoxBilinearFormIntegrator ::CalcLinearizedElementMatrix (
-    const FiniteElement &fel, const ElementTransformation &trafo,
-    FlatVector<double> elveclin, FlatMatrix<double> elmat, LocalHeap &lh) const
+    const FiniteElement &, const ElementTransformation &, FlatVector<double>,
+    FlatMatrix<double>, LocalHeap &) const
 {
   throw Exception ("BoxBilinearFormIntegrator::CalcLinearizedElementMatrix "
                    "not implemented");
@@ -1151,15 +1150,16 @@ void BoxBilinearFormIntegrator ::CalcLinearizedElementMatrix (
 void ExportBoxIntegral (py::module m)
 {
 
-  py::class_<BoxIntegral, shared_ptr<BoxIntegral>, Integral> (
-      m, "BoxIntegral", docu_string (R"raw_string(
+  const auto py_boxint
+      = py::class_<BoxIntegral, shared_ptr<BoxIntegral>, Integral> (
+          m, "BoxIntegral", docu_string (R"raw_string(
         BoxIntegral allows to formulate linear, bilinear forms and integrals on
         box parts of the mesh")raw_string"));
 
   py::class_<BoxDifferentialSymbol, DifferentialSymbol> (
       m, "BoxDifferentialSymbol", docu_string (R"raw_string(
 dBox that allows to formulate linear, bilinear forms and integrals on
-(bounding) boxes 
+(bounding) boxes
 
 Example use case:
 
@@ -1175,7 +1175,7 @@ Constructor of BoxDifferentialSymbol.
 )raw_string"))
       .def (
           "__call__",
-          [] (BoxDifferentialSymbol &self,
+          [] (BoxDifferentialSymbol &,
               optional<variant<Region, string>> definedon,
               bool element_boundary, VorB element_vb,
               shared_ptr<GridFunction> deformation,
@@ -1208,7 +1208,7 @@ Constructor of BoxDifferentialSymbol.
           py::arg ("definedonelements") = nullptr,
           py::arg ("bonus_intorder") = 0,
           py::arg ("reference_box_length") = 0.5, docu_string (R"raw_string(
-The call of a BoxDifferentialSymbol allows to specify what is needed to specify the 
+The call of a BoxDifferentialSymbol allows to specify what is needed to specify the
 integration domain. It returns a new BoxDifferentialSymbol.
 
 Parameters:

@@ -25,7 +25,7 @@ namespace ngcomp
                                      Point2IndexMap *pim, netgen::Point3d p)
   {
     netgen::PointIndex pi = Point2Index (pim, p);
-    if (pi == pim->size ())
+    if (size_t (pi) == pim->size ())
       ngma->AddPoint (p);
     return pi;
   }

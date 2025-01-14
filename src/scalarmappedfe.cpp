@@ -22,9 +22,9 @@ namespace ngfem
       CalcShape (mir[i], shape.Col (i));
   }
 
-  void BaseScalarMappedElement ::CalcShape (
-      const SIMD_BaseMappedIntegrationRule &mir,
-      BareSliceMatrix<SIMD<double>> shape) const
+  void
+  BaseScalarMappedElement ::CalcShape (const SIMD_BaseMappedIntegrationRule &,
+                                       BareSliceMatrix<SIMD<double>>) const
   {
     cout << "SIMD - CalcShape not overloaded" << endl;
     throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
@@ -48,9 +48,10 @@ namespace ngfem
       vals (i) = Evaluate (mir[i], coefs);
   }
 
-  void BaseScalarMappedElement ::Evaluate (
-      const SIMD_BaseMappedIntegrationRule &mir, BareSliceVector<> coefs,
-      BareVector<SIMD<double>> values) const
+  void
+  BaseScalarMappedElement ::Evaluate (const SIMD_BaseMappedIntegrationRule &,
+                                      BareSliceVector<>,
+                                      BareVector<SIMD<double>>) const
   {
     cout << "SIMD - Eval not overloaded" << endl;
     throw ExceptionNOSIMD (
@@ -92,9 +93,10 @@ namespace ngfem
       }
   }
 
-  void BaseScalarMappedElement ::AddTrans (
-      const SIMD_BaseMappedIntegrationRule &mir,
-      BareVector<SIMD<double>> values, BareSliceVector<> coefs) const
+  void
+  BaseScalarMappedElement ::AddTrans (const SIMD_BaseMappedIntegrationRule &,
+                                      BareVector<SIMD<double>>,
+                                      BareSliceVector<>) const
   {
     cout << "SIMD - AddTrans not overloaded" << endl;
     throw ExceptionNOSIMD (
@@ -111,16 +113,16 @@ namespace ngfem
   }
 
   void BaseScalarMappedElement ::CalcMappedDShape (
-      const SIMD_BaseMappedIntegrationRule &mir,
-      BareSliceMatrix<SIMD<double>> dshapes) const
+      const SIMD_BaseMappedIntegrationRule &,
+      BareSliceMatrix<SIMD<double>>) const
   {
     cout << "SIMD - CalcMappedDShape not overloaded" << endl;
     throw ExceptionNOSIMD ("SIMD - CalcDShape not overloaded");
   }
 
   void BaseScalarMappedElement ::EvaluateGrad (
-      const SIMD_BaseMappedIntegrationRule &ir, BareSliceVector<> coefs,
-      BareSliceMatrix<SIMD<double>> values) const
+      const SIMD_BaseMappedIntegrationRule &, BareSliceVector<>,
+      BareSliceMatrix<SIMD<double>>) const
   {
     cout << "SIMD - EvaluateGrad not overloaded" << endl;
     throw ExceptionNOSIMD (
@@ -137,8 +139,8 @@ namespace ngfem
   // }
 
   void BaseScalarMappedElement ::AddGradTrans (
-      const SIMD_BaseMappedIntegrationRule &ir,
-      BareSliceMatrix<SIMD<double>> values, BareSliceVector<> coefs) const
+      const SIMD_BaseMappedIntegrationRule &, BareSliceMatrix<SIMD<double>>,
+      BareSliceVector<>) const
   {
     cout << "SIMD - AddTransGrad not overloaded" << endl;
     throw ExceptionNOSIMD (
@@ -238,9 +240,10 @@ namespace ngfem
   }
 
   template <int D>
-  void ScalarMappedElement<D>::EvaluateGradTrans (
-      const BaseMappedIntegrationRule &ir, SliceMatrix<> values,
-      SliceMatrix<> coefs) const
+  void
+  ScalarMappedElement<D>::EvaluateGradTrans (const BaseMappedIntegrationRule &,
+                                             SliceMatrix<>,
+                                             SliceMatrix<>) const
   {
 #ifndef __CUDA_ARCH__
     cout << "EvalGradTrans not overloaded" << endl;
@@ -313,7 +316,7 @@ namespace ngfem
 
   template <>
   void ScalarMappedElement<1>::CalcMappedDDShape (
-      const BaseMappedIntegrationPoint &bmip, BareSliceMatrix<> hddshape) const
+      const BaseMappedIntegrationPoint &, BareSliceMatrix<>) const
   {
     ;
   }
@@ -414,7 +417,7 @@ namespace ngfem
 
   template <>
   void ScalarMappedElement<4>::CalcMappedDDShape (
-      const BaseMappedIntegrationPoint &bmip, BareSliceMatrix<> hddshape) const
+      const BaseMappedIntegrationPoint &, BareSliceMatrix<>) const
   {
     ;
   }
@@ -424,9 +427,9 @@ namespace ngfem
   ////////////////////////////////////////////////////////
 
   template <>
-  void ScalarMappedElement<1>::CalcShape (
-      const SIMD_BaseMappedIntegrationRule &smir,
-      BareSliceMatrix<SIMD<double>> shape) const
+  void
+  ScalarMappedElement<1>::CalcShape (const SIMD_BaseMappedIntegrationRule &,
+                                     BareSliceMatrix<SIMD<double>>) const
   {
     cout << "dim not implemented" << endl;
   }
@@ -537,9 +540,9 @@ namespace ngfem
   }
 
   template <>
-  void ScalarMappedElement<1>::CalcDShape (
-      const SIMD_BaseMappedIntegrationRule &smir,
-      BareSliceMatrix<SIMD<double>> dshape) const
+  void
+  ScalarMappedElement<1>::CalcDShape (const SIMD_BaseMappedIntegrationRule &,
+                                      BareSliceMatrix<SIMD<double>>) const
   {
     cout << "dim not implemented" << endl;
   }
@@ -673,9 +676,8 @@ namespace ngfem
   /////////////// non-simd
 
   template <>
-  void
-  ScalarMappedElement<1>::CalcShape (const BaseMappedIntegrationPoint &mip,
-                                     BareSliceVector<> shape) const
+  void ScalarMappedElement<1>::CalcShape (const BaseMappedIntegrationPoint &,
+                                          BareSliceVector<>) const
   {
     cout << "dim not implemented" << endl;
   }
@@ -777,9 +779,8 @@ namespace ngfem
   }
 
   template <>
-  void
-  ScalarMappedElement<1>::CalcDShape (const BaseMappedIntegrationPoint &mip,
-                                      BareSliceMatrix<> dshape) const
+  void ScalarMappedElement<1>::CalcDShape (const BaseMappedIntegrationPoint &,
+                                           BareSliceMatrix<>) const
   {
     cout << "dim not implemented" << endl;
   }
@@ -902,19 +903,15 @@ namespace ngfem
 
   template <>
   void ScalarMappedElement<1>::CalcDDWaveOperator (
-      const SIMD_BaseMappedIntegrationRule &smir,
-      BareSliceMatrix<SIMD<double>> dshape,
-      BareSliceMatrix<SIMD<double>> wavespeed,
-      BareSliceMatrix<SIMD<double>> mu) const
+      const SIMD_BaseMappedIntegrationRule &, BareSliceMatrix<SIMD<double>>,
+      BareSliceMatrix<SIMD<double>>, BareSliceMatrix<SIMD<double>>) const
   {
     ;
   }
   template <>
   void ScalarMappedElement<4>::CalcDDWaveOperator (
-      const SIMD_BaseMappedIntegrationRule &smir,
-      BareSliceMatrix<SIMD<double>> dshape,
-      BareSliceMatrix<SIMD<double>> wavespeed,
-      BareSliceMatrix<SIMD<double>> mu) const
+      const SIMD_BaseMappedIntegrationRule &, BareSliceMatrix<SIMD<double>>,
+      BareSliceMatrix<SIMD<double>>, BareSliceMatrix<SIMD<double>>) const
   {
     ;
   }
@@ -1017,30 +1014,28 @@ namespace ngfem
 
   template <int D>
   void
-  BlockMappedElement<D>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                    BareSliceMatrix<SIMD<double>> shape) const
+  BlockMappedElement<D>::CalcShape (const SIMD_BaseMappedIntegrationRule &,
+                                    BareSliceMatrix<SIMD<double>>) const
   {
     throw Exception ("Not allowed");
   }
 
   template <int D>
-  void BlockMappedElement<D>::CalcShape (const BaseMappedIntegrationPoint &mip,
-                                         BareSliceVector<> shape) const
+  void BlockMappedElement<D>::CalcShape (const BaseMappedIntegrationPoint &,
+                                         BareSliceVector<>) const
   {
     throw Exception ("Not allowed");
   }
 
   template <>
-  void
-  BlockMappedElement<1>::CalcDShape (const BaseMappedIntegrationPoint &mip,
-                                     BareSliceMatrix<> dshape) const
+  void BlockMappedElement<1>::CalcDShape (const BaseMappedIntegrationPoint &,
+                                          BareSliceMatrix<>) const
   {
     throw Exception ("Not implemented point ");
   }
   template <>
-  void
-  BlockMappedElement<4>::CalcDShape (const BaseMappedIntegrationPoint &mip,
-                                     BareSliceMatrix<> dshape) const
+  void BlockMappedElement<4>::CalcDShape (const BaseMappedIntegrationPoint &,
+                                          BareSliceMatrix<>) const
   {
     throw Exception ("Not implemented point ");
   }
@@ -1125,9 +1120,9 @@ namespace ngfem
   //{ throw Exception("Not implemented no simd "); }
 
   template <>
-  void BlockMappedElement<1>::CalcDShape (
-      const SIMD_BaseMappedIntegrationRule &smir,
-      BareSliceMatrix<SIMD<double>> dshape) const
+  void
+  BlockMappedElement<1>::CalcDShape (const SIMD_BaseMappedIntegrationRule &,
+                                     BareSliceMatrix<SIMD<double>>) const
   {
     throw Exception ("Not implemented 1d");
   }
@@ -1256,8 +1251,9 @@ namespace ngfem
   }
 
   template <>
-  void BlockMappedElement<1>::CalcMappedDDShape (
-      const BaseMappedIntegrationPoint &bmip, BareSliceMatrix<> hddshape) const
+  void
+  BlockMappedElement<1>::CalcMappedDDShape (const BaseMappedIntegrationPoint &,
+                                            BareSliceMatrix<>) const
   {
     ;
   }
@@ -1353,8 +1349,9 @@ namespace ngfem
   }
 
   template <>
-  void BlockMappedElement<4>::CalcMappedDDShape (
-      const BaseMappedIntegrationPoint &bmip, BareSliceMatrix<> hddshape) const
+  void
+  BlockMappedElement<4>::CalcMappedDDShape (const BaseMappedIntegrationPoint &,
+                                            BareSliceMatrix<>) const
   {
     ;
   }

@@ -4,6 +4,7 @@
 #include "trefftzfespace.hpp"
 #include "monomialfespace.hpp"
 #include "diffopmapped.hpp"
+#include "planewavefe.hpp"
 
 /// @returns the corresponding `EqType`.
 /// @throws an `Exception`, if the input String has no associated `EqType`.
@@ -491,6 +492,7 @@ namespace ngcomp
       }
   }
 
+  /// @tparam TFunc has signature (int, Vec<D, int>) -> void
   template <int D, typename TFunc>
   void TraversePol (Vec<D, int> order, const TFunc &func)
   {
@@ -527,6 +529,7 @@ namespace ngcomp
       }
   }
 
+  /// @tparam TFunc has signature (int, Vec<D, int>) -> void
   template <int D, int traverse_dir = 0, typename TFunc>
   void TraversePol2 (int order, const TFunc &func)
   {
@@ -622,7 +625,7 @@ namespace ngcomp
     for (int basis = 0; basis < ndof; basis++)
       {
         int tracker = 0;
-        TraversePol<D> (ord, [&] (int i, Vec<D, int> coeff) {
+        TraversePol<D> (ord, [&] (int, Vec<D, int> coeff) {
           if (tracker >= 0)
             tracker++;
           int indexmap = PolBasis::IndexMap2<D> (coeff, ord);
@@ -689,8 +692,7 @@ namespace ngcomp
   template class TWaveBasis<3>;
   template class TWaveBasis<4>;
 
-  template <int D>
-  CSR THeatBasis<D>::Basis (int ord, int basistype, int fowave)
+  template <int D> CSR THeatBasis<D>::Basis (int ord, int, int fowave)
   {
     CSR tb;
     const int ndof = BinCoeff (D - 1 + ord, ord);
@@ -700,7 +702,7 @@ namespace ngcomp
     for (int basis = 0; basis < ndof; basis++)
       {
         int tracker = 0;
-        TraversePol<D> (ord, [&] (int i, Vec<D, int> coeff) {
+        TraversePol<D> (ord, [&] (int, Vec<D, int> coeff) {
           int indexmap = PolBasis::IndexMap2<D> (coeff, ord);
           int sum = 0;
           for (int m = 0; m <= D - 1; m++)
@@ -737,7 +739,7 @@ namespace ngcomp
   template class THeatBasis<2>;
   template class THeatBasis<3>;
 
-  template <int D> CSR TLapBasis<D>::Basis (int ord, int basistype)
+  template <int D> CSR TLapBasis<D>::Basis (int ord, int)
   {
     CSR tb;
     const int ndof
@@ -748,7 +750,7 @@ namespace ngcomp
     for (int basis = 0; basis < ndof; basis++)
       {
         int tracker = 0;
-        TraversePol<D> (ord, [&] (int i, Vec<D, int> coeff) {
+        TraversePol<D> (ord, [&] (int, Vec<D, int> coeff) {
           if (tracker >= 0)
             tracker++;
           int indexmap = PolBasis::IndexMap2<D> (coeff, ord);
@@ -802,7 +804,7 @@ namespace ngcomp
     for (int basis = 0; basis < ndof; basis++)
       {
         int tracker = 0;
-        TraversePol<D> (ord, [&] (int i, Vec<D, int> coeff) {
+        TraversePol<D> (ord, [&] (int, Vec<D, int> coeff) {
           if (tracker >= 0)
             tracker++;
           int indexmap = PolBasis::IndexMap2<D> (coeff, ord);
@@ -874,7 +876,7 @@ namespace ngcomp
         Vector<Vector<>> BB (ndiffs);
         Vector<> CC (ndiffs);
 
-        TraversePol<D> (order - 1, [&] (int i, Vec<D, int> coeff) {
+        TraversePol<D> (order - 1, [&] (int, Vec<D, int> coeff) {
           int index = PolBasis::IndexMap2<D> (coeff, order - 1);
           AA[index].SetSize (D, D);
           BB[index].SetSize (D);
@@ -897,7 +899,7 @@ namespace ngcomp
           qtbasis (i, indexmap) = 1;
         });
         // start recursion
-        TraversePol2<D> (order, [&] (int i, Vec<D, int> coeff) {
+        TraversePol2<D> (order, [&] (int, Vec<D, int> coeff) {
           if (coeff (D - 1) <= 1)
             return;
           int indexmap = PolBasis::IndexMap2<D> (coeff, order);
@@ -917,7 +919,7 @@ namespace ngcomp
                     Vec<D, int> em = 0;
                     em[m] = 1;
                     qtbasis.Col (indexmap)
-                        -= factorial (mii + ej) / factorial (mil)
+                        -= double (factorial (mii + ej) / factorial (mil))
                            * (AA[IndexMap2<D> (mil, order - 1)]) (j, m)
                            * pow (elsize, vsum<D, int> (mil))
                            * (mii[m] + ej[m] - mil[m] + 1)
@@ -988,7 +990,7 @@ namespace ngcomp
     ndiffs = (BinCoeff (D + order, order));
     FlatVector<> FF (ndiffs, lh);
 
-    TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
+    TraversePol<D> (order, [&] (int, Vec<D, int> coeff) {
       int index = PolBasis::IndexMap2<D> (coeff, order);
       FF[index] = FFder[index]->Evaluate (mip);
       if (vsum<D, int> (coeff) < order)
@@ -1004,7 +1006,7 @@ namespace ngcomp
 
     sol = 0;
     // start recursion
-    TraversePol2<D> (order, [&] (int i, Vec<D, int> mii) {
+    TraversePol2<D> (order, [&] (int, Vec<D, int> mii) {
       if (mii (D - 1) <= 1)
         return;
       int indexmap = PolBasis::IndexMap2<D> (mii, order);
@@ -1058,8 +1060,7 @@ namespace ngcomp
   template class QTEllipticBasis<3>;
 
   template <int D>
-  CSR QTWaveBasis<D>::Basis (int ord, Vec<D> ElCenter, double elsize,
-                             int basistype)
+  CSR QTWaveBasis<D>::Basis (int ord, Vec<D> ElCenter, double elsize, int)
   {
     lock_guard<mutex> lock (gentrefftzbasis);
     string encode = to_string (ord) + to_string (elsize);
@@ -1081,7 +1082,7 @@ namespace ngcomp
         Matrix<> BB (ord, (ord - 1) * (D == 3) + 1);
         Matrix<> AA (ord - 1, (ord - 2) * (D == 3) + 1);
 
-        TraversePol<D - 1> (order - 1, [&] (int i, Vec<D - 1, int> coeff) {
+        TraversePol<D - 1> (order - 1, [&] (int, Vec<D - 1, int> coeff) {
           int nx = coeff[0];
           int ny = D > 2 ? coeff[1] : 0;
           double fac = (factorial (nx) * factorial (ny));
@@ -1232,7 +1233,7 @@ namespace ngcomp
         Matrix<> BB (ord, (ord - 1) * (D == 3) + 1);
         Matrix<> AA (ord, (ord - 1) * (D == 3) + 1);
 
-        TraversePol<D - 1> (order - 1, [&] (int i, Vec<D - 1, int> coeff) {
+        TraversePol<D - 1> (order - 1, [&] (int, Vec<D - 1, int> coeff) {
           int nx = coeff[0];
           int ny = D > 2 ? coeff[1] : 0;
           double fac = (factorial (nx) * factorial (ny));
@@ -1359,7 +1360,7 @@ namespace ngcomp
       const int ndiffs = (BinCoeff (D + order - 1, order - 1));
       Vector<Matrix<>> AA (ndiffs);
 
-      TraversePol<D> (order - 1, [&] (int i, Vec<D, int> coeff) {
+      TraversePol<D> (order - 1, [&] (int, Vec<D, int> coeff) {
         int index = PolBasis::IndexMap2<D> (coeff, order - 1);
         AA[index].SetSize (D - 1, D - 1);
         AAder[index]->Evaluate (mip, AA[index].AsVector ());
@@ -1372,14 +1373,14 @@ namespace ngcomp
       qtbasis = 0;
       // init qtbasis
       int counter = 0;
-      TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
+      TraversePol<D> (order, [&] (int, Vec<D, int> coeff) {
         if (coeff[0] > 1)
           return;
         int indexmap = PolBasis::IndexMap2<D> (coeff, order);
         qtbasis (counter++, indexmap) = 1;
       });
       // start recursion
-      TraversePol2<D, 1> (order, [&] (int i, Vec<D, int> coeff) {
+      TraversePol2<D, 1> (order, [&] (int, Vec<D, int> coeff) {
         if (coeff[0] <= 1)
           return;
         int indexmap = PolBasis::IndexMap2<D> (coeff, order);
@@ -1451,7 +1452,7 @@ namespace ngcomp
     ndiffs = (BinCoeff (D + order, order));
     FlatVector<> FF (ndiffs, lh);
 
-    TraversePol<D> (order, [&] (int i, Vec<D, int> coeff) {
+    TraversePol<D> (order, [&] (int, Vec<D, int> coeff) {
       int index = PolBasis::IndexMap2<D> (coeff, order);
       FF[index] = FFder[index]->Evaluate (mip);
       if (vsum<D, int> (coeff) < order)
@@ -1464,7 +1465,7 @@ namespace ngcomp
 
     sol = 0;
     // start recursion
-    TraversePol2<D, 1> (order, [&] (int i, Vec<D, int> coeff) {
+    TraversePol2<D, 1> (order, [&] (int, Vec<D, int> coeff) {
       if (coeff[0] <= 1)
         return;
       int indexmap = PolBasis::IndexMap2<D> (coeff, order);

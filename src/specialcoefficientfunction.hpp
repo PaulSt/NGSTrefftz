@@ -5,7 +5,6 @@
 #include <comp.hpp>
 #include <multigrid.hpp>
 #include <h1lofe.hpp>
-#include <regex>
 
 namespace ngfem
 {

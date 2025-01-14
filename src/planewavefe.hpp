@@ -34,43 +34,43 @@ namespace ngfem
 
     bool ComplexShapes () const override { return true; }
 
-    Vec<D> EvaluateGrad (const BaseMappedIntegrationPoint &ip,
-                         BareSliceVector<> x) const override
+    Vec<D> EvaluateGrad (const BaseMappedIntegrationPoint &,
+                         BareSliceVector<>) const override
     {
       throw Exception ("EvaluateGrad only complex for PW ");
     }
-    void CalcShape (const BaseMappedIntegrationPoint &mip,
-                    BareSliceVector<> shape) const override
+    void CalcShape (const BaseMappedIntegrationPoint &,
+                    BareSliceVector<>) const override
     {
       throw Exception ("CalcShape only complex for PW ");
     }
-    void CalcShape (const BaseMappedIntegrationRule &mir,
-                    BareSliceMatrix<> shape) const override
+    void CalcShape (const BaseMappedIntegrationRule &,
+                    BareSliceMatrix<>) const override
     {
       throw Exception ("CalcShape only complex for PW ");
     }
-    void CalcDShape (const BaseMappedIntegrationPoint &mip,
-                     BareSliceMatrix<> dshape) const override
+    void CalcDShape (const BaseMappedIntegrationPoint &,
+                     BareSliceMatrix<>) const override
     {
       throw Exception ("CalcDShape only complex for PW ");
     }
-    void CalcDShape (const BaseMappedIntegrationRule &mir,
-                     BareSliceMatrix<> dshapes) const override
+    void CalcDShape (const BaseMappedIntegrationRule &,
+                     BareSliceMatrix<>) const override
     {
       throw Exception ("CalcDShape only complex for PW ");
     }
-    void CalcMappedDDShape (const BaseMappedIntegrationPoint &bmip,
-                            BareSliceMatrix<> hddshape) const override
+    void CalcMappedDDShape (const BaseMappedIntegrationPoint &,
+                            BareSliceMatrix<>) const override
     {
       throw Exception ("Not implemented for PW ");
     }
-    void CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
-                    BareSliceMatrix<SIMD<double>> shape) const override
+    void CalcShape (const SIMD_BaseMappedIntegrationRule &,
+                    BareSliceMatrix<SIMD<double>>) const override
     {
       throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
     }
-    void CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
-                     BareSliceMatrix<SIMD<double>> dshape) const override
+    void CalcDShape (const SIMD_BaseMappedIntegrationRule &,
+                     BareSliceMatrix<SIMD<double>>) const override
     {
       throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
     }
@@ -92,8 +92,8 @@ namespace ngfem
       for (size_t i = 0; i < mir.Size (); i++)
         CalcDShape (mir[i], dshapes.Cols (i * D, (i + 1) * D));
     }
-    Vec<D> EvaluateGrad (const BaseMappedIntegrationPoint &ip,
-                         BareSliceVector<Complex> x) const
+    Vec<D> EvaluateGrad (const BaseMappedIntegrationPoint &,
+                         BareSliceVector<Complex>) const
     {
       throw Exception ("OII");
     }
@@ -146,16 +146,15 @@ namespace ngfem
     }
 
     static void
-    GenerateMatrix (const FiniteElement &fel,
-                    const BaseMappedIntegrationPoint &mip,
-                    BareSliceMatrix<double, ColMajor> mat, LocalHeap &lh)
+    GenerateMatrix (const FiniteElement &, const BaseMappedIntegrationPoint &,
+                    BareSliceMatrix<double, ColMajor>, LocalHeap &)
     {
       throw Exception ("Not implemented for complex DiffOp");
     }
     static void
     GenerateMatrix (const FiniteElement &fel,
                     const BaseMappedIntegrationPoint &mip,
-                    BareSliceMatrix<Complex, ColMajor> mat, LocalHeap &lh)
+                    BareSliceMatrix<Complex, ColMajor> mat, LocalHeap &)
     {
       Cast (fel).CalcShape (mip, mat.Row (0));
     }
@@ -163,14 +162,14 @@ namespace ngfem
     template <typename MAT>
     static void GenerateMatrixIR (const FiniteElement &fel,
                                   const BaseMappedIntegrationRule &mir,
-                                  MAT &mat, LocalHeap &lh)
+                                  MAT &mat, LocalHeap &)
     {
       Cast (fel).CalcShape (mir, Trans (mat));
     }
 
     template <typename MIP, class TVX, class TVY>
-    static void Apply (const FiniteElement &fel, const MIP &mip, const TVX &x,
-                       TVY &y, LocalHeap &lh)
+    static void
+    Apply (const FiniteElement &, const MIP &, const TVX &, TVY &, LocalHeap &)
     {
       throw Exception ("Not implemented for complex DiffOp");
     }
@@ -178,14 +177,14 @@ namespace ngfem
     static void
     Apply (const FiniteElement &fel, const MappedIntegrationPoint<D, D> &mip,
            const BareSliceVector<Complex> &x, FlatVector<Complex> &y,
-           LocalHeap &lh)
+           LocalHeap &)
     {
       y (0) = Cast (fel).EvaluateComplex (mip, x);
     }
 
     template <class MIR, class TMY>
-    static void ApplyIR (const FiniteElement &fel, const MIR &mir,
-                         BareSliceVector<double> x, TMY y, LocalHeap &lh)
+    static void ApplyIR (const FiniteElement &, const MIR &,
+                         BareSliceVector<double>, TMY, LocalHeap &)
     {
       throw Exception ("Not implemented for complex DiffOp");
     }
@@ -193,15 +192,15 @@ namespace ngfem
     template <class MIR>
     static void
     ApplyIR (const FiniteElement &fel, const MIR &mir,
-             BareSliceVector<Complex> x, SliceMatrix<Complex> y, LocalHeap &lh)
+             BareSliceVector<Complex> x, SliceMatrix<Complex> y, LocalHeap &)
     {
       Cast (fel).Evaluate (mir, x,
                            FlatVector<Complex> (mir.Size (), &y (0, 0)));
     }
 
     template <typename MIP, class TVX, class TVY>
-    static void ApplyTrans (const FiniteElement &fel, const MIP &mip,
-                            const TVX &x, TVY &y, LocalHeap &lh)
+    static void ApplyTrans (const FiniteElement &, const MIP &, const TVX &,
+                            TVY &, LocalHeap &)
     {
       throw Exception ("Not implemented for complex DiffOp");
     }
@@ -274,7 +273,7 @@ namespace ngfem
     static void
     GenerateMatrix (const FiniteElement &fel,
                     const MappedIntegrationPoint<D, D, SCALMIP> &mip,
-                    MAT &&mat, LocalHeap &lh)
+                    MAT &&mat, LocalHeap &)
     {
       Cast (fel).CalcDShape (mip, Trans (mat));
     }
@@ -290,8 +289,8 @@ namespace ngfem
     }
 
     template <typename MIP, class TVX, class TVY>
-    static void Apply (const FiniteElement &fel, const MIP &mip, const TVX &x,
-                       TVY &&y, LocalHeap &lh)
+    static void Apply (const FiniteElement &, const MIP &, const TVX &, TVY &&,
+                       LocalHeap &)
     {
       throw Exception ("Not implemented for complex DiffOp ");
     }
@@ -309,8 +308,8 @@ namespace ngfem
     }
 
     template <typename MIP, class TVX, class TVY>
-    static void ApplyTransAdd (const FiniteElement &fel, const MIP &mip,
-                               const TVX &x, TVY &y, LocalHeap &lh)
+    static void ApplyTransAdd (const FiniteElement &, const MIP &, const TVX &,
+                               TVY &, LocalHeap &)
     {
       throw Exception ("Not implemented for complex DiffOp ");
     }

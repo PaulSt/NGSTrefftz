@@ -1,6 +1,10 @@
 #ifndef SPECIALINTEGRATOR_HPP
 #define SPECIALINTEGRATOR_HPP
 
+#include <symbolicintegrator.hpp>
+
+#include "ngsttd.hpp"
+
 namespace ngfem
 {
 
@@ -29,9 +33,8 @@ namespace ngfem
     xbool IsSymmetric () const override { return true; }
 
     void
-    CalcElementMatrix (const FiniteElement &fel,
-                       const ElementTransformation &eltrans,
-                       FlatMatrix<double> elmat, LocalHeap &lh) const override
+    CalcElementMatrix (const FiniteElement &, const ElementTransformation &,
+                       FlatMatrix<double>, LocalHeap &) const override
     {
       throw Exception (
           "SpaceTimeDG_FFacetBFI::CalcElementMatrix - not implemented!");
@@ -180,55 +183,52 @@ namespace ngfem
                      FlatArray<int> &SElVertices, FlatMatrix<Complex> elmat,
                      LocalHeap &lh) const;
 
-    NGST_DLL virtual void CalcLinearizedFacetMatrix (
-        const FiniteElement &volumefel, int LocalFacetNr,
-        const ElementTransformation &eltrans, FlatArray<int> &ElVertices,
-        const ElementTransformation &seltrans, FlatArray<int> &SElVertices,
-        FlatVector<double> vec, FlatMatrix<double> elmat, LocalHeap &lh) const
+    NGST_DLL virtual void
+    CalcLinearizedFacetMatrix (const FiniteElement &, int,
+                               const ElementTransformation &, FlatArray<int> &,
+                               const ElementTransformation &, FlatArray<int> &,
+                               FlatVector<double>, FlatMatrix<double>,
+                               LocalHeap &) const
     {
       throw Exception (
           "SymbolicFFacetBFI::CalcLinearizedFacetMatrix not implemented");
     }
 
     NGST_DLL virtual void
-    ApplyFacetMatrix (const FiniteElement &volumefel1, int LocalFacetNr1,
-                      const ElementTransformation &eltrans1,
-                      FlatArray<int> &ElVertices1,
-                      const FiniteElement &volumefel2, int LocalFacetNr2,
-                      const ElementTransformation &eltrans2,
-                      FlatArray<int> &ElVertices2, FlatVector<double> elx,
-                      FlatVector<double> ely, LocalHeap &lh) const
+    ApplyFacetMatrix (const FiniteElement &, int,
+                      const ElementTransformation &, FlatArray<int> &,
+                      const FiniteElement &, int,
+                      const ElementTransformation &, FlatArray<int> &,
+                      FlatVector<double>, FlatVector<double>,
+                      LocalHeap &) const
     {
       throw Exception ("SymbolicFFacetBFI::ApplyFacetMatrix not implemented");
     }
 
     NGST_DLL virtual void
-    CalcTraceValues (const FiniteElement &volumefel, int LocalFacetNr,
-                     const ElementTransformation &eltrans,
-                     FlatArray<int> &ElVertices, FlatVector<double> &trace,
-                     FlatVector<double> elx, LocalHeap &lh) const
+    CalcTraceValues (const FiniteElement &, int, const ElementTransformation &,
+                     FlatArray<int> &, FlatVector<double> &,
+                     FlatVector<double>, LocalHeap &) const
     {
       throw Exception ("SymbolicFFacetBFI::CalcTraceValues not implemented");
     }
 
     NGST_DLL virtual void
-    ApplyFromTraceValues (const FiniteElement &volumefel, int LocalFacetNr,
-                          const ElementTransformation &eltrans,
-                          FlatArray<int> &ElVertices, FlatVector<double> trace,
-                          FlatVector<double> elx, FlatVector<double> ely,
-                          LocalHeap &lh) const
+    ApplyFromTraceValues (const FiniteElement &, int,
+                          const ElementTransformation &, FlatArray<int> &,
+                          FlatVector<double>, FlatVector<double>,
+                          FlatVector<double>, LocalHeap &) const
     {
       throw Exception (
           "SymbolicFFacetBFI::ApplyFromTraceValues not implemented");
     }
 
     NGST_DLL virtual void
-    ApplyFacetMatrix (const FiniteElement &volumefel, int LocalFacetNr,
-                      const ElementTransformation &eltrans,
-                      FlatArray<int> &ElVertices,
-                      const ElementTransformation &seltrans,
-                      FlatArray<int> &SElVertices, FlatVector<double> elx,
-                      FlatVector<double> ely, LocalHeap &lh) const
+    ApplyFacetMatrix (const FiniteElement &, int,
+                      const ElementTransformation &, FlatArray<int> &,
+                      const ElementTransformation &, FlatArray<int> &,
+                      FlatVector<double>, FlatVector<double>,
+                      LocalHeap &) const
     {
       throw Exception ("SymbolicFFacetBFI::ApplyFacetMatrix not implemented");
     }

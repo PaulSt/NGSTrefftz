@@ -1,13 +1,13 @@
 #include <comp.hpp> // provides FESpace, ...
 #include <python_comp.hpp>
 
+#include "pufe.hpp"
 #include "pufespace.hpp"
 #include "diffopmapped.hpp"
 
 namespace ngcomp
 {
-  PUFESpace ::PUFESpace (shared_ptr<MeshAccess> ama, const Flags &flags,
-                         bool checkflags)
+  PUFESpace ::PUFESpace (shared_ptr<MeshAccess> ama, const Flags &flags, bool)
       : FESpace (ama, flags)
   {
     type = "pufespace";

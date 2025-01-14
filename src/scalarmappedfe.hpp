@@ -16,20 +16,20 @@ namespace ngfem
       Eval (n, x, values);
     }
 
-    template <class S> static INLINE double P0 (S x) { return 1.0; }
+    template <class S> static INLINE double P0 (S) { return 1.0; }
     template <class S> static INLINE S P1 (S x) { return x; }
-    template <class S, class Sy> static INLINE S P1 (S x, Sy y)
+    template <class S, class Sy> static INLINE S P1 (S x, Sy)
     {
       return P1 (x);
     }
 
-    static INLINE double A (int i) { return 1.0; }
-    static INLINE double B (int i) { return 0; }
-    static INLINE double C (int i) { return 0; }
+    static INLINE double A (int) { return 1.0; }
+    static INLINE double B (int) { return 0; }
+    static INLINE double C (int) { return 0; }
 
-    static INLINE double CalcA (int i) { return 1.0; }
-    static INLINE double CalcB (int i) { return 0; }
-    static INLINE double CalcC (int i) { return 0; }
+    static INLINE double CalcA (int) { return 1.0; }
+    static INLINE double CalcB (int) { return 0; }
+    static INLINE double CalcC (int) { return 0; }
 
     enum
     {

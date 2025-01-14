@@ -1,4 +1,3 @@
-#include <fem.hpp>
 #include <comp.hpp>
 #include "scalarmappedfe.hpp"
 #include "specialintegrator.hpp"
@@ -339,7 +338,7 @@ namespace ngfem
   void SpaceTimeDG_FFacetBFI<D>::CalcFacetMatrix (
       const FiniteElement &volumefel, int LocalFacetNr,
       const ElementTransformation &eltrans, FlatArray<int> &ElVertices,
-      const ElementTransformation &seltrans, FlatArray<int> &SElVertices,
+      const ElementTransformation &, FlatArray<int> &,
       FlatMatrix<double> elmat, LocalHeap &lh) const
   {
     this->CalcFacetMatrix (volumefel, LocalFacetNr, eltrans, ElVertices,
@@ -659,7 +658,7 @@ namespace ngfem
   void SpaceTimeDG_FFacetLFI<D>::CalcFacetVector (
       const FiniteElement &volumefel, int LocalFacetNr,
       const ElementTransformation &eltrans, FlatArray<int> &ElVertices,
-      const ElementTransformation &seltrans, FlatVector<double> elvec,
+      const ElementTransformation &, FlatVector<double> elvec,
       LocalHeap &lh) const
   {
     this->CalcFacetVector (volumefel, LocalFacetNr, eltrans, ElVertices,
@@ -1476,17 +1475,13 @@ skeleton : bool
 
   m.def (
       "FFacetLFI",
-      [] (shared_ptr<CoefficientFunction> cf, VorB vb, bool element_boundary,
-          bool skeleton, optional<variant<Region, py::list>> definedon,
-          IntegrationRule ir, int bonus_intorder,
-          shared_ptr<BitArray> definedonelem, bool simd_evaluate,
-          VorB element_vb, shared_ptr<GridFunction> deformation) {
+      [] (shared_ptr<CoefficientFunction> cf, VorB vb, bool, bool skeleton,
+          optional<variant<Region, py::list>> definedon, IntegrationRule ir,
+          int bonus_intorder, shared_ptr<BitArray> definedonelem,
+          bool simd_evaluate, VorB, shared_ptr<GridFunction> deformation) {
         if (definedon.has_value ())
           if (auto defregion = get_if<Region> (&*definedon); defregion)
             vb = VorB (*defregion);
-
-        if (element_boundary)
-          element_vb = BND;
 
         shared_ptr<LinearFormIntegrator> lfi;
         if (!skeleton)

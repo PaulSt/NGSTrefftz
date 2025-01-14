@@ -49,7 +49,7 @@ namespace ngcomp
         ma->GetFacetElements (i, elnums);
         for (int elnr2 : elnums)
           {
-            if (elnr2 != elnr.Nr ())
+            if (elnr2 != (int)elnr.Nr ())
               els.Append (elnr2);
           }
       }
@@ -105,7 +105,7 @@ namespace ngcomp
                 Array<int> els2 = GetElNeighbours (ma, ElementId (elnr));
                 for (auto elnr2 : els2)
                   {
-                    if (elnr2 == ei.Nr () || els.Contains (elnr2))
+                    if (elnr2 == (int)ei.Nr () || els.Contains (elnr2))
                       continue;
                     els.Append (elnr2);
                     dnums.SetSize0 ();

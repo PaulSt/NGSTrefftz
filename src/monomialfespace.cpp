@@ -7,7 +7,7 @@
 namespace ngcomp
 {
   MonomialFESpace ::MonomialFESpace (shared_ptr<MeshAccess> ama,
-                                     const Flags &flags, bool checkflags)
+                                     const Flags &flags, bool)
       : FESpace (ama, flags)
   {
     type = "monomialfespace";

@@ -2,7 +2,8 @@
 #define FILE_PUFESPACE_HPP
 
 #include "scalarmappedfe.hpp"
-#include "pufe.hpp"
+
+#include <comp.hpp>
 
 namespace ngcomp
 {

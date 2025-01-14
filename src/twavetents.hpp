@@ -22,8 +22,8 @@ namespace ngfem
     }
 
     SIMD_STMappedIntegrationRule (const SIMD_IntegrationRule &ir,
-                                  const ElementTransformation &aeltrans,
-                                  int dummy, Allocator &lh)
+                                  const ElementTransformation &aeltrans, int,
+                                  Allocator &lh)
         : SIMD_BaseMappedIntegrationRule (ir, aeltrans), mips (ir.Size (), lh)
     {
       dim_element = DIM_ELEMENT;
@@ -48,8 +48,7 @@ namespace ngfem
           &mips[0].NV () (0));
     }
 
-    virtual void
-    ComputeNormalsAndMeasure (ELEMENT_TYPE et, int facetnr) override
+    virtual void ComputeNormalsAndMeasure (ELEMENT_TYPE, int) override
     {
       throw Exception ("Not implemented for sstmip");
     }
@@ -61,12 +60,12 @@ namespace ngfem
     virtual void Print (ostream &ost) const override;
 
     virtual void
-    TransformGradient (BareSliceMatrix<SIMD<double>> grad) const override
+    TransformGradient (BareSliceMatrix<SIMD<double>>) const override
     {
       throw Exception ("Not implemented for sstmip");
     }
     virtual void
-    TransformGradientTrans (BareSliceMatrix<SIMD<double>> grad) const override
+    TransformGradientTrans (BareSliceMatrix<SIMD<double>>) const override
     {
       throw Exception ("Not implemented for sstmip");
     }
@@ -80,13 +79,14 @@ namespace ngcomp
   {
   public:
     TrefftzTents () { ; }
+    virtual ~TrefftzTents () = default;
     virtual int dimensio () { return 0; }
     virtual void Propagate () { throw Exception ("TrefftzTents virtual!"); }
-    virtual void SetInitial (shared_ptr<CoefficientFunction> init)
+    virtual void SetInitial (shared_ptr<CoefficientFunction>)
     {
       throw Exception ("TrefftzTents virtual!");
     }
-    virtual void SetBoundaryCF (shared_ptr<CoefficientFunction> abddatum)
+    virtual void SetBoundaryCF (shared_ptr<CoefficientFunction>)
     {
       throw Exception ("TrefftzTents virtual!");
     }

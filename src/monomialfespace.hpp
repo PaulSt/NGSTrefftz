@@ -3,6 +3,8 @@
 
 #include "scalarmappedfe.hpp"
 
+#include <comp.hpp>
+
 namespace ngcomp
 {
 

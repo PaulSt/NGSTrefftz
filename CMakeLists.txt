@@ -15,6 +15,7 @@ file(DOWNLOAD https://raw.githubusercontent.com/NGSolve/ngsolve-addon-template/$
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_BINARY_DIR}/cmake_modules")
 
 ### ngstrefftz
+
 set(addon_name ngstrefftz)
 project(ngstrefftz)
 include_directories(${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src)
@@ -40,6 +41,24 @@ add_ngsolve_addon( ngstrefftz
   )
 target_compile_definitions(ngstrefftz PRIVATE NGSTREFFTZ_EXPORTS)
 target_compile_definitions(ngstrefftz PRIVATE NGSTENT_EXPORTS)
+
+# enable compiler warinigs, when building with g++ or clang++
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(_trefftz PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wno-vla # ngsolve uses VLAs anyway
+    )
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(_trefftz PRIVATE
+        -Wall
+        -Wextra
+        -pedantic
+        -Wtype-limits
+        -Wuninitialized
+    )
+endif()
 
 ### user options
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
@@ -182,7 +201,6 @@ Make sure to add it to the python path:
 \n${ColourReset}")
 
 ### tests
-set(CMAKE_BUILD_TYPE Debug)
 enable_testing()
 include(CTest)
 # set up python integration tests

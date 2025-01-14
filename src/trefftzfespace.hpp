@@ -2,7 +2,8 @@
 #define FILE_TREFFTZFESPACE_HPP
 
 #include "scalarmappedfe.hpp"
-#include "planewavefe.hpp"
+
+#include <fespace.hpp>
 
 /// Denotes the types of equations supported by the TrefftzFESpace.
 enum class EqType
@@ -23,6 +24,8 @@ enum class EqType
 
 namespace ngcomp
 {
+  using namespace std;
+  using namespace ngfem;
 
   class PolBasis
   {
@@ -34,22 +37,22 @@ namespace ngcomp
     PolBasis (int aorder) : order (aorder) { ; }
     virtual ~PolBasis () { ; }
 
-    virtual void SetRHS (shared_ptr<CoefficientFunction> coeffF)
+    virtual void SetRHS (shared_ptr<CoefficientFunction>)
     {
       throw Exception ("SetRHS not implemented for this basis");
     }
-    virtual void GetParticularSolution (Vec<1> ElCenter, Vec<1> elsize,
-                                        FlatVector<> sol, LocalHeap &lh)
+    virtual void
+    GetParticularSolution (Vec<1>, Vec<1>, FlatVector<>, LocalHeap &)
     {
       throw Exception ("GetParticularSolution not implemented for this basis");
     }
-    virtual void GetParticularSolution (Vec<2> ElCenter, Vec<2> elsize,
-                                        FlatVector<> sol, LocalHeap &lh)
+    virtual void
+    GetParticularSolution (Vec<2>, Vec<2>, FlatVector<>, LocalHeap &)
     {
       throw Exception ("GetParticularSolution not implemented for this basis");
     }
-    virtual void GetParticularSolution (Vec<3> ElCenter, Vec<3> elsize,
-                                        FlatVector<> sol, LocalHeap &lh)
+    virtual void
+    GetParticularSolution (Vec<3>, Vec<3>, FlatVector<>, LocalHeap &)
     {
       throw Exception ("GetParticularSolution not implemented for this basis");
     }

@@ -58,9 +58,8 @@ namespace ngfem
   }
 
   template <int D>
-  void PUFElement<D>::EvaluateGradTrans (const BaseMappedIntegrationRule &ir,
-                                         SliceMatrix<> values,
-                                         SliceMatrix<> coefs) const
+  void PUFElement<D>::EvaluateGradTrans (const BaseMappedIntegrationRule &,
+                                         SliceMatrix<>, SliceMatrix<>) const
   {
     cout << "EvalGradTrans not overloaded" << endl;
   }
@@ -70,43 +69,43 @@ namespace ngfem
   ////////////////////////////////////////////////////////
 
   template <>
-  void PUFElement<1>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                 BareSliceMatrix<SIMD<double>> shape) const
+  void PUFElement<1>::CalcShape (const SIMD_BaseMappedIntegrationRule &,
+                                 BareSliceMatrix<SIMD<double>>) const
   {
     throw ExceptionNOSIMD ("nosimd");
   }
 
   template <>
-  void PUFElement<2>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                 BareSliceMatrix<SIMD<double>> shape) const
+  void PUFElement<2>::CalcShape (const SIMD_BaseMappedIntegrationRule &,
+                                 BareSliceMatrix<SIMD<double>>) const
   {
     throw ExceptionNOSIMD ("nosimd");
   }
 
   template <>
-  void PUFElement<3>::CalcShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                 BareSliceMatrix<SIMD<double>> shape) const
+  void PUFElement<3>::CalcShape (const SIMD_BaseMappedIntegrationRule &,
+                                 BareSliceMatrix<SIMD<double>>) const
   {
     throw ExceptionNOSIMD ("nosimd");
   }
 
   template <>
-  void PUFElement<1>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                  BareSliceMatrix<SIMD<double>> dshape) const
+  void PUFElement<1>::CalcDShape (const SIMD_BaseMappedIntegrationRule &,
+                                  BareSliceMatrix<SIMD<double>>) const
   {
     throw ExceptionNOSIMD ("nosimd");
   }
 
   template <>
-  void PUFElement<2>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                  BareSliceMatrix<SIMD<double>> dshape) const
+  void PUFElement<2>::CalcDShape (const SIMD_BaseMappedIntegrationRule &,
+                                  BareSliceMatrix<SIMD<double>>) const
   {
     throw ExceptionNOSIMD ("nosimd");
   }
 
   template <>
-  void PUFElement<3>::CalcDShape (const SIMD_BaseMappedIntegrationRule &smir,
-                                  BareSliceMatrix<SIMD<double>> dshape) const
+  void PUFElement<3>::CalcDShape (const SIMD_BaseMappedIntegrationRule &,
+                                  BareSliceMatrix<SIMD<double>>) const
   {
     throw ExceptionNOSIMD ("nosimd");
   }
@@ -195,8 +194,8 @@ namespace ngfem
   }
 
   template <>
-  void PUFElement<3>::CalcShape (const BaseMappedIntegrationPoint &mip,
-                                 BareSliceVector<> shape) const
+  void PUFElement<3>::CalcShape (const BaseMappedIntegrationPoint &,
+                                 BareSliceVector<>) const
   {
     cout << "dim not implemented" << endl;
   }
@@ -332,8 +331,8 @@ namespace ngfem
   }
 
   template <>
-  void PUFElement<3>::CalcDShape (const BaseMappedIntegrationPoint &mip,
-                                  BareSliceMatrix<> dshape) const
+  void PUFElement<3>::CalcDShape (const BaseMappedIntegrationPoint &,
+                                  BareSliceMatrix<>) const
   {
     cout << "dim not implemented" << endl;
   }

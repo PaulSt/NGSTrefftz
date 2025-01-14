@@ -1,6 +1,8 @@
 #ifndef FILE_DIFFOPMAPPED
 #define FILE_DIFFOPMAPPED
 
+#include "scalarmappedfe.hpp"
+
 namespace ngfem
 {
 
@@ -54,16 +56,15 @@ namespace ngfem
 
     static void GenerateMatrix (const FiniteElement &fel,
                                 const BaseMappedIntegrationPoint &mip,
-                                FlatMatrixFixHeight<1> &mat, LocalHeap &lh)
+                                FlatMatrixFixHeight<1> &mat, LocalHeap &)
     {
       Cast (fel).CalcShape (
           mip, mat.Row (0)); // FlatVector<> (fel.GetNDof(), &mat(0,0)));
     }
 
-    static void
-    GenerateMatrix (const FiniteElement &fel,
-                    const BaseMappedIntegrationPoint &mip,
-                    SliceMatrix<double, ColMajor> mat, LocalHeap &lh)
+    static void GenerateMatrix (const FiniteElement &fel,
+                                const BaseMappedIntegrationPoint &mip,
+                                SliceMatrix<double, ColMajor> mat, LocalHeap &)
     {
       Cast (fel).CalcShape (mip, mat.Row (0));
     }
@@ -72,7 +73,7 @@ namespace ngfem
     template <typename MAT>
     static void GenerateMatrixIR (const FiniteElement &fel,
                                   const BaseMappedIntegrationRule &mir,
-                                  MAT &mat, LocalHeap &lh)
+                                  MAT &mat, LocalHeap &)
     {
       Cast (fel).CalcShape (mir, Trans (mat));
     }
@@ -95,7 +96,7 @@ namespace ngfem
 
     static void
     Apply (const FiniteElement &fel, const MappedIntegrationPoint<D, D> &mip,
-           const FlatVector<double> &x, FlatVector<double> &y, LocalHeap &lh)
+           const FlatVector<double> &x, FlatVector<double> &y, LocalHeap &)
     {
       y (0) = Cast (fel).Evaluate (mip, x);
     }
@@ -103,7 +104,7 @@ namespace ngfem
     // using DiffOp<DiffOpId<D, FEL> >::ApplyIR;
     template <class MIR, class TMY>
     static void ApplyIR (const FiniteElement &fel, const MIR &mir,
-                         BareSliceVector<double> x, TMY y, LocalHeap &lh)
+                         BareSliceVector<double> x, TMY y, LocalHeap &)
     {
       Cast (fel).Evaluate (mir, x, FlatVector<> (mir.Size (), &y (0, 0)));
     }
@@ -111,7 +112,7 @@ namespace ngfem
     template <class MIR>
     static void
     ApplyIR (const FiniteElement &fel, const MIR &mir,
-             BareSliceVector<Complex> x, SliceMatrix<Complex> y, LocalHeap &lh)
+             BareSliceVector<Complex> x, SliceMatrix<Complex> y, LocalHeap &)
     {
       Cast (fel).Evaluate (
           mir,
@@ -141,9 +142,9 @@ namespace ngfem
 
     // using DiffOp<DiffOpId<D, FEL> >::ApplyTransIR;
     template <class MIR>
-    static void ApplyTransIR (const FiniteElement &fel, const MIR &mir,
-                              FlatMatrix<double> x, BareSliceVector<double> y,
-                              LocalHeap &lh)
+    static void
+    ApplyTransIR (const FiniteElement &fel, const MIR &mir,
+                  FlatMatrix<double> x, BareSliceVector<double> y, LocalHeap &)
     {
       Cast (fel).EvaluateTrans (mir, FlatVector<> (mir.Size (), &x (0, 0)), y);
     }
@@ -220,7 +221,7 @@ namespace ngfem
     static void
     Apply (const ScalarFiniteElement<D - 1> &fel,
            const MappedIntegrationPoint<D - 1, D> &mip,
-           const FlatVector<double> &x, FlatVector<double> &y, LocalHeap &lh)
+           const FlatVector<double> &x, FlatVector<double> &y, LocalHeap &)
     {
       y (0) = static_cast<const FEL &> (fel).Evaluate (mip, x);
     }
@@ -237,7 +238,7 @@ namespace ngfem
     template <class MIR>
     static void
     ApplyTransIR (const FiniteElement &fel, const MIR &mir,
-                  FlatMatrix<double> x, FlatVector<double> y, LocalHeap &lh)
+                  FlatMatrix<double> x, FlatVector<double> y, LocalHeap &)
     {
       // static Timer t("applytransir - bnd");
       // RegionTimer reg(t);
@@ -311,10 +312,9 @@ namespace ngfem
       return static_cast<const FEL &> (fel);
     }
 
-    static void
-    GenerateMatrix (const FiniteElement &fel,
-                    const MappedIntegrationPoint<D, D> &mip,
-                    SliceMatrix<double, ColMajor> mat, LocalHeap &lh)
+    static void GenerateMatrix (const FiniteElement &fel,
+                                const MappedIntegrationPoint<D, D> &mip,
+                                SliceMatrix<double, ColMajor> mat, LocalHeap &)
     {
       Cast (fel).CalcMappedDShape (mip, Trans (mat));
     }
@@ -333,7 +333,7 @@ namespace ngfem
     static void
     GenerateMatrixIR (const FiniteElement &fel,
                       const MappedIntegrationRule<D, D> &mir,
-                      BareSliceMatrix<double, ColMajor> mat, LocalHeap &lh)
+                      BareSliceMatrix<double, ColMajor> mat, LocalHeap &)
     {
       Cast (fel).CalcMappedDShape (mir, Trans (mat));
     }
@@ -361,7 +361,7 @@ namespace ngfem
     template <class TVY>
     static void
     Apply (const FiniteElement &fel, const MappedIntegrationPoint<D, D> &mip,
-           const FlatVector<> &x, TVY &&y, LocalHeap &lh)
+           const FlatVector<> &x, TVY &&y, LocalHeap &)
     {
       Vec<D> hv = Cast (fel).EvaluateGrad (mip, x);
       // y = Trans (mip.GetJacobianInverse()) * hv;
@@ -373,7 +373,7 @@ namespace ngfem
     template <class MIR>
     static void ApplyIR (const FiniteElement &fel, const MIR &mir,
                          const FlatVector<double> x,
-                         FlatMatrixFixWidth<D, double> y, LocalHeap &lh)
+                         FlatMatrixFixWidth<D, double> y, LocalHeap &)
     {
       FlatMatrixFixWidth<D> grad (mir.Size (), &y (0));
       Cast (fel).EvaluateGrad (mir, x, grad);

@@ -156,11 +156,10 @@ public:
                                             LocalHeap &lh) const override;
 
   template <int D, typename SCAL, typename SCAL_SHAPES>
-  void
-  T_CalcLinearizedElementMatrixEB (const FiniteElement &fel,
-                                   const ElementTransformation &trafo,
-                                   FlatVector<SCAL> elveclin,
-                                   FlatMatrix<SCAL> elmat, LocalHeap &lh) const
+  void T_CalcLinearizedElementMatrixEB (const FiniteElement &,
+                                        const ElementTransformation &,
+                                        FlatVector<SCAL>, FlatMatrix<SCAL>,
+                                        LocalHeap &) const
   {
     throw Exception ("BoxBilinearFormIntegrator::T_"
                      "CalcLinearizedElementMatrixEB not yet implemented");
@@ -174,10 +173,9 @@ public:
 
   template <int D, typename SCAL, typename SCAL_SHAPES>
   void
-  T_ApplyElementMatrixEB (const FiniteElement &fel,
-                          const ElementTransformation &trafo,
-                          const FlatVector<SCAL> elx, FlatVector<SCAL> ely,
-                          void *precomputed, LocalHeap &lh) const
+  T_ApplyElementMatrixEB (const FiniteElement &, const ElementTransformation &,
+                          const FlatVector<SCAL>, FlatVector<SCAL>, void *,
+                          LocalHeap &) const
   {
     throw Exception ("BoxBilinearFormIntegrator::T_ApplyElementMatrixEB not "
                      "yet implemented");

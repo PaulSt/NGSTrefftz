@@ -125,8 +125,8 @@ namespace ngcomp
           FlatVector<> subv (nbasis, &elvec (eli * nbasis));
           double bla = wavespeed[tent->els[elnr]];
           CalcTentEl (
-              tent->els[elnr], tent, tel, [&] (int imip) { return bla; }, sir,
-              slh, subm, subv, topdshapes[elnr]);
+              tent->els[elnr], tent, tel, [&] (int) { return bla; }, sir, slh,
+              subm, subv, topdshapes[elnr]);
         }
 
       // solve
@@ -414,7 +414,7 @@ namespace ngcomp
                                   const Tent *tent,
                                   ScalarMappedElement<D + 1> &tel,
                                   SIMD_IntegrationRule &sir, LocalHeap &slh,
-                                  SliceMatrix<> elmat, FlatVector<> elvec)
+                                  SliceMatrix<> elmat, FlatVector<>)
   {
     HeapReset hr (slh);
     size_t snip = sir.Size () * nsimd;
