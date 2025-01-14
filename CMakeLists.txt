@@ -10,15 +10,16 @@ if(NOT WIN32)
   set(BoldWhite   "${Esc}[1;37m")
 endif()
 
-file(DOWNLOAD https://raw.githubusercontent.com/NGSolve/ngsolve-addon-template/main/ngsolve_addon.cmake ${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
+set(ngsolve_addon_commit_hash 379d1efbd3a95001da7ca0d7005ae2c9eb892653)
+file(DOWNLOAD https://raw.githubusercontent.com/NGSolve/ngsolve-addon-template/${ngsolve_addon_commit_hash}/ngsolve_addon.cmake ${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_BINARY_DIR}/cmake_modules")
 
 ### ngstrefftz
-set(addon_name _trefftz)
-project(_trefftz)
+set(addon_name ngstrefftz)
+project(ngstrefftz)
 include_directories(${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src)
 include(${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
-add_ngsolve_addon( _trefftz
+add_ngsolve_addon( ngstrefftz
     ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp
     src/python_trefftz.cpp
     src/diffopmapped.hpp
@@ -37,8 +38,8 @@ add_ngsolve_addon( _trefftz
     src/boxintegral.cpp
     #src/airy.cpp #for testing, requires boost
   )
-target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_EXPORTS)
-target_compile_definitions(_trefftz PRIVATE NGSTENT_EXPORTS)
+target_compile_definitions(ngstrefftz PRIVATE NGSTREFFTZ_EXPORTS)
+target_compile_definitions(ngstrefftz PRIVATE NGSTENT_EXPORTS)
 
 ### user options
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
@@ -132,10 +133,10 @@ if(NGSTREFFTZ_USE_LAPACK AND NOT LAPACK_LIBRARIES)
     find_package(LAPACK)
 endif(NGSTREFFTZ_USE_LAPACK AND NOT LAPACK_LIBRARIES)
 if(LAPACK_LIBRARIES)
-    #target_link_libraries(_trefftz PRIVATE $<BUILD_INTERFACE:ngs_lapack>)
+    #target_link_libraries(ngstrefftz PRIVATE $<BUILD_INTERFACE:ngs_lapack>)
     message(STATUS "Linking with LAPACK_LIBRARIES=${LAPACK_LIBRARIES}")
-    target_link_libraries(_trefftz PRIVATE ${LAPACK_LIBRARIES})
-    target_compile_definitions(_trefftz PRIVATE NGSTREFFTZ_USE_LAPACK)
+    target_link_libraries(ngstrefftz PRIVATE ${LAPACK_LIBRARIES})
+    target_compile_definitions(ngstrefftz PRIVATE NGSTREFFTZ_USE_LAPACK)
 else(LAPACK_LIBRARIES)
     message("${Red}LAPACK not found, restricted usage${ColourReset}")
 endif(LAPACK_LIBRARIES)
@@ -155,12 +156,12 @@ if (NGSTREFFTZ_BUILD_DOC)
 endif (NGSTREFFTZ_BUILD_DOC)
 
 ### install
-set_target_properties(_trefftz PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz")
+set_target_properties(ngstrefftz PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz")
 file(COPY ${CMAKE_SOURCE_DIR}/src/__init__.py DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz)
 set(install_dir ${ADDON_INSTALL_DIR_PYTHON}/ngstrefftz)
-install(TARGETS _trefftz DESTINATION ${install_dir})
+install(TARGETS ngstrefftz DESTINATION ${install_dir})
 install(FILES src/__init__.py DESTINATION ${install_dir})
-#ngsolve_generate_stub_files(${addon_name})
+ngsolve_generate_stub_files(${addon_name})
 
 message("${BoldCyan}
 ------------------------------------------------------------------------
@@ -222,7 +223,8 @@ if(NGSTREFFTZ_USE_GTEST)
       Python3::Python
       ${LAPACK_LIBRARIES}
       ngsolve
-      _trefftz
+      ngstrefftz
+      GTest::gtest_main
     )
     target_compile_definitions(trefftz_gtest PRIVATE NGSTREFFTZ_USE_LAPACK)
     set_target_properties(trefftz_gtest PROPERTIES PREFIX "" CXX_STANDARD 17)

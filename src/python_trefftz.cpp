@@ -17,7 +17,7 @@
 #include "boxintegral.hpp"
 // #include "airy.cpp"
 
-PYBIND11_MODULE (_trefftz, m)
+PYBIND11_MODULE (ngstrefftz, m)
 {
   py::module::import ("ngsolve");
   m.attr ("__name__") = "ngstrefftz";
