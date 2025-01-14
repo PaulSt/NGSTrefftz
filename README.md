@@ -65,6 +65,15 @@ pip install ngsolve --pre
 🚀 Nov, 2021: NGSTrefftz now comes in a docker and with binder notebooks! 
 
 ## Papers using the code
+* *A unified framework for Trefftz-like discretization methods*  
+Philip L. Lederer, Christoph Lehrenfeld, Paul Stocker, Igor Voulis  
+[![arXiv](https://img.shields.io/badge/arXiv-2412.00806-b31b1b.svg)](https://arxiv.org/abs/2412.00806)
+* *Inf-sup stable space-time Local Discontinuous Galerkin method for the heat equation*  
+Sergio Gómez, Chiara Perinati, Paul Stocker  
+[![arXiv](https://img.shields.io/badge/arXiv-2411.14819-b31b1b.svg)](https://arxiv.org/abs/2411.14819)
+* *Polynomial quasi-Trefftz DG for PDEs with smooth coefficients: elliptic problems*  
+Lise-Marie Imbert-Gérard, Andrea Moiola, Chiara Perinati, Paul Stocker  
+[![arXiv](https://img.shields.io/badge/arXiv-2408.00392-b31b1b.svg)](https://arxiv.org/abs/2408.00392)
 * *Trefftz Discontinuous Galerkin discretization for the Stokes problem*  
 Philip L. Lederer, Christoph Lehrenfeld, Paul Stocker  
 [![arXiv](https://img.shields.io/badge/arXiv-2306.14600-b31b1b.svg)](https://arxiv.org/abs/2306.14600)
