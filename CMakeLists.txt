@@ -20,7 +20,7 @@ set(addon_name ngstrefftz)
 project(ngstrefftz)
 include_directories(${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src)
 include(${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
-add_ngsolve_addon( ngstrefftz
+add_ngsolve_addon(ngstrefftz
     ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp
     src/python_trefftz.cpp
     src/diffopmapped.hpp
@@ -44,14 +44,14 @@ target_compile_definitions(ngstrefftz PRIVATE NGSTENT_EXPORTS)
 
 # enable compiler warinigs, when building with g++ or clang++
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(_trefftz PRIVATE
+    target_compile_options(ngstrefftz PRIVATE
         -Wall
         -Wextra
         -Wpedantic
         -Wno-vla # ngsolve uses VLAs anyway
     )
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(_trefftz PRIVATE
+    target_compile_options(ngstrefftz PRIVATE
         -Wall
         -Wextra
         -pedantic
