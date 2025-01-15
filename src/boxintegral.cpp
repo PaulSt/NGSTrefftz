@@ -783,7 +783,9 @@ void BoxBilinearFormIntegrator ::T_CalcElementMatrixAdd (
                                           mir, proxyvalues.Rows (kk, kk + 1));
                                     }
                                   else
-                                    ;
+                                    {
+                                      ;
+                                    }
                                   // proxyvalues.Row(kk) = 0.0;
                                 }
                           }

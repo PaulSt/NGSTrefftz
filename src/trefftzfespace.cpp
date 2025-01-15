@@ -861,7 +861,7 @@ namespace ngcomp
 
     if (gtbstore[encode][0].Size () == 0)
       {
-        IntegrationPoint ip (ElCenter, 0);
+        IntegrationPoint ip;
         Mat<D, D> dummy;
         FE_ElementTransformation<D, D> et (D == 3   ? ET_TET
                                            : D == 2 ? ET_TRIG
@@ -973,7 +973,7 @@ namespace ngcomp
     double hx = elsize[0];
     static Timer t ("QTEll - GetParticularSolution");
     RegionTimer reg (t);
-    IntegrationPoint ip (ElCenter, 0);
+    IntegrationPoint ip;
     Mat<D, D> dummy;
     FE_ElementTransformation<D, D> et (D == 3   ? ET_TET
                                        : D == 2 ? ET_TRIG
@@ -1069,7 +1069,7 @@ namespace ngcomp
 
     if (gtbstore[encode][0].Size () == 0)
       {
-        IntegrationPoint ip (ElCenter, 0);
+        IntegrationPoint ip;
         Mat<D - 1, D - 1> dummy;
         FE_ElementTransformation<D - 1, D - 1> et (D == 4   ? ET_TET
                                                    : D == 3 ? ET_TRIG
@@ -1220,7 +1220,7 @@ namespace ngcomp
 
     if (gtbstore[0][encode][0].Size () == 0)
       {
-        IntegrationPoint ip (ElCenter, 0);
+        IntegrationPoint ip;
         Mat<D - 1, D - 1> dummy;
         FE_ElementTransformation<D - 1, D - 1> et (D == 4   ? ET_TET
                                                    : D == 3 ? ET_TRIG
@@ -1350,7 +1350,7 @@ namespace ngcomp
 
     // if (gtbstore[encode][0].Size () == 0)
     {
-      IntegrationPoint ip (ElCenter, 0);
+      IntegrationPoint ip;
       Mat<D, D> dummy;
       FE_ElementTransformation<D, D> et (D == 3 ? ET_TET : ET_TRIG, dummy);
       MappedIntegrationPoint<D, D> mip (ip, et, 0);
@@ -1440,7 +1440,7 @@ namespace ngcomp
   {
     double hx = elsize[0];
     double ht = elsize[D - 1];
-    IntegrationPoint ip (ElCenter, 0);
+    IntegrationPoint ip;
     Mat<D, D> dummy;
     FE_ElementTransformation<D, D> et (D == 3 ? ET_TET : ET_TRIG, dummy);
     MappedIntegrationPoint<D, D> mip (ip, et, 0);

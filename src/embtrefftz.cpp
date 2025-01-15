@@ -842,8 +842,8 @@ namespace ngcomp
     for (auto ei : this->ma->Elements (VOL))
       {
         // skip this element, if there is no element matrix defined
-        if (this->IsComplex () && !ETmatsC[ei.Nr ()]
-            || !this->IsComplex () && !ETmats[ei.Nr ()])
+        if ((this->IsComplex () && !ETmatsC[ei.Nr ()])
+            || (!this->IsComplex () && !ETmats[ei.Nr ()]))
           continue;
 
         const size_t ndof_trefftz_local
