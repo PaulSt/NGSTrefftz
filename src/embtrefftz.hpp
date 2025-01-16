@@ -100,15 +100,13 @@ namespace ngcomp
     EmbTrefftzFESpace (shared_ptr<T> afes)
         : T (afes->GetMeshAccess (), afes->GetFlags (), false), fes (afes)
     {
-      this->name = "EmbTrefftzFESpace";
+      this->name = "EmbTrefftzFESpace(" + afes->GetClassName () + ")";
       this->type = "embt";
       this->needs_transform_vec = true;
       this->iscomplex = afes->IsComplex ();
-      shared_ptr<CompoundFESpace> cafes
-          = dynamic_pointer_cast<CompoundFESpace> (afes);
-      if (cafes)
-        for (auto space : cafes->Spaces ())
-          dynamic_cast<CompoundFESpace *> (this)->AddSpace (space);
+      if constexpr (std::is_base_of_v<CompoundFESpace, T>)
+        for (auto space : afes->Spaces ())
+          this->AddSpace (space);
       // this->Update();
       // this->UpdateDofTables();
       // this->UpdateCouplingDofArray();
@@ -171,6 +169,8 @@ namespace ngcomp
     shared_ptr<GridFunction> Embed (shared_ptr<GridFunction> tgfu);
 
     shared_ptr<BaseMatrix> GetEmbedding ();
+
+    virtual string GetClassName () const override;
 
   private:
     /// adjusts the dofs of the space. Will be called by SetOp.

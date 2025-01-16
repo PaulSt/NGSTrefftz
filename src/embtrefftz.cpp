@@ -1062,6 +1062,11 @@ namespace ngcomp
   // initembt3 ("MonomialEmbTrefftzFESpace");
 }
 
+template <typename T> string EmbTrefftzFESpace<T>::GetClassName () const
+{
+  return this->name;
+}
+
 ////////////////////////// python interface ///////////////////////////
 
 #ifdef NGS_PYTHON
@@ -1283,8 +1288,7 @@ pythonEmbTrefftz (shared_ptr<ngfem::SumOfIntegrals> bf,
 void ExportEmbTrefftz (py::module m)
 {
   ExportETSpace<ngcomp::L2HighOrderFESpace> (m, "L2EmbTrefftzFESpace");
-  // ExportETSpace<ngcomp::VectorL2FESpace,
-  // shared_ptr<ngcomp::VectorL2FESpace>> ( m, "VL2EmbTrefftzFESpace");
+  ExportETSpace<ngcomp::VectorL2FESpace> (m, "VectorL2EmbTrefftzFESpace");
   ExportETSpace<ngcomp::MonomialFESpace> (m, "MonomialEmbTrefftzFESpace");
   ExportETSpace<ngcomp::CompoundFESpace> (m, "CompoundEmbTrefftzFESpace");
 
@@ -1296,10 +1300,10 @@ void ExportEmbTrefftz (py::module m)
           nfes = make_shared<
               ngcomp::EmbTrefftzFESpace<ngcomp::L2HighOrderFESpace>> (
               dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes));
-        // else if (dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes))
-        // nfes = make_shared<ngcomp::EmbTrefftzFESpace<
-        // ngcomp::VectorL2FESpace, shared_ptr<ngcomp::VectorL2FESpace>>> (
-        // dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes));
+        else if (dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes))
+          nfes = make_shared<
+              ngcomp::EmbTrefftzFESpace<ngcomp::VectorL2FESpace>> (
+              dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes));
         else if (dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes))
           nfes = make_shared<
               ngcomp::EmbTrefftzFESpace<ngcomp::MonomialFESpace>> (
