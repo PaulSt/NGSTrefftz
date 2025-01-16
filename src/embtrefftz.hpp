@@ -104,11 +104,9 @@ namespace ngcomp
       this->type = "embt";
       this->needs_transform_vec = true;
       this->iscomplex = afes->IsComplex ();
-      shared_ptr<CompoundFESpace> cafes
-          = dynamic_pointer_cast<CompoundFESpace> (afes);
-      if (cafes)
-        for (auto space : cafes->Spaces ())
-          dynamic_cast<CompoundFESpace *> (this)->AddSpace (space);
+      if constexpr (std::is_base_of_v<CompoundFESpace, T>)
+        for (auto space : afes->Spaces ())
+          this->AddSpace (space);
       // this->Update();
       // this->UpdateDofTables();
       // this->UpdateCouplingDofArray();
