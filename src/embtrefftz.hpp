@@ -100,7 +100,7 @@ namespace ngcomp
     EmbTrefftzFESpace (shared_ptr<T> afes)
         : T (afes->GetMeshAccess (), afes->GetFlags (), false), fes (afes)
     {
-      this->name = "EmbTrefftzFESpace";
+      this->name = "EmbTrefftzFESpace(" + afes->GetClassName () + ")";
       this->type = "embt";
       this->needs_transform_vec = true;
       this->iscomplex = afes->IsComplex ();
@@ -171,6 +171,8 @@ namespace ngcomp
     shared_ptr<GridFunction> Embed (shared_ptr<GridFunction> tgfu);
 
     shared_ptr<BaseMatrix> GetEmbedding ();
+
+    virtual string GetClassName () const override;
 
   private:
     /// adjusts the dofs of the space. Will be called by SetOp.

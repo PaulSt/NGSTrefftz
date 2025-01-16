@@ -1062,6 +1062,11 @@ namespace ngcomp
   // initembt3 ("MonomialEmbTrefftzFESpace");
 }
 
+template <typename T> string EmbTrefftzFESpace<T>::GetClassName () const
+{
+  return this->name;
+}
+
 ////////////////////////// python interface ///////////////////////////
 
 #ifdef NGS_PYTHON
