@@ -1006,7 +1006,7 @@ namespace ngcomp
 
   template <typename T>
   shared_ptr<GridFunction>
-  EmbTrefftzFESpace<T>::Embed (const shared_ptr<const GridFunction> tgfu)
+  EmbTrefftzFESpace<T>::Embed (const shared_ptr<const GridFunction> tgfu) const
   {
     LocalHeap lh (1000 * 1000 * 1000);
     Flags flags;
@@ -1060,7 +1060,7 @@ namespace ngcomp
   }
 
   template <typename T>
-  shared_ptr<BaseMatrix> EmbTrefftzFESpace<T>::GetEmbedding ()
+  shared_ptr<BaseMatrix> EmbTrefftzFESpace<T>::GetEmbedding () const
   {
     if (this->IsComplex ())
       return Elmats2Sparse<Complex> (ETmatsC, *(this->fes),
