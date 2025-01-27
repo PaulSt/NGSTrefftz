@@ -1,9 +1,6 @@
 #include "embtrefftz.hpp"
 #include "monomialfespace.hpp"
-#include <basevector.hpp>
 #include <cfloat>
-#include <memory>
-#include <mutex>
 
 using namespace ngbla;
 using namespace ngcomp;
@@ -964,18 +961,28 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    size_t nz = (ETmats[ei.Nr ()])->elmat.Width ();
+    if (!ETmats[ei.Nr ()])
+      {
+
+        ostringstream err_msg;
+        err_msg << "The space is not defined on element " << ei;
+        throw std::invalid_argument (err_msg.str ());
+      }
+
+    const auto elmat = ETmats[ei.Nr ()]->elmat;
+    const size_t ndof = elmat.Width ();
 
     if (type == TRANSFORM_RHS)
       {
-        Vector<double> new_vec (nz);
-        new_vec = Trans ((ETmats[ei.Nr ()])->elmat) * vec;
+        Vector<double> new_vec (ndof);
+        new_vec = Trans (elmat) * vec;
         vec = new_vec;
       }
     else if (type == TRANSFORM_SOL)
       {
         Vector<double> new_vec (vec.Size ());
-        new_vec = ((ETmats[ei.Nr ()])->elmat) * vec.Range (0, nz);
+        new_vec = 0;
+        new_vec.Range (0, elmat.Height ()) = elmat * vec.Range (0, ndof);
         vec = new_vec;
       }
   }
@@ -988,18 +995,28 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    size_t nz = (ETmatsC[ei.Nr ()])->elmat.Width ();
+    if (!ETmats[ei.Nr ()])
+      {
+
+        ostringstream err_msg;
+        err_msg << "The space is not defined on element " << ei;
+        throw std::invalid_argument (err_msg.str ());
+      }
+
+    const auto elmat = ETmatsC[ei.Nr ()]->elmat;
+    const size_t ndof = elmat.Width ();
 
     if (type == TRANSFORM_RHS)
       {
-        Vector<Complex> new_vec (nz);
-        new_vec = Trans ((ETmatsC[ei.Nr ()])->elmat) * vec;
+        Vector<Complex> new_vec (ndof);
+        new_vec = Trans (elmat) * vec;
         vec = new_vec;
       }
     else if (type == TRANSFORM_SOL)
       {
         Vector<Complex> new_vec (vec.Size ());
-        new_vec = ((ETmatsC[ei.Nr ()])->elmat) * vec.Range (0, nz);
+        new_vec = 0;
+        new_vec.Range (0, elmat.Height ()) = elmat * vec.Range (0, ndof);
         vec = new_vec;
       }
   }
