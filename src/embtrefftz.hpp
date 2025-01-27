@@ -166,9 +166,13 @@ namespace ngcomp
     virtual void VTransformVC (ElementId ei, const SliceVector<Complex> vec,
                                TRANSFORM_TYPE type) const override;
 
-    shared_ptr<GridFunction> Embed (shared_ptr<GridFunction> tgfu);
+    /// Embeds the given GridFunction `tgfu` into the background space `fes´.
+    ///
+    /// @returns the embedding of `tgfu` into the space `fes` of type `T`
+    shared_ptr<GridFunction>
+    Embed (const shared_ptr<const GridFunction> tgfu) const;
 
-    shared_ptr<BaseMatrix> GetEmbedding ();
+    shared_ptr<BaseMatrix> GetEmbedding () const;
 
     virtual string GetClassName () const override;
 

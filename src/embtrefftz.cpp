@@ -961,18 +961,28 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    size_t nz = (ETmats[ei.Nr ()])->elmat.Width ();
+    if (!ETmats[ei.Nr ()])
+      {
+
+        ostringstream err_msg;
+        err_msg << "The space is not defined on element " << ei;
+        throw std::invalid_argument (err_msg.str ());
+      }
+
+    const auto elmat = ETmats[ei.Nr ()]->elmat;
+    const size_t ndof = elmat.Width ();
 
     if (type == TRANSFORM_RHS)
       {
-        Vector<double> new_vec (nz);
-        new_vec = Trans ((ETmats[ei.Nr ()])->elmat) * vec;
+        Vector<double> new_vec (ndof);
+        new_vec = Trans (elmat) * vec;
         vec = new_vec;
       }
     else if (type == TRANSFORM_SOL)
       {
         Vector<double> new_vec (vec.Size ());
-        new_vec = ((ETmats[ei.Nr ()])->elmat) * vec.Range (0, nz);
+        new_vec = 0;
+        new_vec.Range (0, elmat.Height ()) = elmat * vec.Range (0, ndof);
         vec = new_vec;
       }
   }
@@ -985,34 +995,57 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    size_t nz = (ETmatsC[ei.Nr ()])->elmat.Width ();
+    if (!ETmats[ei.Nr ()])
+      {
+
+        ostringstream err_msg;
+        err_msg << "The space is not defined on element " << ei;
+        throw std::invalid_argument (err_msg.str ());
+      }
+
+    const auto elmat = ETmatsC[ei.Nr ()]->elmat;
+    const size_t ndof = elmat.Width ();
 
     if (type == TRANSFORM_RHS)
       {
-        Vector<Complex> new_vec (nz);
-        new_vec = Trans ((ETmatsC[ei.Nr ()])->elmat) * vec;
+        Vector<Complex> new_vec (ndof);
+        new_vec = Trans (elmat) * vec;
         vec = new_vec;
       }
     else if (type == TRANSFORM_SOL)
       {
         Vector<Complex> new_vec (vec.Size ());
-        new_vec = ((ETmatsC[ei.Nr ()])->elmat) * vec.Range (0, nz);
+        new_vec = 0;
+        new_vec.Range (0, elmat.Height ()) = elmat * vec.Range (0, ndof);
         vec = new_vec;
       }
   }
 
   template <typename T>
   shared_ptr<GridFunction>
-  EmbTrefftzFESpace<T>::Embed (shared_ptr<GridFunction> tgfu)
+  EmbTrefftzFESpace<T>::Embed (const shared_ptr<const GridFunction> tgfu) const
   {
     LocalHeap lh (1000 * 1000 * 1000);
     Flags flags;
 
-    auto tvec = tgfu->GetVectorPtr ();
+    const auto tvec = tgfu->GetVectorPtr ();
 
     auto gfu = CreateGridFunction (this->fes, "pws", flags);
     gfu->Update ();
     auto vec = gfu->GetVectorPtr ();
+
+    // We will write to vec, maybe from multiple threads.
+    // It is not guaranteed, that the write accesses will be on disjoint parts
+    // of the vector (conformity dofs can be non-local, so their dof numbers
+    // can occur on multiple elements), hence we need to use a mutex for
+    // synchronization of the write accesses.
+    //
+    // This solution is chosen to be simple. Depending on the performance
+    // impact, it might be worth it to refine it. For example, in the case of a
+    // pure Trefftz space, without any conformity part, all dofs are local and
+    // it is guaranteed that each dof number occurs on only one element,
+    // making it safe to write to vec in parallel without synchronuzation.
+    mutex vec_mutex;
 
     this->ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
       Array<DofId> dofs;
@@ -1025,6 +1058,8 @@ namespace ngcomp
           tvec->GetIndirect (tdofs, telvec);
           FlatVector<Complex> elvec (dofs.Size (), mlh);
           elvec = ((ETmatsC[ei.Nr ()])->elmat) * telvec;
+
+          const lock_guard<mutex> lock (vec_mutex);
           vec->SetIndirect (dofs, elvec);
         }
       else
@@ -1033,6 +1068,8 @@ namespace ngcomp
           tvec->GetIndirect (tdofs, telvec);
           FlatVector<> elvec (dofs.Size (), mlh);
           elvec = ((ETmats[ei.Nr ()])->elmat) * telvec;
+
+          const lock_guard<mutex> lock (vec_mutex);
           vec->SetIndirect (dofs, elvec);
         }
     });
@@ -1040,7 +1077,7 @@ namespace ngcomp
   }
 
   template <typename T>
-  shared_ptr<BaseMatrix> EmbTrefftzFESpace<T>::GetEmbedding ()
+  shared_ptr<BaseMatrix> EmbTrefftzFESpace<T>::GetEmbedding () const
   {
     if (this->IsComplex ())
       return Elmats2Sparse<Complex> (ETmatsC, *(this->fes),
