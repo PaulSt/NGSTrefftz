@@ -202,7 +202,6 @@ Make sure to add it to the python path:
 
 ### tests
 enable_testing()
-include(CTest)
 # set up python integration tests
 file(COPY
     ${CMAKE_SOURCE_DIR}/test/dg.py
