@@ -961,14 +961,6 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    if (!ETmats[ei.Nr ()])
-      {
-
-        ostringstream err_msg;
-        err_msg << "The space is not defined on element " << ei;
-        throw std::invalid_argument (err_msg.str ());
-      }
-
     const auto elmat = ETmats[ei.Nr ()]->elmat;
     const size_t ndof = elmat.Width ();
 
@@ -994,14 +986,6 @@ namespace ngcomp
   {
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
-
-    if (!ETmats[ei.Nr ()])
-      {
-
-        ostringstream err_msg;
-        err_msg << "The space is not defined on element " << ei;
-        throw std::invalid_argument (err_msg.str ());
-      }
 
     const auto elmat = ETmatsC[ei.Nr ()]->elmat;
     const size_t ndof = elmat.Width ();
