@@ -435,6 +435,9 @@ namespace ngbla
 
   /// `A = U * Sigma * V`
   /// A gets overwritten with Sigma
+  /// @param A has dimension n * m
+  /// @param U has dimension n * n
+  /// @param V has dimension m * m
   template <typename SCAL, typename TDIST>
   void getSVD (MatrixView<SCAL, ngbla::RowMajor, size_t, size_t, TDIST> A,
                FlatMatrix<SCAL, ColMajor> U, FlatMatrix<SCAL, ColMajor> V)
@@ -460,12 +463,14 @@ namespace ngbla
   }
 }
 
+/// @param num_zero number of singular values `sigma_i = 0` in the matrix Sigma
 /// @return pseudoinverse of A (as some `ngbla::Expr` type to avoid
 /// allocations)
 template <typename SCAL, typename TDIST>
 auto invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
                 const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &Sigma,
-                const FlatMatrix<SCAL, ColMajor> &V, size_t nz, LocalHeap &lh)
+                const FlatMatrix<SCAL, ColMajor> &V, size_t num_zero,
+                LocalHeap &lh)
 {
   auto U_T = Trans (U);
   auto V_T = Trans (V);
@@ -478,12 +483,34 @@ auto invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
   // Sigma_inv.Diag () = 1.0 / elmat_a.Diag ();
   for (size_t i = 0; i < m; i++)
     {
-      if (i < n - nz)
+      if (i < n - num_zero)
         *(Sigma_inv_el++) = 1.0 / *(Sigma_el++);
       else
         *(Sigma_inv_el++) = 0.0;
     }
   return V_T * Sigma_inv * U_T;
+}
+
+/// @returns the pseudo-inverse of `mat`
+/// @param num_zero number of (near) zero singular values in `mat`
+template <typename SCAL>
+Matrix<SCAL>
+getPseudoInverse (const FlatMatrix<SCAL> mat, const size_t num_zero)
+{
+  const auto [n, m] = mat.Shape ();
+  // should be at least as large as the needed size.
+  // needed size: (n*m + n*n + m*m) * sizeof(SCAL)
+  LocalHeap local_heap (2 * (n * n + n * m + m * m) * sizeof (SCAL));
+  FlatMatrix<SCAL> sigma (n, m, local_heap);
+  FlatMatrix<SCAL, ColMajor> U (n, n, local_heap);
+  FlatMatrix<SCAL, ColMajor> V (m, m, local_heap);
+
+  Matrix<SCAL> elmat_inv (m, n);
+
+  sigma = mat;
+  getSVD (sigma, U, V);
+  elmat_inv = invertSVD (U, sigma, V, num_zero, local_heap);
+  return elmat_inv;
 }
 
 /// calculates from the given space and linear form integrators a particular
@@ -693,8 +720,6 @@ namespace ngcomp
 
           // T = (T_c | T_t)
           Matrix<SCAL> elmat_T (ndof, ndof_trefftz_i + ndof_conforming);
-          // T1 has dimension (ndof, ndof_conforming)
-          // T2 has dimension (ndof, ndof_trefftz_i)
           auto [elmat_Tc, elmat_Tt] = elmat_T.SplitCols (ndof_conforming);
 
           // T_c solves A @ T_c = B,
@@ -704,7 +729,6 @@ namespace ngcomp
           // so T_c has dimension (ndof, ndof_conforming)
           elmat_Tc = elmat_A_inv * elmat_B;
 
-          // standard embedded Trefftz behaviour is get_range==false
           if (get_range)
             elmat_Tt = U.Cols (0, dofs.Size () - ndof_trefftz_i);
           else
@@ -953,6 +977,47 @@ namespace ngcomp
       }
   }
 
+  /// double/complex generic implementation for the methods VTransformV(R | C)
+  /// for the embedded Trefftz FESpace.
+  template <typename SCAL>
+  void etFesVTransformV (SliceVector<SCAL> vec, const TRANSFORM_TYPE type,
+                         const Matrix<SCAL> elmat)
+  {
+    const size_t ndof = elmat.Width ();
+
+    if (type == TRANSFORM_RHS)
+      {
+        Vector<SCAL> new_vec (ndof);
+        new_vec = Trans (elmat) * vec;
+        vec = new_vec;
+      }
+    else if (type == TRANSFORM_SOL)
+      {
+        Vector<SCAL> new_vec (vec.Size ());
+        new_vec = 0;
+        new_vec.Range (0, elmat.Height ()) = elmat * vec.Range (0, ndof);
+        vec = new_vec;
+      }
+    else if (type == TRANSFORM_SOL_INVERSE)
+      {
+        if (vec.Size () != elmat.Height ())
+          throw std::invalid_argument (
+              "given vec does not match the needed dimension.");
+
+        // todo for later: pre-calculate the inverse matrices
+        const auto elmat_inv = getPseudoInverse (elmat, 0);
+        Vector<SCAL> tmp_vec (elmat_inv.Height ());
+        tmp_vec = elmat_inv * vec;
+        vec = tmp_vec;
+      }
+    else
+      {
+        stringstream err;
+        err << "VTransformV is not implemented for TRANSFORM_TYPE " << type;
+        throw std::invalid_argument (err.str ());
+      }
+  }
+
   template <typename T>
   void
   EmbTrefftzFESpace<T>::VTransformVR (ElementId ei, SliceVector<double> vec,
@@ -962,21 +1027,7 @@ namespace ngcomp
     RegionTimer reg (timer);
 
     const auto elmat = ETmats[ei.Nr ()]->elmat;
-    const size_t ndof = elmat.Width ();
-
-    if (type == TRANSFORM_RHS)
-      {
-        Vector<double> new_vec (ndof);
-        new_vec = Trans (elmat) * vec;
-        vec = new_vec;
-      }
-    else if (type == TRANSFORM_SOL)
-      {
-        Vector<double> new_vec (vec.Size ());
-        new_vec = 0;
-        new_vec.Range (0, elmat.Height ()) = elmat * vec.Range (0, ndof);
-        vec = new_vec;
-      }
+    etFesVTransformV (vec, type, elmat);
   }
 
   template <typename T>
@@ -988,21 +1039,7 @@ namespace ngcomp
     RegionTimer reg (timer);
 
     const auto elmat = ETmatsC[ei.Nr ()]->elmat;
-    const size_t ndof = elmat.Width ();
-
-    if (type == TRANSFORM_RHS)
-      {
-        Vector<Complex> new_vec (ndof);
-        new_vec = Trans (elmat) * vec;
-        vec = new_vec;
-      }
-    else if (type == TRANSFORM_SOL)
-      {
-        Vector<Complex> new_vec (vec.Size ());
-        new_vec = 0;
-        new_vec.Range (0, elmat.Height ()) = elmat * vec.Range (0, ndof);
-        vec = new_vec;
-      }
+    etFesVTransformV (vec, type, elmat);
   }
 
   template <typename T>

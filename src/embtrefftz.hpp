@@ -104,7 +104,7 @@ namespace ngcomp
       this->type = "embt";
       this->needs_transform_vec = true;
       this->iscomplex = afes->IsComplex ();
-      if constexpr (std::is_base_of_v<CompoundFESpace, T>)
+      if constexpr (std::is_same_v<CompoundFESpace, T>)
         for (auto space : afes->Spaces ())
           this->AddSpace (space);
       // this->Update();
