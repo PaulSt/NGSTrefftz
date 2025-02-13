@@ -5,13 +5,6 @@
 using namespace ngbla;
 using namespace ngcomp;
 
-/// @returns the number of threads, that nngsolve might use.
-int getNumberOfThreads ()
-{
-  // if no task manager is available, ngsolve will run sequentially.
-  return (task_manager) ? task_manager->GetNumThreads () : 1;
-}
-
 /// @returns `max(a-b, 0)` without integer underflow risk, if `b > a`.
 INLINE size_t max_a_minus_b_or_0 (const size_t a, const size_t b) noexcept
 {
@@ -590,8 +583,7 @@ namespace ngcomp
     const size_t num_elements = mesh_access->GetNE (VOL);
     // #TODO what is a good size for the local heap?
     // For the moment: large enough constant size.
-    LocalHeap local_heap
-        = LocalHeap (getNumberOfThreads () * 10 * 1000 * 1000);
+    LocalHeap local_heap = LocalHeap (100 * 1000 * 1000, "embt", true);
 
     // calculate the integrators for the three bilinear forms,
     // each for VOL, BND, BBND, BBBND, hence 4 arrays per bilnear form
@@ -709,7 +701,9 @@ namespace ngcomp
           // # TODO: incorporate the double variant
           const size_t ndof_trefftz_i
               = calcNdofTrefftz (ndof, ndof_test, ndof_conforming,
-                                 ndof_trefftz, !op, elmat_A.Diag ());
+                                 ndof_trefftz, !op, elmat_A.Diag (0));
+          if (ndof_trefftz_i == 0)
+            throw std::invalid_argument ("ndof_trefftz zero");
 
           const auto elmat_A_inv_expr
               = invertSVD (U, elmat_A, V, ndof_trefftz_i, local_heap);
@@ -1046,7 +1040,7 @@ namespace ngcomp
   shared_ptr<GridFunction>
   EmbTrefftzFESpace<T>::Embed (const shared_ptr<const GridFunction> tgfu) const
   {
-    LocalHeap lh (1000 * 1000 * 1000);
+    LocalHeap lh (100 * 1000 * 1000, "embt", true);
     Flags flags;
 
     const auto tvec = tgfu->GetVectorPtr ();
@@ -1054,19 +1048,8 @@ namespace ngcomp
     auto gfu = CreateGridFunction (this->fes, "pws", flags);
     gfu->Update ();
     auto vec = gfu->GetVectorPtr ();
-
-    // We will write to vec, maybe from multiple threads.
-    // It is not guaranteed, that the write accesses will be on disjoint parts
-    // of the vector (conformity dofs can be non-local, so their dof numbers
-    // can occur on multiple elements), hence we need to use a mutex for
-    // synchronization of the write accesses.
-    //
-    // This solution is chosen to be simple. Depending on the performance
-    // impact, it might be worth it to refine it. For example, in the case of a
-    // pure Trefftz space, without any conformity part, all dofs are local and
-    // it is guaranteed that each dof number occurs on only one element,
-    // making it safe to write to vec in parallel without synchronuzation.
-    mutex vec_mutex;
+    if (fes_conformity)
+      vec->SetScalar (0.0);
 
     this->ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
       Array<DofId> dofs;
@@ -1079,9 +1062,10 @@ namespace ngcomp
           tvec->GetIndirect (tdofs, telvec);
           FlatVector<Complex> elvec (dofs.Size (), mlh);
           elvec = ((ETmatsC[ei.Nr ()])->elmat) * telvec;
-
-          const lock_guard<mutex> lock (vec_mutex);
-          vec->SetIndirect (dofs, elvec);
+          if (fes_conformity)
+            vec->AddIndirect (dofs, elvec, true);
+          else
+            vec->SetIndirect (dofs, elvec);
         }
       else
         {
@@ -1089,9 +1073,10 @@ namespace ngcomp
           tvec->GetIndirect (tdofs, telvec);
           FlatVector<> elvec (dofs.Size (), mlh);
           elvec = ((ETmats[ei.Nr ()])->elmat) * telvec;
-
-          const lock_guard<mutex> lock (vec_mutex);
-          vec->SetIndirect (dofs, elvec);
+          if (fes_conformity)
+            vec->AddIndirect (dofs, elvec, true);
+          else
+            vec->SetIndirect (dofs, elvec);
         }
     });
     return gfu;
