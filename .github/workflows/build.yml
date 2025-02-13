@@ -26,9 +26,10 @@ jobs:
   test_linux:
     name: Test on Linux
     runs-on: ubuntu-latest
-    #container: quay.io/pypa/manylinux_2_28_x86_64
-    container: python:3.12
+    container: archlinux:latest
     steps:
+      - name: setup
+        run: pacman -Syu --noconfirm && pacman -S --noconfirm python python-pip python-setuptools git gcc make cmake python-numpy python-scipy
       - uses: actions/checkout@v4
         with:
           submodules: true
@@ -40,11 +41,9 @@ jobs:
       - name: install ngstrefftz
         #env:
         #NGSTREFFTZ_USE_GTEST: 'ON'
-        run: cd NGSTrefftz && pip install numpy scipy && pip install . -v
+        run: cd NGSTrefftz && pip install --break-system-packages . -v
       - name: run test
-        run: |
-          cd $GITHUB_WORKSPACE/NGSTrefftz/test
-          python3 -m doctest -v *.py
+        run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
 
   gtest_linux:
     name: Test GTest on Linux

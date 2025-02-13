@@ -9,7 +9,7 @@ classifiers = [
   "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
 ]
 dependencies = [
-  "ngsolve==6.2.2406.post134.dev1"
+  "ngsolve>=6.2.2406.post134.dev1",
 ]
 
 
