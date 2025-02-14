@@ -239,7 +239,7 @@ jobs:
   docs:
     needs: [build_wheels]
     runs-on: ubuntu-latest
-    container: python:3.12
+    container: python:3.13
     steps:
       - uses: actions/checkout@v4
         with:
