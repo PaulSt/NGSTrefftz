@@ -1,12 +1,22 @@
 name: build
 
 on:
+  workflow_dispatch:
+    inputs:
+      level:
+        description: 'build level'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+        - test_only
+        - quick
+        - full
   push:
-    branches: ["main**"]
-  pull_request:
     branches: ["main**"]
   release:
     types: [created]
+    
 
 jobs:
   check_formatting:
@@ -26,9 +36,10 @@ jobs:
   test_linux:
     name: Test on Linux
     runs-on: ubuntu-latest
-    #container: quay.io/pypa/manylinux_2_28_x86_64
-    container: python:3.12
+    container: archlinux:latest
     steps:
+      - name: setup
+        run: pacman -Syu --noconfirm && pacman -S --noconfirm python python-pip python-setuptools git gcc make cmake python-numpy python-scipy
       - uses: actions/checkout@v4
         with:
           submodules: true
@@ -40,14 +51,13 @@ jobs:
       - name: install ngstrefftz
         #env:
         #NGSTREFFTZ_USE_GTEST: 'ON'
-        run: cd NGSTrefftz && pip install numpy scipy && pip install . -v
+        run: cd NGSTrefftz && pip install --break-system-packages . -v
       - name: run test
-        run: |
-          cd $GITHUB_WORKSPACE/NGSTrefftz/test
-          python3 -m doctest -v *.py
+        run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
 
   gtest_linux:
     name: Test GTest on Linux
+    if: ${{ inputs.level == 'full' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -76,36 +86,50 @@ jobs:
         run: $GITHUB_WORKSPACE/NGSTrefftz/make/trefftz_gtest
 
   build_wheels:
+    if: ${{ inputs.level == 'full' || inputs.level == 'quick' }}
     name: Build wheels on ${{ matrix.os }}
-    needs: [test_linux, gtest_linux]
+    needs: [test_linux]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-13]
+        os: [macos-13, ubuntu-latest]
+        doit: 
+          - ${{ inputs.level == 'full' }}
+        cibw_build: 
+          - cp39-* cp310-* cp311-* cp312-* cp313-*
         include:
+          - os: ubuntu-latest
+            doit: ${{ inputs.level == 'quick' }}
+            cibw_build: cp313-*
           - os: windows-2019
             cibw-arch: AMD64
             cmake-generator: "Visual Studio 16 2019"
             cmake_generator_platform: "x64"
+            run: ${{ inputs.level == 'full' }}
+            cibw_build: cp39-* cp310-* cp311-* cp312-* cp313-*
     env:
-      CIBW_BUILD: cp39-* cp310-* cp311-* cp312-* cp313-*
+      CIBW_BUILD: ${{ matrix.cibw_build }}
     steps:
       - uses: actions/checkout@v4
+        if: ${{ matrix.doit }}
         with:
           submodules: true
           fetch-tags: true
           fetch-depth: 0
       - name: Build wheels
+        if: ${{ matrix.doit }}
         uses: pypa/cibuildwheel@v2.22.0
         env:
           CIBW_BUILD_VERBOSITY: 1
       - uses: actions/upload-artifact@v4
+        if: ${{ matrix.doit }}
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
 
   build_sdist:
     name: Build source distribution
+    if: ${{ inputs.level == 'full' }}
     needs: [test_linux, gtest_linux]
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
@@ -215,9 +239,9 @@ jobs:
           path: ./ngst-pyodide
 
   docs:
-    needs: [upload_pypi]
+    needs: [build_wheels]
     runs-on: ubuntu-latest
-    container: python:3.12
+    container: python:3.13
     steps:
       - uses: actions/checkout@v4
         with:
@@ -228,7 +252,16 @@ jobs:
         run: |
           apt update -y && DEBIAN_FRONTEND="noninteractive" apt install -y git pandoc
           pip install -r $GITHUB_WORKSPACE/NGSTrefftz/docs/requirements.txt
-          cd $GITHUB_WORKSPACE/NGSTrefftz && pip install .
+        # cd $GITHUB_WORKSPACE/NGSTrefftz && pip install .
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cibw-wheels-ubuntu*
+          path: wheels
+          merge-multiple: true
+      - name: Display structure of downloaded files
+        run: ls -R $GITHUB_WORKSPACE/wheels
+      - name: install ngstrefftz
+        run: pip install $GITHUB_WORKSPACE/wheels/*-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - name: Build and Commit
         uses: sphinx-notes/pages@v2
         with:
@@ -265,6 +298,7 @@ jobs:
 
   paper:
     runs-on: ubuntu-latest
+    if: ${{ inputs.level == 'full' }}
     name: Paper Draft
     steps:
       - name: Checkout

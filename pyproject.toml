@@ -8,15 +8,25 @@ requires-python = ">=3.8"
 classifiers = [
   "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
 ]
-dependencies = ["ngsolve>=6.2.2406.post16.dev0"]
+dependencies = [
+  "ngsolve>=6.2.2406.post134.dev1",
+]
+
 
 [project.urls]
 Documentation = "https://paulst.github.io/NGSTrefftz"
 Repository = "https://github.com/PaulSt/ngstrefftz"
 
 [build-system]
-requires = ["ngsolve>=6.2.2406.post16.dev0", "scikit-build-core>=0.9.0", "pybind11_stubgen", "setuptools>=45", "setuptools_scm[toml]>=8", "toml", 
-            'mkl==2024.* ; platform_system != "Darwin"', 'mkl-devel==2024.* ; platform_system != "Darwin"']
+requires = ["ngsolve==6.2.2406.post134.dev1",
+            "scikit-build-core>=0.9.0",
+            "pybind11_stubgen",
+            "setuptools>=45",
+            "setuptools_scm>=8",
+            "toml;  python_version >= '3.11'",
+            "tomli>=1.1.0; python_version < '3.11'",
+            "mkl==2024.* ; platform_system != 'Darwin'",
+            "mkl-devel==2024.* ; platform_system != 'Darwin'"]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
@@ -33,7 +43,7 @@ local_scheme = "no-local-version"
 
 [tool.cibuildwheel]
 #build-verbosity = 1
-manylinux-x86_64-image = "sameli/manylinux_2_28_x86_64_cuda_12.3"
+manylinux-x86_64-image = "cerbsim/manylinux_2_28_x86_64_cuda_12.8"
 skip = """
   pp*
   *_i686
