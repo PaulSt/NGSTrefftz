@@ -702,8 +702,8 @@ namespace ngcomp
           const size_t ndof_trefftz_i
               = calcNdofTrefftz (ndof, ndof_test, ndof_conforming,
                                  ndof_trefftz, !op, elmat_A.Diag (0));
-          if (ndof_trefftz_i == 0)
-            throw std::invalid_argument ("ndof_trefftz zero");
+          if (ndof_trefftz_i + ndof_conforming == 0)
+            throw std::invalid_argument ("zero trefftz dofs");
 
           const auto elmat_A_inv_expr
               = invertSVD (U, elmat_A, V, ndof_trefftz_i, local_heap);
