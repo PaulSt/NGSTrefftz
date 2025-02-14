@@ -57,7 +57,6 @@ jobs:
 
   gtest_linux:
     name: Test GTest on Linux
-    if: ${{ inputs.level == 'full' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -86,15 +85,15 @@ jobs:
         run: $GITHUB_WORKSPACE/NGSTrefftz/make/trefftz_gtest
 
   build_wheels:
-    if: ${{ inputs.level == 'full' || inputs.level == 'quick' }}
+    if: ${{ inputs.level != 'test_only' }}
     name: Build wheels on ${{ matrix.os }}
-    needs: [test_linux]
+    needs: [test_linux, gtest_linux]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macos-13, ubuntu-latest]
         doit: 
-          - ${{ inputs.level == 'full' }}
+          - ${{ inputs.level != 'quick' }}
         cibw_build: 
           - cp39-* cp310-* cp311-* cp312-* cp313-*
         include:
@@ -105,7 +104,7 @@ jobs:
             cibw-arch: AMD64
             cmake-generator: "Visual Studio 16 2019"
             cmake_generator_platform: "x64"
-            run: ${{ inputs.level == 'full' }}
+            doit: ${{ inputs.level != 'quick' }}
             cibw_build: cp39-* cp310-* cp311-* cp312-* cp313-*
     env:
       CIBW_BUILD: ${{ matrix.cibw_build }}
@@ -129,7 +128,7 @@ jobs:
 
   build_sdist:
     name: Build source distribution
-    if: ${{ inputs.level == 'full' }}
+    if: ${{ inputs.level != 'quick' }}
     needs: [test_linux, gtest_linux]
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
@@ -298,7 +297,7 @@ jobs:
 
   paper:
     runs-on: ubuntu-latest
-    if: ${{ inputs.level == 'full' }}
+    if: ${{ inputs.level != 'quick' || inputs.level != 'test_only' }}
     name: Paper Draft
     steps:
       - name: Checkout
