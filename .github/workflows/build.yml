@@ -227,7 +227,16 @@ jobs:
         run: |
           apt update -y && DEBIAN_FRONTEND="noninteractive" apt install -y git pandoc
           pip install -r $GITHUB_WORKSPACE/NGSTrefftz/docs/requirements.txt
-          cd $GITHUB_WORKSPACE/NGSTrefftz && pip install .
+        # cd $GITHUB_WORKSPACE/NGSTrefftz && pip install .
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cibw-wheels-ubuntu*
+          path: $GITHUB_WORKSPACE/wheels
+          merge-multiple: true
+      - name: Display structure of downloaded files
+        run: ls -R $GITHUB_WORKSPACE/wheels
+      - name: install ngstrefftz
+        run: pip install $GITHUB_WORKSPACE/wheels/*-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - name: Build and Commit
         uses: sphinx-notes/pages@v2
         with:
