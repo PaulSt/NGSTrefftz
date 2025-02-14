@@ -9,6 +9,7 @@ on:
         default: 'full'
         type: choice
         options:
+        - test_only
         - quick
         - full
   push:
@@ -85,6 +86,7 @@ jobs:
         run: $GITHUB_WORKSPACE/NGSTrefftz/make/trefftz_gtest
 
   build_wheels:
+    if: ${{ inputs.level == 'full' || inputs.level == 'quick' }}
     name: Build wheels on ${{ matrix.os }}
     needs: [test_linux]
     runs-on: ${{ matrix.os }}
