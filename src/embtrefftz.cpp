@@ -611,9 +611,9 @@ namespace ngcomp
     vector<optional<ElmatWithTrefftzInfo<SCAL>>> element_matrices (
         num_elements);
 
-    const bool fes_has_hidden_dofs = fesHasHiddenDofs (fes);
-    // const bool fes_conformity_has_hidden_dofs
-    //     = fesHasHiddenDofs (fes_conformity);
+    const bool fes_has_inactive_dofs = fesHasInactiveDofs (fes);
+    const bool fes_conformity_has_inactive_dofs
+        = (fes_conformity) ? fesHasInactiveDofs (*fes_conformity) : false;
 
     auto particular_solution_vec = make_shared<VVector<SCAL>> (fes.GetNDof ());
     particular_solution_vec->operator= (0.0);
@@ -656,8 +656,8 @@ namespace ngcomp
           size_t ndof = dofs.Size ();
           const size_t ndof_test = dofs_test.Size ();
           const size_t ndof_conforming = dofs_conforming.Size ();
-          auto elmat_A = FlatMatrix<SCAL> (ndof_test + ndof_conforming, ndof,
-                                           local_heap);
+          FlatMatrix<SCAL> elmat_A (ndof_test + ndof_conforming, ndof,
+                                    local_heap);
           auto [elmat_Cl, elmat_L] = elmat_A.SplitRows (ndof_conforming);
 
           //     /   \    /   \    //
@@ -666,13 +666,13 @@ namespace ngcomp
           //     \   /    \   /    //
           // with C_r.shape == (ndof_conforming, ndof_conforming),
           // and B.shape == ( ndof_conforming + ndof_test, ndof_conforming)
-          auto elmat_B = FlatMatrix<SCAL> (ndof_test + ndof_conforming,
-                                           ndof_conforming, local_heap);
+          FlatMatrix<SCAL> elmat_B (ndof_test + ndof_conforming,
+                                    ndof_conforming, local_heap);
           elmat_A = static_cast<SCAL> (0.);
           elmat_B = static_cast<SCAL> (0.);
 
           // elmat_cr is a view into elamt_b
-          MatrixView<SCAL> elmat_Cr = elmat_B.Rows (ndof_conforming);
+          auto elmat_Cr = elmat_B.Rows (ndof_conforming);
 
           // the diff. operator L operates only on volume terms
           addIntegrationToElementMatrix (elmat_L, op_integrators[VOL],
@@ -694,7 +694,7 @@ namespace ngcomp
           // if (fes_has_hidden_dofs)
           //   throw std::invalid_argument (
           //       "fes has hidden dofs, not supported at the moment");
-          if (fes_has_hidden_dofs)
+          if (fes_has_inactive_dofs)
             {
               extractVisibleDofs (elmat_A, element_id, fes, fes_test, dofs,
                                   dofs_test, local_heap);
