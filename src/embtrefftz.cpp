@@ -123,27 +123,36 @@ inline void addIntegrationToElementMatrix (
     }
 }
 
-template <typename SCAL>
-void extractVisibleDofs (FlatMatrix<SCAL> &elmat, const ElementId &element_id,
-                         const FESpace &fes, const FESpace &test_fes,
-                         Array<DofId> &dofs, Array<DofId> &test_dofs,
-                         LocalHeap &local_heap)
+/// Extracts the submatrix of `elmat`,
+/// consisting only of entries `elmat[i,j]`, where `i` and `j`
+/// are visible dofs.
+///
+/// Additionally, `dofs` and `test_dofs` are overwritten by only the visible
+/// dofs.
+///
+/// @returns the extracted submatrix, allocated on the `LocalHeap`.
+template <typename SCAL, typename TDIST>
+FlatMatrix<SCAL> extractVisibleDofs (
+    const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &elmat,
+    const ElementId &element_id, const FESpace &fes, const FESpace &test_fes,
+    Array<DofId> &dofs, Array<DofId> &test_dofs, LocalHeap &local_heap)
 {
-  Array<DofId> vdofs, vtest_dofs;
-  fes.GetDofNrs (element_id, vdofs, VISIBLE_DOF);
-  test_fes.GetDofNrs (element_id, vtest_dofs, VISIBLE_DOF);
-  FlatMatrix<SCAL> velmat (vtest_dofs.Size (), vdofs.Size (), local_heap);
-  for (size_t jj = 0; jj < dofs.Size (); jj++)
-    for (size_t ii = 0; ii < test_dofs.Size (); ii++)
+  Array<DofId> visible_dofs, visible_test_dofs;
+  fes.GetDofNrs (element_id, visible_dofs, VISIBLE_DOF);
+  test_fes.GetDofNrs (element_id, visible_test_dofs, VISIBLE_DOF);
+  FlatMatrix<SCAL> visible_elmat (visible_test_dofs.Size (),
+                                  visible_dofs.Size (), local_heap);
+  for (size_t j = 0; j < dofs.Size (); j++)
+    for (size_t i = 0; i < test_dofs.Size (); i++)
       {
-        auto j = vdofs.Pos (dofs[jj]);
-        auto i = vtest_dofs.Pos (test_dofs[ii]);
-        if (i != size_t (-1) && j != size_t (-1))
-          velmat (i, j) = elmat (ii, jj);
+        const size_t visible_j = visible_dofs.Pos (dofs[j]);
+        const size_t visible_i = visible_test_dofs.Pos (test_dofs[i]);
+        if (visible_i != size_t (-1) && visible_j != size_t (-1))
+          visible_elmat (visible_i, visible_j) = elmat (i, j);
       }
-  dofs = std::move (vdofs);
-  test_dofs = std::move (vtest_dofs);
-  elmat.Assign (velmat);
+  dofs = std::move (visible_dofs);
+  test_dofs = std::move (visible_test_dofs);
+  return visible_elmat;
 }
 
 /// Fills the two creators with the sparsity pattern needed for
@@ -349,11 +358,13 @@ void calculateLinearFormIntegrators (
     }
 }
 
-bool fesHasHiddenDofs (const FESpace &fes)
+/// Determines, if the FESpace has unused or hidden dofs
+/// (which are considered inactive for this purpose).
+bool fesHasInactiveDofs (const FESpace &fes)
 {
   const size_t ndof = fes.GetNDof ();
   for (size_t d = 0; d < ndof; d++)
-    if (HIDDEN_DOF == fes.GetDofCouplingType (d))
+    if (fes.GetDofCouplingType (d) <= HIDDEN_DOF)
       return true;
   return false;
 }
