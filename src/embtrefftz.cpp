@@ -847,6 +847,30 @@ namespace ngcomp
     return particular_solution;
   }
 
+  /// Copies `source` to the beginning of `target`.
+  ///
+  /// For `source.Size() > target.Size()`,
+  /// the behaviour is undefined.
+  void copyBitArray (const shared_ptr<BitArray> target,
+                     const shared_ptr<const BitArray> source)
+  {
+    assert (source->Size () <= target->Size ()
+            && "The target must not be smaller than the source BitArray.");
+
+    assert (source != nullptr
+            && "The source BitArray pointer may not be null");
+    assert (target != nullptr
+            && "The target BitArray pointer may not be null");
+
+    for (size_t i = 0; i < source->Size (); i++)
+      {
+        if (source->Test (i))
+          target->SetBit (i);
+        else
+          target->Clear (i);
+      }
+  }
+
   template <typename T> void EmbTrefftzFESpace<T>::adjustDofsAfterSetOp ()
   {
     static_assert (std::is_base_of_v<FESpace, T>, "T must be a FESpace");
@@ -886,6 +910,10 @@ namespace ngcomp
       this->ctofdof[i] = LOCAL_DOF;
 
     T::FinalizeUpdate ();
+
+    // needs previous FinalizeUpdate to construct free_dofs for `this`
+    if (fes_conformity)
+      copyBitArray (this->GetFreeDofs (), fes_conformity->GetFreeDofs ());
   }
 
   template <typename T>
