@@ -1,6 +1,7 @@
 #include "embtrefftz.hpp"
 #include "monomialfespace.hpp"
 #include <cfloat>
+#include <compressedfespace.hpp>
 
 using namespace ngbla;
 using namespace ngcomp;
@@ -358,10 +359,34 @@ void calculateLinearFormIntegrators (
     }
 }
 
+/// @returns true, if `fes` is a CompressedFESpace
+/// or is a CompoundFESpace with a CompressedFESpace as a child.
+bool fesHasCompressedChild (const FESpace &fes)
+{
+  if (dynamic_cast<const CompressedFESpace *> (&fes))
+    return true;
+
+  if (dynamic_cast<const CompoundFESpace *> (&fes))
+    {
+      for (const shared_ptr<FESpace> &component_fes :
+           dynamic_cast<const CompoundFESpace &> (fes).Spaces ())
+        {
+          if (fesHasCompressedChild (*component_fes))
+            return true;
+        }
+    }
+  return false;
+}
+
 /// Determines, if the FESpace has unused or hidden dofs
 /// (which are considered inactive for this purpose).
+///
+/// If the provided space is a CompressedFESpace,
+/// it is assumed that the base space will have inactive dofs.
 bool fesHasInactiveDofs (const FESpace &fes)
 {
+  if (fesHasCompressedChild (fes))
+    return true;
   const size_t ndof = fes.GetNDof ();
   for (size_t d = 0; d < ndof; d++)
     if (fes.GetDofCouplingType (d) <= HIDDEN_DOF)
