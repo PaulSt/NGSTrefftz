@@ -1,9 +1,5 @@
-#include <fespace.hpp>
 #include <gtest/gtest.h>
 
-#include <comp.hpp>
-#include <stdexcept>
-#include <vector.hpp>
 #include "embtrefftz.cpp"
 
 TEST (reorderMatrixColumnsTest, throwOnDimensionMismatch)
