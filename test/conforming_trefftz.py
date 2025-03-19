@@ -553,6 +553,37 @@ def test_ConstrainedTrefftzFESpace(
     return sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d))
 
 
+def test_ConstrainedTrefftzFESpaceDirichlet():
+    """
+    >>> test_ConstrainedTrefftzFESpaceDirichlet()
+    """
+    mesh = Mesh(unit_square.GenerateMesh(maxh=0.2))
+    base_fes = L2(mesh, order=4)
+    fes_conformity = H1(mesh, order=2, dirichlet="left|right") * FacetFESpace(
+        mesh, order=3
+    )
+
+    fes = EmbeddedTrefftzFES(base_fes)
+    assert type(fes) is L2EmbTrefftzFESpace
+
+    u = fes.TrialFunction()
+    ((uc_h, uc_f), (vc_h, vc_f)) = fes_conformity.TnT()
+    cop_lhs = u * vc_h * dx(element_vb=BBND)
+    cop_rhs = uc_h * vc_h * dx(element_vb=BBND)
+
+    cop_lhs += u * vc_f * dx(element_vb=BND)
+    cop_rhs += uc_f * vc_f * dx(element_vb=BND)
+
+    _ = fes.SetOp(None, cop_lhs, cop_rhs, fes_conformity)
+
+    assert fes.ndof >= fes_conformity.ndof
+
+    fes_freedofs = fes.FreeDofs()
+    fes_conformity_freedofs = fes_conformity.FreeDofs()
+    for i in range(fes_conformity.ndof):
+        assert fes_freedofs[i] == fes_conformity_freedofs[i]
+
+
 if __name__ == "__main__":
     import doctest
 
