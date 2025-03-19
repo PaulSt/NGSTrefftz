@@ -209,7 +209,7 @@ INLINE size_t fillTrefftzTableCreators (
 }
 
 template <typename SCAL>
-INLINE size_t createConformingTrefftzTables (
+size_t createConformingTrefftzTables (
     Table<int> &table, Table<int> &table2,
     const vector<optional<ElmatWithTrefftzInfo<SCAL>>> &ETmats,
     const FESpace &fes, shared_ptr<const FESpace> fes_conformity,
@@ -262,13 +262,6 @@ INLINE size_t createConformingTrefftzTables (
                     creator2.Add (ei.Nr (), d);
                 }
             }
-
-          for (size_t d = 0, hcnt = 0; d < ndof_conforming; d++)
-            if (HIDDEN_DOF == fes_conformity->GetDofCouplingType (d))
-              {
-                creator.Add (ne + hcnt, d);
-                creator2.Add (ne + hcnt++, d);
-              }
         }
     }
 
@@ -592,6 +585,94 @@ calculateParticularSolution (Array<shared_ptr<LinearFormIntegrator>> lfis[4],
   return elsol;
 }
 
+/// Given the matrices, and new ndof values,
+/// this method reshapes the matrices according to the dimensions.
+/// Because this function re-uses the already allocated memory,
+/// the behaviour is undefined if the new shape of the matrices elmat_A or
+/// elmat_B uses more memory than before the reshaping.
+///
+///      /   \    /   \
+///   A= |C_l| B= |C_r|
+///      | L |    | 0 |
+///      \   /    \   /
+/// with dimensions:
+/// - A: (ndof_conforming + ndof_test) x ndof
+///     - C_l ndof_conforming x ndof
+///     - L: ndof_test x ndof
+/// - B: (ndof_test + ndof_conforming) x ndof_conforming
+///     - C_r ndof_conforming
+template <typename SCAL>
+INLINE void
+conformingTrefftzReshapeMatrices (FlatMatrix<SCAL> &elmat_A,
+                                  FlatMatrix<SCAL> &elmat_B,
+                                  FlatMatrix<SCAL> &elmat_Cl,
+                                  FlatMatrix<SCAL> &elmat_L,
+                                  FlatMatrix<SCAL> &elmat_Cr,
+                                  const size_t ndof, const size_t ndof_test,
+                                  const size_t ndof_conforming)
+{
+  // shrink the big matrices in place to the new dimensions
+  elmat_A.Assign (elmat_A.Reshape (ndof_test + ndof_conforming, ndof));
+  elmat_B.Assign (
+      elmat_B.Reshape (ndof_test + ndof_conforming, ndof_conforming));
+  // relocate the views to the shrunken dimensions
+  const auto [elmat_Cl_view, elmat_L_view]
+      = elmat_A.SplitRows (ndof_conforming);
+  elmat_Cl.Assign (elmat_Cl_view);
+  elmat_L.Assign (elmat_L_view);
+  elmat_Cr.Assign (elmat_B.Rows (ndof_conforming));
+}
+
+/// Given a conformity space with unused or hidden dofs,
+/// this function extracts the relevant submatrices of the element matrices
+/// for the visible dofs only,
+/// as well as adjusting the dof arrays.
+template <typename SCAL>
+void conformingTrefftzExtractVisibleDofs (
+    FlatMatrix<SCAL> &elmat_A, FlatMatrix<SCAL> &elmat_B,
+    FlatMatrix<SCAL> &elmat_Cl, FlatMatrix<SCAL> &elmat_L,
+    FlatMatrix<SCAL> &elmat_Cr, const FESpace &fes,
+    const FESpace &fes_conformity, Array<DofId> &dofs,
+    Array<DofId> &dofs_conforming, const ElementId &element_id,
+    LocalHeap &local_heap)
+{
+  const HeapReset hr (local_heap);
+
+  Array<DofId> temp_conformity_dofs;
+  temp_conformity_dofs = dofs_conforming;
+
+  // extract the submatrices to new FlatMatrix
+  const auto elmat_Cl_new
+      = extractVisibleDofs (elmat_Cl, element_id, fes, fes_conformity, dofs,
+                            temp_conformity_dofs, local_heap);
+
+  const auto elmat_Cr_new = extractVisibleDofs (
+      elmat_Cr, element_id, fes_conformity, fes_conformity, dofs_conforming,
+      dofs_conforming, local_heap);
+
+  FlatMatrix<SCAL> temp_L (elmat_L.Height (), elmat_L.Width (), local_heap);
+  temp_L = elmat_L;
+
+  assert (
+      elmat_A.Width () == dofs.Size ()
+      && "Assumption is, that `fes` does not contain hidden or unused dofs.");
+
+  const size_t new_ndof = temp_L.Width ();
+  const size_t new_ndof_test = temp_L.Height ();
+  const size_t new_ndof_conforming = dofs_conforming.Size ();
+
+  conformingTrefftzReshapeMatrices (elmat_A, elmat_B, elmat_Cl, elmat_L,
+                                    elmat_Cr, new_ndof, new_ndof_test,
+                                    new_ndof_conforming);
+
+  // copy the data back into the views
+  elmat_Cl = elmat_Cl_new;
+  elmat_L = temp_L;
+
+  elmat_B = static_cast<SCAL> (0.);
+  elmat_Cr = elmat_Cr_new;
+}
+
 namespace ngcomp
 {
   mutex stats_mutex;
@@ -680,7 +761,7 @@ namespace ngcomp
           // thus A.shape == (ndof_test + ndof_conforming, ndof)
           size_t ndof = dofs.Size ();
           const size_t ndof_test = dofs_test.Size ();
-          const size_t ndof_conforming = dofs_conforming.Size ();
+          size_t ndof_conforming = dofs_conforming.Size ();
           FlatMatrix<SCAL> elmat_A (ndof_test + ndof_conforming, ndof,
                                     local_heap);
           auto [elmat_Cl, elmat_L] = elmat_A.SplitRows (ndof_conforming);
@@ -716,14 +797,31 @@ namespace ngcomp
                       local_heap);
                 }
             }
-          // if (fes_has_hidden_dofs)
-          //   throw std::invalid_argument (
-          //       "fes has hidden dofs, not supported at the moment");
           if (fes_has_inactive_dofs)
             {
-              extractVisibleDofs (elmat_A, element_id, fes, fes_test, dofs,
-                                  dofs_test, local_heap);
+              if (fes_conformity)
+                throw std::invalid_argument (
+                    "It is not currently supported to have conformity "
+                    "constraints together with hidden dofs in `fes`");
+
+              elmat_A.Assign (extractVisibleDofs (elmat_A, element_id, fes,
+                                                  fes_test, dofs, dofs_test,
+                                                  local_heap));
               ndof = dofs.Size ();
+
+              // only adjust elmat_A and elmat_L, as all other matrices
+              // are of zero width or height,
+              // and of no interest for fes_conformity == nullptr
+              elmat_L.Assign (elmat_A);
+            }
+          if (fes_conformity_has_inactive_dofs)
+            {
+              conformingTrefftzExtractVisibleDofs (
+                  elmat_A, elmat_B, elmat_Cl, elmat_L, elmat_Cr, fes,
+                  *fes_conformity, dofs, dofs_conforming, element_id,
+                  local_heap);
+
+              ndof_conforming = dofs_conforming.Size ();
             }
 
           // reorder elmat_cr
