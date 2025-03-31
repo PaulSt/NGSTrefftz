@@ -802,7 +802,7 @@ namespace ngcomp
                                shared_ptr<const FESpace> fes_conformity,
                                shared_ptr<const FESpace> fes_test,
                                shared_ptr<const SumOfIntegrals> linear_form,
-                               const std::variant<size_t, double> ndof_trefftz)
+                               std::variant<size_t, double> ndof_trefftz)
   {
     static Timer timer ("EmbTrefftz: SetOp");
 
@@ -815,6 +815,10 @@ namespace ngcomp
     // fes_test may be null. If it is null, then choose the trial space as the
     // test space as well.
     const FESpace &fes_test_ref = (fes_test) ? *fes_test : *fes;
+
+    if (holds_alternative<size_t> (ndof_trefftz)
+        && std::get<size_t> (ndof_trefftz) == 0)
+      ndof_trefftz = 0.0;
 
     // #TODO: what about hidden dofs?
     if (!this->IsComplex ())
@@ -1144,7 +1148,7 @@ template <typename T> void ExportETSpace (py::module m, string label)
                 optional<const SumOfIntegrals>, optional<const SumOfIntegrals>,
                 optional<const SumOfIntegrals>, shared_ptr<const FESpace>,
                 shared_ptr<const FESpace>, shared_ptr<const SumOfIntegrals>,
-                const std::variant<size_t, double>)> (
+                std::variant<size_t, double>)> (
                 &ngcomp::EmbTrefftzFESpace<T>::SetOp),
             R"mydelimiter(
             Sets the operators for the conforming Trefftz method.
