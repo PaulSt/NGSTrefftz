@@ -143,14 +143,13 @@ namespace ngcomp
     ///
     /// @throws std::invalid_argument if `op`, `cop_lhs`, or `cop_rhs` are
     /// `null`.
-    shared_ptr<BaseVector>
-    SetOp (optional<const SumOfIntegrals> op,
-           optional<const SumOfIntegrals> cop_lhs,
-           optional<const SumOfIntegrals> cop_rhs,
-           shared_ptr<const FESpace> fes_conformity,
-           shared_ptr<const FESpace> fes_test,
-           shared_ptr<const SumOfIntegrals> linear_form,
-           const std::variant<size_t, double> ndof_trefftz);
+    shared_ptr<BaseVector> SetOp (optional<const SumOfIntegrals> op,
+                                  optional<const SumOfIntegrals> cop_lhs,
+                                  optional<const SumOfIntegrals> cop_rhs,
+                                  shared_ptr<const FESpace> fes_conformity,
+                                  shared_ptr<const FESpace> fes_test,
+                                  shared_ptr<const SumOfIntegrals> linear_form,
+                                  std::variant<size_t, double> ndof_trefftz);
 
     void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
 
