@@ -1,9 +1,5 @@
-#include <fespace.hpp>
 #include <gtest/gtest.h>
 
-#include <comp.hpp>
-#include <stdexcept>
-#include <vector.hpp>
 #include "embtrefftz.cpp"
 
 TEST (reorderMatrixColumnsTest, throwOnDimensionMismatch)
@@ -121,4 +117,36 @@ TEST (calcNdofTrefftzTest, EpsilonGivenWithSingularValues)
   ASSERT_EQ (calcNdofTrefftz<double> (42, 4, 5, double (1e-2), false,
                                       singular_values.View ()),
              42 - 4 - 5 + 2);
+}
+
+TEST (copyBitArrayTest, CopySourceZeros)
+{
+  auto source = make_shared<BitArray> (2);
+  auto target = make_shared<BitArray> (10);
+
+  source->Clear ();
+  target->Set ();
+
+  copyBitArray (target, source);
+
+  for (size_t i = 0; i < source->Size (); i++)
+    EXPECT_EQ (target->Test (i), false);
+  for (size_t i = source->Size (); i < target->Size (); i++)
+    EXPECT_EQ (target->Test (i), true);
+}
+
+TEST (copyBitArrayTest, CopySourceOnes)
+{
+  auto source = make_shared<BitArray> (3);
+  auto target = make_shared<BitArray> (10);
+
+  source->Set ();
+  target->Clear ();
+
+  copyBitArray (target, source);
+
+  for (size_t i = 0; i < source->Size (); i++)
+    EXPECT_EQ (target->Test (i), true);
+  for (size_t i = source->Size (); i < target->Size (); i++)
+    EXPECT_EQ (target->Test (i), false);
 }

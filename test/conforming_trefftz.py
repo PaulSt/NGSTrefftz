@@ -1,19 +1,36 @@
-from typing import Final, List
-from ngsolve import *
-from ngstrefftz import *
-from dg import *
 import time
+from typing import Final, List
 
 import dg
-from netgen.geom2d import unit_square
-import scipy as sp
 import numpy as np
+import scipy as sp
 import scipy.sparse
+from dg import dgell, exactpoi
+from netgen.geom2d import unit_square
+from ngsolve import (
+    BBND,
+    BND,
+    H1,
+    L2,
+    BilinearForm,
+    Draw,
+    FacetFESpace,
+    FESpace,
+    GridFunction,
+    Integrate,
+    Mesh,
+    comp,
+    dx,
+    sqrt,
+    x,
+    y,
+)
+from ngstrefftz import EmbeddedTrefftzFES, L2EmbTrefftzFESpace, TrefftzEmbedding
 
 # import matplotlib.pyplot as plt
 
 
-SetNumThreads(3)
+# SetNumThreads(3)
 
 
 def PySVDConformingTrefftz(
@@ -180,7 +197,10 @@ def PySVDConformingTrefftz(
         P[
             np.ix_(
                 dofs,
-                range(n_constr + nr * trefftzndof, n_constr + (nr + 1) * trefftzndof),
+                range(
+                    n_constr + nr * trefftzndof,
+                    n_constr + (nr + 1) * trefftzndof,
+                ),
             )
         ] += V[nonzero_dofs:, :].T
 
@@ -197,7 +217,9 @@ def PySVDConformingTrefftz(
     return P
 
 
-def test_PySVDConformingTrefftz(order: int = 2, debug: bool = False, maxh=0.4) -> float:
+def test_PySVDConformingTrefftz(
+    order: int = 2, debug: bool = False, maxh=0.4
+) -> float:
     """
     simple test case for PySVDConstrainedTrefftz.
 
@@ -222,7 +244,13 @@ def test_PySVDConformingTrefftz(order: int = 2, debug: bool = False, maxh=0.4) -
     cop_rhs = uF * vF * dx(element_boundary=True)
 
     P = PySVDConformingTrefftz(
-        op, fes, cop_lhs, cop_rhs, fes_conformity, 2 * order + 1 - 3, debug=False
+        op,
+        fes,
+        cop_lhs,
+        cop_rhs,
+        fes_conformity,
+        2 * order + 1 - 3,
+        debug=False,
     )
     if debug:
         print("P:")
@@ -251,7 +279,9 @@ def test_PySVDConformingTrefftz(order: int = 2, debug: bool = False, maxh=0.4) -
     return sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d))
 
 
-def test_ConstrainedTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) -> float:
+def test_ConstrainedTrefftzCpp(
+    order: int = 2, debug: bool = False, maxh=0.4
+) -> float:
     """
     simple test case for Constrained Trefftz C++ implementation.
 
@@ -275,7 +305,9 @@ def test_ConstrainedTrefftzCpp(order: int = 2, debug: bool = False, maxh=0.4) ->
     cop_lhs = u * vF * dx(element_boundary=True)
     cop_rhs = uF * vF * dx(element_boundary=True)
 
-    P = TrefftzEmbedding(op, fes, cop_lhs, cop_rhs, fes_conformity, 2 * order + 1 - 3)
+    P = TrefftzEmbedding(
+        op, fes, cop_lhs, cop_rhs, fes_conformity, 2 * order + 1 - 3
+    )
 
     rows, cols, vals = P.COO()
 
@@ -420,7 +452,14 @@ def test_conforming_trefftz_mixed_mode(order, order_conformity):
     cop_rhs = uF * vF * dx(element_boundary=True)
 
     PP, ufv = TrefftzEmbedding(
-        op, fes, cop_lhs, cop_rhs, fes_conformity, lop, 2 * order + 3 - 1, fes_test
+        op,
+        fes,
+        cop_lhs,
+        cop_rhs,
+        fes_conformity,
+        lop,
+        2 * order + 3 - 1,
+        fes_test,
     )
     PPT = PP.CreateTranspose()
     a, f = dgell(fes, exactpoi, rhs)
@@ -512,6 +551,37 @@ def test_ConstrainedTrefftzFESpace(
         Draw(tpgfu)
         input()
     return sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d))
+
+
+def test_ConstrainedTrefftzFESpaceDirichlet():
+    """
+    >>> test_ConstrainedTrefftzFESpaceDirichlet()
+    """
+    mesh = Mesh(unit_square.GenerateMesh(maxh=0.2))
+    base_fes = L2(mesh, order=4)
+    fes_conformity = H1(mesh, order=2, dirichlet="left|right") * FacetFESpace(
+        mesh, order=3
+    )
+
+    fes = EmbeddedTrefftzFES(base_fes)
+    assert type(fes) is L2EmbTrefftzFESpace
+
+    u = fes.TrialFunction()
+    ((uc_h, uc_f), (vc_h, vc_f)) = fes_conformity.TnT()
+    cop_lhs = u * vc_h * dx(element_vb=BBND)
+    cop_rhs = uc_h * vc_h * dx(element_vb=BBND)
+
+    cop_lhs += u * vc_f * dx(element_vb=BND)
+    cop_rhs += uc_f * vc_f * dx(element_vb=BND)
+
+    _ = fes.SetOp(None, cop_lhs, cop_rhs, fes_conformity)
+
+    assert fes.ndof >= fes_conformity.ndof
+
+    fes_freedofs = fes.FreeDofs()
+    fes_conformity_freedofs = fes_conformity.FreeDofs()
+    for i in range(fes_conformity.ndof):
+        assert fes_freedofs[i] == fes_conformity_freedofs[i]
 
 
 if __name__ == "__main__":

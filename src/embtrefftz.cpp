@@ -1,6 +1,7 @@
 #include "embtrefftz.hpp"
 #include "monomialfespace.hpp"
 #include <cfloat>
+#include <compressedfespace.hpp>
 
 using namespace ngbla;
 using namespace ngcomp;
@@ -123,27 +124,65 @@ inline void addIntegrationToElementMatrix (
     }
 }
 
-template <typename SCAL>
-void extractVisibleDofs (FlatMatrix<SCAL> &elmat, const ElementId &element_id,
-                         const FESpace &fes, const FESpace &test_fes,
-                         Array<DofId> &dofs, Array<DofId> &test_dofs,
-                         LocalHeap &local_heap)
+/// Extracts the submatrix of `elmat`,
+/// consisting only of entries `elmat[i,j]`, where `i` and `j`
+/// are visible dofs.
+///
+/// Additionally, `dofs` and `test_dofs` are overwritten by only the visible
+/// dofs.
+///
+/// @returns the extracted submatrix, allocated on the `LocalHeap`.
+template <typename SCAL, typename TDIST>
+FlatMatrix<SCAL> extractVisibleDofs (
+    const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &elmat,
+    const ElementId &element_id, const FESpace &fes, const FESpace *test_fes,
+    const shared_ptr<const FESpace> fes_conformity, Array<DofId> &dofs,
+    Array<DofId> &test_dofs, Array<DofId> &conformity_dofs,
+    LocalHeap &local_heap)
 {
-  Array<DofId> vdofs, vtest_dofs;
-  fes.GetDofNrs (element_id, vdofs, VISIBLE_DOF);
-  test_fes.GetDofNrs (element_id, vtest_dofs, VISIBLE_DOF);
-  FlatMatrix<SCAL> velmat (vtest_dofs.Size (), vdofs.Size (), local_heap);
-  for (size_t jj = 0; jj < dofs.Size (); jj++)
-    for (size_t ii = 0; ii < test_dofs.Size (); ii++)
-      {
-        auto j = vdofs.Pos (dofs[jj]);
-        auto i = vtest_dofs.Pos (test_dofs[ii]);
-        if (i != size_t (-1) && j != size_t (-1))
-          velmat (i, j) = elmat (ii, jj);
-      }
-  dofs = std::move (vdofs);
-  test_dofs = std::move (vtest_dofs);
-  elmat.Assign (velmat);
+  Array<DofId> visible_dofs, visible_test_dofs, visible_conformity_dofs;
+
+  fes.GetDofNrs (element_id, visible_dofs, VISIBLE_DOF);
+  test_fes->GetDofNrs (element_id, visible_test_dofs, VISIBLE_DOF);
+  FlatMatrix<SCAL> visible_elmat (visible_test_dofs.Size ()
+                                      + visible_conformity_dofs.Size (),
+                                  visible_dofs.Size (), local_heap);
+  size_t conformity_offset = fes_conformity ? conformity_dofs.Size () : 0;
+  size_t visible_conformity_offset
+      = fes_conformity ? visible_conformity_dofs.Size () : 0;
+
+  if (fes_conformity)
+    {
+      fes_conformity->GetDofNrs (element_id, visible_conformity_dofs,
+                                 VISIBLE_DOF);
+      for (size_t j = 0; j < dofs.Size (); j++)
+        for (size_t i = 0; i < conformity_dofs.Size (); i++)
+          {
+            const size_t visible_j = visible_dofs.Pos (dofs[j]);
+            const size_t visible_i
+                = visible_conformity_dofs.Pos (conformity_dofs[i]);
+            if (visible_i != size_t (-1) && visible_j != size_t (-1))
+              visible_elmat (visible_i, visible_j) = elmat (i, j);
+          }
+      if (test_fes)
+        conformity_dofs = std::move (visible_conformity_dofs);
+    }
+  if (test_fes)
+    {
+      for (size_t j = 0; j < dofs.Size (); j++)
+        for (size_t i = 0; i < test_dofs.Size (); i++)
+          {
+            const size_t visible_j = visible_dofs.Pos (dofs[j]);
+            const size_t visible_i = visible_conformity_offset
+                                     + visible_test_dofs.Pos (test_dofs[i]);
+            if (visible_i != size_t (-1) && visible_j != size_t (-1))
+              visible_elmat (visible_i, visible_j)
+                  = elmat (conformity_offset + i, j);
+          }
+      dofs = std::move (visible_dofs);
+      test_dofs = std::move (visible_test_dofs);
+    }
+  return visible_elmat;
 }
 
 /// Fills the two creators with the sparsity pattern needed for
@@ -162,9 +201,9 @@ INLINE size_t fillTrefftzTableCreators (
       std::is_same_v<std::invoke_result_t<NZ_FUNC, ElementId>, size_t>,
       "NZ_FUNC must have return type size_t");
 
-  const size_t ndof = fes.GetNDof ();
-  const size_t ne = ma.GetNE (VOL);
-  // number of the next Trefftz dof to create
+  // const size_t ndof = fes.GetNDof ();
+  // const size_t ne = ma.GetNE (VOL);
+  //  number of the next Trefftz dof to create
   size_t next_trefftz_dof = offset;
   for (auto ei : ma.Elements (VOL))
     {
@@ -189,17 +228,17 @@ INLINE size_t fillTrefftzTableCreators (
         }
     }
 
-  for (size_t d = 0, hcnt = 0; d < ndof; d++)
-    if (HIDDEN_DOF == fes.GetDofCouplingType (d))
-      {
-        creator.Add (ne + hcnt, d);
-        creator2.Add (ne + hcnt++, next_trefftz_dof++);
-      }
+  // for (size_t d = 0, hcnt = 0; d < ndof; d++)
+  // if (HIDDEN_DOF == fes.GetDofCouplingType (d))
+  //{
+  // creator.Add (ne + hcnt, d);
+  // creator2.Add (ne + hcnt++, next_trefftz_dof++);
+  //}
   return next_trefftz_dof - offset;
 }
 
 template <typename SCAL>
-INLINE size_t createConformingTrefftzTables (
+size_t createConformingTrefftzTables (
     Table<int> &table, Table<int> &table2,
     const vector<optional<ElmatWithTrefftzInfo<SCAL>>> &ETmats,
     const FESpace &fes, shared_ptr<const FESpace> fes_conformity,
@@ -252,13 +291,6 @@ INLINE size_t createConformingTrefftzTables (
                     creator2.Add (ei.Nr (), d);
                 }
             }
-
-          for (size_t d = 0, hcnt = 0; d < ndof_conforming; d++)
-            if (HIDDEN_DOF == fes_conformity->GetDofCouplingType (d))
-              {
-                creator.Add (ne + hcnt, d);
-                creator2.Add (ne + hcnt++, d);
-              }
         }
     }
 
@@ -274,7 +306,7 @@ INLINE void fillSparseMatrixWithData (
     const Table<int> &table, const Table<int> &table2, const MeshAccess &ma,
     const size_t hidden_dofs)
 {
-  const size_t ne = ma.GetNE (VOL);
+  // const size_t ne = ma.GetNE (VOL);
   P.SetZero ();
   for (auto ei : ma.Elements (VOL))
     if (ETmats[ei.Nr ()])
@@ -283,10 +315,10 @@ INLINE void fillSparseMatrixWithData (
                             ETmats[ei.Nr ()]->elmat);
       }
 
-  SCAL one = 1;
-  FlatMatrix<SCAL> I (1, 1, &one);
-  for (size_t hd = 0; hd < hidden_dofs; hd++)
-    P.AddElementMatrix (table[ne + hd], table2[ne + hd], I);
+  // SCAL one = 1;
+  // FlatMatrix<SCAL> I (1, 1, &one);
+  // for (size_t hd = 0; hd < hidden_dofs; hd++)
+  // P.AddElementMatrix (table[ne + hd], table2[ne + hd], I);
 }
 
 INLINE size_t countHiddenDofs (const FESpace &fes)
@@ -349,11 +381,37 @@ void calculateLinearFormIntegrators (
     }
 }
 
-bool fesHasHiddenDofs (const FESpace &fes)
+/// @returns true, if `fes` is a CompressedFESpace
+/// or is a CompoundFESpace with a CompressedFESpace as a child.
+bool fesHasCompressedChild (const FESpace &fes)
 {
+  if (dynamic_cast<const CompressedFESpace *> (&fes))
+    return true;
+
+  if (dynamic_cast<const CompoundFESpace *> (&fes))
+    {
+      for (const shared_ptr<FESpace> &component_fes :
+           dynamic_cast<const CompoundFESpace &> (fes).Spaces ())
+        {
+          if (fesHasCompressedChild (*component_fes))
+            return true;
+        }
+    }
+  return false;
+}
+
+/// Determines, if the FESpace has unused or hidden dofs
+/// (which are considered inactive for this purpose).
+///
+/// If the provided space is a CompressedFESpace,
+/// it is assumed that the base space will have inactive dofs.
+bool fesHasInactiveDofs (const FESpace &fes)
+{
+  if (fesHasCompressedChild (fes))
+    return true;
   const size_t ndof = fes.GetNDof ();
   for (size_t d = 0; d < ndof; d++)
-    if (HIDDEN_DOF == fes.GetDofCouplingType (d))
+    if (fes.GetDofCouplingType (d) <= HIDDEN_DOF)
       return true;
   return false;
 }
@@ -600,9 +658,8 @@ namespace ngcomp
     vector<optional<ElmatWithTrefftzInfo<SCAL>>> element_matrices (
         num_elements);
 
-    const bool fes_has_hidden_dofs = fesHasHiddenDofs (fes);
-    // const bool fes_conformity_has_hidden_dofs
-    //     = fesHasHiddenDofs (fes_conformity);
+    const bool fes_has_inactive_dofs
+        = fesHasInactiveDofs (fes) || fesHasInactiveDofs (fes_test);
 
     auto particular_solution_vec = make_shared<VVector<SCAL>> (fes.GetNDof ());
     particular_solution_vec->operator= (0.0);
@@ -643,10 +700,10 @@ namespace ngcomp
           // L.shape == (ndof_test, ndof)
           // thus A.shape == (ndof_test + ndof_conforming, ndof)
           size_t ndof = dofs.Size ();
-          const size_t ndof_test = dofs_test.Size ();
-          const size_t ndof_conforming = dofs_conforming.Size ();
-          auto elmat_A = FlatMatrix<SCAL> (ndof_test + ndof_conforming, ndof,
-                                           local_heap);
+          size_t ndof_test = dofs_test.Size ();
+          size_t ndof_conforming = dofs_conforming.Size ();
+          FlatMatrix<SCAL> elmat_A (ndof_test + ndof_conforming, ndof,
+                                    local_heap);
           auto [elmat_Cl, elmat_L] = elmat_A.SplitRows (ndof_conforming);
 
           //     /   \    /   \    //
@@ -655,13 +712,13 @@ namespace ngcomp
           //     \   /    \   /    //
           // with C_r.shape == (ndof_conforming, ndof_conforming),
           // and B.shape == ( ndof_conforming + ndof_test, ndof_conforming)
-          auto elmat_B = FlatMatrix<SCAL> (ndof_test + ndof_conforming,
-                                           ndof_conforming, local_heap);
+          FlatMatrix<SCAL> elmat_B (ndof_test + ndof_conforming,
+                                    ndof_conforming, local_heap);
           elmat_A = static_cast<SCAL> (0.);
           elmat_B = static_cast<SCAL> (0.);
 
           // elmat_cr is a view into elamt_b
-          MatrixView<SCAL> elmat_Cr = elmat_B.Rows (ndof_conforming);
+          auto elmat_Cr = elmat_B.Rows (ndof_conforming);
 
           // the diff. operator L operates only on volume terms
           addIntegrationToElementMatrix (elmat_L, op_integrators[VOL],
@@ -680,14 +737,24 @@ namespace ngcomp
                       local_heap);
                 }
             }
-          // if (fes_has_hidden_dofs)
-          //   throw std::invalid_argument (
-          //       "fes has hidden dofs, not supported at the moment");
-          if (fes_has_hidden_dofs)
+          if (fes_has_inactive_dofs)
             {
-              extractVisibleDofs (elmat_A, element_id, fes, fes_test, dofs,
-                                  dofs_test, local_heap);
+              elmat_B.Assign (extractVisibleDofs (
+                  elmat_B, element_id, fes, nullptr, fes_conformity, dofs,
+                  dofs_test, dofs_conforming, local_heap));
+
+              elmat_A.Assign (extractVisibleDofs (
+                  elmat_A, element_id, fes, &fes_test, fes_conformity, dofs,
+                  dofs_test, dofs_conforming, local_heap));
+
               ndof = dofs.Size ();
+              ndof_test = dofs_test.Size ();
+              ndof_conforming = dofs_conforming.Size ();
+
+              // not needed
+              // auto [elmat_Cl_tmp, elmat_L_tmp] = elmat_A.SplitRows
+              // (ndof_conforming); elmat_Cl.Assign(elmat_Cl_tmp);
+              // elmat_L.Assign(elmat_L_tmp);
             }
 
           // reorder elmat_cr
@@ -851,6 +918,30 @@ namespace ngcomp
     return particular_solution;
   }
 
+  /// Copies `source` to the beginning of `target`.
+  ///
+  /// For `source.Size() > target.Size()`,
+  /// the behaviour is undefined.
+  void copyBitArray (const shared_ptr<BitArray> target,
+                     const shared_ptr<const BitArray> source)
+  {
+    assert (source->Size () <= target->Size ()
+            && "The target must not be smaller than the source BitArray.");
+
+    assert (source != nullptr
+            && "The source BitArray pointer may not be null");
+    assert (target != nullptr
+            && "The target BitArray pointer may not be null");
+
+    for (size_t i = 0; i < source->Size (); i++)
+      {
+        if (source->Test (i))
+          target->SetBit (i);
+        else
+          target->Clear (i);
+      }
+  }
+
   template <typename T> void EmbTrefftzFESpace<T>::adjustDofsAfterSetOp ()
   {
     static_assert (std::is_base_of_v<FESpace, T>, "T must be a FESpace");
@@ -890,6 +981,10 @@ namespace ngcomp
       this->ctofdof[i] = LOCAL_DOF;
 
     T::FinalizeUpdate ();
+
+    // needs previous FinalizeUpdate to construct free_dofs for `this`
+    if (fes_conformity)
+      copyBitArray (this->GetFreeDofs (), fes_conformity->GetFreeDofs ());
   }
 
   template <typename T>
