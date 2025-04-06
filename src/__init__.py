@@ -43,8 +43,8 @@ def GetWave(self,U):
         U.vec.data = a.mat.Inverse() * f.vec
 
 
-
 dbox = BoxDifferentialSymbol()
+dball = dbox(boxtype=BOXTYPE.BALL)
 
 setattr(TWaveTents1, 'GetWave', GetWave)
 setattr(TWaveTents2, 'GetWave', GetWave)

@@ -36,21 +36,22 @@ INLINE double GetElementSizeCenter (const ElementTransformation &trafo,
  * @param lh The LocalHeap object.
  */
 template <int D>
-INLINE void MapRefPoints (const ElementTransformation &trafo,
-                          FlatMatrixFixWidth<D> &pts_in,
-                          FlatMatrixFixWidth<D> &pts_out, FlatVector<> &wts_in,
-                          FlatVector<> &wts_out, double reference_box_length,
-                          LocalHeap &lh, VorB element_vb = VOL)
+INLINE void
+MapRefPoints (const ElementTransformation &trafo,
+              FlatMatrixFixWidth<D> &pts_in, FlatMatrixFixWidth<D> &pts_out,
+              FlatVector<> &wts_in, FlatVector<> &wts_out, double box_length,
+              bool scale_with_elsize, LocalHeap &lh, VorB element_vb = VOL)
 {
   FlatVector<> center (D, lh);
   double h = GetElementSizeCenter<D> (trafo, center, lh);
-  const double reference_box_factor
-      = pow (reference_box_length * h, element_vb == VOL ? D : D - 1);
+  if (scale_with_elsize)
+    box_length *= h;
+  const double box_factor = pow (box_length, element_vb == VOL ? D : D - 1);
   for (size_t i = 0; i < pts_in.Height (); i++)
     {
       for (int d = 0; d < D; d++)
-        pts_out (i, d) = center (d) + reference_box_length * h * pts_in (i, d);
-      wts_out (i) = reference_box_factor * wts_in (i);
+        pts_out (i, d) = center (d) + box_length * pts_in (i, d);
+      wts_out (i) = box_factor * wts_in (i);
     }
 }
 
@@ -151,10 +152,39 @@ void FindIntegrationPoint (IntegrationPoint &ip,
  */
 template <int D>
 tuple<FlatMatrixFixWidth<D>, FlatVector<>>
-GetBoxPointsAndWeights (int order, LocalHeap &lh, VorB element_vb = VOL)
+GetBoxPointsAndWeights (int order, LocalHeap &lh, VorB element_vb = VOL,
+                        BOXTYPE type = DEFAULT)
 {
   const IntegrationRule &ir1d = SelectIntegrationRule (ET_SEGM, order);
   const int nip1D = ir1d.Size ();
+
+  if ((type == BOXTYPE::BALL) && (D == 2))
+    {
+      const int ballnip = (order + 1) / 2;
+      const int nip = nip1D * ballnip;
+      FlatMatrixFixWidth<D> ref_pts_mat (nip, lh);
+      FlatVector<> ref_wts_vec (nip, lh);
+      for (int k = 0; k < ballnip; k++)
+        {
+          double etak = cos ((k + 1) * M_PI / (ballnip + 1));
+          double ak
+              = M_PI / (ballnip + 1) * sin ((k + 1) * M_PI / (ballnip + 1));
+          for (int i : Range (nip1D))
+            {
+              int idx = nip1D * k + i;
+
+              double segp = sqrt (1.0 - etak * etak);
+              double p0 = ref_pts_mat (idx, 0) = etak;
+              double p1 = ref_pts_mat (idx, 1)
+                  = ir1d[i](0) * 2.0 * segp - segp;
+
+              ref_wts_vec (idx) = pow (1.0 - (p0 * p0 + p1 * p1), 3) * ak
+                                  * ir1d[i].Weight () * 2.0 * segp;
+            }
+        }
+      return make_tuple (ref_pts_mat, ref_wts_vec);
+    }
+
   switch (element_vb)
     {
     case VOL:
@@ -221,15 +251,17 @@ GetBoxPointsAndWeights (int order, LocalHeap &lh, VorB element_vb = VOL)
 
 BoxIntegral ::BoxIntegral (shared_ptr<CoefficientFunction> _cf,
                            shared_ptr<BoxDifferentialSymbol> _dx)
-    : Integral (_cf, *_dx), reference_box_length (_dx->reference_box_length)
+    : Integral (_cf, *_dx), box_length (_dx->box_length),
+      scale_with_elsize (_dx->scale_with_elsize), boxtype (_dx->boxtype)
 {
   ;
 }
 
 BoxIntegral ::BoxIntegral (shared_ptr<CoefficientFunction> _cf,
-                           DifferentialSymbol _dx,
-                           double _reference_box_length)
-    : Integral (_cf, _dx), reference_box_length (_reference_box_length)
+                           DifferentialSymbol _dx, double _box_length,
+                           bool _scale_with_elsize, BOXTYPE _boxtype)
+    : Integral (_cf, _dx), box_length (_box_length),
+      scale_with_elsize (_scale_with_elsize), boxtype (_boxtype)
 {
   ;
 }
@@ -253,8 +285,8 @@ BoxIntegral ::MakeBilinearFormIntegrator () const
     throw Exception ("no skeleton in BoxIntegral..");
 
   shared_ptr<BilinearFormIntegrator> bfi;
-  bfi = make_shared<BoxBilinearFormIntegrator> (cf, dx.element_vb,
-                                                reference_box_length);
+  bfi = make_shared<BoxBilinearFormIntegrator> (cf, dx.element_vb, box_length,
+                                                scale_with_elsize, boxtype);
 
   if (dx.definedon)
     {
@@ -288,8 +320,8 @@ BoxIntegral ::MakeLinearFormIntegrator () const
     throw Exception ("no skeleton in BoxIntegral..");
 
   shared_ptr<LinearFormIntegrator> lfi;
-  lfi = make_shared<BoxLinearFormIntegrator> (cf, dx.element_vb,
-                                              reference_box_length);
+  lfi = make_shared<BoxLinearFormIntegrator> (cf, dx.element_vb, box_length,
+                                              scale_with_elsize, boxtype);
   if (dx.definedon)
     {
       if (auto definedon_bitarray = get_if<BitArray> (&*dx.definedon);
@@ -335,7 +367,7 @@ TSCAL BoxIntegral ::T_BoxIntegrate (const ngcomp::MeshAccess &ma,
 
   // auto [ref_pts_mat, ref_wts_vec] = GetBoxPointsAndWeights<D> (order, glh);
   tuple<FlatMatrixFixWidth<D>, FlatVector<>> paw
-      = GetBoxPointsAndWeights<D> (order, glh, dx.element_vb);
+      = GetBoxPointsAndWeights<D> (order, glh, dx.element_vb, boxtype);
   auto ref_pts_mat = get<0> (paw);
   auto ref_wts_vec = get<1> (paw);
   const int nip = ref_pts_mat.Height ();
@@ -355,7 +387,7 @@ TSCAL BoxIntegral ::T_BoxIntegrate (const ngcomp::MeshAccess &ma,
         FlatMatrixFixWidth<D> pts_mat (nip, lh);
         FlatVector<> wts_vec (nip, lh);
         MapRefPoints<D> (trafo, ref_pts_mat, pts_mat, ref_wts_vec, wts_vec,
-                         reference_box_length, lh, dx.element_vb);
+                         box_length, scale_with_elsize, lh, dx.element_vb);
 
         IntegrationRule &ir = *(new (lh) IntegrationRule (nip, lh));
         for (int i = 0; i < nip; i++)
@@ -402,7 +434,7 @@ TSCAL BoxIntegral ::T_BoxIntegrate (const ngcomp::MeshAccess &ma,
     FlatMatrixFixWidth<D> pts_mat (nip, lh);
     FlatVector<> wts_vec (nip, lh);
     MapRefPoints<D> (trafo, ref_pts_mat, pts_mat, ref_wts_vec, wts_vec,
-                     reference_box_length, lh, dx.element_vb);
+                     box_length, scale_with_elsize, lh, dx.element_vb);
 
     IntegrationRule &ir = *(new (lh) IntegrationRule (nip, lh));
     TSCAL lsum (0.0);
@@ -462,9 +494,10 @@ BoxIntegral ::T_BoxIntegrate<Complex, 3> (const ngcomp::MeshAccess &ma,
                                           FlatVector<Complex> element_wise);
 
 BoxLinearFormIntegrator ::BoxLinearFormIntegrator (
-    shared_ptr<CoefficientFunction> acf, VorB vb, double _reference_box_length)
-    : SymbolicLinearFormIntegrator (acf, VOL, vb),
-      reference_box_length (_reference_box_length)
+    shared_ptr<CoefficientFunction> acf, VorB vb, double _box_length,
+    bool _scale_with_elsize, BOXTYPE _boxtype)
+    : SymbolicLinearFormIntegrator (acf, VOL, vb), box_length (_box_length),
+      scale_with_elsize (_scale_with_elsize), boxtype (_boxtype)
 {
   ;
 }
@@ -499,7 +532,7 @@ void BoxLinearFormIntegrator ::T_CalcElementVector (
   int intorder = 2 * fel.Order () + bonus_intorder;
 
   tuple<FlatMatrixFixWidth<D>, FlatVector<>> paw
-      = GetBoxPointsAndWeights<D> (intorder, lh, element_vb);
+      = GetBoxPointsAndWeights<D> (intorder, lh, element_vb, boxtype);
   auto ref_pts_mat = get<0> (paw);
   auto ref_wts_vec = get<1> (paw);
   const int nip = ref_pts_mat.Height ();
@@ -507,7 +540,7 @@ void BoxLinearFormIntegrator ::T_CalcElementVector (
   FlatMatrixFixWidth<D> pts_mat (nip, lh);
   FlatVector<> wts_vec (nip, lh);
   MapRefPoints<D> (trafo, ref_pts_mat, pts_mat, ref_wts_vec, wts_vec,
-                   reference_box_length, lh, element_vb);
+                   box_length, scale_with_elsize, lh, element_vb);
 
   IntegrationRule *ir = new (lh) IntegrationRule (nip, lh);
   for (int i = 0; i < nip; i++)
@@ -593,10 +626,10 @@ void BoxLinearFormIntegrator ::T_CalcElementVector (
 }
 
 BoxBilinearFormIntegrator ::BoxBilinearFormIntegrator (
-    shared_ptr<CoefficientFunction> acf, VorB avb,
-    double _reference_box_length)
-    : SymbolicBilinearFormIntegrator (acf, VOL, avb),
-      reference_box_length (_reference_box_length)
+    shared_ptr<CoefficientFunction> acf, VorB avb, double _box_length,
+    bool _scale_with_elsize, BOXTYPE _boxtype)
+    : SymbolicBilinearFormIntegrator (acf, VOL, avb), box_length (_box_length),
+      scale_with_elsize (_scale_with_elsize), boxtype (_boxtype)
 {
   ;
 }
@@ -672,7 +705,7 @@ void BoxBilinearFormIntegrator ::T_CalcElementMatrixAdd (
 
   int intorder = fel_trial.Order () + fel_test.Order () + bonus_intorder;
   tuple<FlatMatrixFixWidth<D>, FlatVector<>> paw
-      = GetBoxPointsAndWeights<D> (intorder, lh, element_vb);
+      = GetBoxPointsAndWeights<D> (intorder, lh, element_vb, boxtype);
   auto ref_pts_mat = get<0> (paw);
   auto ref_wts_vec = get<1> (paw);
   const int nip = ref_pts_mat.Height ();
@@ -680,7 +713,7 @@ void BoxBilinearFormIntegrator ::T_CalcElementMatrixAdd (
   FlatMatrixFixWidth<D> pts_mat (nip, lh);
   FlatVector<> wts_vec (nip, lh);
   MapRefPoints<D> (trafo, ref_pts_mat, pts_mat, ref_wts_vec, wts_vec,
-                   reference_box_length, lh, element_vb);
+                   box_length, scale_with_elsize, lh, element_vb);
 
   IntegrationRule *iir = new (lh) IntegrationRule (nip, lh);
   for (int i = 0; i < nip; i++)
@@ -1152,6 +1185,14 @@ void BoxBilinearFormIntegrator ::CalcLinearizedElementMatrix (
 void ExportBoxIntegral (py::module m)
 {
 
+  py::enum_<BOXTYPE> (m, "BOXTYPE", docu_string (R"raw_string(
+  Shape of subdomain for BoxIntegral, currently supported are:
+  BOX: gives square or cube, in 2D or 3D
+  BALL: gives circle, currently only in 2D
+  )raw_string"))
+      .value ("BOX", BOX)
+      .value ("BALL", BALL);
+
   const auto py_boxint
       = py::class_<BoxIntegral, shared_ptr<BoxIntegral>, Integral> (
           m, "BoxIntegral", docu_string (R"raw_string(
@@ -1177,15 +1218,18 @@ Constructor of BoxDifferentialSymbol.
 )raw_string"))
       .def (
           "__call__",
-          [] (BoxDifferentialSymbol &,
+          [] (BoxDifferentialSymbol &self,
               optional<variant<Region, string>> definedon,
               bool element_boundary, VorB element_vb,
               shared_ptr<GridFunction> deformation,
               shared_ptr<BitArray> definedonelements, int bonus_intorder,
-              double reference_box_length) {
+              double box_length, bool scale_with_elsize, BOXTYPE boxtype) {
             if (element_boundary)
               element_vb = BND;
-            auto dx = BoxDifferentialSymbol (reference_box_length);
+            BOXTYPE newboxtype
+                = boxtype >= BOXTYPE::DEFAULT ? boxtype : self.boxtype;
+            auto dx = BoxDifferentialSymbol (box_length, scale_with_elsize,
+                                             newboxtype);
             dx.element_vb = element_vb;
             dx.bonus_intorder = bonus_intorder;
             if (definedon)
@@ -1208,8 +1252,9 @@ Constructor of BoxDifferentialSymbol.
           py::arg ("element_boundary") = false, py::arg ("element_vb") = VOL,
           py::arg ("deformation") = nullptr,
           py::arg ("definedonelements") = nullptr,
-          py::arg ("bonus_intorder") = 0,
-          py::arg ("reference_box_length") = 0.5, docu_string (R"raw_string(
+          py::arg ("bonus_intorder") = 0, py::arg ("box_length") = 0.5,
+          py::arg ("scale_with_elsize") = false,
+          py::arg ("boxtype") = BOXTYPE::DEFAULT, docu_string (R"raw_string(
 The call of a BoxDifferentialSymbol allows to specify what is needed to specify the
 integration domain. It returns a new BoxDifferentialSymbol.
 
@@ -1225,7 +1270,10 @@ deformation (GridFunction) : which mesh deformation shall be applied (default : 
 definedonelements (BitArray) : Set of elements or facets where the integral shall be
   defined.
 bonus_intorder (int) : additional integration order for the integration rule (default: 0)
-reference_box_length (double) : length of the reference box (default: 0.5)
+box_length (double) : length of the box (default: 0.5)
+scale_with_elsize (bool) : if true, the box length is scaled with the size of the
+  element (default: false)
+boxtype (BOXTYPE) : shape of the box (default: BOX)
 )raw_string"))
       .def_property (
           "element_vb",

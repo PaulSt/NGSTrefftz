@@ -17,15 +17,24 @@ using namespace ngcomp;
 
 namespace ngfem
 {
+  enum BOXTYPE
+  {
+    DEFAULT = -1,
+    BOX = 0,
+    BALL = 1
+  };
 
   class BoxDifferentialSymbol;
   class BoxIntegral : public Integral
   {
-    double reference_box_length = 0.5;
-
   public:
+    double box_length = 0.5;
+    bool scale_with_elsize = false;
+    BOXTYPE boxtype = DEFAULT;
+
     BoxIntegral (shared_ptr<CoefficientFunction> _cf, DifferentialSymbol _dx,
-                 double _reference_box_length);
+                 double _box_length, bool _scale_with_elsize,
+                 BOXTYPE _boxtype);
     BoxIntegral (shared_ptr<CoefficientFunction> _cf,
                  shared_ptr<BoxDifferentialSymbol> _dx);
     virtual ~BoxIntegral () {}
@@ -48,26 +57,31 @@ namespace ngfem
     virtual shared_ptr<Integral>
     CreateSameIntegralType (shared_ptr<CoefficientFunction> _cf) override
     {
-      return make_shared<BoxIntegral> (_cf, dx, reference_box_length);
+      return make_shared<BoxIntegral> (_cf, dx, box_length, scale_with_elsize,
+                                       boxtype);
     }
   };
 
   class BoxDifferentialSymbol : public DifferentialSymbol
   {
-    double reference_box_length = 0.5;
-    friend class BoxIntegral;
-
   public:
+    friend class BoxIntegral;
+    double box_length = 0.5;
+    bool scale_with_elsize = false;
+    BOXTYPE boxtype = DEFAULT;
+
     BoxDifferentialSymbol (const BoxDifferentialSymbol &bds)
-        : DifferentialSymbol (bds),
-          reference_box_length (bds.reference_box_length)
+        : DifferentialSymbol (bds), box_length (bds.box_length),
+          scale_with_elsize (bds.scale_with_elsize), boxtype (bds.boxtype)
     {
       ;
     }
 
-    BoxDifferentialSymbol (double _reference_box_length = 0.5)
-        : DifferentialSymbol (VOL),
-          reference_box_length (_reference_box_length)
+    BoxDifferentialSymbol (double _box_length = 0.5,
+                           bool _scale_with_elsize = false,
+                           BOXTYPE _boxtype = DEFAULT)
+        : DifferentialSymbol (VOL), box_length (_box_length),
+          scale_with_elsize (_scale_with_elsize), boxtype (_boxtype)
     {
       ;
     }
@@ -77,7 +91,8 @@ namespace ngfem
     virtual shared_ptr<Integral>
     MakeIntegral (shared_ptr<CoefficientFunction> cf) const
     {
-      return make_shared<BoxIntegral> (cf, *this, reference_box_length);
+      return make_shared<BoxIntegral> (cf, *this, box_length,
+                                       scale_with_elsize, boxtype);
     }
   };
 
@@ -85,10 +100,15 @@ namespace ngfem
 
 class BoxLinearFormIntegrator : public SymbolicLinearFormIntegrator
 {
+  double box_length = 0.5;
+  bool scale_with_elsize = false;
+  BOXTYPE boxtype = DEFAULT;
+
 public:
-  double reference_box_length = 0.5;
   BoxLinearFormIntegrator (shared_ptr<CoefficientFunction> acf, VorB vb = VOL,
-                           double _reference_box_length = 0.5);
+                           double _box_length = 0.5,
+                           bool _scale_with_elsize = false,
+                           BOXTYPE _boxtype = DEFAULT);
 
   virtual string Name () const override { return string ("BoxInt-LFI"); }
 
@@ -110,12 +130,15 @@ public:
 
 class BoxBilinearFormIntegrator : public SymbolicBilinearFormIntegrator
 {
-  double reference_box_length = 0.5;
+  double box_length = 0.5;
+  bool scale_with_elsize = false;
+  BOXTYPE boxtype = DEFAULT;
 
 public:
   BoxBilinearFormIntegrator (shared_ptr<CoefficientFunction> acf,
-                             VorB vb = VOL,
-                             double _reference_box_length = 0.5);
+                             VorB vb = VOL, double _box_length = 0.5,
+                             bool _scale_with_elsize = false,
+                             BOXTYPE _boxtype = DEFAULT);
 
   virtual xbool IsSymmetric () const override { return maybe; }
   virtual string Name () const override { return string ("BoxInt-BFI"); }

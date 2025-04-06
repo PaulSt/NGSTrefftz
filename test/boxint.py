@@ -51,7 +51,7 @@ def embtbox(mesh,order):
     u = fes.TrialFunction()
     v = test_fes.TestFunction()
     if mesh.dim == 2:
-        db = dbox(reference_box_length=1/3)
+        db = dbox(reference_box_length=1/3,bonus_intorder=6)
         op = -A*Lap(u)*v*db - CF((A.Diff(x),A.Diff(y)))*grad(u)*v*db + B*grad(u)*v*db + C*u*v*db
     elif mesh.dim == 3:
         db = dbox(reference_box_length=1/3)
