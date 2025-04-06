@@ -138,51 +138,77 @@ FlatMatrix<SCAL> extractVisibleDofs (
     const ElementId &element_id, const FESpace &fes, const FESpace *test_fes,
     const shared_ptr<const FESpace> fes_conformity, Array<DofId> &dofs,
     Array<DofId> &test_dofs, Array<DofId> &conformity_dofs,
-    LocalHeap &local_heap)
+    LocalHeap &local_heap, bool compute_new_dofs = false)
 {
-  Array<DofId> visible_dofs, visible_test_dofs, visible_conformity_dofs;
+  Array<DofId> vdofs, vtest_dofs, vconformity_dofs;
 
-  fes.GetDofNrs (element_id, visible_dofs, VISIBLE_DOF);
-  test_fes->GetDofNrs (element_id, visible_test_dofs, VISIBLE_DOF);
-  FlatMatrix<SCAL> visible_elmat (visible_test_dofs.Size ()
-                                      + visible_conformity_dofs.Size (),
-                                  visible_dofs.Size (), local_heap);
+  fes.GetDofNrs (element_id, vdofs, VISIBLE_DOF);
+  if (test_fes)
+    test_fes->GetDofNrs (element_id, vtest_dofs, VISIBLE_DOF);
+  if (fes_conformity)
+    fes_conformity->GetDofNrs (element_id, vconformity_dofs, VISIBLE_DOF);
+
+  FlatMatrix<SCAL> velmat (vtest_dofs.Size () + vconformity_dofs.Size (),
+                           vdofs.Size (), local_heap);
+
   size_t conformity_offset = fes_conformity ? conformity_dofs.Size () : 0;
-  size_t visible_conformity_offset
-      = fes_conformity ? visible_conformity_dofs.Size () : 0;
+  size_t vconformity_offset = fes_conformity ? vconformity_dofs.Size () : 0;
 
   if (fes_conformity)
     {
-      fes_conformity->GetDofNrs (element_id, visible_conformity_dofs,
-                                 VISIBLE_DOF);
-      for (size_t j = 0; j < dofs.Size (); j++)
-        for (size_t i = 0; i < conformity_dofs.Size (); i++)
-          {
-            const size_t visible_j = visible_dofs.Pos (dofs[j]);
-            const size_t visible_i
-                = visible_conformity_dofs.Pos (conformity_dofs[i]);
-            if (visible_i != size_t (-1) && visible_j != size_t (-1))
-              visible_elmat (visible_i, visible_j) = elmat (i, j);
-          }
-      if (test_fes)
-        conformity_dofs = std::move (visible_conformity_dofs);
+      for (size_t vi = 0; vi < vconformity_dofs.Size (); vi++)
+        {
+          const size_t i = conformity_dofs.Pos (vconformity_dofs[vi]);
+          for (size_t vj = 0; vj < vdofs.Size (); vj++)
+            {
+              const size_t j = dofs.Pos (vdofs[vj]);
+              velmat (vi, vj) = elmat (i, j);
+            }
+        }
     }
   if (test_fes)
     {
-      for (size_t j = 0; j < dofs.Size (); j++)
-        for (size_t i = 0; i < test_dofs.Size (); i++)
-          {
-            const size_t visible_j = visible_dofs.Pos (dofs[j]);
-            const size_t visible_i = visible_conformity_offset
-                                     + visible_test_dofs.Pos (test_dofs[i]);
-            if (visible_i != size_t (-1) && visible_j != size_t (-1))
-              visible_elmat (visible_i, visible_j)
+      for (size_t vi = 0; vi < vtest_dofs.Size (); vi++)
+        {
+          const size_t i = test_dofs.Pos (vtest_dofs[vi]);
+          for (size_t vj = 0; vj < vdofs.Size (); vj++)
+            {
+              const size_t j = dofs.Pos (vdofs[vj]);
+              velmat (vconformity_offset + vi, vj)
                   = elmat (conformity_offset + i, j);
-          }
-      dofs = std::move (visible_dofs);
-      test_dofs = std::move (visible_test_dofs);
+            }
+        }
     }
-  return visible_elmat;
+
+  if (compute_new_dofs)
+    {
+      conformity_dofs = std::move (vconformity_dofs);
+      dofs = std::move (vdofs);
+      test_dofs = std::move (vtest_dofs);
+    }
+  return velmat;
+}
+
+template <typename SCAL, typename TDIST>
+Matrix<SCAL> putbackVisibleDofs (
+    const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &velmat,
+    const ElementId &element_id, const FESpace &fes, const Array<DofId> &vdofs)
+{
+  Array<DofId> dofs;
+  fes.GetDofNrs (element_id, dofs);
+
+  Matrix<SCAL> elmat (dofs.Size (), velmat.Width ());
+  elmat = static_cast<SCAL> (0.0);
+
+  for (size_t j = 0; j < dofs.Size (); j++)
+    {
+      const size_t vj = vdofs.Pos (dofs[j]);
+      if (vj != size_t (-1))
+        // elmat.Row (j) = velmat.Row (vj);
+        for (size_t i = 0; i < velmat.Width (); i++)
+          elmat (j, i) = velmat (vj, i);
+    }
+  return elmat;
 }
 
 /// Fills the two creators with the sparsity pattern needed for
@@ -212,7 +238,7 @@ INLINE size_t fillTrefftzTableCreators (
 
       size_t nz = nz_from_elnr (ei);
       Array<DofId> dnums;
-      fes.GetDofNrs (ei, dnums, VISIBLE_DOF);
+      fes.GetDofNrs (ei, dnums);
       bool hasregdof = false;
       for (DofId d : dnums)
         if (IsRegularDof (d))
@@ -248,8 +274,10 @@ size_t createConformingTrefftzTables (
   const size_t ne = ma->GetNE (VOL);
   const size_t ndof_conforming
       = (fes_conformity) ? fes_conformity->GetNDof () : 0;
-  TableCreator<int> creator (ne + hidden_dofs);
-  TableCreator<int> creator2 (ne + hidden_dofs);
+  // TableCreator<int> creator (ne + hidden_dofs);
+  // TableCreator<int> creator2 (ne + hidden_dofs);
+  TableCreator<int> creator (ne);
+  TableCreator<int> creator2 (ne);
   size_t global_trefftz_ndof = 0;
 
   for (; !creator.Done (); creator++, creator2++)
@@ -571,32 +599,21 @@ getPseudoInverse (const FlatMatrix<SCAL> mat, const size_t num_zero)
 /// @return the element-local solution, allocated on the local heap `mlh`
 /// @tparam T type of matrix expression
 template <typename SCAL, typename T>
-FlatVector<SCAL>
-calculateParticularSolution (Array<shared_ptr<LinearFormIntegrator>> lfis[4],
-                             const FESpace &test_fes, const ElementId ei,
-                             const MeshAccess &ma, const Array<DofId> &dofs,
-                             const size_t ndof_test,
-                             const Expr<T> &inverse_elmat, LocalHeap &mlh)
+void calculateParticularSolution (
+    FlatVector<SCAL> partsol, Array<shared_ptr<LinearFormIntegrator>> lfis[4],
+    const FESpace &test_fes, const ElementId ei, const MeshAccess &ma,
+    const Expr<T> &inverse_elmat, LocalHeap &mlh)
 {
-  if (inverse_elmat.Width () < ndof_test)
-    throw std::invalid_argument (
-        "The width of inverse_elmat must be at least as long as ndof_test");
-
-  // shall not be deallocated after function scope ends
-  FlatVector<SCAL> elsol (dofs.Size (), mlh);
+  Array<DofId> dofs_test;
+  test_fes.GetDofNrs (ei, dofs_test);
 
   const HeapReset hr (mlh);
   const auto &test_fel = test_fes.GetFE (ei, mlh);
   const auto &trafo = ma.GetTrafo (ei, mlh);
-  FlatVector<SCAL> elvec (inverse_elmat.Width (), mlh),
-      elveci (ndof_test, mlh);
+  FlatVector<SCAL> elvec (dofs_test.Size (), mlh),
+      elveci (dofs_test.Size (), mlh);
   elvec = static_cast<SCAL> (0.0);
 
-  // elvec: (... conformity part ... | ... Trefftz part ...)
-  // len:    --- ndof_conforming --- | --- ndof_test ------
-  auto elvec_trefftz = elvec.Range (inverse_elmat.Width () - ndof_test,
-                                    inverse_elmat.Width ());
-  // now write into the Trefftz part of the vector linear_form(*, v_h)
   for (const auto vorb : { VOL, BND, BBND, BBBND })
     {
       for (const auto &lfi : lfis[vorb])
@@ -606,12 +623,26 @@ calculateParticularSolution (Array<shared_ptr<LinearFormIntegrator>> lfis[4],
               auto &mapped_trafo
                   = trafo.AddDeformation (lfi->GetDeformation ().get (), mlh);
               lfi->CalcElementVector (test_fel, mapped_trafo, elveci, mlh);
-              elvec_trefftz += elveci;
+              elvec += elveci;
             }
         }
     }
-  elsol = inverse_elmat * elvec;
-  return elsol;
+
+  if (fesHasInactiveDofs (test_fes))
+    {
+      Array<DofId> vdofs_test;
+      test_fes.GetDofNrs (ei, vdofs_test, VISIBLE_DOF);
+      FlatVector<SCAL> velvec (vdofs_test.Size (), mlh);
+
+      for (size_t vi = 0; vi < vdofs_test.Size (); vi++)
+        {
+          const size_t i = dofs_test.Pos (vdofs_test[vi]);
+          velvec[vi] = elvec[i];
+        }
+      // elvec = std::move(velvec);
+      elvec.AssignMemory (velvec.Size (), &velvec[0]);
+    }
+  partsol = inverse_elmat * elvec;
 }
 
 namespace ngcomp
@@ -667,13 +698,16 @@ namespace ngcomp
     if (linear_form)
       calculateLinearFormIntegrators (*linear_form, lfis);
 
-    // solve the following linear system in an element-wise fashion:
-    // L @ T_t = B for the unknown matrix T_t,
-    // with the given matrices:
-    //     /   \    /   \    //
-    //  A= |C_l| B= |C_r|    //
-    //     | L |    | 0 |    //
-    //     \   /    \   /    //
+    // we compute embedding matrices E_C, E_T and particular solution u_p that
+    // satisfy
+    //  /C_l\  * (E_C | E_T | u_p) = / C_r | 0 | 0 \                       //
+    //  \ L /                        \  0  | 0 | f /                       //
+    // C_l.shape == (ndof_conforming, ndof),
+    // L.shape == (ndof_test, ndof)
+    // C_r.shape == (ndof_conforming, ndof_conforming),
+    // E_C.shape == (ndof, ndof_conforming),
+    // E_T.shape == (ndof, ndof_trefftz),
+    // f.shape == (ndof_test), u_p.shape == (ndof)
     mesh_access->IterateElements (
         VOL, local_heap,
         [&] (Ngs_Element mesh_element, LocalHeap &local_heap) {
@@ -692,13 +726,6 @@ namespace ngcomp
           if (fes_conformity)
             fes_conformity->GetDofNrs (element_id, dofs_conforming);
 
-          //     /   \    /   \    //
-          //  A= |C_l| B= |C_r|    //
-          //     | L |    | 0 |    //
-          //     \   /    \   /    //
-          // with C_l.shape == (ndof_conforming, ndof),
-          // L.shape == (ndof_test, ndof)
-          // thus A.shape == (ndof_test + ndof_conforming, ndof)
           size_t ndof = dofs.Size ();
           size_t ndof_test = dofs_test.Size ();
           size_t ndof_conforming = dofs_conforming.Size ();
@@ -706,12 +733,6 @@ namespace ngcomp
                                     local_heap);
           auto [elmat_Cl, elmat_L] = elmat_A.SplitRows (ndof_conforming);
 
-          //     /   \    /   \    //
-          //  A= |C_l| B= |C_r|    //
-          //     | L |    | 0 |    //
-          //     \   /    \   /    //
-          // with C_r.shape == (ndof_conforming, ndof_conforming),
-          // and B.shape == ( ndof_conforming + ndof_test, ndof_conforming)
           FlatMatrix<SCAL> elmat_B (ndof_test + ndof_conforming,
                                     ndof_conforming, local_heap);
           elmat_A = static_cast<SCAL> (0.);
@@ -737,15 +758,23 @@ namespace ngcomp
                       local_heap);
                 }
             }
+          // reorder elmat_cr
+          // #TODO is this really necessary?
+          reorderMatrixColumns (elmat_Cr, dofs_conforming, local_heap);
+
           if (fes_has_inactive_dofs)
             {
-              elmat_B.Assign (extractVisibleDofs (
-                  elmat_B, element_id, fes, nullptr, fes_conformity, dofs,
-                  dofs_test, dofs_conforming, local_heap));
+              if (fes_conformity)
+                {
+                  elmat_B.Assign (extractVisibleDofs (
+                      elmat_B, element_id, *fes_conformity, &fes_test,
+                      fes_conformity, dofs_conforming, dofs_test,
+                      dofs_conforming, local_heap));
+                }
 
               elmat_A.Assign (extractVisibleDofs (
                   elmat_A, element_id, fes, &fes_test, fes_conformity, dofs,
-                  dofs_test, dofs_conforming, local_heap));
+                  dofs_test, dofs_conforming, local_heap, true));
 
               ndof = dofs.Size ();
               ndof_test = dofs_test.Size ();
@@ -756,10 +785,6 @@ namespace ngcomp
               // (ndof_conforming); elmat_Cl.Assign(elmat_Cl_tmp);
               // elmat_L.Assign(elmat_L_tmp);
             }
-
-          // reorder elmat_cr
-          // #TODO is this really necessary?
-          reorderMatrixColumns (elmat_Cr, dofs_conforming, local_heap);
 
           FlatMatrix<SCAL, ColMajor> U (elmat_A.Height (), local_heap),
               V (elmat_A.Width (), local_heap);
@@ -784,10 +809,6 @@ namespace ngcomp
           auto [elmat_Tc, elmat_Tt] = elmat_T.SplitCols (ndof_conforming);
 
           // T_c solves A @ T_c = B,
-          // i.e. T_c = A^{-1} @ B.
-          // A has dimension (ndof + ndof_conforming, ndof),
-          // B has dimension (ndof + ndof_conforming, ndof_conforming),
-          // so T_c has dimension (ndof, ndof_conforming)
           elmat_Tc = elmat_A_inv * elmat_B;
 
           if (get_range)
@@ -795,17 +816,24 @@ namespace ngcomp
           else
             elmat_Tt = Trans (V.Rows (ndof - ndof_trefftz_i, ndof));
 
+          if (linear_form)
+            {
+              auto elmat_T_inv = elmat_A_inv.Cols (
+                  ndof_conforming, ndof_conforming + ndof_test);
+              FlatVector<SCAL> partsol (dofs.Size (), local_heap);
+              calculateParticularSolution<SCAL> (partsol, lfis, fes_test,
+                                                 element_id, *mesh_access,
+                                                 elmat_T_inv, local_heap);
+              particular_solution_vec->SetIndirect (dofs, partsol);
+            }
+
+          if (fes_has_inactive_dofs)
+            elmat_T = putbackVisibleDofs (elmat_T, element_id, fes, dofs);
+
           element_matrices[element_id.Nr ()]
               = make_optional<ElmatWithTrefftzInfo<SCAL>> (
                   { elmat_T, ndof_trefftz_i });
 
-          if (linear_form)
-            {
-              const auto part_sol = calculateParticularSolution<SCAL> (
-                  lfis, fes_test, element_id, *mesh_access, dofs, ndof_test,
-                  elmat_A_inv, local_heap);
-              particular_solution_vec->SetIndirect (dofs, part_sol);
-            }
           if (stats)
             {
               const lock_guard<mutex> lock (stats_mutex);
