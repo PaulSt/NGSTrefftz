@@ -1040,33 +1040,52 @@ namespace ngcomp
         }
   }
 
+  /// double/complex generic implementation for the methods VTransformM(R | C)
+  /// for the embedded Trefftz FESpace.
+  template <typename SCAL>
+  void etFesVTransformM (SliceMatrix<SCAL> mat, const TRANSFORM_TYPE type,
+                         const Matrix<SCAL> elmat)
+  {
+    static Timer timer ("EmbTrefftz: MTransform");
+    RegionTimer reg (timer);
+
+    Matrix<SCAL> temp_mat (mat.Height (), mat.Width ());
+
+    const size_t ndof = elmat.Width ();
+
+    if (type == TRANSFORM_MAT_LEFT)
+      {
+        temp_mat.Rows (0, ndof) = Trans (elmat) * mat;
+        mat = temp_mat;
+      }
+    else if (type == TRANSFORM_MAT_RIGHT)
+      {
+        temp_mat.Cols (0, ndof) = mat * elmat;
+        mat = temp_mat;
+      }
+    else if (type == TRANSFORM_MAT_LEFT_RIGHT)
+      {
+        auto mat_times_elmat = temp_mat.Cols (0, ndof);
+        mat_times_elmat = mat * elmat;
+
+        auto mat_upleft = mat.Cols (0, ndof).Rows (0, ndof);
+        mat_upleft = Trans (elmat) * mat_times_elmat;
+      }
+    else
+      {
+        stringstream err;
+        err << "VTransformM is not implemented for TRANSFORM_TYPE " << type;
+        throw std::invalid_argument (err.str ());
+      }
+  }
+
   template <typename T>
   void
   EmbTrefftzFESpace<T>::VTransformMR (ElementId ei, SliceMatrix<double> mat,
                                       TRANSFORM_TYPE type) const
   {
-    static Timer timer ("EmbTrefftz: MTransform");
-    RegionTimer reg (timer);
-
-    size_t nz = (ETmats[ei.Nr ()])->elmat.Width ();
-    Matrix<double> temp_mat (mat.Height (), mat.Width ());
-
-    if (type == TRANSFORM_MAT_LEFT)
-      {
-        temp_mat.Rows (0, nz) = Trans ((ETmats[ei.Nr ()])->elmat) * mat;
-        mat = temp_mat;
-      }
-    if (type == TRANSFORM_MAT_RIGHT)
-      {
-        temp_mat.Cols (0, nz) = mat * ((ETmats[ei.Nr ()])->elmat);
-        mat = temp_mat;
-      }
-    if (type == TRANSFORM_MAT_LEFT_RIGHT)
-      {
-        temp_mat.Cols (0, nz) = mat * ((ETmats[ei.Nr ()])->elmat);
-        mat.Cols (0, nz).Rows (0, nz)
-            = Trans ((ETmats[ei.Nr ()])->elmat) * temp_mat;
-      }
+    const auto elmat = (ETmats[ei.Nr ()])->elmat;
+    etFesVTransformM (mat, type, elmat);
   }
 
   template <typename T>
@@ -1074,28 +1093,8 @@ namespace ngcomp
   EmbTrefftzFESpace<T>::VTransformMC (ElementId ei, SliceMatrix<Complex> mat,
                                       TRANSFORM_TYPE type) const
   {
-    static Timer timer ("EmbTrefftz: MTransform");
-    RegionTimer reg (timer);
-
-    size_t nz = (ETmatsC[ei.Nr ()])->elmat.Width ();
-    Matrix<Complex> temp_mat (mat.Height (), mat.Width ());
-
-    if (type == TRANSFORM_MAT_LEFT)
-      {
-        temp_mat.Rows (0, nz) = Trans ((ETmatsC[ei.Nr ()])->elmat) * mat;
-        mat = temp_mat;
-      }
-    if (type == TRANSFORM_MAT_RIGHT)
-      {
-        temp_mat.Cols (0, nz) = mat * ((ETmatsC[ei.Nr ()])->elmat);
-        mat = temp_mat;
-      }
-    if (type == TRANSFORM_MAT_LEFT_RIGHT)
-      {
-        temp_mat.Cols (0, nz) = mat * ((ETmatsC[ei.Nr ()])->elmat);
-        mat.Cols (0, nz).Rows (0, nz)
-            = Trans ((ETmatsC[ei.Nr ()])->elmat) * temp_mat;
-      }
+    const auto elmat = (ETmatsC[ei.Nr ()])->elmat;
+    etFesVTransformM (mat, type, elmat);
   }
 
   /// double/complex generic implementation for the methods VTransformV(R | C)
@@ -1110,7 +1109,7 @@ namespace ngcomp
       {
         Vector<SCAL> new_vec (ndof);
         new_vec = Trans (elmat) * vec;
-        vec = new_vec;
+        vec.Range (ndof) = new_vec;
       }
     else if (type == TRANSFORM_SOL)
       {
