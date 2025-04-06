@@ -117,9 +117,12 @@ jobs:
           fetch-depth: 0
       - name: Build wheels
         if: ${{ matrix.doit }}
-        uses: pypa/cibuildwheel@v2.22.0
+        uses: pypa/cibuildwheel@v2.23.2
         env:
           CIBW_BUILD_VERBOSITY: 1
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
       - uses: actions/upload-artifact@v4
         if: ${{ matrix.doit }}
         with:

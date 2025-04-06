@@ -10,9 +10,9 @@ if(NOT WIN32)
   set(BoldWhite   "${Esc}[1;37m")
 endif()
 
-set(ngsolve_addon_commit_hash 379d1efbd3a95001da7ca0d7005ae2c9eb892653)
+set(ngsolve_addon_commit_hash refs/heads/main)
 file(DOWNLOAD https://raw.githubusercontent.com/NGSolve/ngsolve-addon-template/${ngsolve_addon_commit_hash}/ngsolve_addon.cmake ${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_BINARY_DIR}/cmake_modules")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_BINARY_DIR}/cmake_modules)
 
 ### ngstrefftz
 
@@ -70,7 +70,7 @@ set(NGSTREFFTZ_USE_LAPACK ${NGSOLVE_USE_LAPACK} CACHE BOOL "Try to use lapack fr
 if (NGSTREFFTZ_USE_MKL)
     file(DOWNLOAD
     https://raw.githubusercontent.com/NGSolve/ngsolve/master/cmake/cmake_modules/FindMKL.cmake
-    "${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake")
+    ${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake)
 
     #file(COPY ${CMAKE_SOURCE_DIR}/FindMKL.cmake DESTINATION
     #"${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake")
@@ -111,18 +111,14 @@ if (NGSTREFFTZ_USE_MKL)
       endif()
     endif()
 
-    file(WRITE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/findmklconf.py
-        "from contextlib import suppress;import importlib.metadata; \
-        [print( f.locate().parent.resolve().absolute().as_posix()) \
-        if f.match('MKLConfig.cmake') else 0 for f in importlib.metadata.files('mkl-devel')]")
-    execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/findmklconf.py
-        ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE MKL_CONF_FROM_PY)
+    file(WRITE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/findmklconf.py "from contextlib import suppress;import importlib.metadata; [print( f.locate().parent.resolve().absolute().as_posix()) if f.match('MKLConfig.cmake') else 0 for f in importlib.metadata.files('mkl-devel')]")
+    execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/findmklconf.py ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE MKL_CONF_FROM_PY)
     if(MKL_CONF_FROM_PY)
         message(STATUS "MKL_CONF_FROM_PY=${MKL_CONF_FROM_PY}")
         message(STATUS "pylibdir=${python3_library_dir}")
-        set(MKL_ROOT "${MKL_CONF_FROM_PY}/../../.." CACHE PATH "MKL root directory" )
-        set(MKL_LIBRARY "${MKL_ROOT}/lib/libmkl_rt.so.2" CACHE PATH "MKL library" )
-        set(MKL_INCLUDE_DIR "${MKL_ROOT}/include" CACHE PATH "MKL include directory" )
+        set(MKL_ROOT ${MKL_CONF_FROM_PY}/../../.. CACHE PATH "MKL root directory" )
+        set(MKL_LIBRARY ${MKL_ROOT}/lib/libmkl_rt.so.2 CACHE PATH "MKL library" )
+        set(MKL_INCLUDE_DIR ${MKL_ROOT}/include CACHE PATH "MKL include directory" )
     endif()
     #set(MKL_VERSION_H "${MKL_ROOT}/include/mkl_version.h")
 
@@ -175,7 +171,7 @@ if (NGSTREFFTZ_BUILD_DOC)
 endif (NGSTREFFTZ_BUILD_DOC)
 
 ### install
-set_target_properties(ngstrefftz PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz")
+set_target_properties(ngstrefftz PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz)
 file(COPY ${CMAKE_SOURCE_DIR}/src/__init__.py DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ngstrefftz)
 set(install_dir ${ADDON_INSTALL_DIR_PYTHON}/ngstrefftz)
 install(TARGETS ngstrefftz DESTINATION ${install_dir})
@@ -218,7 +214,7 @@ add_test(NAME tents COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
 add_test(NAME box COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/boxint.py)
 #WORKING_DIRECTORY ${ CMAKE_CURRENT_SOURCE_DIR }
 set_tests_properties(embtrefftz trefftz tents
-    PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON}:$ENV{PYTHONPATH}")
+    PROPERTIES ENVIRONMENT PYTHONPATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON}:$ENV{PYTHONPATH})
 
 if(NGSTREFFTZ_USE_GTEST)
     #target_compile_options(_trefftz PRIVATE -Wall)# -Wextra -Wpedantic)
