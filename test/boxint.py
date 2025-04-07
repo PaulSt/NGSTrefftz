@@ -45,21 +45,21 @@ def embtbox(mesh,order):
         rhs = -sum( (A*CF((exact.Diff(x),exact.Diff(y),exact.Diff(z))))[i].Diff(var) for i,var in enumerate([x,y,z])) + B*CF((exact.Diff(x),exact.Diff(y),exact.Diff(z))) + C*exact
 
     fes = L2(mesh, order=order, dgjumps=True)
-    test_fes = L2(mesh, order=order-2, dgjumps=True)
+    fes_test = L2(mesh, order=order-2, dgjumps=True)
     etfes = EmbeddedTrefftzFES(fes)
 
     u = fes.TrialFunction()
-    v = test_fes.TestFunction()
+    v = fes_test.TestFunction()
     if mesh.dim == 2:
         db = dbox(box_length=1/3,scale_with_elsize=True,bonus_intorder=6)
-        op = -A*Lap(u)*v*db - CF((A.Diff(x),A.Diff(y)))*grad(u)*v*db + B*grad(u)*v*db + C*u*v*db
+        top = -A*Lap(u)*v*db - CF((A.Diff(x),A.Diff(y)))*grad(u)*v*db + B*grad(u)*v*db + C*u*v*db
     elif mesh.dim == 3:
         db = dbox(box_length=1/3,scale_with_elsize=True)
-        op = -A*Lap(u)*v*db - CF((A.Diff(x),A.Diff(y),A.Diff(z)))*grad(u)*v*db + B*grad(u)*v*db + C*u*v*db
+        top = -A*Lap(u)*v*db - CF((A.Diff(x),A.Diff(y),A.Diff(z)))*grad(u)*v*db + B*grad(u)*v*db + C*u*v*db
     lop = rhs*v*db
 
     gfu = GridFunction(fes)
-    gfu.vec.data = etfes.SetOp(op,lop,test_fes=test_fes)
+    gfu.vec.data = etfes.SetOp(top,lop,fes_test=fes_test)
 
     a,f = dgell(etfes,Dbndc=exact,A=A,B=B,C=C,rhs=rhs,uf=gfu)
 
