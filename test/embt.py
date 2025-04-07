@@ -97,7 +97,8 @@ def testembtrefftz(fes):
     # top = grad(u)*grad(v) * dx
     # top = InnerProduct(u.Operator("hesse"),v.Operator("hesse"))*dx
     with TaskManager():
-        PP = TrefftzEmbedding(top,fes,eps)
+        emb = TrefftzEmbedding(top=top,eps=eps)
+    PP = emb.GetEmbedding()
     # spspy(PP)
     PPT = PP.CreateTranspose()
     a,f = dgell(fes,exactlap)
@@ -125,7 +126,8 @@ def testembtrefftz_mixed(fes):
     top = Lap(u)*(v)*dx
     startsvd = time.time()
     with TaskManager():
-        PP = TrefftzEmbedding(top,fes,fes_test=fes_test)
+        emb = TrefftzEmbedding(top=top)
+    PP = emb.GetEmbedding()
     PPT = PP.CreateTranspose()
     a,f = dgell(fes,exactlap)
     TA = PPT@a.mat@PP
@@ -148,7 +150,8 @@ def testembtrefftznonsym(fes):
     vh = v.Operator("hesse")
     top = (uh[0,0]+uh[1,1])*v*dx
     with TaskManager():
-        PP = TrefftzEmbedding(top,fes,eps)
+        emb = TrefftzEmbedding(top=top,eps=eps)
+    PP = emb.GetEmbedding()
     PPT = PP.CreateTranspose()
     a,f = dgell(fes,exactlap)
     TA = PPT@a.mat@PP
@@ -170,15 +173,17 @@ def testembtrefftzpoi(fes):
     vh = v.Operator("hesse")
     top = (uh[0,0]+uh[1,1])*(vh[0,0]+vh[1,1])*dx
     rhs = -exactpoi.Diff(x).Diff(x)-exactpoi.Diff(y).Diff(y)
-    lop = -rhs*(vh[0,0]+vh[1,1])*dx
+    trhs = -rhs*(vh[0,0]+vh[1,1])*dx
     with TaskManager():
-        PP,ufv = TrefftzEmbedding(top,fes,lop,eps)
+        emb = TrefftzEmbedding(top=top,trhs=trhs,eps=eps)
+    PP = emb.GetEmbedding()
     PPT = PP.CreateTranspose()
+    uf = emb.GetParticularSolution()
     a,f = dgell(fes,exactpoi,rhs)
     TA = PPT@a.mat@PP
-    TU = TA.Inverse()*(PPT*(f.vec-a.mat*ufv))
+    TU = TA.Inverse()*(PPT*(f.vec-a.mat*uf.vec))
     tpgfu = GridFunction(fes)
-    tpgfu.vec.data = PP*TU+ufv
+    tpgfu.vec.data = PP*TU+uf.vec
     return sqrt(Integrate((tpgfu-exactpoi)**2, mesh))
 
 
@@ -194,15 +199,17 @@ def testembtrefftzpoi_mixed(fes):
     v=fes_test.TestFunction()
     top = Lap(u)*(v)*dx
     rhs = -exactpoi.Diff(x).Diff(x)-exactpoi.Diff(y).Diff(y)
-    lop = -rhs*v*dx
+    trhs = -rhs*v*dx
     with TaskManager():
-        PP,ufv = TrefftzEmbedding(top,fes,lop,fes_test=fes_test)
+        emb = TrefftzEmbedding(top=top,trhs=trhs)
+    PP = emb.GetEmbedding()
     PPT = PP.CreateTranspose()
     a,f = dgell(fes,exactpoi,rhs)
     TA = PPT@a.mat@PP
-    TU = TA.Inverse()*(PPT*(f.vec-a.mat*ufv))
+    uf = emb.GetParticularSolution()
+    TU = TA.Inverse()*(PPT*(f.vec-a.mat*uf.vec))
     tpgfu = GridFunction(fes)
-    tpgfu.vec.data = PP*TU+ufv
+    tpgfu.vec.data = PP*TU+uf.vec
     #import netgen.gui
     #Draw(tpgfu)
     #input("")
@@ -238,16 +245,18 @@ def embtell(mesh,order):
         top = (-A*Lap(u)*v - CF((A.Diff(x),A.Diff(y)))*grad(u)*v + B*grad(u)*v + C*u*v)*dx
     elif mesh.dim == 3:
         top = -A*Lap(u)*v*dx - CF((A.Diff(x),A.Diff(y),A.Diff(z)))*grad(u)*v*dx + B*grad(u)*v*dx + C*u*v*dx
-    lop = rhs*v*dx
+    trhs = rhs*v*dx
 
     with TaskManager():
-        PP,ufv = TrefftzEmbedding(top,fes,lop,fes_test=fes_test)
+        emb = TrefftzEmbedding(top=top,fes=fes,trhs=trhs,fes_test=fes_test)
+    PP = emb.GetEmbedding()
     PPT = PP.CreateTranspose()
+    uf = emb.GetParticularSolution()
     a,f = dgell(fes,Dbndc=exact,A=A,B=B,C=C,rhs=rhs)
     TA = PPT@a.mat@PP
-    TU = TA.Inverse()*(PPT*(f.vec-a.mat*ufv))
+    TU = TA.Inverse()*(PPT*(f.vec-a.mat*uf.vec))
     gfu = GridFunction(fes)
-    gfu.vec.data = PP*TU+ufv
+    gfu.vec.data = PP*TU+uf.vec
 
     error = sqrt(Integrate((gfu-exact)**2, mesh))
     return error
@@ -275,8 +284,8 @@ def testembtrefftzhelm(fes):
     top += (-u)*(Lap(v))*dx#+1j*(-Lap(u)-u)*(Lap(v))*dx
     # top = (-Lap(u)-u)*((v))*dx+1j*(-Lap(u)-u)*((v))*dx
     with TaskManager():
-        PP = TrefftzEmbedding(top,fes,eps=10**-8)
-        # PP = TrefftzEmbedding(top,fes,fes_test=fes_test)
+        emb = TrefftzEmbedding(top=top,fes=fes,eps=10**-8)
+    PP = emb.GetEmbedding()
     PPT = PP.CreateTranspose()
     a,f = dghelm(fes,None,bndc,omega)
     TA = PPT@a.mat@PP
@@ -378,19 +387,19 @@ def SolveStokes(mesh, k, nu, coeff, trefftz=True, ubnd=None, bndname="inflow"):
             + InnerProduct(grad(p),wu) * dx + div(u)*wp*dx
 
         timer = time.time()
-        lop = coeff * wu * dx(bonus_intorder=10)
-        PP, uf = TrefftzEmbedding(top,
-                                  fes,
-                                  lop,
+        trhs = coeff * wu * dx(bonus_intorder=10)
+        emb = TrefftzEmbedding(top=top, trhs=trhs,
                                   fes_test=fes_test)#, ignoredofs=ignoredofs)
+        PP = emb.GetEmbedding()
         PPT = PP.CreateTranspose()
+        uf = emb.GetParticularSolution()
         # print(f"Trefftz embedding setup {time.time() - timer:5f} seconds")
 
         timer = time.time()
         TA = PPT @ a.mat @ PP
         TC = PPT @ c.mat @ PP
-        Tgfu = CGSolver(TA, TC.Inverse()) * (PPT * (f.vec - a.mat * uf))
-        gfu.vec.data = PP * Tgfu + uf
+        Tgfu = CGSolver(TA, TC.Inverse()) * (PPT * (f.vec - a.mat * uf.vec))
+        gfu.vec.data = PP * Tgfu + uf.vec
         # print(f"Trefftz embedding solve {time.time() - timer:5f} seconds")
         ndof = PP.shape[1]
     else:
@@ -420,10 +429,10 @@ def testembtrefftzfes(mesh,order):
 
     u,v = fes.TnT()
     top = Lap(u)*Lap(v)*dx
-    lop = -rhs*Lap(v)*dx
+    trhs = -rhs*Lap(v)*dx
 
     uf = GridFunction(fes)
-    uf.vec.data = etfes.SetOp(top,trhs=lop,eps=eps)
+    uf.vec.data = etfes.SetOp(top=top,trhs=trhs,eps=eps)
 
     # etfes = Compress(etfes, etfes.FreeDofs())
     a,f = dgell(etfes,exactpoi,rhs,uf)

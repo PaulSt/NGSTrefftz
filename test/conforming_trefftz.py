@@ -25,7 +25,7 @@ from ngsolve import (
     x,
     y,
 )
-from ngstrefftz import EmbeddedTrefftzFES, L2EmbTrefftzFESpace, TrefftzEmbedding
+from ngstrefftz import EmbeddedTrefftzFES, L2EmbTrefftzFESpace, TrefftzEmbedding 
 
 # import matplotlib.pyplot as plt
 
@@ -305,9 +305,10 @@ def test_ConstrainedTrefftzCpp(
     cop = u * vF * dx(element_boundary=True)
     crhs = uF * vF * dx(element_boundary=True)
 
-    P = TrefftzEmbedding(
-        top, fes, cop, crhs, fes_conformity, 2 * order + 1 - 3
+    emb = TrefftzEmbedding(
+        top=top, fes=fes, cop=cop, crhs=crhs, fes_conformity=fes_conformity, ndof_trefftz=2 * order + 1 - 3
     )
+    P = emb.GetEmbedding()
 
     rows, cols, vals = P.COO()
 
@@ -361,15 +362,17 @@ def test_conformiting_trefftz_with_rhs(order, order_conformity):
     cop = u * vF * dx(element_boundary=True)
     crhs = uF * vF * dx(element_boundary=True)
 
-    PP, ufv = TrefftzEmbedding(
-        top, fes, cop, crhs, fes_conformity, lop, 2 * order + 1
+    emb = TrefftzEmbedding(
+        top, lop, cop, crhs, ndof_trefftz = 2 * order + 1
     )
+    PP = emb.GetEmbedding()
+    uf = emb.GetParticularSolution()
     PPT = PP.CreateTranspose()
     a, f = dgell(fes, exactpoi, rhs)
     TA = PPT @ a.mat @ PP
-    TU = TA.Inverse() * (PPT * (f.vec - a.mat * ufv))
+    TU = TA.Inverse() * (PPT * (f.vec - a.mat * uf.vec))
     tpgfu = GridFunction(fes)
-    tpgfu.vec.data = PP * TU + ufv
+    tpgfu.vec.data = PP * TU + uf.vec
     return sqrt(Integrate((tpgfu - exactpoi) ** 2, mesh))
 
 
@@ -398,19 +401,13 @@ def test_conformiting_trefftz_trivial_mixed_mode(order, order_conformity):
     cop = u * vF * dx(element_boundary=True)
     crhs = uF * vF * dx(element_boundary=True)
 
-    ta, va = TrefftzEmbedding(
-        top, fes, cop, crhs, fes_conformity, lop, 2 * order + 3 - 1
-    )
-    tb, vb = TrefftzEmbedding(
-        top,
-        fes,
-        cop,
-        crhs,
-        fes_conformity,
-        lop,
-        2 * order + 3 - 1,
-        fes_test=fes,
-    )
+    emba = TrefftzEmbedding(top, lop, cop, crhs, ndof_trefftz = 2 * order + 3 - 1)
+    ta=emba.GetEmbedding()
+    va=emba.GetParticularSolution()
+    embb = TrefftzEmbedding( top, lop, cop, crhs, ndof_trefftz = 2 * order + 3 - 1, fes_test=fes)
+    tb=embb.GetEmbedding()
+    vb=embb.GetParticularSolution()
+
     import scipy.sparse as sp
 
     rows, cols, vals = ta.COO()
@@ -422,7 +419,7 @@ def test_conformiting_trefftz_trivial_mixed_mode(order, order_conformity):
         Ta.toarray(), Tb.toarray()
     ).all(), "The embedding matrices do not agree"
     assert np.isclose(
-        va.FV().NumPy(), vb.FV().NumPy()
+        va.vec.FV().NumPy(), vb.vec.FV().NumPy()
     ).all(), "The particular solutions disagree"
 
 
@@ -451,22 +448,18 @@ def test_conforming_trefftz_mixed_mode(order, order_conformity):
     cop = u * vF * dx(element_boundary=True)
     crhs = uF * vF * dx(element_boundary=True)
 
-    PP, ufv = TrefftzEmbedding(
-        top,
-        fes,
-        cop,
-        crhs,
-        fes_conformity,
-        lop,
-        2 * order + 3 - 1,
-        fes_test,
+    emb = TrefftzEmbedding(
+        top, lop, cop, crhs,
+        ndof_trefftz = 2 * order + 3 - 1
     )
+    PP = emb.GetEmbedding()
     PPT = PP.CreateTranspose()
+    uf = emb.GetParticularSolution()
     a, f = dgell(fes, exactpoi, rhs)
     TA = PPT @ a.mat @ PP
-    TU = TA.Inverse() * (PPT * (f.vec - a.mat * ufv))
+    TU = TA.Inverse() * (PPT * (f.vec - a.mat * uf.vec))
     tpgfu = GridFunction(fes)
-    tpgfu.vec.data = PP * TU + ufv
+    tpgfu.vec.data = PP * TU + uf.vec
     return sqrt(Integrate((tpgfu - exactpoi) ** 2, mesh))
 
 
@@ -493,15 +486,17 @@ def test_conforming_trefftz_without_op(order, order_conformity):
     cop = u * vF * dx(element_boundary=True)
     crhs = uF * vF * dx(element_boundary=True)
 
-    PP, ufv = TrefftzEmbedding(
-        top, fes, cop, crhs, fes_conformity, lop, 2 * order + 3 - 1
+    emb = TrefftzEmbedding(
+        top, lop,  cop, crhs, ndof_trefftz = 2 * order + 3 - 1
     )
+    PP = emb.GetEmbedding()
     PPT = PP.CreateTranspose()
+    uf = emb.GetParticularSolution()
     a, f = dgell(fes, exactpoi, rhs)
     TA = PPT @ a.mat @ PP
-    TU = TA.Inverse() * (PPT * (f.vec - a.mat * ufv))
+    TU = TA.Inverse() * (PPT * (f.vec - a.mat * uf.vec))
     tpgfu = GridFunction(fes)
-    tpgfu.vec.data = PP * TU + ufv
+    tpgfu.vec.data = PP * TU + uf.vec
     return sqrt(Integrate((tpgfu - exactpoi) ** 2, mesh))
 
 
@@ -535,7 +530,7 @@ def test_ConstrainedTrefftzFESpace(
     fes_trefftz = EmbeddedTrefftzFES(fes)
     # P = TrefftzEmbedding(top, fes, cop, crhs, fes_conformity, 2 * order + 1 - 3)
     fes_trefftz.SetOp(
-        top, cop, crhs, fes_conformity, ndof_trefftz=2 * order + 1 - 3
+        top=top, cop=cop, crhs=crhs, fes_conformity=fes_conformity, tndof=2 * order + 1 - 3
     )
 
     a, f = dg.dgell(fes_trefftz, dg.exactlap)
@@ -574,7 +569,7 @@ def test_ConstrainedTrefftzFESpaceDirichlet():
     cop += u * vc_f * dx(element_vb=BND)
     crhs += uc_f * vc_f * dx(element_vb=BND)
 
-    _ = fes.SetOp(None, cop, crhs, fes_conformity)
+    _ = fes.SetOp(top=None, cop=cop, crhs=crhs, fes_conformity=fes_conformity)
 
     assert fes.ndof >= fes_conformity.ndof
 
