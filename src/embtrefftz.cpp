@@ -671,21 +671,15 @@ namespace ngcomp
   template <typename SCAL>
   pair<vector<optional<ElmatWithTrefftzInfo<SCAL>>>,
        shared_ptr<ngla::BaseVector>>
-  EmbTrefftz (shared_ptr<const SumOfIntegrals> top, const FESpace &fes,
-              const FESpace &fes_test, shared_ptr<const SumOfIntegrals> cop,
-              shared_ptr<const SumOfIntegrals> crhs,
-              shared_ptr<const FESpace> fes_conformity,
-              shared_ptr<const SumOfIntegrals> trhs,
-              const std::variant<size_t, double> ndof_trefftz,
-              shared_ptr<std::map<std::string, Vector<SCAL>>> stats)
+  TrefftzEmbedding::EmbTrefftz ()
   {
     // statistics stuff
-    Vector<SCAL> sing_val_avg;
+    Vector<double> sing_val_avg;
     Vector<double> sing_val_max;
     Vector<double> sing_val_min;
     std::atomic<size_t> active_elements = 0;
 
-    auto ma = fes.GetMeshAccess ();
+    auto ma = fes->GetMeshAccess ();
     const size_t num_elements = ma->GetNE (VOL);
     // #TODO what is a good size for the local heap?
     // For the moment: large enough constant size.
@@ -706,9 +700,10 @@ namespace ngcomp
     vector<optional<ElmatWithTrefftzInfo<SCAL>>> etmats (num_elements);
 
     const bool fes_has_inactive_dofs
-        = fesHasInactiveDofs (fes) || fesHasInactiveDofs (fes_test);
+        = fesHasInactiveDofs (*fes) || fesHasInactiveDofs (*fes_test);
 
-    auto particular_solution_vec = make_shared<VVector<SCAL>> (fes.GetNDof ());
+    auto particular_solution_vec
+        = make_shared<VVector<SCAL>> (fes->GetNDof ());
     particular_solution_vec->operator= (0.0);
     Array<shared_ptr<LinearFormIntegrator>> lfis[4];
     if (trhs)
@@ -736,8 +731,8 @@ namespace ngcomp
             return;
 
           Array<DofId> dofs, dofs_test, dofs_conforming;
-          fes.GetDofNrs (element_id, dofs);
-          fes_test.GetDofNrs (element_id, dofs_test);
+          fes->GetDofNrs (element_id, dofs);
+          fes_test->GetDofNrs (element_id, dofs_test);
           if (fes_conformity)
             fes_conformity->GetDofNrs (element_id, dofs_conforming);
 
@@ -757,14 +752,14 @@ namespace ngcomp
 
           // the diff. operator L operates only on volume terms
           addIntegrationToElementMatrix (elmat_L, op_integrators[VOL], *ma,
-                                         element_id, fes, fes_test, lh);
+                                         element_id, *fes, *fes_test, lh);
           if (fes_conformity)
             {
               for (const auto vorb : { VOL, BND, BBND, BBBND })
                 {
                   addIntegrationToElementMatrix (
                       elmat_Cl, cop_lhs_integrators[vorb], *ma, element_id,
-                      fes, *fes_conformity, lh);
+                      *fes, *fes_conformity, lh);
                   addIntegrationToElementMatrix (
                       elmat_Cr, cop_rhs_integrators[vorb], *ma, element_id,
                       *fes_conformity, *fes_conformity, lh);
@@ -779,13 +774,13 @@ namespace ngcomp
               if (fes_conformity)
                 {
                   elmat_B.Assign (extractVisibleDofs (
-                      elmat_B, element_id, *fes_conformity, fes_test,
+                      elmat_B, element_id, *fes_conformity, *fes_test,
                       fes_conformity, dofs_conforming, dofs_test,
                       dofs_conforming, lh));
                 }
 
               elmat_A.Assign (extractVisibleDofs (
-                  elmat_A, element_id, fes, fes_test, fes_conformity, dofs,
+                  elmat_A, element_id, *fes, *fes_test, fes_conformity, dofs,
                   dofs_test, dofs_conforming, lh, true));
 
               ndof = dofs.Size ();
@@ -832,12 +827,12 @@ namespace ngcomp
                   ndof_conforming, ndof_conforming + ndof_test);
               FlatVector<SCAL> partsol (dofs.Size (), lh);
               calculateParticularSolution<SCAL> (
-                  partsol, lfis, fes_test, element_id, *ma, elmat_T_inv, lh);
+                  partsol, lfis, *fes_test, element_id, *ma, elmat_T_inv, lh);
               particular_solution_vec->SetIndirect (dofs, partsol);
             }
 
           if (fes_has_inactive_dofs)
-            elmat_T = putbackVisibleDofs (elmat_T, element_id, fes, dofs);
+            elmat_T = putbackVisibleDofs (elmat_T, element_id, *fes, dofs);
 
           etmats[element_id.Nr ()]
               = make_optional<ElmatWithTrefftzInfo<SCAL>> (
@@ -858,7 +853,7 @@ namespace ngcomp
               active_elements += 1;
               for (size_t i = 0; i < elmat_A.Height (); i++)
                 {
-                  sing_val_avg[i] += elmat_A (i, i);
+                  sing_val_avg[i] += abs (elmat_A (i, i));
                   sing_val_max[i]
                       = max (sing_val_max[i], abs (elmat_A (i, i)));
                   sing_val_min[i]
@@ -878,7 +873,7 @@ namespace ngcomp
     if (stats)
       {
         sing_val_avg /= active_elements.load ();
-        (*stats)["singavg"] = Vector<SCAL> (sing_val_avg);
+        (*stats)["singavg"] = Vector<double> (sing_val_avg);
         (*stats)["singmax"] = Vector<double> (sing_val_max);
         (*stats)["singmin"] = Vector<double> (sing_val_min);
       }
@@ -919,13 +914,9 @@ namespace ngcomp
     ma = fes->GetMeshAccess ();
 
     if (fes->IsComplex ())
-      tie (etmatsc, psol)
-          = EmbTrefftz<Complex> (top, *fes, *fes_test, cop, crhs,
-                                 fes_conformity, trhs, ndof_trefftz, nullptr);
+      tie (etmatsc, psol) = EmbTrefftz<Complex> ();
     else
-      tie (etmats, psol)
-          = EmbTrefftz<double> (top, *fes, *fes_test, cop, crhs,
-                                fes_conformity, trhs, ndof_trefftz, nullptr);
+      tie (etmats, psol) = EmbTrefftz<double> ();
   }
 
   shared_ptr<GridFunction> TrefftzEmbedding::GetParticularSolution ()

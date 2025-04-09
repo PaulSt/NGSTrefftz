@@ -39,6 +39,8 @@ namespace ngcomp
     std::variant<size_t, double> ndof_trefftz;
     // shared_ptr<std::map<std::string, Vector<SCAL>>> stats = nullptr;
 
+    shared_ptr<std::map<std::string, Vector<double>>> stats = nullptr;
+
   public:
     vector<optional<ElmatWithTrefftzInfo<double>>> etmats;
     vector<optional<ElmatWithTrefftzInfo<Complex>>> etmatsc;
@@ -51,6 +53,11 @@ namespace ngcomp
                       double _eps, shared_ptr<FESpace> _fes = nullptr,
                       shared_ptr<FESpace> _fes_test = nullptr,
                       shared_ptr<FESpace> _fes_conformity = nullptr);
+
+    template <typename SCAL>
+    pair<vector<optional<ElmatWithTrefftzInfo<SCAL>>>,
+         shared_ptr<ngla::BaseVector>>
+    EmbTrefftz ();
 
     shared_ptr<GridFunction>
     Embed (const shared_ptr<const GridFunction> tgfu) const;
