@@ -891,7 +891,7 @@ namespace ngcomp
       shared_ptr<SumOfIntegrals> _cop, shared_ptr<SumOfIntegrals> _crhs,
       size_t _ndof_trefftz, double _eps, shared_ptr<FESpace> _fes,
       shared_ptr<FESpace> _fes_test, shared_ptr<FESpace> _fes_conformity)
-      : top (_top), cop (_cop), crhs (_crhs), trhs (_trhs)
+      : top (_top), trhs (_trhs), cop (_cop), crhs (_crhs)
   {
     if (_ndof_trefftz == 0)
       ndof_trefftz = _eps;
@@ -958,15 +958,12 @@ namespace ngcomp
       vec->SetScalar (0.0);
 
     Table<int> table, table2;
-    size_t conformity_plus_trefftz_dofs;
-
     if (fes->IsComplex ())
-      conformity_plus_trefftz_dofs = createConformingTrefftzTables (
-          table, table2, etmatsc, *fes, fes_conformity,
-          countHiddenDofs (*fes));
+      createConformingTrefftzTables (table, table2, etmatsc, *fes,
+                                     fes_conformity, countHiddenDofs (*fes));
     else
-      conformity_plus_trefftz_dofs = createConformingTrefftzTables (
-          table, table2, etmats, *fes, fes_conformity, countHiddenDofs (*fes));
+      createConformingTrefftzTables (table, table2, etmats, *fes,
+                                     fes_conformity, countHiddenDofs (*fes));
 
     const auto tvec = tgfu->GetVectorPtr ();
 
