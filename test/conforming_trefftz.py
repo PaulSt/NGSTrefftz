@@ -527,11 +527,8 @@ def test_ConstrainedTrefftzFESpace(
     cop = u * vF * dx(element_boundary=True)
     crhs = uF * vF * dx(element_boundary=True)
 
-    fes_trefftz = EmbeddedTrefftzFES(fes)
-    # P = TrefftzEmbedding(top, fes, cop, crhs, fes_conformity, 2 * order + 1 - 3)
-    fes_trefftz.SetOp(
-        top=top, cop=cop, crhs=crhs, fes_conformity=fes_conformity, tndof=2 * order + 1 - 3
-    )
+    emb = TrefftzEmbedding(top=top,cop=cop,crhs=crhs,ndof_trefftz=2 * order + 1 - 3)
+    fes_trefftz = EmbeddedTrefftzFES(emb)
 
     a, f = dg.dgell(fes_trefftz, dg.exactlap)
     a.Assemble()
@@ -553,15 +550,12 @@ def test_ConstrainedTrefftzFESpaceDirichlet():
     >>> test_ConstrainedTrefftzFESpaceDirichlet()
     """
     mesh = Mesh(unit_square.GenerateMesh(maxh=0.2))
-    base_fes = L2(mesh, order=4)
+    fes_base = L2(mesh, order=4)
     fes_conformity = H1(mesh, order=2, dirichlet="left|right") * FacetFESpace(
         mesh, order=3
     )
 
-    fes = EmbeddedTrefftzFES(base_fes)
-    assert type(fes) is L2EmbTrefftzFESpace
-
-    u = fes.TrialFunction()
+    u = fes_base.TrialFunction()
     ((uc_h, uc_f), (vc_h, vc_f)) = fes_conformity.TnT()
     cop = u * vc_h * dx(element_vb=BBND)
     crhs = uc_h * vc_h * dx(element_vb=BBND)
@@ -569,8 +563,10 @@ def test_ConstrainedTrefftzFESpaceDirichlet():
     cop += u * vc_f * dx(element_vb=BND)
     crhs += uc_f * vc_f * dx(element_vb=BND)
 
-    _ = fes.SetOp(top=None, cop=cop, crhs=crhs, fes_conformity=fes_conformity)
+    emb = TrefftzEmbedding(top=None, cop=cop, crhs=crhs)
+    fes = EmbeddedTrefftzFES(emb)
 
+    assert type(fes) is L2EmbTrefftzFESpace
     assert fes.ndof >= fes_conformity.ndof
 
     fes_freedofs = fes.FreeDofs()
@@ -581,5 +577,4 @@ def test_ConstrainedTrefftzFESpaceDirichlet():
 
 if __name__ == "__main__":
     import doctest
-
     doctest.testmod()

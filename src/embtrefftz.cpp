@@ -911,6 +911,8 @@ namespace ngcomp
       fes_test = _fes_test;
     if (_fes_conformity)
       fes_conformity = _fes_conformity;
+    if (!fes_test)
+      fes_test = fes;
 
     if (fes->IsComplex ())
       tie (etmatsc, psol)
@@ -999,63 +1001,6 @@ namespace ngcomp
 
   ////////////////////////// EmbTrefftzFESpace ///////////////////////////
 
-  template <typename T>
-  shared_ptr<BaseVector>
-  EmbTrefftzFESpace<T>::SetOp (shared_ptr<const SumOfIntegrals> top,
-                               shared_ptr<const SumOfIntegrals> trhs,
-                               shared_ptr<const FESpace> fes_test,
-                               shared_ptr<const SumOfIntegrals> cop,
-                               shared_ptr<const SumOfIntegrals> crhs,
-                               shared_ptr<const FESpace> fes_conformity,
-                               size_t tndof, double eps)
-  {
-    static Timer timer ("EmbTrefftz: SetOp");
-
-    shared_ptr<BaseVector> particular_solution = nullptr;
-
-    this->fes_conformity = fes_conformity;
-
-    // fes_test may be null. If it is null, then choose the trial space as the
-    // test space as well.
-    const FESpace &fes_test_ref = (fes_test) ? *fes_test : *fes;
-
-    std::variant<size_t, double> ndof_trefftz;
-    if (tndof == 0)
-      ndof_trefftz = eps;
-    else if (eps == 0.0)
-      ndof_trefftz = tndof;
-
-    // #TODO: what about hidden dofs?
-    if (!this->IsComplex ())
-      {
-        std::tie (this->etmats, particular_solution)
-            = EmbTrefftz<double> (top, *fes, fes_test_ref, cop, crhs,
-                                  fes_conformity, trhs, ndof_trefftz, nullptr);
-        Table<DofId> _table_dummy{};
-        createConformingTrefftzTables (_table_dummy, elnr_to_dofs, etmats,
-                                       *fes, fes_conformity, 0);
-        for (size_t i = 0; i < etmats.size (); i++)
-          if (etmats[i])
-            QuickSort (elnr_to_dofs[i]);
-      }
-    else
-      {
-        std::tie (this->etmatsc, particular_solution) = EmbTrefftz<Complex> (
-            top, *fes, fes_test_ref, cop, crhs, fes_conformity, trhs,
-            ndof_trefftz, nullptr);
-        Table<DofId> _table_dummy{};
-        createConformingTrefftzTables (_table_dummy, elnr_to_dofs, etmatsc,
-                                       *fes, fes_conformity, 0);
-        for (size_t i = 0; i < etmatsc.size (); i++)
-          if (etmatsc[i])
-            QuickSort (elnr_to_dofs[i]);
-      }
-
-    adjustDofsAfterSetOp ();
-
-    return particular_solution;
-  }
-
   /// Copies `source` to the beginning of `target`.
   ///
   /// For `source.Size() > target.Size()`,
@@ -1083,6 +1028,26 @@ namespace ngcomp
   template <typename T> void EmbTrefftzFESpace<T>::adjustDofsAfterSetOp ()
   {
     static_assert (std::is_base_of_v<FESpace, T>, "T must be a FESpace");
+
+    // #TODO: what about hidden dofs?
+    if (!this->IsComplex ())
+      {
+        Table<DofId> _table_dummy{};
+        createConformingTrefftzTables (_table_dummy, elnr_to_dofs, etmats,
+                                       *fes, fes_conformity, 0);
+        for (size_t i = 0; i < etmats.size (); i++)
+          if (etmats[i])
+            QuickSort (elnr_to_dofs[i]);
+      }
+    else
+      {
+        Table<DofId> _table_dummy{};
+        createConformingTrefftzTables (_table_dummy, elnr_to_dofs, etmatsc,
+                                       *fes, fes_conformity, 0);
+        for (size_t i = 0; i < etmatsc.size (); i++)
+          if (etmatsc[i])
+            QuickSort (elnr_to_dofs[i]);
+      }
 
     const size_t ndof_conformity
         = (fes_conformity) ? fes_conformity->GetNDof () : 0;
@@ -1272,63 +1237,6 @@ namespace ngcomp
     etFesVTransformV (vec, type, elmat);
   }
 
-  template <typename T>
-  shared_ptr<GridFunction>
-  EmbTrefftzFESpace<T>::Embed (const shared_ptr<const GridFunction> tgfu) const
-  {
-    LocalHeap lh (100 * 1000 * 1000, "embt", true);
-    Flags flags;
-
-    const auto tvec = tgfu->GetVectorPtr ();
-
-    auto gfu = CreateGridFunction (this->fes, "pws", flags);
-    gfu->Update ();
-    auto vec = gfu->GetVectorPtr ();
-    if (fes_conformity)
-      vec->SetScalar (0.0);
-
-    this->ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
-      Array<DofId> dofs;
-      FlatArray<DofId> tdofs = this->elnr_to_dofs[ei.Nr ()];
-      this->fes->GetDofNrs (ei, dofs);
-
-      if (this->IsComplex ())
-        {
-          FlatVector<Complex> telvec (tdofs.Size (), mlh);
-          tvec->GetIndirect (tdofs, telvec);
-          FlatVector<Complex> elvec (dofs.Size (), mlh);
-          elvec = ((etmatsc[ei.Nr ()])->elmat) * telvec;
-          if (fes_conformity)
-            vec->AddIndirect (dofs, elvec, true);
-          else
-            vec->SetIndirect (dofs, elvec);
-        }
-      else
-        {
-          FlatVector<> telvec (tdofs.Size (), mlh);
-          tvec->GetIndirect (tdofs, telvec);
-          FlatVector<> elvec (dofs.Size (), mlh);
-          elvec = ((etmats[ei.Nr ()])->elmat) * telvec;
-          if (fes_conformity)
-            vec->AddIndirect (dofs, elvec, true);
-          else
-            vec->SetIndirect (dofs, elvec);
-        }
-    });
-    return gfu;
-  }
-
-  template <typename T>
-  shared_ptr<BaseMatrix> EmbTrefftzFESpace<T>::GetEmbedding () const
-  {
-    if (this->IsComplex ())
-      return Elmats2Sparse<Complex> (etmatsc, *(this->fes),
-                                     this->fes_conformity);
-    else
-      return Elmats2Sparse<double> (etmats, *(this->fes),
-                                    this->fes_conformity);
-  }
-
   // template class EmbTrefftzFESpace<L2HighOrderFESpace,
   // shared_ptr<L2HighOrderFESpace>>;
   // static RegisterFESpace<
@@ -1354,46 +1262,17 @@ template <typename T> void ExportETSpace (py::module m, string label)
   auto pyspace
       = ngcomp::ExportFESpace<ngcomp::EmbTrefftzFESpace<T>> (m, label);
 
-  pyspace.def (py::init ([pyspace] (shared_ptr<T> fes) {
-                 py::list info;
-                 auto ma = fes->GetMeshAccess ();
-                 info.append (ma);
-                 auto nfes = make_shared<ngcomp::EmbTrefftzFESpace<T>> (fes);
-                 nfes->Update ();
-                 nfes->FinalizeUpdate ();
-                 connect_auto_update (nfes.get ());
-                 return nfes;
-               }),
-               py::arg ("fes"));
-
-  pyspace
-      .def ("SetOp",
-            static_cast<shared_ptr<BaseVector> (EmbTrefftzFESpace<T>::*) (
-                shared_ptr<const SumOfIntegrals>,
-                shared_ptr<const SumOfIntegrals>, shared_ptr<const FESpace>,
-                shared_ptr<const SumOfIntegrals>,
-                shared_ptr<const SumOfIntegrals>, shared_ptr<const FESpace>,
-                size_t, double)> (&ngcomp::EmbTrefftzFESpace<T>::SetOp),
-            R"mydelimiter(
-            Sets the operators for the conforming Trefftz method.
-
-            :param top: the differential operation. Can be None
-            :param cop: left hand side of the conformity operation
-            :param crhs: right hand side of the conformity operation
-            :param fes_conformity: finite element space of the conformity operation
-            :param fes_test: test finite element space for `top`. Can be None
-            :param trhs: right hand side of the var. formulation. Can be None
-            :param ndof_trefftz: number of degrees of freedom per element
-                in the Trefftz finite element space on `fes`, generated by `top`
-                (i.e. the local dimension of the kernel of `top` on one element)
-
-            :return: the particular solution vector.)mydelimiter",
-            py::arg ("top") = nullptr, py::arg ("trhs") = nullptr,
-            py::arg ("fes_test") = nullptr, py::arg ("cop") = nullptr,
-            py::arg ("crhs") = nullptr, py::arg ("fes_conformity") = nullptr,
-            py::arg ("tndof") = 0, py::arg ("eps") = 0.0)
-      .def ("Embed", &ngcomp::EmbTrefftzFESpace<T>::Embed)
-      .def ("GetEmbedding", &ngcomp::EmbTrefftzFESpace<T>::GetEmbedding);
+  // pyspace.def (py::init ([pyspace] (shared_ptr<T> fes) {
+  // py::list info;
+  // auto ma = fes->GetMeshAccess ();
+  // info.append (ma);
+  // auto nfes = make_shared<ngcomp::EmbTrefftzFESpace<T>> (fes);
+  // nfes->Update ();
+  // nfes->FinalizeUpdate ();
+  // connect_auto_update (nfes.get ());
+  // return nfes;
+  //}),
+  // py::arg ("fes"));
 }
 
 void ExportEmbTrefftz (py::module m)
@@ -1405,24 +1284,22 @@ void ExportEmbTrefftz (py::module m)
 
   m.def (
       "EmbeddedTrefftzFES",
-      [] (shared_ptr<ngcomp::FESpace> fes) -> shared_ptr<ngcomp::FESpace> {
+      [] (shared_ptr<ngcomp::TrefftzEmbedding> emb)
+          -> shared_ptr<ngcomp::FESpace> {
+        shared_ptr<ngcomp::FESpace> fes = emb->GetFES ();
         shared_ptr<ngcomp::FESpace> nfes;
         if (dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes))
           nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::L2HighOrderFESpace>> (
-              dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes));
+              ngcomp::EmbTrefftzFESpace<ngcomp::L2HighOrderFESpace>> (emb);
         else if (dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes))
           nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::VectorL2FESpace>> (
-              dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes));
+              ngcomp::EmbTrefftzFESpace<ngcomp::VectorL2FESpace>> (emb);
         else if (dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes))
           nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::MonomialFESpace>> (
-              dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes));
+              ngcomp::EmbTrefftzFESpace<ngcomp::MonomialFESpace>> (emb);
         else if (dynamic_pointer_cast<ngcomp::CompoundFESpace> (fes))
           nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::CompoundFESpace>> (
-              dynamic_pointer_cast<ngcomp::CompoundFESpace> (fes));
+              ngcomp::EmbTrefftzFESpace<ngcomp::CompoundFESpace>> (emb);
         else
           throw Exception ("Unknown base fes");
         return nfes;
@@ -1436,9 +1313,10 @@ void ExportEmbTrefftz (py::module m)
 
         :return: EmbTrefftzFES
         )mydelimiter",
-      py::arg ("fes"));
+      py::arg ("emb"));
 
-  py::class_<TrefftzEmbedding> (m, "TrefftzEmbedding")
+  py::class_<TrefftzEmbedding, shared_ptr<TrefftzEmbedding>> (
+      m, "TrefftzEmbedding")
       .def (py::init<shared_ptr<SumOfIntegrals>, shared_ptr<SumOfIntegrals>,
                      shared_ptr<SumOfIntegrals>, shared_ptr<SumOfIntegrals>,
                      size_t, double, shared_ptr<FESpace>, shared_ptr<FESpace>,

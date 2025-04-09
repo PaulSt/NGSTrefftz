@@ -425,18 +425,16 @@ def testembtrefftzfes(mesh,order):
     eps = 10**-7
 
     fes = L2(mesh, order=order, dgjumps=True)
-    etfes = EmbeddedTrefftzFES(fes)
 
     u,v = fes.TnT()
     top = Lap(u)*Lap(v)*dx
     trhs = -rhs*Lap(v)*dx
 
-    uf = GridFunction(fes)
-    uf.vec.data = etfes.SetOp(top=top,trhs=trhs,eps=eps)
-
+    emb = TrefftzEmbedding(top=top,trhs=trhs,eps=eps)
+    uf = emb.GetParticularSolution()
+    etfes = EmbeddedTrefftzFES(emb)
     # etfes = Compress(etfes, etfes.FreeDofs())
     a,f = dgell(etfes,exactpoi,rhs,uf)
-    # import pdb; pdb.set_trace()
 
     inv = a.mat.Inverse(inverse="sparsecholesky")
     gfu = GridFunction(etfes)
@@ -450,5 +448,3 @@ def testembtrefftzfes(mesh,order):
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-    #fes = L2(mesh2d, order=5,  dgjumps=True)#,all_dofs_together=True)
-    #testembtrefftzpoi_mixed(fes) # doctest:+ELLIPSIS
