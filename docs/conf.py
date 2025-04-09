@@ -114,6 +114,7 @@ templates_path = ['_static']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'paper', 'env', 'jupyter_execute']
 
+autoclass_content = 'both'
 
 # -- Options for HTML output -------------------------------------------------
 

@@ -41,7 +41,11 @@ Then we can solve the reduced problem: Find :math:`\bu_\IT` so that
 
 The solution in the full polynomial space is then given by :math:`\bu=\bT\bu_\IT`
 
-.. autofunction:: ngstrefftz.TrefftzEmbedding
+.. autoclass:: ngstrefftz.TrefftzEmbedding
+
+   .. automethod:: Embed
+   .. automethod:: GetEmbedding
+   .. automethod:: GetParticularSolution
 
 .. autofunction:: ngstrefftz.EmbeddedTrefftzFES
 
