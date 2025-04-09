@@ -50,6 +50,10 @@ pip install ngsolve --pre
    * [ngsolve](https://www.ngsolve.org) >= 6.2  (to access the newest features the nightly version of NGSolve works best)
 
 ## News
+⚠️ Apr, 2025: `TrefftzEmbedding` has a new interface, please check the documentation for details.
+
+🚀 Jul, 2024: Conforming Trefftz embedding implementation by [@johann-cm](https://github.com/johann-cm) 
+
 ⚠️ Oct, 2022: With v0.2.0 the git history has undergone a major cleanup, please make sure to clone the repo anew.
 
 🚀 Oct, 2022: New and improved implementation of the embedded Trefftz method via `EmbeddedTrefftzFES`!
@@ -64,7 +68,7 @@ pip install ngsolve --pre
 
 🚀 Nov, 2021: NGSTrefftz now comes in a docker and with binder notebooks! 
 
-## Papers using the code
+## Publications using the code
 * *A unified framework for Trefftz-like discretization methods*  
 Philip L. Lederer, Christoph Lehrenfeld, Paul Stocker, Igor Voulis  
 [![arXiv](https://img.shields.io/badge/arXiv-2412.00806-b31b1b.svg)](https://arxiv.org/abs/2412.00806)
@@ -89,6 +93,11 @@ Lise-Marie Imbert-Gérard, Andrea Moiola, Paul Stocker
 * *Tent pitching and Trefftz-DG method for the acoustic wave equation*  
 Ilaria Perugia, Joachim Schöberl, Paul Stocker, Christoph Wintersteiger   
 [![arXiv](https://img.shields.io/badge/arXiv-1907.02367-b31b1b.svg)](https://arxiv.org/abs/1907.02367)
+* *Space-time Trefftz DG methods for parabolic PDEs*  
+Constanze Heil, [Master's thesis](https://doi.org/10.25625/ZSA8UU/2L4C1E)
+* *Embedded Trefftz Trace DG Methods for PDEs on unfitted Surfaces*  
+Erik Schlesinger, [Master's thesis](https://doi.org/10.25625/QTOPWD/93ZYRQ)
+
 
 If you are using `ngstrefftz` in your academic work, please consider citing 
 ```
