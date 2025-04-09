@@ -914,6 +914,8 @@ namespace ngcomp
     if (!fes_test)
       fes_test = fes;
 
+    ma = fes->GetMeshAccess ();
+
     if (fes->IsComplex ())
       tie (etmatsc, psol)
           = EmbTrefftz<Complex> (top, *fes, *fes_test, cop, crhs,
@@ -947,10 +949,8 @@ namespace ngcomp
   TrefftzEmbedding::Embed (const shared_ptr<const GridFunction> tgfu) const
   {
     LocalHeap lh (100 * 1000 * 1000, "embt", true);
+
     Flags flags;
-
-    const auto tvec = tgfu->GetVectorPtr ();
-
     auto gfu = CreateGridFunction (fes, "pws", flags);
     gfu->Update ();
     auto vec = gfu->GetVectorPtr ();
@@ -967,6 +967,8 @@ namespace ngcomp
     else
       conformity_plus_trefftz_dofs = createConformingTrefftzTables (
           table, table2, etmats, *fes, fes_conformity, countHiddenDofs (*fes));
+
+    const auto tvec = tgfu->GetVectorPtr ();
 
     ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
       Array<DofId> dofs, tdofs;

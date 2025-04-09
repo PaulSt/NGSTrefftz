@@ -17,7 +17,7 @@ except Exception as e:
 try:
     #integral = Integrate(CF(1.0)*dbox(element_boundary = True, reference_box_length=sqrt(2)/3), mesh, element_wise=True)
     # pcf = PrintCF('test.csv')
-    integral = Integrate(CF(1.0)*dbox(element_boundary = False, reference_box_length=1/3), mesh, element_wise=True)
+    integral = Integrate(CF(1.0)*dbox(element_boundary = False, box_length=1/3), mesh, element_wise=True)
     # print("integral: ", integral)
 except Exception as e:
     print(e)
@@ -46,7 +46,6 @@ def embtbox(mesh,order):
 
     fes = L2(mesh, order=order, dgjumps=True)
     fes_test = L2(mesh, order=order-2, dgjumps=True)
-    etfes = EmbeddedTrefftzFES(fes)
 
     u = fes.TrialFunction()
     v = fes_test.TestFunction()
@@ -58,14 +57,16 @@ def embtbox(mesh,order):
         top = -A*Lap(u)*v*db - CF((A.Diff(x),A.Diff(y),A.Diff(z)))*grad(u)*v*db + B*grad(u)*v*db + C*u*v*db
     lop = rhs*v*db
 
-    gfu = GridFunction(fes)
-    gfu.vec.data = etfes.SetOp(top,lop,fes_test=fes_test)
+    emb = TrefftzEmbedding(top=top,trhs=lop,fes=fes,fes_test=fes_test)
+    gfu = emb.GetParticularSolution()
+    etfes = EmbeddedTrefftzFES(emb)
 
     a,f = dgell(etfes,Dbndc=exact,A=A,B=B,C=C,rhs=rhs,uf=gfu)
 
     tgfu = GridFunction(etfes)
     tgfu.vec.data = a.mat.Inverse() * f.vec
-    gfu.vec.data += etfes.Embed(tgfu).vec 
+
+    gfu.vec.data += emb.Embed(tgfu).vec 
 
     error = sqrt(Integrate((gfu-exact)**2, mesh))
     return error

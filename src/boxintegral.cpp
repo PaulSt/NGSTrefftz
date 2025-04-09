@@ -1190,6 +1190,7 @@ void ExportBoxIntegral (py::module m)
   BOX: gives square or cube, in 2D or 3D
   BALL: gives circle, currently only in 2D
   )raw_string"))
+      .value ("DEFAULT", DEFAULT)
       .value ("BOX", BOX)
       .value ("BALL", BALL);
 
