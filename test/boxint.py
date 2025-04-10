@@ -17,7 +17,7 @@ except Exception as e:
 try:
     #integral = Integrate(CF(1.0)*dbox(element_boundary = True, reference_box_length=sqrt(2)/3), mesh, element_wise=True)
     # pcf = PrintCF('test.csv')
-    integral = Integrate(CF(1.0)*dbox(element_boundary = False, reference_box_length=1/3), mesh, element_wise=True)
+    integral = Integrate(CF(1.0)*dbox(element_boundary = False, box_length=1/3), mesh, element_wise=True)
     # print("integral: ", integral)
 except Exception as e:
     print(e)
@@ -45,27 +45,29 @@ def embtbox(mesh,order):
         rhs = -sum( (A*CF((exact.Diff(x),exact.Diff(y),exact.Diff(z))))[i].Diff(var) for i,var in enumerate([x,y,z])) + B*CF((exact.Diff(x),exact.Diff(y),exact.Diff(z))) + C*exact
 
     fes = L2(mesh, order=order, dgjumps=True)
-    test_fes = L2(mesh, order=order-2, dgjumps=True)
-    etfes = EmbeddedTrefftzFES(fes)
+    fes_test = L2(mesh, order=order-2, dgjumps=True)
 
     u = fes.TrialFunction()
-    v = test_fes.TestFunction()
+    v = fes_test.TestFunction()
     if mesh.dim == 2:
         db = dbox(box_length=1/3,scale_with_elsize=True,bonus_intorder=6)
-        op = -A*Lap(u)*v*db - CF((A.Diff(x),A.Diff(y)))*grad(u)*v*db + B*grad(u)*v*db + C*u*v*db
+        top = -A*Lap(u)*v*db - CF((A.Diff(x),A.Diff(y)))*grad(u)*v*db + B*grad(u)*v*db + C*u*v*db
     elif mesh.dim == 3:
         db = dbox(box_length=1/3,scale_with_elsize=True)
-        op = -A*Lap(u)*v*db - CF((A.Diff(x),A.Diff(y),A.Diff(z)))*grad(u)*v*db + B*grad(u)*v*db + C*u*v*db
+        top = -A*Lap(u)*v*db - CF((A.Diff(x),A.Diff(y),A.Diff(z)))*grad(u)*v*db + B*grad(u)*v*db + C*u*v*db
     lop = rhs*v*db
 
+    emb = TrefftzEmbedding(top=top,trhs=lop,fes=fes,fes_test=fes_test)
     gfu = GridFunction(fes)
-    gfu.vec.data = etfes.SetOp(op,lop,test_fes=test_fes)
+    gfu.vec.data = emb.GetParticularSolution()
+    etfes = EmbeddedTrefftzFES(emb)
 
     a,f = dgell(etfes,Dbndc=exact,A=A,B=B,C=C,rhs=rhs,uf=gfu)
 
     tgfu = GridFunction(etfes)
     tgfu.vec.data = a.mat.Inverse() * f.vec
-    gfu.vec.data += etfes.Embed(tgfu).vec 
+
+    gfu.vec.data += emb.Embed(tgfu.vec)
 
     error = sqrt(Integrate((gfu-exact)**2, mesh))
     return error

@@ -51,21 +51,21 @@ size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
 template <typename SCAL, typename TDIST>
 void reorderMatrixColumns (
     MatrixView<SCAL, ngbla::RowMajor, size_t, size_t, TDIST> &matrix,
-    const Array<DofId> &dof_nrs, LocalHeap &local_heap)
+    const Array<DofId> &dof_nrs, LocalHeap &lh)
 {
   const auto [n, m] = matrix.Shape ();
   if (m != dof_nrs.Size ())
     throw std::invalid_argument (
         "the width of the matrix must match the length of the dof_nrs");
 
-  const auto heap_reset = HeapReset (local_heap);
+  const auto heap_reset = HeapReset (lh);
 
-  FlatArray<int> map (m, local_heap);
+  FlatArray<int> map (m, lh);
   for (size_t i = 0; i < map.Size (); i++)
     map[i] = i;
 
   QuickSortI (dof_nrs, map);
-  auto matrix_copy = FlatMatrix<SCAL> (n, m, local_heap);
+  auto matrix_copy = FlatMatrix<SCAL> (n, m, lh);
   matrix_copy = matrix;
   for (auto j : Range (m))
     matrix.Col (j) = matrix_copy.Col (map[j]);
@@ -75,17 +75,17 @@ template <typename SCAL, typename TDIST>
 inline void addIntegrationToElementMatrix (
     MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> elmat,
     const Array<shared_ptr<BilinearFormIntegrator>> &bf_integrators,
-    const MeshAccess &mesh_access, const ElementId &element_id,
-    const FESpace &fes, const FESpace &test_fes, LocalHeap &local_heap)
+    const MeshAccess &ma, const ElementId &element_id, const FESpace &fes,
+    const FESpace &fes_test, LocalHeap &lh)
 {
-  const HeapReset hr (local_heap);
+  const HeapReset hr (lh);
 
-  auto &trafo = mesh_access.GetTrafo (element_id, local_heap);
+  auto &trafo = ma.GetTrafo (element_id, lh);
 
-  auto &test_fel = test_fes.GetFE (element_id, local_heap);
-  auto &trial_fel = fes.GetFE (element_id, local_heap);
+  auto &test_fel = fes_test.GetFE (element_id, lh);
+  auto &trial_fel = fes.GetFE (element_id, lh);
 
-  const bool mixed_mode = std::addressof (test_fes) != std::addressof (fes);
+  const bool mixed_mode = std::addressof (fes_test) != std::addressof (fes);
 
   bool symmetric_so_far = true;
   size_t bfi_ind = 0;
@@ -95,8 +95,8 @@ inline void addIntegrationToElementMatrix (
       bfi_ind++;
       if (bfi->DefinedOnElement (element_id.Nr ()))
         {
-          auto &mapped_trafo = trafo.AddDeformation (
-              bfi->GetDeformation ().get (), local_heap);
+          auto &mapped_trafo
+              = trafo.AddDeformation (bfi->GetDeformation ().get (), lh);
           try
             {
               if (mixed_mode)
@@ -104,12 +104,12 @@ inline void addIntegrationToElementMatrix (
                   const auto &mixed_fel
                       = MixedFiniteElement (trial_fel, test_fel);
                   bfi->CalcElementMatrixAdd (mixed_fel, mapped_trafo, elmat,
-                                             symmetric_so_far, local_heap);
+                                             symmetric_so_far, lh);
                 }
               else
                 {
                   bfi->CalcElementMatrixAdd (test_fel, mapped_trafo, elmat,
-                                             symmetric_so_far, local_heap);
+                                             symmetric_so_far, lh);
                 }
             }
           catch (ExceptionNOSIMD const &e)
@@ -128,37 +128,36 @@ inline void addIntegrationToElementMatrix (
 /// consisting only of entries `elmat[i,j]`, where `i` and `j`
 /// are visible dofs.
 ///
-/// Additionally, `dofs` and `test_dofs` are overwritten by only the visible
+/// Additionally, `dofs` and `dofs_test` are overwritten by only the visible
 /// dofs.
 ///
 /// @returns the extracted submatrix, allocated on the `LocalHeap`.
 template <typename SCAL, typename TDIST>
 FlatMatrix<SCAL> extractVisibleDofs (
     const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &elmat,
-    const ElementId &element_id, const FESpace &fes, const FESpace *test_fes,
+    const ElementId &element_id, const FESpace &fes, const FESpace &fes_test,
     const shared_ptr<const FESpace> fes_conformity, Array<DofId> &dofs,
-    Array<DofId> &test_dofs, Array<DofId> &conformity_dofs,
-    LocalHeap &local_heap, bool compute_new_dofs = false)
+    Array<DofId> &dofs_test, Array<DofId> &conformity_dofs, LocalHeap &lh,
+    bool compute_new_dofs = false)
 {
-  Array<DofId> vdofs, vtest_dofs, vconformity_dofs;
+  Array<DofId> vdofs, vdofs_test, vdofs_conformity;
 
   fes.GetDofNrs (element_id, vdofs, VISIBLE_DOF);
-  if (test_fes)
-    test_fes->GetDofNrs (element_id, vtest_dofs, VISIBLE_DOF);
+  fes_test.GetDofNrs (element_id, vdofs_test, VISIBLE_DOF);
   if (fes_conformity)
-    fes_conformity->GetDofNrs (element_id, vconformity_dofs, VISIBLE_DOF);
+    fes_conformity->GetDofNrs (element_id, vdofs_conformity, VISIBLE_DOF);
 
-  FlatMatrix<SCAL> velmat (vtest_dofs.Size () + vconformity_dofs.Size (),
-                           vdofs.Size (), local_heap);
+  FlatMatrix<SCAL> velmat (vdofs_test.Size () + vdofs_conformity.Size (),
+                           vdofs.Size (), lh);
 
   size_t conformity_offset = fes_conformity ? conformity_dofs.Size () : 0;
-  size_t vconformity_offset = fes_conformity ? vconformity_dofs.Size () : 0;
+  size_t vconformity_offset = fes_conformity ? vdofs_conformity.Size () : 0;
 
   if (fes_conformity)
     {
-      for (size_t vi = 0; vi < vconformity_dofs.Size (); vi++)
+      for (size_t vi = 0; vi < vdofs_conformity.Size (); vi++)
         {
-          const size_t i = conformity_dofs.Pos (vconformity_dofs[vi]);
+          const size_t i = conformity_dofs.Pos (vdofs_conformity[vi]);
           for (size_t vj = 0; vj < vdofs.Size (); vj++)
             {
               const size_t j = dofs.Pos (vdofs[vj]);
@@ -166,25 +165,22 @@ FlatMatrix<SCAL> extractVisibleDofs (
             }
         }
     }
-  if (test_fes)
+  for (size_t vi = 0; vi < vdofs_test.Size (); vi++)
     {
-      for (size_t vi = 0; vi < vtest_dofs.Size (); vi++)
+      const size_t i = dofs_test.Pos (vdofs_test[vi]);
+      for (size_t vj = 0; vj < vdofs.Size (); vj++)
         {
-          const size_t i = test_dofs.Pos (vtest_dofs[vi]);
-          for (size_t vj = 0; vj < vdofs.Size (); vj++)
-            {
-              const size_t j = dofs.Pos (vdofs[vj]);
-              velmat (vconformity_offset + vi, vj)
-                  = elmat (conformity_offset + i, j);
-            }
+          const size_t j = dofs.Pos (vdofs[vj]);
+          velmat (vconformity_offset + vi, vj)
+              = elmat (conformity_offset + i, j);
         }
     }
 
   if (compute_new_dofs)
     {
-      conformity_dofs = std::move (vconformity_dofs);
+      conformity_dofs = std::move (vdofs_conformity);
       dofs = std::move (vdofs);
-      test_dofs = std::move (vtest_dofs);
+      dofs_test = std::move (vdofs_test);
     }
   return velmat;
 }
@@ -211,13 +207,35 @@ Matrix<SCAL> putbackVisibleDofs (
   return elmat;
 }
 
+void fesFromOp (const SumOfIntegrals &op, shared_ptr<FESpace> &fes,
+                shared_ptr<FESpace> &fes_test)
+{
+  Array<shared_ptr<Integral>> ics;
+
+  for (shared_ptr<Integral> icf : op.icfs)
+    icf->cf->TraverseTree ([&] (CoefficientFunction &nodecf) {
+      auto proxy = dynamic_pointer_cast<ProxyFunction> (
+          (&nodecf)->shared_from_this ());
+      if (proxy && proxy->IsTrialFunction () && !fes)
+        fes = proxy->GetFESpace ();
+      else if (proxy && proxy->IsTrialFunction ()
+               && fes != proxy->GetFESpace ())
+        throw Exception ("Two different trial FESpaces in the same operator");
+      else if (proxy && proxy->IsTestFunction () && !fes_test)
+        fes_test = proxy->GetFESpace ();
+      else if (proxy && proxy->IsTestFunction ()
+               && fes_test != proxy->GetFESpace ())
+        throw Exception ("Two different test FESpaces in the same operator");
+    });
+}
+
 /// Fills the two creators with the sparsity pattern needed for
 /// the Trefftz embedding.
 /// @tparam NZ_FUNC has signature `(ElementId) -> size_t`
 template <typename SCAL, typename NZ_FUNC>
 INLINE size_t fillTrefftzTableCreators (
     TableCreator<int> &creator, TableCreator<int> &creator2,
-    const vector<optional<ElmatWithTrefftzInfo<SCAL>>> &ETmats,
+    const vector<optional<ElmatWithTrefftzInfo<SCAL>>> &etmats,
     const MeshAccess &ma, const FESpace &fes, NZ_FUNC nz_from_elnr,
     const size_t offset)
 {
@@ -233,7 +251,7 @@ INLINE size_t fillTrefftzTableCreators (
   size_t next_trefftz_dof = offset;
   for (auto ei : ma.Elements (VOL))
     {
-      if (!ETmats[ei.Nr ()])
+      if (!etmats[ei.Nr ()])
         continue;
 
       size_t nz = nz_from_elnr (ei);
@@ -266,7 +284,7 @@ INLINE size_t fillTrefftzTableCreators (
 template <typename SCAL>
 size_t createConformingTrefftzTables (
     Table<int> &table, Table<int> &table2,
-    const vector<optional<ElmatWithTrefftzInfo<SCAL>>> &ETmats,
+    const vector<optional<ElmatWithTrefftzInfo<SCAL>>> &etmats,
     const FESpace &fes, shared_ptr<const FESpace> fes_conformity,
     const size_t hidden_dofs)
 {
@@ -286,9 +304,9 @@ size_t createConformingTrefftzTables (
       // are shifted up by conforming_ndof, to avoid conflicts between Trefftz
       // and Constraint dofs.
       global_trefftz_ndof = fillTrefftzTableCreators (
-          creator, creator2, ETmats, *ma, fes,
+          creator, creator2, etmats, *ma, fes,
           [&] (ElementId ei) {
-            return (ETmats[ei.Nr ()]) ? ETmats[ei.Nr ()]->ndof_trefftz : 0;
+            return (etmats[ei.Nr ()]) ? etmats[ei.Nr ()]->ndof_trefftz : 0;
           },
           ndof_conforming);
       (*testout) << "created " << global_trefftz_ndof << " many trefftz dofs"
@@ -299,7 +317,7 @@ size_t createConformingTrefftzTables (
         {
           for (auto ei : ma->Elements (VOL))
             {
-              if (!ETmats[ei.Nr ()])
+              if (!etmats[ei.Nr ()])
                 continue;
 
               Array<DofId> dofs_conforming;
@@ -330,17 +348,17 @@ size_t createConformingTrefftzTables (
 template <typename SCAL>
 INLINE void fillSparseMatrixWithData (
     SparseMatrix<SCAL> &P,
-    const vector<optional<ElmatWithTrefftzInfo<SCAL>>> &ETmats,
+    const vector<optional<ElmatWithTrefftzInfo<SCAL>>> &etmats,
     const Table<int> &table, const Table<int> &table2, const MeshAccess &ma,
     const size_t hidden_dofs)
 {
   // const size_t ne = ma.GetNE (VOL);
   P.SetZero ();
   for (auto ei : ma.Elements (VOL))
-    if (ETmats[ei.Nr ()])
+    if (etmats[ei.Nr ()])
       {
         P.AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()],
-                            ETmats[ei.Nr ()]->elmat);
+                            etmats[ei.Nr ()]->elmat);
       }
 
   // SCAL one = 1;
@@ -364,12 +382,12 @@ INLINE size_t countHiddenDofs (const FESpace &fes)
 namespace ngcomp
 {
   /// assembles a global sparse matrix from the given element matrices.
-  /// @param ETMats vector of all element matrices
+  /// @param etmats vector of all element matrices
   /// @param fes non-Trefftz finite element space
   /// @tparam SCAL scalar type of the matrix entries
   template <typename SCAL>
   shared_ptr<BaseMatrix>
-  Elmats2Sparse (const vector<optional<ElmatWithTrefftzInfo<SCAL>>> ETmats,
+  Elmats2Sparse (const vector<optional<ElmatWithTrefftzInfo<SCAL>>> etmats,
                  const FESpace &fes, shared_ptr<const FESpace> fes_conformity)
   {
     const auto ma = fes.GetMeshAccess ();
@@ -378,11 +396,11 @@ namespace ngcomp
 
     Table<int> table, table2;
     const size_t conformity_plus_trefftz_dofs = createConformingTrefftzTables (
-        table, table2, ETmats, fes, fes_conformity, hidden_dofs);
+        table, table2, etmats, fes, fes_conformity, hidden_dofs);
 
     auto P = make_shared<SparseMatrix<SCAL>> (
         fes.GetNDof (), conformity_plus_trefftz_dofs, table, table2, false);
-    fillSparseMatrixWithData (*P, ETmats, table, table2, *ma, hidden_dofs);
+    fillSparseMatrixWithData (*P, etmats, table, table2, *ma, hidden_dofs);
 
     return P;
   }
@@ -400,9 +418,10 @@ void calculateBilinearFormIntegrators (
 }
 
 void calculateLinearFormIntegrators (
-    const SumOfIntegrals &lf, Array<shared_ptr<LinearFormIntegrator>> lfis[4])
+    const SumOfIntegrals &trhs,
+    Array<shared_ptr<LinearFormIntegrator>> lfis[4])
 {
-  for (auto icf : lf.icfs)
+  for (auto icf : trhs.icfs)
     {
       DifferentialSymbol &dx = icf->dx;
       lfis[dx.vb] += icf->MakeLinearFormIntegrator ();
@@ -579,16 +598,16 @@ getPseudoInverse (const FlatMatrix<SCAL> mat, const size_t num_zero)
   const auto [n, m] = mat.Shape ();
   // should be at least as large as the needed size.
   // needed size: (n*m + n*n + m*m) * sizeof(SCAL)
-  LocalHeap local_heap (2 * (n * n + n * m + m * m) * sizeof (SCAL));
-  FlatMatrix<SCAL> sigma (n, m, local_heap);
-  FlatMatrix<SCAL, ColMajor> U (n, n, local_heap);
-  FlatMatrix<SCAL, ColMajor> V (m, m, local_heap);
+  LocalHeap lh (2 * (n * n + n * m + m * m) * sizeof (SCAL));
+  FlatMatrix<SCAL> sigma (n, m, lh);
+  FlatMatrix<SCAL, ColMajor> U (n, n, lh);
+  FlatMatrix<SCAL, ColMajor> V (m, m, lh);
 
   Matrix<SCAL> elmat_inv (m, n);
 
   sigma = mat;
   getSVD (sigma, U, V);
-  elmat_inv = invertSVD (U, sigma, V, num_zero, local_heap);
+  elmat_inv = invertSVD (U, sigma, V, num_zero, lh);
   return elmat_inv;
 }
 
@@ -601,14 +620,14 @@ getPseudoInverse (const FlatMatrix<SCAL> mat, const size_t num_zero)
 template <typename SCAL, typename T>
 void calculateParticularSolution (
     FlatVector<SCAL> partsol, Array<shared_ptr<LinearFormIntegrator>> lfis[4],
-    const FESpace &test_fes, const ElementId ei, const MeshAccess &ma,
+    const FESpace &fes_test, const ElementId ei, const MeshAccess &ma,
     const Expr<T> &inverse_elmat, LocalHeap &mlh)
 {
   Array<DofId> dofs_test;
-  test_fes.GetDofNrs (ei, dofs_test);
+  fes_test.GetDofNrs (ei, dofs_test);
 
   const HeapReset hr (mlh);
-  const auto &test_fel = test_fes.GetFE (ei, mlh);
+  const auto &test_fel = fes_test.GetFE (ei, mlh);
   const auto &trafo = ma.GetTrafo (ei, mlh);
   FlatVector<SCAL> elvec (dofs_test.Size (), mlh),
       elveci (dofs_test.Size (), mlh);
@@ -628,10 +647,10 @@ void calculateParticularSolution (
         }
     }
 
-  if (fesHasInactiveDofs (test_fes))
+  if (fesHasInactiveDofs (fes_test))
     {
       Array<DofId> vdofs_test;
-      test_fes.GetDofNrs (ei, vdofs_test, VISIBLE_DOF);
+      fes_test.GetDofNrs (ei, vdofs_test, VISIBLE_DOF);
       FlatVector<SCAL> velvec (vdofs_test.Size (), mlh);
 
       for (size_t vi = 0; vi < vdofs_test.Size (); vi++)
@@ -652,51 +671,43 @@ namespace ngcomp
   template <typename SCAL>
   pair<vector<optional<ElmatWithTrefftzInfo<SCAL>>>,
        shared_ptr<ngla::BaseVector>>
-  EmbTrefftz (const std::optional<SumOfIntegrals> &op, const FESpace &fes,
-              const FESpace &fes_test,
-              const std::optional<ngfem::SumOfIntegrals> &cop_lhs,
-              const std::optional<ngfem::SumOfIntegrals> &cop_rhs,
-              const shared_ptr<const FESpace> fes_conformity,
-              shared_ptr<const ngfem::SumOfIntegrals> linear_form,
-              const std::variant<size_t, double> ndof_trefftz,
-              shared_ptr<std::map<std::string, Vector<SCAL>>> stats,
-              const bool get_range)
+  TrefftzEmbedding::EmbTrefftz ()
   {
     // statistics stuff
-    Vector<SCAL> sing_val_avg;
+    Vector<double> sing_val_avg;
     Vector<double> sing_val_max;
     Vector<double> sing_val_min;
     std::atomic<size_t> active_elements = 0;
 
-    auto mesh_access = fes.GetMeshAccess ();
-    const size_t num_elements = mesh_access->GetNE (VOL);
+    auto ma = fes->GetMeshAccess ();
+    const size_t num_elements = ma->GetNE (VOL);
     // #TODO what is a good size for the local heap?
     // For the moment: large enough constant size.
-    LocalHeap local_heap = LocalHeap (100 * 1000 * 1000, "embt", true);
+    LocalHeap clh = LocalHeap (100 * 1000 * 1000, "embt", true);
 
     // calculate the integrators for the three bilinear forms,
     // each for VOL, BND, BBND, BBBND, hence 4 arrays per bilnear form
     Array<shared_ptr<BilinearFormIntegrator>> op_integrators[4],
         cop_lhs_integrators[4], cop_rhs_integrators[4];
-    if (op)
-      calculateBilinearFormIntegrators (*op, op_integrators);
-    if (cop_lhs && cop_rhs)
+    if (top)
+      calculateBilinearFormIntegrators (*top, op_integrators);
+    if (cop && crhs)
       {
-        calculateBilinearFormIntegrators (*cop_lhs, cop_lhs_integrators);
-        calculateBilinearFormIntegrators (*cop_rhs, cop_rhs_integrators);
+        calculateBilinearFormIntegrators (*cop, cop_lhs_integrators);
+        calculateBilinearFormIntegrators (*crhs, cop_rhs_integrators);
       }
 
-    vector<optional<ElmatWithTrefftzInfo<SCAL>>> element_matrices (
-        num_elements);
+    vector<optional<ElmatWithTrefftzInfo<SCAL>>> etmats (num_elements);
 
     const bool fes_has_inactive_dofs
-        = fesHasInactiveDofs (fes) || fesHasInactiveDofs (fes_test);
+        = fesHasInactiveDofs (*fes) || fesHasInactiveDofs (*fes_test);
 
-    auto particular_solution_vec = make_shared<VVector<SCAL>> (fes.GetNDof ());
+    auto particular_solution_vec
+        = make_shared<VVector<SCAL>> (fes->GetNDof ());
     particular_solution_vec->operator= (0.0);
     Array<shared_ptr<LinearFormIntegrator>> lfis[4];
-    if (linear_form)
-      calculateLinearFormIntegrators (*linear_form, lfis);
+    if (trhs)
+      calculateLinearFormIntegrators (*trhs, lfis);
 
     // we compute embedding matrices E_C, E_T and particular solution u_p that
     // satisfy
@@ -708,33 +719,31 @@ namespace ngcomp
     // E_C.shape == (ndof, ndof_conforming),
     // E_T.shape == (ndof, ndof_trefftz),
     // f.shape == (ndof_test), u_p.shape == (ndof)
-    mesh_access->IterateElements (
-        VOL, local_heap,
-        [&] (Ngs_Element mesh_element, LocalHeap &local_heap) {
+    ma->IterateElements (
+        VOL, clh, [&] (Ngs_Element mesh_element, LocalHeap &lh) {
           const ElementId element_id = ElementId (mesh_element);
 
           // skip this element, if the bilinear forms are not defined
           // on this element
-          if (!(op && bfIsDefinedOnElement (*op, mesh_element))
-              && !(cop_lhs && bfIsDefinedOnElement (*cop_lhs, mesh_element))
-              && !(cop_rhs && bfIsDefinedOnElement (*cop_rhs, mesh_element)))
+          if (!(top && bfIsDefinedOnElement (*top, mesh_element))
+              && !(cop && bfIsDefinedOnElement (*cop, mesh_element))
+              && !(crhs && bfIsDefinedOnElement (*crhs, mesh_element)))
             return;
 
           Array<DofId> dofs, dofs_test, dofs_conforming;
-          fes.GetDofNrs (element_id, dofs);
-          fes_test.GetDofNrs (element_id, dofs_test);
+          fes->GetDofNrs (element_id, dofs);
+          fes_test->GetDofNrs (element_id, dofs_test);
           if (fes_conformity)
             fes_conformity->GetDofNrs (element_id, dofs_conforming);
 
           size_t ndof = dofs.Size ();
           size_t ndof_test = dofs_test.Size ();
           size_t ndof_conforming = dofs_conforming.Size ();
-          FlatMatrix<SCAL> elmat_A (ndof_test + ndof_conforming, ndof,
-                                    local_heap);
+          FlatMatrix<SCAL> elmat_A (ndof_test + ndof_conforming, ndof, lh);
           auto [elmat_Cl, elmat_L] = elmat_A.SplitRows (ndof_conforming);
 
           FlatMatrix<SCAL> elmat_B (ndof_test + ndof_conforming,
-                                    ndof_conforming, local_heap);
+                                    ndof_conforming, lh);
           elmat_A = static_cast<SCAL> (0.);
           elmat_B = static_cast<SCAL> (0.);
 
@@ -742,39 +751,37 @@ namespace ngcomp
           auto elmat_Cr = elmat_B.Rows (ndof_conforming);
 
           // the diff. operator L operates only on volume terms
-          addIntegrationToElementMatrix (elmat_L, op_integrators[VOL],
-                                         *mesh_access, element_id, fes,
-                                         fes_test, local_heap);
+          addIntegrationToElementMatrix (elmat_L, op_integrators[VOL], *ma,
+                                         element_id, *fes, *fes_test, lh);
           if (fes_conformity)
             {
               for (const auto vorb : { VOL, BND, BBND, BBBND })
                 {
                   addIntegrationToElementMatrix (
-                      elmat_Cl, cop_lhs_integrators[vorb], *mesh_access,
-                      element_id, fes, *fes_conformity, local_heap);
+                      elmat_Cl, cop_lhs_integrators[vorb], *ma, element_id,
+                      *fes, *fes_conformity, lh);
                   addIntegrationToElementMatrix (
-                      elmat_Cr, cop_rhs_integrators[vorb], *mesh_access,
-                      element_id, *fes_conformity, *fes_conformity,
-                      local_heap);
+                      elmat_Cr, cop_rhs_integrators[vorb], *ma, element_id,
+                      *fes_conformity, *fes_conformity, lh);
                 }
             }
           // reorder elmat_cr
           // #TODO is this really necessary?
-          reorderMatrixColumns (elmat_Cr, dofs_conforming, local_heap);
+          reorderMatrixColumns (elmat_Cr, dofs_conforming, lh);
 
           if (fes_has_inactive_dofs)
             {
               if (fes_conformity)
                 {
                   elmat_B.Assign (extractVisibleDofs (
-                      elmat_B, element_id, *fes_conformity, &fes_test,
+                      elmat_B, element_id, *fes_conformity, *fes_test,
                       fes_conformity, dofs_conforming, dofs_test,
-                      dofs_conforming, local_heap));
+                      dofs_conforming, lh));
                 }
 
               elmat_A.Assign (extractVisibleDofs (
-                  elmat_A, element_id, fes, &fes_test, fes_conformity, dofs,
-                  dofs_test, dofs_conforming, local_heap, true));
+                  elmat_A, element_id, *fes, *fes_test, fes_conformity, dofs,
+                  dofs_test, dofs_conforming, lh, true));
 
               ndof = dofs.Size ();
               ndof_test = dofs_test.Size ();
@@ -786,21 +793,20 @@ namespace ngcomp
               // elmat_L.Assign(elmat_L_tmp);
             }
 
-          FlatMatrix<SCAL, ColMajor> U (elmat_A.Height (), local_heap),
-              V (elmat_A.Width (), local_heap);
+          FlatMatrix<SCAL, ColMajor> U (elmat_A.Height (), lh),
+              V (elmat_A.Width (), lh);
           getSVD<SCAL> (elmat_A, U, V);
 
           // # TODO: incorporate the double variant
           const size_t ndof_trefftz_i
               = calcNdofTrefftz (ndof, ndof_test, ndof_conforming,
-                                 ndof_trefftz, !op, elmat_A.Diag (0));
+                                 ndof_trefftz, !top, elmat_A.Diag (0));
           if (ndof_trefftz_i + ndof_conforming == 0)
             throw std::invalid_argument ("zero trefftz dofs");
 
           const auto elmat_A_inv_expr
-              = invertSVD (U, elmat_A, V, ndof_trefftz_i, local_heap);
-          FlatMatrix<SCAL> elmat_A_inv (ndof, ndof_conforming + ndof_test,
-                                        local_heap);
+              = invertSVD (U, elmat_A, V, ndof_trefftz_i, lh);
+          FlatMatrix<SCAL> elmat_A_inv (ndof, ndof_conforming + ndof_test, lh);
           // Calculate the matrix entries and write them to memory.
           elmat_A_inv = elmat_A_inv_expr;
 
@@ -811,26 +817,24 @@ namespace ngcomp
           // T_c solves A @ T_c = B,
           elmat_Tc = elmat_A_inv * elmat_B;
 
-          if (get_range)
-            elmat_Tt = U.Cols (0, dofs.Size () - ndof_trefftz_i);
-          else
-            elmat_Tt = Trans (V.Rows (ndof - ndof_trefftz_i, ndof));
+          // if (get_range)
+          // elmat_Tt = U.Cols (0, dofs.Size () - ndof_trefftz_i);
+          elmat_Tt = Trans (V.Rows (ndof - ndof_trefftz_i, ndof));
 
-          if (linear_form)
+          if (trhs)
             {
               auto elmat_T_inv = elmat_A_inv.Cols (
                   ndof_conforming, ndof_conforming + ndof_test);
-              FlatVector<SCAL> partsol (dofs.Size (), local_heap);
-              calculateParticularSolution<SCAL> (partsol, lfis, fes_test,
-                                                 element_id, *mesh_access,
-                                                 elmat_T_inv, local_heap);
+              FlatVector<SCAL> partsol (dofs.Size (), lh);
+              calculateParticularSolution<SCAL> (
+                  partsol, lfis, *fes_test, element_id, *ma, elmat_T_inv, lh);
               particular_solution_vec->SetIndirect (dofs, partsol);
             }
 
           if (fes_has_inactive_dofs)
-            elmat_T = putbackVisibleDofs (elmat_T, element_id, fes, dofs);
+            elmat_T = putbackVisibleDofs (elmat_T, element_id, *fes, dofs);
 
-          element_matrices[element_id.Nr ()]
+          etmats[element_id.Nr ()]
               = make_optional<ElmatWithTrefftzInfo<SCAL>> (
                   { elmat_T, ndof_trefftz_i });
 
@@ -849,7 +853,7 @@ namespace ngcomp
               active_elements += 1;
               for (size_t i = 0; i < elmat_A.Height (); i++)
                 {
-                  sing_val_avg[i] += elmat_A (i, i);
+                  sing_val_avg[i] += abs (elmat_A (i, i));
                   sing_val_max[i]
                       = max (sing_val_max[i], abs (elmat_A (i, i)));
                   sing_val_min[i]
@@ -869,82 +873,120 @@ namespace ngcomp
     if (stats)
       {
         sing_val_avg /= active_elements.load ();
-        (*stats)["singavg"] = Vector<SCAL> (sing_val_avg);
+        (*stats)["singavg"] = Vector<double> (sing_val_avg);
         (*stats)["singmax"] = Vector<double> (sing_val_max);
         (*stats)["singmin"] = Vector<double> (sing_val_min);
       }
 
-    return make_pair (element_matrices, particular_solution_vec);
+    return make_pair (etmats, particular_solution_vec);
   }
 
-  ////////////////////////// EmbTrefftzFESpace ///////////////////////////
-
-  template <typename T>
-  shared_ptr<BaseVector>
-  EmbTrefftzFESpace<T>::SetOp (shared_ptr<SumOfIntegrals> bf,
-                               shared_ptr<SumOfIntegrals> lf, double eps,
-                               shared_ptr<FESpace> test_fes, int tndof)
+  TrefftzEmbedding::TrefftzEmbedding (
+      shared_ptr<SumOfIntegrals> _top, shared_ptr<SumOfIntegrals> _trhs,
+      shared_ptr<SumOfIntegrals> _cop, shared_ptr<SumOfIntegrals> _crhs,
+      size_t _ndof_trefftz, double _eps, shared_ptr<FESpace> _fes,
+      shared_ptr<FESpace> _fes_test, shared_ptr<FESpace> _fes_conformity)
+      : top (_top), trhs (_trhs), cop (_cop), crhs (_crhs)
   {
-    return SetOp (*bf, nullopt, nullopt, nullptr, test_fes, lf,
-                  (tndof != 0) ? size_t (tndof) : eps);
-  }
+    if (_ndof_trefftz == 0)
+      ndof_trefftz = _eps;
+    else if (_eps == 0.0)
+      ndof_trefftz = _ndof_trefftz;
+    else
+      throw std::invalid_argument (
+          "cannot use ndof_trefftz and eps at the same time");
 
-  template <typename T>
-  shared_ptr<BaseVector>
-  EmbTrefftzFESpace<T>::SetOp (optional<const SumOfIntegrals> op,
-                               optional<const SumOfIntegrals> cop_lhs,
-                               optional<const SumOfIntegrals> cop_rhs,
-                               shared_ptr<const FESpace> fes_conformity,
-                               shared_ptr<const FESpace> fes_test,
-                               shared_ptr<const SumOfIntegrals> linear_form,
-                               std::variant<size_t, double> ndof_trefftz)
-  {
-    static Timer timer ("EmbTrefftz: SetOp");
-
-    shared_ptr<BaseVector> particular_solution = nullptr;
-
+    if (top)
+      fesFromOp (*top, fes, fes_test);
+    if (cop)
+      fesFromOp (*cop, fes, fes_conformity);
+    if (_fes)
+      fes = _fes;
+    if (_fes_test)
+      fes_test = _fes_test;
+    if (_fes_conformity)
+      fes_conformity = _fes_conformity;
+    if (!fes_test)
+      fes_test = fes;
     if (!fes)
-      throw std::invalid_argument ("fes may not be null");
-    this->fes_conformity = fes_conformity;
+      throw Exception ("TrefftzEmbedding: no fespace found");
 
-    // fes_test may be null. If it is null, then choose the trial space as the
-    // test space as well.
-    const FESpace &fes_test_ref = (fes_test) ? *fes_test : *fes;
+    ma = fes->GetMeshAccess ();
 
-    if (holds_alternative<size_t> (ndof_trefftz)
-        && std::get<size_t> (ndof_trefftz) == 0)
-      ndof_trefftz = 0.0;
+    if (fes->IsComplex ())
+      tie (etmatsc, psol) = EmbTrefftz<Complex> ();
+    else
+      tie (etmats, psol) = EmbTrefftz<double> ();
+  }
 
-    // #TODO: what about hidden dofs?
-    if (!this->IsComplex ())
+  shared_ptr<BaseVector> TrefftzEmbedding::GetParticularSolution ()
+  {
+    return psol;
+  }
+
+  shared_ptr<BaseMatrix> TrefftzEmbedding::GetEmbedding ()
+  {
+    if (fes->IsComplex ())
+      return Elmats2Sparse<Complex> (etmatsc, *fes, fes_conformity);
+    else
+      return Elmats2Sparse<double> (etmats, *fes, fes_conformity);
+  }
+
+  shared_ptr<BaseVector>
+  TrefftzEmbedding::Embed (const shared_ptr<const BaseVector> tvec) const
+  {
+    LocalHeap lh (100 * 1000 * 1000, "embt", true);
+
+    shared_ptr<BaseVector> vec;
+
+    Table<int> table, table2;
+    if (fes->IsComplex ())
       {
-        std::tie (this->ETmats, particular_solution) = EmbTrefftz<double> (
-            op, *fes, fes_test_ref, cop_lhs, cop_rhs, fes_conformity,
-            linear_form, ndof_trefftz, nullptr);
-        Table<DofId> _table_dummy{};
-        createConformingTrefftzTables (_table_dummy, elnr_to_dofs, ETmats,
-                                       *fes, fes_conformity, 0);
-        for (size_t i = 0; i < ETmats.size (); i++)
-          if (ETmats[i])
-            QuickSort (elnr_to_dofs[i]);
+        vec = make_shared<VVector<Complex>> (fes->GetNDof ());
+        createConformingTrefftzTables (table, table2, etmatsc, *fes,
+                                       fes_conformity, countHiddenDofs (*fes));
       }
     else
       {
-        std::tie (this->ETmatsC, particular_solution) = EmbTrefftz<Complex> (
-            op, *fes, fes_test_ref, cop_lhs, cop_rhs, fes_conformity,
-            linear_form, ndof_trefftz, nullptr);
-        Table<DofId> _table_dummy{};
-        createConformingTrefftzTables (_table_dummy, elnr_to_dofs, ETmatsC,
-                                       *fes, fes_conformity, 0);
-        for (size_t i = 0; i < ETmatsC.size (); i++)
-          if (ETmatsC[i])
-            QuickSort (elnr_to_dofs[i]);
+        vec = make_shared<VVector<double>> (fes->GetNDof ());
+        createConformingTrefftzTables (table, table2, etmats, *fes,
+                                       fes_conformity, countHiddenDofs (*fes));
       }
+    if (fes_conformity)
+      vec->SetScalar (0.0);
 
-    adjustDofsAfterSetOp ();
+    ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
+      Array<DofId> dofs, tdofs;
+      dofs = table[ei.Nr ()];
+      tdofs = table2[ei.Nr ()];
 
-    return particular_solution;
+      if (fes->IsComplex ())
+        {
+          FlatVector<Complex> telvec (tdofs.Size (), mlh);
+          tvec->GetIndirect (tdofs, telvec);
+          FlatVector<Complex> elvec (dofs.Size (), mlh);
+          elvec = ((etmatsc[ei.Nr ()])->elmat) * telvec;
+          if (fes_conformity)
+            vec->AddIndirect (dofs, elvec, true);
+          else
+            vec->SetIndirect (dofs, elvec);
+        }
+      else
+        {
+          FlatVector<> telvec (tdofs.Size (), mlh);
+          tvec->GetIndirect (tdofs, telvec);
+          FlatVector<> elvec (dofs.Size (), mlh);
+          elvec = ((etmats[ei.Nr ()])->elmat) * telvec;
+          if (fes_conformity)
+            vec->AddIndirect (dofs, elvec, true);
+          else
+            vec->SetIndirect (dofs, elvec);
+        }
+    });
+    return vec;
   }
+
+  ////////////////////////// EmbTrefftzFESpace ///////////////////////////
 
   /// Copies `source` to the beginning of `target`.
   ///
@@ -974,6 +1016,26 @@ namespace ngcomp
   {
     static_assert (std::is_base_of_v<FESpace, T>, "T must be a FESpace");
 
+    // #TODO: what about hidden dofs?
+    if (!this->IsComplex ())
+      {
+        Table<DofId> _table_dummy{};
+        createConformingTrefftzTables (_table_dummy, elnr_to_dofs, etmats,
+                                       *fes, fes_conformity, 0);
+        for (size_t i = 0; i < etmats.size (); i++)
+          if (etmats[i])
+            QuickSort (elnr_to_dofs[i]);
+      }
+    else
+      {
+        Table<DofId> _table_dummy{};
+        createConformingTrefftzTables (_table_dummy, elnr_to_dofs, etmatsc,
+                                       *fes, fes_conformity, 0);
+        for (size_t i = 0; i < etmatsc.size (); i++)
+          if (etmatsc[i])
+            QuickSort (elnr_to_dofs[i]);
+      }
+
     const size_t ndof_conformity
         = (fes_conformity) ? fes_conformity->GetNDof () : 0;
 
@@ -983,13 +1045,13 @@ namespace ngcomp
     for (auto ei : this->ma->Elements (VOL))
       {
         // skip this element, if there is no element matrix defined
-        if ((this->IsComplex () && !ETmatsC[ei.Nr ()])
-            || (!this->IsComplex () && !ETmats[ei.Nr ()]))
+        if ((this->IsComplex () && !etmatsc[ei.Nr ()])
+            || (!this->IsComplex () && !etmats[ei.Nr ()]))
           continue;
 
         const size_t ndof_trefftz_local
-            = this->IsComplex () ? (ETmatsC[ei.Nr ()])->ndof_trefftz
-                                 : (ETmats[ei.Nr ()])->ndof_trefftz;
+            = this->IsComplex () ? (etmatsc[ei.Nr ()])->ndof_trefftz
+                                 : (etmats[ei.Nr ()])->ndof_trefftz;
         ndof_trefftz += ndof_trefftz_local;
       }
 
@@ -1084,7 +1146,7 @@ namespace ngcomp
   EmbTrefftzFESpace<T>::VTransformMR (ElementId ei, SliceMatrix<double> mat,
                                       TRANSFORM_TYPE type) const
   {
-    const auto elmat = (ETmats[ei.Nr ()])->elmat;
+    const auto elmat = (etmats[ei.Nr ()])->elmat;
     etFesVTransformM (mat, type, elmat);
   }
 
@@ -1093,7 +1155,7 @@ namespace ngcomp
   EmbTrefftzFESpace<T>::VTransformMC (ElementId ei, SliceMatrix<Complex> mat,
                                       TRANSFORM_TYPE type) const
   {
-    const auto elmat = (ETmatsC[ei.Nr ()])->elmat;
+    const auto elmat = (etmatsc[ei.Nr ()])->elmat;
     etFesVTransformM (mat, type, elmat);
   }
 
@@ -1146,7 +1208,7 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    const auto elmat = ETmats[ei.Nr ()]->elmat;
+    const auto elmat = etmats[ei.Nr ()]->elmat;
     etFesVTransformV (vec, type, elmat);
   }
 
@@ -1158,65 +1220,8 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    const auto elmat = ETmatsC[ei.Nr ()]->elmat;
+    const auto elmat = etmatsc[ei.Nr ()]->elmat;
     etFesVTransformV (vec, type, elmat);
-  }
-
-  template <typename T>
-  shared_ptr<GridFunction>
-  EmbTrefftzFESpace<T>::Embed (const shared_ptr<const GridFunction> tgfu) const
-  {
-    LocalHeap lh (100 * 1000 * 1000, "embt", true);
-    Flags flags;
-
-    const auto tvec = tgfu->GetVectorPtr ();
-
-    auto gfu = CreateGridFunction (this->fes, "pws", flags);
-    gfu->Update ();
-    auto vec = gfu->GetVectorPtr ();
-    if (fes_conformity)
-      vec->SetScalar (0.0);
-
-    this->ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
-      Array<DofId> dofs;
-      FlatArray<DofId> tdofs = this->elnr_to_dofs[ei.Nr ()];
-      this->fes->GetDofNrs (ei, dofs);
-
-      if (this->IsComplex ())
-        {
-          FlatVector<Complex> telvec (tdofs.Size (), mlh);
-          tvec->GetIndirect (tdofs, telvec);
-          FlatVector<Complex> elvec (dofs.Size (), mlh);
-          elvec = ((ETmatsC[ei.Nr ()])->elmat) * telvec;
-          if (fes_conformity)
-            vec->AddIndirect (dofs, elvec, true);
-          else
-            vec->SetIndirect (dofs, elvec);
-        }
-      else
-        {
-          FlatVector<> telvec (tdofs.Size (), mlh);
-          tvec->GetIndirect (tdofs, telvec);
-          FlatVector<> elvec (dofs.Size (), mlh);
-          elvec = ((ETmats[ei.Nr ()])->elmat) * telvec;
-          if (fes_conformity)
-            vec->AddIndirect (dofs, elvec, true);
-          else
-            vec->SetIndirect (dofs, elvec);
-        }
-    });
-    return gfu;
-  }
-
-  template <typename T>
-  shared_ptr<BaseMatrix> EmbTrefftzFESpace<T>::GetEmbedding () const
-  {
-    if (this->IsComplex ())
-      return Elmats2Sparse<Complex> (ETmatsC, *(this->fes),
-                                     this->fes_conformity);
-    else
-      return Elmats2Sparse<double> (ETmats, *(this->fes),
-                                    this->fes_conformity);
   }
 
   // template class EmbTrefftzFESpace<L2HighOrderFESpace,
@@ -1244,214 +1249,17 @@ template <typename T> void ExportETSpace (py::module m, string label)
   auto pyspace
       = ngcomp::ExportFESpace<ngcomp::EmbTrefftzFESpace<T>> (m, label);
 
-  pyspace.def (py::init ([pyspace] (shared_ptr<T> fes) {
-                 py::list info;
-                 auto ma = fes->GetMeshAccess ();
-                 info.append (ma);
-                 auto nfes = make_shared<ngcomp::EmbTrefftzFESpace<T>> (fes);
-                 nfes->Update ();
-                 nfes->FinalizeUpdate ();
-                 connect_auto_update (nfes.get ());
-                 return nfes;
-               }),
-               py::arg ("fes"));
-
-  pyspace
-      .def ("SetOp",
-            static_cast<shared_ptr<BaseVector> (EmbTrefftzFESpace<T>::*) (
-                shared_ptr<SumOfIntegrals>, shared_ptr<SumOfIntegrals>, double,
-                shared_ptr<FESpace>, int)> (
-                &ngcomp::EmbTrefftzFESpace<T>::SetOp),
-            "Sets the operators for the embedded Trefftz method.",
-            py::arg ("bf"), py::arg ("lf") = nullptr, py::arg ("eps") = 0,
-            py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0)
-      .def ("SetOp",
-            static_cast<shared_ptr<BaseVector> (EmbTrefftzFESpace<T>::*) (
-                optional<const SumOfIntegrals>, optional<const SumOfIntegrals>,
-                optional<const SumOfIntegrals>, shared_ptr<const FESpace>,
-                shared_ptr<const FESpace>, shared_ptr<const SumOfIntegrals>,
-                std::variant<size_t, double>)> (
-                &ngcomp::EmbTrefftzFESpace<T>::SetOp),
-            R"mydelimiter(
-            Sets the operators for the conforming Trefftz method.
-
-            :param op: the differential operation. Can be None
-            :param cop_lhs: left hand side of the conformity operation
-            :param cop_rhs: right hand side of the conformity operation
-            :param fes_conformity: finite element space of the conformity operation
-            :param fes_test: test finite element space for `op`. Can be None
-            :param linear_form: right hand side of the var. formulation. Can be None
-            :param ndof_trefftz: number of degrees of freedom per element
-                in the Trefftz finite element space on `fes`, generated by `op`
-                (i.e. the local dimension of the kernel of `op` on one element)
-
-            :return: the particular solution vector.)mydelimiter",
-            py::arg ("op").none (true), py::arg ("cop_lhs"),
-            py::arg ("cop_rhs"), py::arg ("fes_conformity"),
-            py::arg ("fes_test") = nullptr, py::arg ("linear_form") = nullptr,
-            py::arg ("ndof_trefftz") = 0)
-      .def ("Embed", &ngcomp::EmbTrefftzFESpace<T>::Embed)
-      .def ("GetEmbedding", &ngcomp::EmbTrefftzFESpace<T>::GetEmbedding);
-}
-
-/// call `EmbTrefftz` for the ConstrainedTrefftz procedure and pack the
-/// resulting element matrices in a sparse matrix.
-/// Assumption: all shared pointers come from python, so they *should* be safe
-/// to dereference. Exception to that: the `linear_form` can be the `nullptr`.
-tuple<shared_ptr<BaseMatrix>, shared_ptr<ngla::BaseVector>>
-pythonConstrTrefftzWithLf (optional<const SumOfIntegrals> op,
-                           shared_ptr<const FESpace> fes,
-                           shared_ptr<const SumOfIntegrals> cop_lhs,
-                           shared_ptr<const SumOfIntegrals> cop_rhs,
-                           shared_ptr<const FESpace> fes_conformity,
-                           shared_ptr<const SumOfIntegrals> linear_form,
-                           std::variant<size_t, double> ndof_trefftz,
-                           shared_ptr<const FESpace> fes_test_ptr)
-{
-  // guard against unwanted segfaults by checking that the pointers are not
-  // null.
-  if (!fes || !cop_lhs || !cop_rhs || !fes_conformity)
-    throw std::invalid_argument (
-        "Some arguments passed were None, which are required to be not-None.");
-
-  // if fes_test is null, i.e. no test space is given, use fes as trial and
-  // test space
-  const FESpace &fes_test = (fes_test_ptr) ? *fes_test_ptr : *fes;
-
-  // if op_maybe is empty, we need a default op to pass to the C++ code
-  // const SumOfIntegrals op_default{};
-  // const SumOfIntegrals &op = (op_maybe) ? *op_maybe : op_default;
-  const std::optional<SumOfIntegrals> cop_lhs_v
-      = (cop_lhs) ? make_optional (*cop_lhs) : nullopt;
-  const std::optional<SumOfIntegrals> cop_rhs_v
-      = (cop_rhs) ? make_optional (*cop_rhs) : nullopt;
-
-  auto [P, u_lf] = EmbTrefftz<double> (op, *fes, fes_test, cop_lhs_v,
-                                       cop_rhs_v, fes_conformity, linear_form,
-                                       ndof_trefftz, nullptr);
-  return std::make_tuple (
-      ngcomp::Elmats2Sparse<double> (P, *fes, fes_conformity), u_lf);
-}
-
-/// call `EmbTrefftz` for the ConstrainedTrefftz procedure and pack the
-/// resulting element matrices in a sparse matrix.
-shared_ptr<BaseMatrix>
-pythonConstrTrefftz (optional<const SumOfIntegrals> op,
-                     shared_ptr<const FESpace> fes,
-                     shared_ptr<const SumOfIntegrals> cop_lhs,
-                     shared_ptr<const SumOfIntegrals> cop_rhs,
-                     shared_ptr<const FESpace> fes_conformity,
-                     std::variant<size_t, double> ndof_trefftz,
-                     shared_ptr<const FESpace> fes_test)
-{
-  return std::get<0> (pythonConstrTrefftzWithLf (op, fes, cop_lhs, cop_rhs,
-                                                 fes_conformity, nullptr,
-                                                 ndof_trefftz, fes_test));
-}
-
-/// call `EmbTrefftz` for the plain embedded Trefftz procedure and pack the
-/// resulting element matrices in a sparse matrix.
-std::tuple<shared_ptr<ngcomp::BaseMatrix>, shared_ptr<ngcomp::BaseVector>>
-pythonEmbTrefftzWithLf (shared_ptr<ngfem::SumOfIntegrals> bf,
-                        shared_ptr<ngcomp::FESpace> fes,
-                        shared_ptr<ngfem::SumOfIntegrals> lf, double eps,
-                        shared_ptr<ngcomp::FESpace> test_fes, int tndof,
-                        bool getrange, optional<py::dict> stats_dict)
-{
-  shared_ptr<py::dict> pystats = nullptr;
-  if (stats_dict)
-    pystats = make_shared<py::dict> (*stats_dict);
-  if (getrange)
-    throw std::invalid_argument ("not supported at the moment!");
-
-  if (!test_fes)
-    test_fes = fes;
-
-  if (fes->IsComplex ())
-    {
-      shared_ptr<std::map<std::string, ngcomp::Vector<Complex>>> stats
-          = nullptr;
-      if (pystats)
-        stats = make_shared<std::map<std::string, ngcomp::Vector<Complex>>> ();
-      // auto P = ngcomp::EmbTrefftz<Complex> (bf, fes, lf, eps, test_fes,
-      // tndof,
-      //                                       getrange, stats);
-      // auto P = ngcomp::EmbTrefftz<Complex> (
-      //    (bf) ? make_optional (*bf) : nullopt, *fes, *test_fes, nullopt,
-      //    nullopt, nullptr, lf, (tndof == 0) ? eps : tndof, stats);
-      auto P = ngcomp::EmbTrefftz<Complex> (
-          make_optional (*bf), *fes, (test_fes) ? *test_fes : *fes, nullopt,
-          nullopt, nullptr, lf, (tndof != 0) ? tndof : eps, nullptr, false);
-      if (pystats)
-        for (auto const &x : *stats)
-          (*pystats)[py::cast (x.first)] = py::cast (x.second);
-      return std::make_tuple (
-          ngcomp::Elmats2Sparse<Complex> (std::get<0> (P), *fes, nullptr),
-          std::get<1> (P));
-    }
-  else
-    {
-      shared_ptr<std::map<std::string, ngcomp::Vector<double>>> stats
-          = nullptr;
-      if (pystats)
-        stats = make_shared<std::map<std::string, ngcomp::Vector<double>>> ();
-      // auto P = ngcomp::EmbTrefftz<double> (
-      //     (bf) ? make_optional (*bf) : nullopt, *fes, *test_fes, nullopt,
-      //     nullopt, nullptr, lf, (tndof == 0) ? eps : tndof, stats);
-      auto P = ngcomp::EmbTrefftz<double> (
-          make_optional (*bf), *fes, (test_fes) ? *test_fes : *fes, nullopt,
-          nullopt, nullptr, lf, (tndof != 0) ? tndof : eps, stats, false);
-      if (pystats)
-        for (auto const &x : *stats)
-          (*pystats)[py::cast (x.first)] = py::cast (x.second);
-      return std::make_tuple (
-          ngcomp::Elmats2Sparse<double> (std::get<0> (P), *fes, nullptr),
-          std::get<1> (P));
-    }
-}
-
-/// call `EmbTrefftz` for the plain embedded Trefftz procedure and pack the
-/// resulting element matrices in a sparse matrix.
-shared_ptr<ngcomp::BaseMatrix>
-pythonEmbTrefftz (shared_ptr<ngfem::SumOfIntegrals> bf,
-                  shared_ptr<ngcomp::FESpace> fes, double eps,
-                  shared_ptr<ngcomp::FESpace> test_fes, int tndof,
-                  bool getrange, optional<py::dict> stats_dict)
-{
-  shared_ptr<py::dict> pystats = nullptr;
-  if (stats_dict)
-    pystats = make_shared<py::dict> (*stats_dict);
-
-  if (fes->IsComplex ())
-    {
-      shared_ptr<std::map<std::string, ngcomp::Vector<Complex>>> stats
-          = nullptr;
-      if (pystats)
-        stats = make_shared<std::map<std::string, ngcomp::Vector<Complex>>> ();
-      auto P = std::get<0> (ngcomp::EmbTrefftz<Complex> (
-          make_optional (*bf), *fes, (test_fes) ? *test_fes : *fes, nullopt,
-          nullopt, nullptr, nullptr, (tndof != 0) ? tndof : eps, stats,
-          getrange));
-      if (pystats)
-        for (auto const &x : *stats)
-          (*pystats)[py::cast (x.first)] = py::cast (x.second);
-      return ngcomp::Elmats2Sparse<Complex> (P, *fes, nullptr);
-    }
-  else
-    {
-      shared_ptr<std::map<std::string, ngcomp::Vector<double>>> stats
-          = nullptr;
-      if (pystats)
-        stats = make_shared<std::map<std::string, ngcomp::Vector<double>>> ();
-      auto P = std::get<0> (ngcomp::EmbTrefftz<double> (
-          make_optional (*bf), *fes, (test_fes) ? *test_fes : *fes, nullopt,
-          nullopt, nullptr, nullptr, (tndof != 0) ? tndof : eps, stats,
-          getrange));
-      if (pystats)
-        for (auto const &x : *stats)
-          (*pystats)[py::cast (x.first)] = py::cast (x.second);
-      return ngcomp::Elmats2Sparse<double> (P, *fes, nullptr);
-    }
+  // pyspace.def (py::init ([pyspace] (shared_ptr<T> fes) {
+  // py::list info;
+  // auto ma = fes->GetMeshAccess ();
+  // info.append (ma);
+  // auto nfes = make_shared<ngcomp::EmbTrefftzFESpace<T>> (fes);
+  // nfes->Update ();
+  // nfes->FinalizeUpdate ();
+  // connect_auto_update (nfes.get ());
+  // return nfes;
+  //}),
+  // py::arg ("fes"));
 }
 
 void ExportEmbTrefftz (py::module m)
@@ -1463,113 +1271,86 @@ void ExportEmbTrefftz (py::module m)
 
   m.def (
       "EmbeddedTrefftzFES",
-      [] (shared_ptr<ngcomp::FESpace> fes) -> shared_ptr<ngcomp::FESpace> {
+      [] (shared_ptr<ngcomp::TrefftzEmbedding> emb)
+          -> shared_ptr<ngcomp::FESpace> {
+        shared_ptr<ngcomp::FESpace> fes = emb->GetFES ();
         shared_ptr<ngcomp::FESpace> nfes;
         if (dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes))
           nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::L2HighOrderFESpace>> (
-              dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes));
+              ngcomp::EmbTrefftzFESpace<ngcomp::L2HighOrderFESpace>> (emb);
         else if (dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes))
           nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::VectorL2FESpace>> (
-              dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes));
+              ngcomp::EmbTrefftzFESpace<ngcomp::VectorL2FESpace>> (emb);
         else if (dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes))
           nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::MonomialFESpace>> (
-              dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes));
+              ngcomp::EmbTrefftzFESpace<ngcomp::MonomialFESpace>> (emb);
         else if (dynamic_pointer_cast<ngcomp::CompoundFESpace> (fes))
           nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::CompoundFESpace>> (
-              dynamic_pointer_cast<ngcomp::CompoundFESpace> (fes));
+              ngcomp::EmbTrefftzFESpace<ngcomp::CompoundFESpace>> (emb);
         else
           throw Exception ("Unknown base fes");
         return nfes;
       },
       R"mydelimiter(
-                        Given a FESpace this wrapper produces a Trefftz FESpace using local projections, following the Embedded Trefftz-DG methodology. Use EmbTrefftzFES.SetOp() to set the operator used to construct the embedding.
+        Given a TrefftzEmbedding this wrapper produces a Trefftz FESpace using local projections,
+        following the Embedded Trefftz-DG methodology. 
 
-                        :param fes: FESpace to be wrapped.
+        :param TrefftzEmbedding: The Trefftz embedding object.
 
-                        :return: EmbTrefftzFES
-                        )mydelimiter",
-      py::arg ("fes"));
+        :return: EmbTrefftzFES
+        )mydelimiter",
+      py::arg ("emb"));
 
-  m.def ("TrefftzEmbedding", &pythonEmbTrefftzWithLf,
-         R"mydelimiter(
-                Computes the Trefftz embedding and particular solution.
+  py::class_<TrefftzEmbedding, shared_ptr<TrefftzEmbedding>> (
+      m, "TrefftzEmbedding",
+      R"mydelimiter(
+                Gives access to the embedding matrix and a particular solution and 
+                can be used to construct an EmbeddedTrefftzFESpace.
 
-                :param bf: operator for which the Trefftz embedding is computed.
-                :param fes: DG finite element space of the weak formulation.
-                :param lf: Rhs used to compute the particular solution.
-                :param eps: Threshold for singular values to be considered zero, defaults to 0
-                :param test_fes: Used if test space differs from trial space, defaults to None
-                :param tndof: If known, local ndofs of the Trefftz space, else eps and/or test_fes are used to find the dimension
-                :param getrange: If True, extract the range instead of the kernel
-                :param stats_dict: Pass a dictionary to fill it with stats on the singular values.
+                The dimension of the local Trefftz space is determined by the kernel of `top`, 
+                after removing the dofs fixed by the conforming condition in `cop` and `crhs`.
 
-                :return: [Trefftz embedding, particular solution]
+                If a different test space is used, the dimension of the local Trefftz space is 
+                at best dim(fes)-dim(fes_test) and may increase by zero singular values of `top`
+                (with respect to the threshold `eps`).
+            )mydelimiter")
+      .def (py::init<shared_ptr<SumOfIntegrals>, shared_ptr<SumOfIntegrals>,
+                     shared_ptr<SumOfIntegrals>, shared_ptr<SumOfIntegrals>,
+                     size_t, double, shared_ptr<FESpace>, shared_ptr<FESpace>,
+                     shared_ptr<FESpace>> (),
+            R"mydelimiter(
+                Constructs a new Trefftz embedding object.
+
+                 :param top: the differential operation. Can be None
+                 :param trhs: right hand side of the var. formulation
+                 :param cop: left hand side of the conformity operation
+                 :param crhs: right hand side of the conformity operation
+                 :param eps: cutoff for singular values from the SVD of the local operator.
+                        values below eps are considered zero and therefore in the kernel of `top`.
+                        (default: 0.0)
+                 :param ndof_trefftz: fixes the number of degrees of freedom per element
+                     that are to be considered in the Trefftz space generated by `top`
+                     (i.e. the local dimension of the kernel of `top` on one element)
+                     cannot be used together with `eps` (default: 0)
+                 :param fes: the finite element space of `top` (optional, determined
+                     from `top` if not given)
+                 :param fes_test: the finite element test space of `top` (optional,
+                     determined from `top` if not given)
+                 :param fes_conformity: finite element space of the conformity operation (optional,
+                     determined from `cop` if not given)
             )mydelimiter",
-         py::arg ("bf"), py::arg ("fes"), py::arg ("lf"), py::arg ("eps") = 0,
-         py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0,
-         py::arg ("getrange") = false, py::arg ("stats_dict") = nullopt);
-
-  m.def ("TrefftzEmbedding", &pythonEmbTrefftz,
-         R"mydelimiter(
-                Used without the parameter lf as input the function only returns the Trefftz embedding.
-
-                :return: Trefftz embedding
-            )mydelimiter",
-         py::arg ("bf"), py::arg ("fes"), py::arg ("eps") = 0,
-         py::arg ("test_fes") = nullptr, py::arg ("tndof") = 0,
-         py::arg ("getrange") = false, py::arg ("stats_dict") = py::none ());
-
-  m.def ("TrefftzEmbedding", &pythonConstrTrefftz,
-         R"mydelimiter(
-                creates an embedding matrix P for the given operations `op`,
-                `cop_lhs`, `cop_rhs`.
-                The embedding is subject to the conformitys specified in
-                `cop_lhs` and `cop_rhs`.
-
-                 :param op: the differential operation. Can be None
-                 :param fes: the finite element space of `op`
-                 :param cop_lhs: left hand side of the conformity operation
-                 :param cop_rhs: right hand side of the conformity operation
-                 :param fes_conformity: finite element space of the conformity operation
-                 :param ndof_trefftz: number of degrees of freedom per element
-                     in the Trefftz finite element space on `fes`, generated by `op`
-                     (i.e. the local dimension of the kernel of `op` on one element)
-
-                 :return: P, the embedding matrix.
-   )mydelimiter",
-         py::arg ("op"), py::arg ("fes"), py::arg ("cop_lhs"),
-         py::arg ("cop_rhs"), py::arg ("fes_conformity"),
-         py::arg ("ndof_trefftz") = py::none (),
-         py::arg ("fes_test") = py::none ());
-
-  m.def ("TrefftzEmbedding", &pythonConstrTrefftzWithLf,
-         R"mydelimiter(
-                creates an embedding matrix P for the given operations `op`,
-                `cop_lhs`, `cop_rhs`.
-                The embedding is subject to the conformitys specified in
-                `cop_lhs` and `cop_rhs`.
-                Also generates a particular solution `u_lf`.
-
-                 :param op: the differential operation. Can be None
-                 :param fes: the finite element space of `op`
-                 :param cop_lhs: left hand side of the conformity operation
-                 :param cop_rhs: right hand side of the conformity operation
-                 :param fes_conformity: finite element space of the conformity operation
-                 :param linear_form: right hand side of the var. formulation
-                 :param ndof_trefftz: number of degrees of freedom per element
-                     in the Trefftz finite element space on `fes`, generated by `op`
-                     (i.e. the local dimension of the kernel of `op` on one element)
-
-                 :return: P, the embedding matrix.
-   )mydelimiter",
-         py::arg ("op"), py::arg ("fes"), py::arg ("cop_lhs"),
-         py::arg ("cop_rhs"), py::arg ("fes_conformity"),
-         py::arg ("linear_form"), py::arg ("ndof_trefftz") = py::none (),
-         py::arg ("fes_test") = py::none ());
+            py::arg ("top") = nullptr, py::arg ("trhs") = nullptr,
+            py::arg ("cop") = nullptr, py::arg ("crhs") = nullptr,
+            py::arg ("ndof_trefftz") = 0, py::arg ("eps") = 0.0,
+            py::arg ("fes") = nullptr, py::arg ("fes_test") = nullptr,
+            py::arg ("fes_conformity") = nullptr)
+      .def ("Embed", &ngcomp::TrefftzEmbedding::Embed,
+            "Embed a Trefftz GridFunction into the underlying FESpace")
+      .def ("GetEmbedding", &ngcomp::TrefftzEmbedding::GetEmbedding,
+            "Get the sparse embedding matrix")
+      .def ("GetParticularSolution",
+            &ngcomp::TrefftzEmbedding::GetParticularSolution,
+            "Particular solution as GridFunction of the underlying FESpace");
 }
 
 #endif // NGS_PYTHON
