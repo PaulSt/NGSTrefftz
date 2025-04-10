@@ -58,7 +58,8 @@ def embtbox(mesh,order):
     lop = rhs*v*db
 
     emb = TrefftzEmbedding(top=top,trhs=lop,fes=fes,fes_test=fes_test)
-    gfu = emb.GetParticularSolution()
+    gfu = GridFunction(fes)
+    gfu.vec.data = emb.GetParticularSolution()
     etfes = EmbeddedTrefftzFES(emb)
 
     a,f = dgell(etfes,Dbndc=exact,A=A,B=B,C=C,rhs=rhs,uf=gfu)
@@ -66,7 +67,7 @@ def embtbox(mesh,order):
     tgfu = GridFunction(etfes)
     tgfu.vec.data = a.mat.Inverse() * f.vec
 
-    gfu.vec.data += emb.Embed(tgfu).vec 
+    gfu.vec.data += emb.Embed(tgfu.vec)
 
     error = sqrt(Integrate((gfu-exact)**2, mesh))
     return error

@@ -59,9 +59,9 @@ namespace ngcomp
          shared_ptr<ngla::BaseVector>>
     EmbTrefftz ();
 
-    shared_ptr<GridFunction>
-    Embed (const shared_ptr<const GridFunction> tgfu) const;
-    shared_ptr<GridFunction> GetParticularSolution ();
+    shared_ptr<BaseVector>
+    Embed (const shared_ptr<const BaseVector> tgfu) const;
+    shared_ptr<BaseVector> GetParticularSolution ();
     shared_ptr<BaseMatrix> GetEmbedding ();
     shared_ptr<FESpace> GetFES () const { return fes; }
     shared_ptr<FESpace> GetFESconf () const { return fes_conformity; }

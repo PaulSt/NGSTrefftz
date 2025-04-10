@@ -370,9 +370,9 @@ def test_conformiting_trefftz_with_rhs(order, order_conformity):
     PPT = PP.CreateTranspose()
     a, f = dgell(fes, exactpoi, rhs)
     TA = PPT @ a.mat @ PP
-    TU = TA.Inverse() * (PPT * (f.vec - a.mat * uf.vec))
+    TU = TA.Inverse() * (PPT * (f.vec - a.mat * uf))
     tpgfu = GridFunction(fes)
-    tpgfu.vec.data = PP * TU + uf.vec
+    tpgfu.vec.data = PP * TU + uf
     return sqrt(Integrate((tpgfu - exactpoi) ** 2, mesh))
 
 
@@ -419,7 +419,7 @@ def test_conformiting_trefftz_trivial_mixed_mode(order, order_conformity):
         Ta.toarray(), Tb.toarray()
     ).all(), "The embedding matrices do not agree"
     assert np.isclose(
-        va.vec.FV().NumPy(), vb.vec.FV().NumPy()
+        va.FV().NumPy(), vb.FV().NumPy()
     ).all(), "The particular solutions disagree"
 
 
@@ -457,9 +457,9 @@ def test_conforming_trefftz_mixed_mode(order, order_conformity):
     uf = emb.GetParticularSolution()
     a, f = dgell(fes, exactpoi, rhs)
     TA = PPT @ a.mat @ PP
-    TU = TA.Inverse() * (PPT * (f.vec - a.mat * uf.vec))
+    TU = TA.Inverse() * (PPT * (f.vec - a.mat * uf))
     tpgfu = GridFunction(fes)
-    tpgfu.vec.data = PP * TU + uf.vec
+    tpgfu.vec.data = PP * TU + uf
     return sqrt(Integrate((tpgfu - exactpoi) ** 2, mesh))
 
 
@@ -494,9 +494,9 @@ def test_conforming_trefftz_without_op(order, order_conformity):
     uf = emb.GetParticularSolution()
     a, f = dgell(fes, exactpoi, rhs)
     TA = PPT @ a.mat @ PP
-    TU = TA.Inverse() * (PPT * (f.vec - a.mat * uf.vec))
+    TU = TA.Inverse() * (PPT * (f.vec - a.mat * uf))
     tpgfu = GridFunction(fes)
-    tpgfu.vec.data = PP * TU + uf.vec
+    tpgfu.vec.data = PP * TU + uf
     return sqrt(Integrate((tpgfu - exactpoi) ** 2, mesh))
 
 

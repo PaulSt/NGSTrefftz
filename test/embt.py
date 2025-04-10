@@ -181,9 +181,9 @@ def testembtrefftzpoi(fes):
     uf = emb.GetParticularSolution()
     a,f = dgell(fes,exactpoi,rhs)
     TA = PPT@a.mat@PP
-    TU = TA.Inverse()*(PPT*(f.vec-a.mat*uf.vec))
+    TU = TA.Inverse()*(PPT*(f.vec-a.mat*uf))
     tpgfu = GridFunction(fes)
-    tpgfu.vec.data = PP*TU+uf.vec
+    tpgfu.vec.data = PP*TU+uf
     return sqrt(Integrate((tpgfu-exactpoi)**2, mesh))
 
 
@@ -207,9 +207,9 @@ def testembtrefftzpoi_mixed(fes):
     a,f = dgell(fes,exactpoi,rhs)
     TA = PPT@a.mat@PP
     uf = emb.GetParticularSolution()
-    TU = TA.Inverse()*(PPT*(f.vec-a.mat*uf.vec))
+    TU = TA.Inverse()*(PPT*(f.vec-a.mat*uf))
     tpgfu = GridFunction(fes)
-    tpgfu.vec.data = PP*TU+uf.vec
+    tpgfu.vec.data = PP*TU+uf
     #import netgen.gui
     #Draw(tpgfu)
     #input("")
@@ -254,9 +254,9 @@ def embtell(mesh,order):
     uf = emb.GetParticularSolution()
     a,f = dgell(fes,Dbndc=exact,A=A,B=B,C=C,rhs=rhs)
     TA = PPT@a.mat@PP
-    TU = TA.Inverse()*(PPT*(f.vec-a.mat*uf.vec))
+    TU = TA.Inverse()*(PPT*(f.vec-a.mat*uf))
     gfu = GridFunction(fes)
-    gfu.vec.data = PP*TU+uf.vec
+    gfu.vec.data = PP*TU+uf
 
     error = sqrt(Integrate((gfu-exact)**2, mesh))
     return error
@@ -398,8 +398,8 @@ def SolveStokes(mesh, k, nu, coeff, trefftz=True, ubnd=None, bndname="inflow"):
         timer = time.time()
         TA = PPT @ a.mat @ PP
         TC = PPT @ c.mat @ PP
-        Tgfu = CGSolver(TA, TC.Inverse()) * (PPT * (f.vec - a.mat * uf.vec))
-        gfu.vec.data = PP * Tgfu + uf.vec
+        Tgfu = CGSolver(TA, TC.Inverse()) * (PPT * (f.vec - a.mat * uf))
+        gfu.vec.data = PP * Tgfu + uf
         # print(f"Trefftz embedding solve {time.time() - timer:5f} seconds")
         ndof = PP.shape[1]
     else:
@@ -431,8 +431,9 @@ def testembtrefftzfes(mesh,order):
     trhs = -rhs*Lap(v)*dx
 
     emb = TrefftzEmbedding(top=top,trhs=trhs,eps=eps)
-    uf = emb.GetParticularSolution()
     etfes = EmbeddedTrefftzFES(emb)
+    uf = GridFunction(fes)
+    uf.vec.data = emb.GetParticularSolution()
     # etfes = Compress(etfes, etfes.FreeDofs())
     a,f = dgell(etfes,exactpoi,rhs,uf)
 

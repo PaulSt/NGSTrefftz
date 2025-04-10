@@ -919,15 +919,9 @@ namespace ngcomp
       tie (etmats, psol) = EmbTrefftz<double> ();
   }
 
-  shared_ptr<GridFunction> TrefftzEmbedding::GetParticularSolution ()
+  shared_ptr<BaseVector> TrefftzEmbedding::GetParticularSolution ()
   {
-
-    Flags flags;
-    auto gfu = CreateGridFunction (fes, "psol", flags);
-    gfu->Update ();
-    auto vec = gfu->GetVectorPtr ();
-    *vec = *psol;
-    return gfu;
+    return psol;
   }
 
   shared_ptr<BaseMatrix> TrefftzEmbedding::GetEmbedding ()
@@ -938,27 +932,28 @@ namespace ngcomp
       return Elmats2Sparse<double> (etmats, *fes, fes_conformity);
   }
 
-  shared_ptr<GridFunction>
-  TrefftzEmbedding::Embed (const shared_ptr<const GridFunction> tgfu) const
+  shared_ptr<BaseVector>
+  TrefftzEmbedding::Embed (const shared_ptr<const BaseVector> tvec) const
   {
     LocalHeap lh (100 * 1000 * 1000, "embt", true);
 
-    Flags flags;
-    auto gfu = CreateGridFunction (fes, "pws", flags);
-    gfu->Update ();
-    auto vec = gfu->GetVectorPtr ();
-    if (fes_conformity)
-      vec->SetScalar (0.0);
+    shared_ptr<BaseVector> vec;
 
     Table<int> table, table2;
     if (fes->IsComplex ())
-      createConformingTrefftzTables (table, table2, etmatsc, *fes,
-                                     fes_conformity, countHiddenDofs (*fes));
+      {
+        vec = make_shared<VVector<Complex>> (fes->GetNDof ());
+        createConformingTrefftzTables (table, table2, etmatsc, *fes,
+                                       fes_conformity, countHiddenDofs (*fes));
+      }
     else
-      createConformingTrefftzTables (table, table2, etmats, *fes,
-                                     fes_conformity, countHiddenDofs (*fes));
-
-    const auto tvec = tgfu->GetVectorPtr ();
+      {
+        vec = make_shared<VVector<double>> (fes->GetNDof ());
+        createConformingTrefftzTables (table, table2, etmats, *fes,
+                                       fes_conformity, countHiddenDofs (*fes));
+      }
+    if (fes_conformity)
+      vec->SetScalar (0.0);
 
     ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
       Array<DofId> dofs, tdofs;
@@ -988,7 +983,7 @@ namespace ngcomp
             vec->SetIndirect (dofs, elvec);
         }
     });
-    return gfu;
+    return vec;
   }
 
   ////////////////////////// EmbTrefftzFESpace ///////////////////////////
