@@ -42,6 +42,7 @@ namespace ngcomp
     shared_ptr<std::map<std::string, Vector<double>>> stats = nullptr;
 
   public:
+    shared_ptr<BitArray> ignoredofs;
     vector<optional<ElmatWithTrefftzInfo<double>>> etmats;
     vector<optional<ElmatWithTrefftzInfo<Complex>>> etmatsc;
     shared_ptr<BaseVector> psol;
@@ -52,7 +53,8 @@ namespace ngcomp
                       shared_ptr<SumOfIntegrals> _crhs, size_t _ndof_trefftz,
                       double _eps, shared_ptr<FESpace> _fes = nullptr,
                       shared_ptr<FESpace> _fes_test = nullptr,
-                      shared_ptr<FESpace> _fes_conformity = nullptr);
+                      shared_ptr<FESpace> _fes_conformity = nullptr,
+                      shared_ptr<BitArray> _ignoredofs = nullptr);
 
     template <typename SCAL>
     pair<vector<optional<ElmatWithTrefftzInfo<SCAL>>>,

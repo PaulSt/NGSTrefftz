@@ -301,23 +301,23 @@ def testembtrefftzhelm(fes):
 
 def SolveStokes(mesh, k, nu, coeff, trefftz=True, ubnd=None, bndname="inflow"):
     """ currently not working
-    >> nu = 1.0
-    >> zeta = cos(pi*x*(1-x)*y*(1-y))
-    >> pexact = sin(pi*(x+y))
-    >> uexact = CF((zeta.Diff(y), - zeta.Diff(x)))
-    >> graduexact = CF((uexact.Diff(x),uexact.Diff(y)),dims=(2,2)).trans
-    >> f1 = - nu*uexact[0].Diff(x).Diff(x) - nu*uexact[0].Diff(y).Diff(y) + pexact.Diff(x)
-    >> f2 = - nu*uexact[1].Diff(x).Diff(x) - nu*uexact[1].Diff(y).Diff(y) + pexact.Diff(y)
-    >> f = CF((f1,f2))
+    >>> nu = 1.0
+    >>> zeta = cos(pi*x*(1-x)*y*(1-y))
+    >>> pexact = sin(pi*(x+y))
+    >>> uexact = CF((zeta.Diff(y), - zeta.Diff(x)))
+    >>> graduexact = CF((uexact.Diff(x),uexact.Diff(y)),dims=(2,2)).trans
+    >>> f1 = - nu*uexact[0].Diff(x).Diff(x) - nu*uexact[0].Diff(y).Diff(y) + pexact.Diff(x)
+    >>> f2 = - nu*uexact[1].Diff(x).Diff(x) - nu*uexact[1].Diff(y).Diff(y) + pexact.Diff(y)
+    >>> f = CF((f1,f2))
 
-    >> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3) )
-    >> k = 5
-    >> uh, ph, ndof = SolveStokes(mesh, k, nu, f, trefftz=True) 
-    >> sqrt(Integrate(InnerProduct(uexact-uh,uexact-uh),mesh)) # doctest:+ELLIPSIS
+    >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.3) )
+    >>> k = 5
+    >>> uh, ph, ndof = SolveStokes(mesh, k, nu, f, trefftz=True) 
+    >>> sqrt(Integrate(InnerProduct(uexact-uh,uexact-uh),mesh)) # doctest:+ELLIPSIS
     1...e-05
-    >> sqrt(Integrate(InnerProduct(pexact-ph,pexact-ph),mesh)) # doctest:+ELLIPSIS
+    >>> sqrt(Integrate(InnerProduct(pexact-ph,pexact-ph),mesh)) # doctest:+ELLIPSIS
     0.001...
-    >> ndof
+    >>> ndof
     529
     """
 
@@ -371,12 +371,12 @@ def SolveStokes(mesh, k, nu, coeff, trefftz=True, ubnd=None, bndname="inflow"):
 
     gfu = GridFunction(fes)
     if trefftz:
-        for i in range(V.ndof + Q.ndof, fes.ndof):
-            fes.SetCouplingType(i, COUPLING_TYPE.HIDDEN_DOF)
-        # ignoredofs = BitArray(fes.ndof)
-        # ignoredofs[:] = False
         # for i in range(V.ndof + Q.ndof, fes.ndof):
-            # ignoredofs[i] = True
+            # fes.SetCouplingType(i, COUPLING_TYPE.HIDDEN_DOF)
+        ignoredofs = BitArray(fes.ndof)
+        ignoredofs[:] = False
+        for i in range(V.ndof + Q.ndof, fes.ndof):
+            ignoredofs[i] = True
         Vs = VectorL2(mesh, order=k - 2)
         Qs = L2(mesh, order=k - 1)
         fes_test = Vs * Qs
@@ -388,8 +388,7 @@ def SolveStokes(mesh, k, nu, coeff, trefftz=True, ubnd=None, bndname="inflow"):
 
         timer = time.time()
         trhs = coeff * wu * dx(bonus_intorder=10)
-        emb = TrefftzEmbedding(top=top, trhs=trhs,
-                                  fes_test=fes_test)#, ignoredofs=ignoredofs)
+        emb = TrefftzEmbedding(top=top, trhs=trhs, ignoredofs=ignoredofs)
         PP = emb.GetEmbedding()
         PPT = PP.CreateTranspose()
         uf = emb.GetParticularSolution()
