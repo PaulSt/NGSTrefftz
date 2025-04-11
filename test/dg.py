@@ -447,6 +447,86 @@ def SolveLapLDG(mesh,order=1,bndc=0,rhs=0,trefftz=False,condense=True):
     error = sqrt(Integrate((gfu.components[0]-exactlap)**2, mesh))
     return error
 
+########################################################################
+# Stokes
+########################################################################
+
+def StokesDG(fes, nu, rhs, ubnd=None, bndname="inflow"):
+    mesh = fes.components[0].mesh
+    k = fes.components[0].globalorder
+    u, v = fes.TrialFunction()[0], fes.TestFunction()[0]
+    p, q = fes.TrialFunction()[1], fes.TestFunction()[1]
+    lam, mu = fes.TrialFunction()[-1], fes.TestFunction()[-1]
+
+    alpha = 20  # interior penalty param
+    stab = 1e-9
+
+    n = specialcf.normal(mesh.dim)
+    h = specialcf.mesh_size
+
+    jump_u = u - u.Other()
+    jump_v = v - v.Other()
+    mean_dudn = 0.5 * (grad(u) + grad(u.Other())) * n
+    mean_dvdn = 0.5 * (grad(v) + grad(v.Other())) * n
+    mean_q = 0.5 * n * (q + q.Other())
+    mean_p = 0.5 * n * (p + p.Other())
+
+    a = nu * InnerProduct(grad(u), grad(v)) * dx
+    a += nu * alpha * k**2 / h * jump_u * jump_v * dx(skeleton=True)
+    a += nu * (-mean_dudn * jump_v - mean_dvdn * jump_u) * dx(skeleton=True)
+    a += nu * alpha * k**2 / h * u * v * ds(skeleton=True)
+    a += nu * (-grad(u) * n * v - grad(v) * n * u) * ds(skeleton=True)
+    a += (mean_p * jump_v + mean_q * jump_u) * dx(skeleton=True)
+    a += (p * v * n + q * u * n) * ds(skeleton=True)
+    a += (-div(u) * q - div(v) * p) * dx
+    a += (p * mu + q * lam) * dx
+
+    c = a
+    c += -stab * p * q * dx
+    c += stab * lam * mu * dx
+
+    f = rhs * v * dx(bonus_intorder=5)
+    if ubnd:
+        f += nu * alpha * k**2 / h * ubnd * v * ds(skeleton=True, definedon=mesh.Boundaries(bndname))
+        f += nu * (- grad(v) * n * ubnd) * ds(skeleton=True, definedon=mesh.Boundaries(bndname))
+
+    return a,c,f
+
+def SolveStokesDG(mesh, k):
+    """ 
+    >>> SolveStokesDG(mesh2d, 5) # doctest:+ELLIPSIS
+    [7...e-06, 0.0004...]
+    """
+    nu = 1.0
+    zeta = cos(pi*x*(1-x)*y*(1-y))
+    pexact = sin(pi*(x+y))
+    uexact = CF((zeta.Diff(y), - zeta.Diff(x)))
+    graduexact = CF((uexact.Diff(x),uexact.Diff(y)),dims=(2,2)).trans
+    f1 = - nu*uexact[0].Diff(x).Diff(x) - nu*uexact[0].Diff(y).Diff(y) + pexact.Diff(x)
+    f2 = - nu*uexact[1].Diff(x).Diff(x) - nu*uexact[1].Diff(y).Diff(y) + pexact.Diff(y)
+    rhs = CF((f1,f2))
+
+    V = VectorL2(mesh, order=k, dgjumps=True)
+    Q = L2(mesh, order=k - 1, dgjumps=True)
+    Z = NumberSpace(mesh)
+    fes = V * Q * Z
+
+    ah,ch,fh = StokesDG(fes, nu, rhs)
+
+    a = BilinearForm(ah)
+    a.Assemble()
+    c = BilinearForm(ch)
+    c.Assemble()
+    f = LinearForm(fh)
+    f.Assemble()
+
+    gfu = GridFunction(fes)
+    gfu.vec.data = CGSolver(a.mat, c.mat.Inverse()) * f.vec
+    ndof = fes.ndof
+
+    uh, ph = gfu.components[0:2]
+    return [sqrt(Integrate(InnerProduct(uexact-uh,uexact-uh),mesh)) , sqrt(Integrate(InnerProduct(pexact-ph,pexact-ph),mesh)) ]
+
 
 if __name__ == "__main__":
     import doctest
