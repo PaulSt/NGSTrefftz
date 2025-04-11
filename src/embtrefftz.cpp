@@ -1011,7 +1011,7 @@ namespace ngcomp
       {
         Table<DofId> _table_dummy{};
         createConformingTrefftzTables (_table_dummy, elnr_to_dofs, etmats,
-                                       *fes, fes_conformity, emb->ignoredofs);
+                                       *fes, fes_conformity, ignoredofs);
         for (size_t i = 0; i < etmats.size (); i++)
           if (etmats[i])
             QuickSort (elnr_to_dofs[i]);
@@ -1020,7 +1020,7 @@ namespace ngcomp
       {
         Table<DofId> _table_dummy{};
         createConformingTrefftzTables (_table_dummy, elnr_to_dofs, etmatsc,
-                                       *fes, fes_conformity, emb->ignoredofs);
+                                       *fes, fes_conformity, ignoredofs);
         for (size_t i = 0; i < etmatsc.size (); i++)
           if (etmatsc[i])
             QuickSort (elnr_to_dofs[i]);
@@ -1045,19 +1045,27 @@ namespace ngcomp
         ndof_trefftz += ndof_trefftz_local;
       }
 
+    size_t ignored_dofs = 0;
+    if (ignoredofs)
+      ignored_dofs = ignoredofs->NumSet ();
+
     // The conformity dofs might overlap.
     // Overall, they add up to exactly the number of
     // dofs in the conformity space.
-    const size_t new_ndof = ndof_conformity + ndof_trefftz;
+    const size_t new_ndof = ignored_dofs + ndof_conformity + ndof_trefftz;
     this->SetNDof (new_ndof);
 
     this->ctofdof.SetSize (new_ndof);
 
     // We start the numbering of the dofs with the conformity dofs,
     // and continue with the Trefftz dofs.
-    for (size_t i = 0; i < ndof_conformity; i++)
+    if (ignoredofs)
+      for (size_t i = 0, idof = 0; i < ignoredofs->Size (); i++)
+        if (ignoredofs->Test (i))
+          this->ctofdof[idof++] = fes->GetDofCouplingType (i);
+    for (size_t i = ignored_dofs; i < ndof_conformity; i++)
       this->ctofdof[i] = fes_conformity->GetDofCouplingType (i);
-    for (size_t i = ndof_conformity; i < new_ndof; i++)
+    for (size_t i = ignored_dofs + ndof_conformity; i < new_ndof; i++)
       this->ctofdof[i] = LOCAL_DOF;
 
     T::FinalizeUpdate ();
@@ -1071,6 +1079,9 @@ namespace ngcomp
   void
   EmbTrefftzFESpace<T>::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
   {
+    // TODO: ignore dofs for BND, BBND, BBBND?
+    if (!T::DefinedOn (ei) || ei.VB () != VOL)
+      return;
     // 1. Provide the dof nrs of the conforming Trefftz space, that are
     // associated to the element ei.
     const FlatArray<DofId> tdofnrs = elnr_to_dofs[ei.Nr ()];
@@ -1103,24 +1114,24 @@ namespace ngcomp
 
     Matrix<SCAL> temp_mat (mat.Height (), mat.Width ());
 
-    const size_t ndof = elmat.Width ();
+    const size_t tndof = elmat.Width ();
 
     if (type == TRANSFORM_MAT_LEFT)
       {
-        temp_mat.Rows (0, ndof) = Trans (elmat) * mat;
+        temp_mat.Rows (0, tndof) = Trans (elmat) * mat;
         mat = temp_mat;
       }
     else if (type == TRANSFORM_MAT_RIGHT)
       {
-        temp_mat.Cols (0, ndof) = mat * elmat;
+        temp_mat.Cols (0, tndof) = mat * elmat;
         mat = temp_mat;
       }
     else if (type == TRANSFORM_MAT_LEFT_RIGHT)
       {
-        auto mat_times_elmat = temp_mat.Cols (0, ndof);
+        auto mat_times_elmat = temp_mat.Cols (0, tndof);
         mat_times_elmat = mat * elmat;
 
-        auto mat_upleft = mat.Cols (0, ndof).Rows (0, ndof);
+        auto mat_upleft = mat.Cols (0, tndof).Rows (0, tndof);
         mat_upleft = Trans (elmat) * mat_times_elmat;
       }
     else

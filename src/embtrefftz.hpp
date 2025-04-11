@@ -35,6 +35,7 @@ namespace ngcomp
     shared_ptr<SumOfIntegrals> cop;
     shared_ptr<SumOfIntegrals> crhs;
     shared_ptr<MeshAccess> ma;
+    shared_ptr<BitArray> ignoredofs;
 
     std::variant<size_t, double> ndof_trefftz;
     // shared_ptr<std::map<std::string, Vector<SCAL>>> stats = nullptr;
@@ -42,7 +43,6 @@ namespace ngcomp
     shared_ptr<std::map<std::string, Vector<double>>> stats = nullptr;
 
   public:
-    shared_ptr<BitArray> ignoredofs;
     vector<optional<ElmatWithTrefftzInfo<double>>> etmats;
     vector<optional<ElmatWithTrefftzInfo<Complex>>> etmatsc;
     shared_ptr<BaseVector> psol;
@@ -67,6 +67,7 @@ namespace ngcomp
     shared_ptr<BaseMatrix> GetEmbedding ();
     shared_ptr<FESpace> GetFES () const { return fes; }
     shared_ptr<FESpace> GetFESconf () const { return fes_conformity; }
+    shared_ptr<BitArray> GetIgnoredDofs () const { return ignoredofs; }
   };
 
   /// creates an embedding marix T for the given operations `top`,
@@ -129,6 +130,7 @@ namespace ngcomp
     vector<optional<ElmatWithTrefftzInfo<Complex>>> etmatsc;
     shared_ptr<T> fes;
     shared_ptr<const FESpace> fes_conformity;
+    shared_ptr<BitArray> ignoredofs;
 
     /// contains the mapping of Element Number to the associated Dofs
     Table<DofId> elnr_to_dofs;
@@ -158,6 +160,8 @@ namespace ngcomp
       etmats = emb->etmats;
       etmatsc = emb->etmatsc;
       fes_conformity = emb->GetFESconf ();
+      ignoredofs = emb->GetIgnoredDofs ();
+
       adjustDofsAfterSetOp ();
       // this->Update();
       // this->UpdateDofTables();
