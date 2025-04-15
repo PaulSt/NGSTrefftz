@@ -692,8 +692,9 @@ namespace ngcomp
     vector<optional<Matrix<SCAL>>> etmats (num_elements);
     vector<size_t> local_ndofs_trefftz (num_elements);
 
-    const bool fes_has_inactive_dofs
-        = fesHasInactiveDofs (*fes) || fesHasInactiveDofs (*fes_test);
+    const bool any_fes_has_inactive_dofs
+        = fesHasInactiveDofs (*fes) || fesHasInactiveDofs (*fes_test)
+          || ((fes_conformity) ? fesHasInactiveDofs (*fes_conformity) : false);
 
     auto particular_solution_vec
         = make_shared<VVector<SCAL>> (fes->GetNDof ());
@@ -758,11 +759,8 @@ namespace ngcomp
                       *fes_conformity, *fes_conformity, lh);
                 }
             }
-          // reorder elmat_cr
-          // #TODO is this really necessary?
-          reorderMatrixColumns (elmat_Cr, dofs_conforming, lh);
 
-          if (fes_has_inactive_dofs || ignoredofs)
+          if (any_fes_has_inactive_dofs || ignoredofs)
             {
               if (fes_conformity)
                 {
@@ -780,11 +778,19 @@ namespace ngcomp
               ndof_test = dofs_test.Size ();
               ndof_conforming = dofs_conforming.Size ();
 
-              // not needed
-              // auto [elmat_Cl_tmp, elmat_L_tmp] = elmat_A.SplitRows
-              // (ndof_conforming); elmat_Cl.Assign(elmat_Cl_tmp);
-              // elmat_L.Assign(elmat_L_tmp);
+              // Technically not needed anymore,
+              // but since elmat_Cl, elmat_L, and elmat_Cr are still living
+              // (but now pointing to the wrong memory), this is an
+              // easy-to-miss source of errors in the future.
+              auto [elmat_Cl_tmp, elmat_L_tmp]
+                  = elmat_A.SplitRows (ndof_conforming);
+              elmat_Cl.Assign (elmat_Cl_tmp);
+              elmat_L.Assign (elmat_L_tmp);
+              elmat_Cr.Assign (elmat_B.Rows (ndof_conforming));
             }
+          // reorder elmat_cr. Needs to happen after visible dof extraction.
+          // #TODO: why is this necessary?
+          reorderMatrixColumns (elmat_Cr, dofs_conforming, lh);
 
           FlatMatrix<SCAL, ColMajor> U (elmat_A.Height (), lh),
               V (elmat_A.Width (), lh);
@@ -824,7 +830,7 @@ namespace ngcomp
               particular_solution_vec->SetIndirect (dofs, partsol);
             }
 
-          if (fes_has_inactive_dofs || ignoredofs)
+          if (ignoredofs)
             elmat_T = putbackVisibleDofs (elmat_T, element_id, *fes, dofs,
                                           ignoredofs);
 
