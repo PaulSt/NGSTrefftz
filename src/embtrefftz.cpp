@@ -759,9 +759,6 @@ namespace ngcomp
                       *fes_conformity, *fes_conformity, lh);
                 }
             }
-          // reorder elmat_cr
-          // #TODO is this really necessary?
-          reorderMatrixColumns (elmat_Cr, dofs_conforming, lh);
 
           if (any_fes_has_inactive_dofs || ignoredofs)
             {
@@ -781,11 +778,19 @@ namespace ngcomp
               ndof_test = dofs_test.Size ();
               ndof_conforming = dofs_conforming.Size ();
 
-              // not needed
-              // auto [elmat_Cl_tmp, elmat_L_tmp] = elmat_A.SplitRows
-              // (ndof_conforming); elmat_Cl.Assign(elmat_Cl_tmp);
-              // elmat_L.Assign(elmat_L_tmp);
+              // Technically not needed anymore,
+              // but since elmat_Cl, elmat_L, and elmat_Cr are still living
+              // (but now pointing to the wrong memory), this is an
+              // easy-to-miss source of errors in the future.
+              auto [elmat_Cl_tmp, elmat_L_tmp]
+                  = elmat_A.SplitRows (ndof_conforming);
+              elmat_Cl.Assign (elmat_Cl_tmp);
+              elmat_L.Assign (elmat_L_tmp);
+              elmat_Cr.Assign (elmat_B.Rows (ndof_conforming));
             }
+          // reorder elmat_cr. Needs to happen after visible dof extraction.
+          // #TODO: why is this necessary?
+          reorderMatrixColumns (elmat_Cr, dofs_conforming, lh);
 
           FlatMatrix<SCAL, ColMajor> U (elmat_A.Height (), lh),
               V (elmat_A.Width (), lh);
