@@ -692,8 +692,9 @@ namespace ngcomp
     vector<optional<Matrix<SCAL>>> etmats (num_elements);
     vector<size_t> local_ndofs_trefftz (num_elements);
 
-    const bool fes_has_inactive_dofs
-        = fesHasInactiveDofs (*fes) || fesHasInactiveDofs (*fes_test);
+    const bool any_fes_has_inactive_dofs
+        = fesHasInactiveDofs (*fes) || fesHasInactiveDofs (*fes_test)
+          || ((fes_conformity) ? fesHasInactiveDofs (*fes_conformity) : false);
 
     auto particular_solution_vec
         = make_shared<VVector<SCAL>> (fes->GetNDof ());
@@ -762,7 +763,7 @@ namespace ngcomp
           // #TODO is this really necessary?
           reorderMatrixColumns (elmat_Cr, dofs_conforming, lh);
 
-          if (fes_has_inactive_dofs || ignoredofs)
+          if (any_fes_has_inactive_dofs || ignoredofs)
             {
               if (fes_conformity)
                 {
@@ -824,7 +825,7 @@ namespace ngcomp
               particular_solution_vec->SetIndirect (dofs, partsol);
             }
 
-          if (fes_has_inactive_dofs || ignoredofs)
+          if (any_fes_has_inactive_dofs || ignoredofs)
             elmat_T = putbackVisibleDofs (elmat_T, element_id, *fes, dofs,
                                           ignoredofs);
 
