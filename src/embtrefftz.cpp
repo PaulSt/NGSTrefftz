@@ -830,7 +830,7 @@ namespace ngcomp
               particular_solution_vec->SetIndirect (dofs, partsol);
             }
 
-          if (any_fes_has_inactive_dofs || ignoredofs)
+          if (ignoredofs)
             elmat_T = putbackVisibleDofs (elmat_T, element_id, *fes, dofs,
                                           ignoredofs);
 
