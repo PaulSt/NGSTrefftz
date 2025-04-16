@@ -9,6 +9,22 @@ namespace ngfem
              sin (2.0 * M_PI * i / this->ndof) };
   }
 
+  template <> Vec<3> PlaneWaveElement<3>::GetDirection (int i) const
+  {
+    int p = this->ndof;
+    int q = sqrt (p) - 1;
+    int l = 0;
+    while (i > 0 && (i / pow (l + 1, 2) >= 1))
+      l++;
+    int m = i - l * l;
+
+    double theta
+        = l % 2 ? M_PI / 2 * l / (q + 1) : M_PI - M_PI / 2 * (l + 1) / (q + 1);
+    double phi = l == 0 ? M_PI : M_PI * 2 * m / (2 * l + 1);
+
+    return { sin (theta) * cos (phi), sin (theta) * sin (phi), cos (theta) };
+  }
+
   // template<>
   // Matrix<Complex> PlaneWaveElement<2> :: StableMat() const
   //{
@@ -23,38 +39,34 @@ namespace ngfem
   // return M;
   //}
 
-  template <>
-  void PlaneWaveElement<2>::CalcShape (const BaseMappedIntegrationPoint &mip,
+  template <int D>
+  void PlaneWaveElement<D>::CalcShape (const BaseMappedIntegrationPoint &mip,
                                        BareSliceVector<Complex> shape) const
   {
-    Vec<2> cpoint = mip.GetPoint ();
-    cpoint -= shift;
+    Vec<D> cpoint = mip.GetPoint ();
+    cpoint -= this->shift;
 
     for (int i = 0; i < this->ndof; ++i)
       {
-        Vec<2> dir = GetDirection (i);
-        shape (i) = 0.0;
-        shape (i) = exp (
-            Complex (0, (cpoint[0] * dir[0] + cpoint[1] * dir[1]) * conj));
+        Vec<D> dir = GetDirection (i);
+        shape (i) = exp (Complex (0, InnerProduct (cpoint, dir) * conj));
       }
   }
 
-  template <>
-  void PlaneWaveElement<2>::CalcDShape (const BaseMappedIntegrationPoint &mip,
+  template <int D>
+  void PlaneWaveElement<D>::CalcDShape (const BaseMappedIntegrationPoint &mip,
                                         BareSliceMatrix<Complex> dshape) const
   {
-    Vec<2> cpoint = mip.GetPoint ();
-    cpoint -= shift;
+    Vec<D> cpoint = mip.GetPoint ();
+    cpoint -= this->shift;
 
-    for (int d = 0; d < 2; d++)
+    for (int d = 0; d < D; d++)
       for (int i = 0; i < this->ndof; ++i)
         {
-          Vec<2> dir = GetDirection (i);
-          dshape (i, d) = 0.0;
+          Vec<D> dir = GetDirection (i);
           dshape (i, d)
               = Complex (0, dir[d] * conj)
-                * exp (Complex (0, (cpoint[0] * dir[0] + cpoint[1] * dir[1])
-                                       * conj));
+                * exp (Complex (0, InnerProduct (cpoint, dir) * conj));
         }
   }
 
@@ -88,4 +100,5 @@ namespace ngfem
   }
 
   template class PlaneWaveElement<2>;
+  template class PlaneWaveElement<3>;
 }

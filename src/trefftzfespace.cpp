@@ -75,14 +75,12 @@ namespace ngcomp
             "grad",
             make_shared<T_DifferentialOperator<DiffOpMappedHesse<Dim>>> ());
       }
-    else if (Dim == 2
-             && (eqtype == EqType::helmholtz
-                 || eqtype == EqType::helmholtzconj))
+    else if (eqtype == EqType::helmholtz || eqtype == EqType::helmholtzconj)
       {
-        evaluator[VOL]
-            = make_shared<T_DifferentialOperatorC<DiffOpMappedComplex<2>>> ();
+        evaluator[VOL] = make_shared<
+            T_DifferentialOperatorC<DiffOpMappedComplex<Dim>>> ();
         flux_evaluator[VOL] = make_shared<
-            T_DifferentialOperatorC<DiffOpMappedGradientComplex<2>>> ();
+            T_DifferentialOperatorC<DiffOpMappedGradientComplex<Dim>>> ();
       }
     else
       {
@@ -329,11 +327,9 @@ namespace ngcomp
         return *(new (alloc) BlockMappedElement<Dim> (
             local_ndof, order, basismats, eltype, ElCenter<Dim> (ei), scale));
       }
-    else if (Dim == 2
-             && (eqtype == EqType::helmholtz
-                 || eqtype == EqType::helmholtzconj))
+    else if (eqtype == EqType::helmholtz || eqtype == EqType::helmholtzconj)
       {
-        return *(new (alloc) PlaneWaveElement<2> (
+        return *(new (alloc) PlaneWaveElement<Dim> (
             local_ndof, order, eltype, ElCenter<Dim> (ei), ElSize<Dim> (ei),
             coeff_const, (eqtype == EqType::helmholtz ? 1 : -1)));
       }
