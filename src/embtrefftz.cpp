@@ -911,6 +911,61 @@ namespace ngcomp
     return psol;
   }
 
+  shared_ptr<const BaseVector> TrefftzEmbedding::GetParticularSolution (
+      shared_ptr<SumOfIntegrals> _trhs) const
+  {
+    LocalHeap clh = LocalHeap (100 * 1000 * 1000, "embt_psol", true);
+
+    shared_ptr<BaseVector> particular_solution_vec;
+    if (fes->IsComplex ())
+      particular_solution_vec
+          = make_shared<VVector<Complex>> (fes->GetNDof ());
+    else
+      particular_solution_vec = make_shared<VVector<double>> (fes->GetNDof ());
+    particular_solution_vec->operator= (0.0);
+    Array<shared_ptr<LinearFormIntegrator>> lfis[4];
+    calculateLinearFormIntegrators (*_trhs, lfis);
+
+    ma->IterateElements (
+        VOL, clh, [&] (Ngs_Element mesh_element, LocalHeap &lh) {
+          if (fes->IsComplex () && !etmatsc[mesh_element.Nr ()])
+            return;
+          if (!fes->IsComplex () && !etmats[mesh_element.Nr ()])
+            return;
+          const ElementId element_id = ElementId (mesh_element);
+
+          Array<DofId> dofs, dofs_test;
+          fes->GetDofNrs (element_id, dofs, VISIBLE_DOF);
+          if (ignoredofs)
+            for (size_t i = 0; i < dofs.Size (); i++)
+              if (ignoredofs->Test (dofs[i]))
+                dofs.RemoveElement (i);
+          fes_test->GetDofNrs (element_id, dofs_test, VISIBLE_DOF);
+
+          if (fes->IsComplex ())
+            {
+              const size_t width = (*etmatsc_inv[element_id.Nr ()]).Width ();
+              auto elmat_T_inv = (*etmatsc_inv[element_id.Nr ()])
+                                     .Cols (width - dofs_test.Size (), width);
+              FlatVector<Complex> partsol (dofs.Size (), lh);
+              calculateParticularSolution<Complex> (
+                  partsol, lfis, *fes_test, element_id, *ma, elmat_T_inv, lh);
+              particular_solution_vec->SetIndirect (dofs, partsol);
+            }
+          else
+            {
+              const size_t width = (*etmats_inv[element_id.Nr ()]).Width ();
+              auto elmat_T_inv = (*etmats_inv[element_id.Nr ()])
+                                     .Cols (width - dofs_test.Size (), width);
+              FlatVector<double> partsol (dofs.Size (), lh);
+              calculateParticularSolution<double> (
+                  partsol, lfis, *fes_test, element_id, *ma, elmat_T_inv, lh);
+              particular_solution_vec->SetIndirect (dofs, partsol);
+            }
+        });
+    return particular_solution_vec;
+  }
+
   shared_ptr<const BaseMatrix> TrefftzEmbedding::GetEmbedding () const
   {
     if (fes->IsComplex ())
@@ -1353,8 +1408,17 @@ void ExportEmbTrefftz (py::module m)
       .def ("GetEmbedding", &ngcomp::TrefftzEmbedding::GetEmbedding,
             "Get the sparse embedding matrix")
       .def ("GetParticularSolution",
-            &ngcomp::TrefftzEmbedding::GetParticularSolution,
-            "Particular solution as GridFunction of the underlying FESpace");
+            static_cast<shared_ptr<const BaseVector> (TrefftzEmbedding::*) ()
+                            const> (
+                &ngcomp::TrefftzEmbedding::GetParticularSolution),
+            "Particular solution as GridFunction vector of the underlying "
+            "FESpace")
+      .def ("GetParticularSolution",
+            static_cast<shared_ptr<const BaseVector> (TrefftzEmbedding::*) (
+                shared_ptr<SumOfIntegrals>) const> (
+                &ngcomp::TrefftzEmbedding::GetParticularSolution),
+            "Particular solution as GridFunction vector of the underlying "
+            "FESpace, given a trhs");
 }
 
 #endif // NGS_PYTHON
