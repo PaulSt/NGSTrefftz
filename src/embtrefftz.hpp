@@ -29,13 +29,17 @@ namespace ngcomp
     shared_ptr<std::map<std::string, Vector<double>>> stats = nullptr;
 
     /// elmat = (elmat_conforming | elmat_trefftz)
-    vector<optional<Matrix<double>>> etmats;
-    /// elmat = (elmat_conforming | elmat_trefftz)
-    vector<optional<Matrix<Complex>>> etmatsc;
+    Array<optional<Matrix<double>>> etmats;
+    Array<optional<Matrix<Complex>>> etmatsc;
+
+    /// pseudoinverse matrices of (cop|top)
+    Array<optional<Matrix<double>>> etmats_inv;
+    Array<optional<Matrix<Complex>>> etmatsc_inv;
+
     /// elmat_trefftz.width == local_ndof_trefftz
     /// elmat_conforming.width == elmat.width - local_ndof_trefftz
     ///                        == local_ndof_conforming
-    vector<size_t> local_ndofs_trefftz;
+    Array<size_t> local_ndofs_trefftz;
 
     shared_ptr<const BaseVector> psol;
 
@@ -62,17 +66,25 @@ namespace ngcomp
     shared_ptr<FESpace> GetFES () const noexcept { return fes; }
     shared_ptr<FESpace> GetFESconf () const noexcept { return fes_conformity; }
     shared_ptr<const BitArray> GetIgnoredDofs () const { return ignoredofs; }
-    const vector<optional<Matrix<double>>> &GetEtmats () const noexcept
+    const Array<optional<Matrix<double>>> &GetEtmats () const noexcept
     {
       return etmats;
     }
-    const vector<optional<Matrix<Complex>>> &GetEtmatsC () const noexcept
+    const Array<optional<Matrix<Complex>>> &GetEtmatsC () const noexcept
     {
       return etmatsc;
     }
-    const vector<size_t> &GetLocalNodfsTrefftz () const noexcept
+    const Array<size_t> &GetLocalNodfsTrefftz () const noexcept
     {
       return local_ndofs_trefftz;
+    }
+    FlatArray<optional<Matrix<double>>> GetEtmatsInv ()
+    {
+      return this->etmats_inv;
+    }
+    FlatArray<optional<Matrix<Complex>>> GetEtmatsCInv ()
+    {
+      return this->etmatsc_inv;
     }
   };
 
@@ -88,14 +100,19 @@ namespace ngcomp
   {
     shared_ptr<TrefftzEmbedding> emb;
     static_assert (std::is_base_of_v<FESpace, T>, "T must be a FESpace");
-    vector<optional<Matrix<double>>> etmats;
-    vector<optional<Matrix<Complex>>> etmatsc;
+    Array<optional<Matrix<double>>> etmats;
+    Array<optional<Matrix<Complex>>> etmatsc;
     shared_ptr<T> fes;
     shared_ptr<const FESpace> fes_conformity;
     shared_ptr<const BitArray> ignoredofs;
 
     /// contains the mapping of Element Number to the associated Dofs
     Table<DofId> elnr_to_dofs;
+
+    /// (pseudo-)inverse matrices of etmats
+    const FlatArray<optional<Matrix<double>>> etmats_inv;
+    /// (pseudo-)inverse matrices of etmatsc
+    const FlatArray<optional<Matrix<Complex>>> etmatsc_inv;
 
   public:
     EmbTrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags,
@@ -108,7 +125,8 @@ namespace ngcomp
     EmbTrefftzFESpace (shared_ptr<TrefftzEmbedding> aemb)
         : T (aemb->GetFES ()->GetMeshAccess (), aemb->GetFES ()->GetFlags (),
              false),
-          emb (aemb)
+          emb (aemb), etmats_inv (emb->GetEtmatsInv ()),
+          etmatsc_inv (emb->GetEtmatsCInv ())
     {
       fes = dynamic_pointer_cast<T> (aemb->GetFES ());
       assert (fes && "fes may not be nullptr");

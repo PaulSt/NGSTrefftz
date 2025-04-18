@@ -251,8 +251,8 @@ void fesFromOp (const SumOfIntegrals &op, shared_ptr<FESpace> &fes,
 template <typename SCAL>
 size_t
 createConformingTrefftzTables (Table<int> &table, Table<int> &table2,
-                               const vector<optional<Matrix<SCAL>>> &etmats,
-                               const vector<size_t> &local_ndofs_trefftz,
+                               const FlatArray<optional<Matrix<SCAL>>> &etmats,
+                               const FlatArray<size_t> &local_ndofs_trefftz,
                                const FESpace &fes,
                                shared_ptr<const FESpace> fes_conformity,
                                shared_ptr<const BitArray> ignoredofs)
@@ -341,7 +341,7 @@ createConformingTrefftzTables (Table<int> &table, Table<int> &table2,
 template <typename SCAL>
 INLINE void
 fillSparseMatrixWithData (SparseMatrix<SCAL> &P,
-                          const vector<optional<Matrix<SCAL>>> &etmats,
+                          const FlatArray<optional<Matrix<SCAL>>> &etmats,
                           const Table<int> &table, const Table<int> &table2,
                           const MeshAccess &ma,
                           shared_ptr<BitArray> ignoredofs)
@@ -377,9 +377,9 @@ namespace ngcomp
   /// @tparam SCAL scalar type of the matrix entries
   template <typename SCAL>
   shared_ptr<BaseMatrix>
-  Elmats2Sparse (const vector<optional<Matrix<SCAL>>> etmats,
-                 const vector<size_t> local_ndofs_trefftz, const FESpace &fes,
-                 shared_ptr<const FESpace> fes_conformity,
+  Elmats2Sparse (const FlatArray<optional<Matrix<SCAL>>> &etmats,
+                 const FlatArray<size_t> &local_ndofs_trefftz,
+                 const FESpace &fes, shared_ptr<const FESpace> fes_conformity,
                  shared_ptr<BitArray> ignoredofs)
   {
     const auto ma = fes.GetMeshAccess ();
@@ -556,50 +556,22 @@ namespace ngbla
 /// @return pseudoinverse of A (as some `ngbla::Expr` type to avoid
 /// allocations)
 template <typename SCAL, typename TDIST>
-auto invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
-                const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &Sigma,
-                const FlatMatrix<SCAL, ColMajor> &V, size_t num_zero,
-                LocalHeap &lh)
-{
-  auto U_T = Trans (U);
-  auto V_T = Trans (V);
-  const auto [m, n] = Sigma.Shape ();
-  FlatMatrix<SCAL> Sigma_inv (n, m, lh);
-  Sigma_inv = 0.;
-  auto Sigma_el = Sigma.Diag ().begin ();
-  auto Sigma_inv_el = Sigma_inv.Diag ().begin ();
-
-  // Sigma_inv.Diag () = 1.0 / elmat_a.Diag ();
-  for (size_t i = 0; i < min (n, m); i++)
-    {
-      if (i < n - num_zero)
-        *(Sigma_inv_el++) = 1.0 / *(Sigma_el++);
-      else
-        *(Sigma_inv_el++) = 0.0;
-    }
-  return V_T * Sigma_inv * U_T;
-}
-
-/// @returns the pseudo-inverse of `mat`
-/// @param num_zero number of (near) zero singular values in `mat`
-template <typename SCAL>
 Matrix<SCAL>
-getPseudoInverse (const FlatMatrix<SCAL> mat, const size_t num_zero)
+invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
+           const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &Sigma,
+           const FlatMatrix<SCAL, ColMajor> &V, size_t num_zero, LocalHeap &lh)
 {
-  const auto [n, m] = mat.Shape ();
-  // should be at least as large as the needed size.
-  // needed size: (n*m + n*n + m*m) * sizeof(SCAL)
-  LocalHeap lh (2 * (n * n + n * m + m * m) * sizeof (SCAL));
-  FlatMatrix<SCAL> sigma (n, m, lh);
-  FlatMatrix<SCAL, ColMajor> U (n, n, lh);
-  FlatMatrix<SCAL, ColMajor> V (m, m, lh);
+  const HeapReset hr (lh);
+  const auto [m, n] = Sigma.Shape ();
 
-  Matrix<SCAL> elmat_inv (m, n);
+  FlatMatrix<SCAL> sigma_inv_times_ut (n, U.Height (), lh);
+  for (size_t i = 0; i < n; i++)
+    if (i < min (n - num_zero, m))
+      sigma_inv_times_ut.Row (i) = 1.0 / Sigma (i, i) * U.Col (i);
+    else
+      sigma_inv_times_ut.Row (i) = SCAL (0.);
 
-  sigma = mat;
-  getSVD (sigma, U, V);
-  elmat_inv = invertSVD (U, sigma, V, num_zero, lh);
-  return elmat_inv;
+  return Trans (V) * sigma_inv_times_ut;
 }
 
 /// calculates from the given space and linear form integrators a particular
@@ -689,8 +661,9 @@ namespace ngcomp
         calculateBilinearFormIntegrators (*crhs, cop_rhs_integrators);
       }
 
-    vector<optional<Matrix<SCAL>>> etmats (num_elements);
-    vector<size_t> local_ndofs_trefftz (num_elements);
+    Array<optional<Matrix<SCAL>>> etmats (num_elements);
+    Array<optional<Matrix<SCAL>>> etmats_inv (num_elements);
+    Array<size_t> local_ndofs_trefftz (num_elements);
 
     const bool any_fes_has_inactive_dofs
         = fesHasInactiveDofs (*fes) || fesHasInactiveDofs (*fes_test)
@@ -835,6 +808,8 @@ namespace ngcomp
                                           ignoredofs);
 
           etmats[element_id.Nr ()] = make_optional<Matrix<SCAL>> (elmat_T);
+          etmats_inv[element_id.Nr ()]
+              = make_optional<Matrix<SCAL>> (elmat_A_inv);
           local_ndofs_trefftz[element_id.Nr ()] = ndof_trefftz_i;
 
           if (stats)
@@ -878,9 +853,15 @@ namespace ngcomp
       }
 
     if constexpr (std::is_same_v<double, SCAL>)
-      this->etmats = etmats;
+      {
+        this->etmats = etmats;
+        this->etmats_inv = etmats_inv;
+      }
     else
-      this->etmatsc = etmats;
+      {
+        this->etmatsc = etmats;
+        this->etmatsc_inv = etmats_inv;
+      }
     this->local_ndofs_trefftz = local_ndofs_trefftz;
     this->psol = particular_solution_vec;
   }
@@ -1033,7 +1014,7 @@ namespace ngcomp
         createConformingTrefftzTables (_table_dummy, elnr_to_dofs, etmats,
                                        emb->GetLocalNodfsTrefftz (), *fes,
                                        fes_conformity, ignoredofs);
-        for (size_t i = 0; i < etmats.size (); i++)
+        for (size_t i = 0; i < etmats.Size (); i++)
           if (etmats[i])
             QuickSort (elnr_to_dofs[i]);
       }
@@ -1043,7 +1024,7 @@ namespace ngcomp
         createConformingTrefftzTables (_table_dummy, elnr_to_dofs, etmatsc,
                                        emb->GetLocalNodfsTrefftz (), *fes,
                                        fes_conformity, ignoredofs);
-        for (size_t i = 0; i < etmatsc.size (); i++)
+        for (size_t i = 0; i < etmatsc.Size (); i++)
           if (etmatsc[i])
             QuickSort (elnr_to_dofs[i]);
       }
@@ -1184,8 +1165,9 @@ namespace ngcomp
   /// double/complex generic implementation for the methods VTransformV(R | C)
   /// for the embedded Trefftz FESpace.
   template <typename SCAL>
-  void etFesVTransformV (SliceVector<SCAL> vec, const TRANSFORM_TYPE type,
-                         const Matrix<SCAL> elmat)
+  void
+  etFesVTransformV (SliceVector<SCAL> &vec, const TRANSFORM_TYPE type,
+                    const Matrix<SCAL> &elmat, const Matrix<SCAL> &elmat_inv)
   {
     const size_t ndof = elmat.Width ();
 
@@ -1208,8 +1190,7 @@ namespace ngcomp
           throw std::invalid_argument (
               "given vec does not match the needed dimension.");
 
-        // todo for later: pre-calculate the inverse matrices
-        const auto elmat_inv = getPseudoInverse (elmat, 0);
+        // const auto elmat_inv = getPseudoInverse (elmat, 0);
         Vector<SCAL> tmp_vec (elmat_inv.Height ());
         tmp_vec = elmat_inv * vec;
         vec = tmp_vec;
@@ -1230,8 +1211,8 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    const auto elmat = *etmats[ei.Nr ()];
-    etFesVTransformV (vec, type, elmat);
+    etFesVTransformV (vec, type, *this->etmats[ei.Nr ()],
+                      *this->etmats_inv[ei.Nr ()]);
   }
 
   template <typename T>
@@ -1242,8 +1223,8 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    const auto elmat = *etmatsc[ei.Nr ()];
-    etFesVTransformV (vec, type, elmat);
+    etFesVTransformV (vec, type, *this->etmatsc[ei.Nr ()],
+                      *this->etmatsc_inv[ei.Nr ()]);
   }
 
   // template class EmbTrefftzFESpace<L2HighOrderFESpace,
