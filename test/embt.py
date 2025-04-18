@@ -160,10 +160,12 @@ def testembtrefftznonsym(fes):
     tpgfu.vec.data = PP*TU
     return sqrt(Integrate((tpgfu-exactlap)**2, mesh))
 
-def testembtrefftzpoi(fes):
+def testembtrefftzpoi(fes,test_gpsrhs = False):
     """
     >>> fes = L2(mesh2d, order=5,  dgjumps=True)#,all_dofs_together=True)
     >>> testembtrefftzpoi(fes) # doctest:+ELLIPSIS
+    3...e-09
+    >>> testembtrefftzpoi(fes,True) # doctest:+ELLIPSIS
     3...e-09
     """
     mesh = fes.mesh
@@ -178,7 +180,10 @@ def testembtrefftzpoi(fes):
         emb = TrefftzEmbedding(top=top,trhs=trhs,eps=eps)
     PP = emb.GetEmbedding()
     PPT = PP.CreateTranspose()
-    uf = emb.GetParticularSolution()
+    if test_gpsrhs:
+        uf = emb.GetParticularSolution(trhs)
+    else:
+        uf = emb.GetParticularSolution()
     a,f = dgell(fes,exactpoi,rhs)
     TA = PPT@a.mat@PP
     TU = TA.Inverse()*(PPT*(f.vec-a.mat*uf))
