@@ -527,6 +527,23 @@ namespace ngbla
   /// @param A has dimension n * m
   /// @param U has dimension n * n
   /// @param V has dimension m * m
+  template <typename SCAL>
+  void getSVD (FlatMatrix<SCAL, ngbla::ColMajor> A,
+               FlatMatrix<SCAL, ColMajor> U, FlatMatrix<SCAL, ColMajor> V)
+  {
+#ifdef NGSTREFFTZ_USE_LAPACK
+    LapackSVD (A, U, V);
+#else
+    cout << "No Lapack, using CalcSVD" << endl;
+    CalcSVD (A, U, V);
+#endif
+  }
+
+  /// `A = U * Sigma * V`
+  /// A gets overwritten with Sigma
+  /// @param A has dimension n * m
+  /// @param U has dimension n * n
+  /// @param V has dimension m * m
   template <typename SCAL, typename TDIST>
   void getSVD (MatrixView<SCAL, ngbla::RowMajor, size_t, size_t, TDIST> A,
                FlatMatrix<SCAL, ColMajor> U, FlatMatrix<SCAL, ColMajor> V)
@@ -535,16 +552,8 @@ namespace ngbla
     Matrix<SCAL, ColMajor> AA (height, width);
     AA = A;
 
-    // Matrix<SCAL,ColMajor> AA(A.Height(),A.Width());
-    // for(int i=0;i<A.Height();i++)
-    // for(int j=0;j<A.Width();j++)
-    // AA(i,j)= A(i,j);
-#ifdef NGSTREFFTZ_USE_LAPACK
-    LapackSVD (AA, U, V);
-#else
-    cout << "No Lapack, using CalcSVD" << endl;
-    CalcSVD (AA, U, V);
-#endif
+    getSVD (AA, U, V);
+
     A = static_cast<SCAL> (0.0);
     // A.Diag(0)=AA.Diag();
     for (size_t i = 0; i < min (A.Width (), A.Height ()); i++)
@@ -555,10 +564,10 @@ namespace ngbla
 /// @param num_zero number of singular values `sigma_i = 0` in the matrix Sigma
 /// @return pseudoinverse of A (as some `ngbla::Expr` type to avoid
 /// allocations)
-template <typename SCAL, typename TDIST>
+template <typename SCAL, typename TDIST, ORDERING SIG_ORD>
 Matrix<SCAL>
 invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
-           const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &Sigma,
+           const MatrixView<SCAL, SIG_ORD, size_t, size_t, TDIST> &Sigma,
            const FlatMatrix<SCAL, ColMajor> &V, size_t num_zero, LocalHeap &lh)
 {
   const HeapReset hr (lh);
@@ -572,6 +581,26 @@ invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
       sigma_inv_times_ut.Row (i) = SCAL (0.);
 
   return Trans (V) * sigma_inv_times_ut;
+}
+
+/// @returns the pseudo-inverse of `mat`
+/// @param num_zero number of (near) zero singular values in `mat`
+template <typename SCAL>
+Matrix<SCAL> getPseudoInverse (const FlatMatrix<SCAL> mat,
+                               const size_t num_zero, LocalHeap &lh)
+{
+  const HeapReset hr (lh);
+  const auto [n, m] = mat.Shape ();
+  FlatMatrix<SCAL, ColMajor> sigma (n, m, lh);
+  FlatMatrix<SCAL, ColMajor> U (n, n, lh);
+  FlatMatrix<SCAL, ColMajor> V (m, m, lh);
+
+  Matrix<SCAL> elmat_inv (m, n);
+
+  sigma = mat;
+  getSVD (sigma, U, V);
+  elmat_inv = invertSVD (U, sigma, V, num_zero, lh);
+  return elmat_inv;
 }
 
 /// calculates from the given space and linear form integrators a particular
@@ -808,8 +837,8 @@ namespace ngcomp
                                           ignoredofs);
 
           etmats[element_id.Nr ()] = make_optional<Matrix<SCAL>> (elmat_T);
-          etmats_inv[element_id.Nr ()]
-              = make_optional<Matrix<SCAL>> (elmat_A_inv);
+          etmats_inv[element_id.Nr ()] = make_optional<Matrix<SCAL>> (
+              getPseudoInverse (elmat_T, 0, lh));
           local_ndofs_trefftz[element_id.Nr ()] = ndof_trefftz_i;
 
           if (stats)
