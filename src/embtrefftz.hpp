@@ -100,13 +100,13 @@ namespace ngcomp
   class EmbTrefftzFESpace
       : public T //, public std::enable_shared_from_this<EmbTrefftzFESpace>
   {
-    shared_ptr<TrefftzEmbedding> emb;
+    const shared_ptr<TrefftzEmbedding> emb;
     static_assert (std::is_base_of_v<FESpace, T>, "T must be a FESpace");
-    Array<optional<Matrix<double>>> etmats;
-    Array<optional<Matrix<Complex>>> etmatsc;
-    shared_ptr<T> fes;
-    shared_ptr<const FESpace> fes_conformity;
-    shared_ptr<const BitArray> ignoredofs;
+    const Array<optional<Matrix<double>>> etmats;
+    const Array<optional<Matrix<Complex>>> etmatsc;
+    const shared_ptr<T> fes;
+    const shared_ptr<const FESpace> fes_conformity;
+    const shared_ptr<const BitArray> ignoredofs;
 
     /// contains the mapping of Element Number to the associated Dofs
     Table<DofId> elnr_to_dofs;
@@ -127,10 +127,13 @@ namespace ngcomp
     EmbTrefftzFESpace (shared_ptr<TrefftzEmbedding> aemb)
         : T (aemb->GetFES ()->GetMeshAccess (), aemb->GetFES ()->GetFlags (),
              false),
-          emb (aemb), etmats_inv (emb->GetEtmatsInv ()),
+          emb (aemb), etmats (emb->GetEtmats ()), etmatsc (emb->GetEtmatsC ()),
+          fes (dynamic_pointer_cast<T> (aemb->GetFES ())),
+          fes_conformity (emb->GetFESconf ()),
+          ignoredofs (emb->GetIgnoredDofs ()),
+          etmats_inv (emb->GetEtmatsInv ()),
           etmatsc_inv (emb->GetEtmatsCInv ())
     {
-      fes = dynamic_pointer_cast<T> (aemb->GetFES ());
       assert (fes && "fes may not be nullptr");
       this->name = "EmbTrefftzFESpace(" + fes->GetClassName () + ")";
       this->type = "embt";
@@ -139,11 +142,6 @@ namespace ngcomp
       if constexpr (std::is_same_v<CompoundFESpace, T>)
         for (auto space : fes->Spaces ())
           this->AddSpace (space);
-
-      etmats = emb->GetEtmats ();
-      etmatsc = emb->GetEtmatsC ();
-      fes_conformity = emb->GetFESconf ();
-      ignoredofs = emb->GetIgnoredDofs ();
 
       adjustDofsAfterSetOp ();
       // this->Update();
@@ -167,6 +165,8 @@ namespace ngcomp
                                TRANSFORM_TYPE type) const override;
 
     virtual string GetClassName () const override;
+
+    shared_ptr<TrefftzEmbedding> GetEmbedding () const noexcept { return emb; }
 
   private:
     /// adjusts the dofs of the space. Will be called by SetOp.

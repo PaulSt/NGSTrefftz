@@ -1307,6 +1307,9 @@ template <typename T> void ExportETSpace (py::module m, string label)
   auto pyspace
       = ngcomp::ExportFESpace<ngcomp::EmbTrefftzFESpace<T>> (m, label);
 
+  pyspace.def ("GetEmbedding", &ngcomp::EmbTrefftzFESpace<T>::GetEmbedding,
+               "Get the TrefftzEmbedding");
+
   // pyspace.def (py::init ([pyspace] (shared_ptr<T> fes) {
   // py::list info;
   // auto ma = fes->GetMeshAccess ();
