@@ -692,6 +692,7 @@ namespace ngcomp
 
     Array<optional<Matrix<SCAL>>> etmats (num_elements);
     Array<optional<Matrix<SCAL>>> etmats_inv (num_elements);
+    Array<optional<Matrix<SCAL>>> etmats_trefftz_inv (num_elements);
     Array<size_t> local_ndofs_trefftz (num_elements);
 
     const bool any_fes_has_inactive_dofs
@@ -839,6 +840,8 @@ namespace ngcomp
           etmats[element_id.Nr ()] = make_optional<Matrix<SCAL>> (elmat_T);
           etmats_inv[element_id.Nr ()] = make_optional<Matrix<SCAL>> (
               getPseudoInverse (elmat_T, 0, lh));
+          etmats_trefftz_inv[element_id.Nr ()]
+              = make_optional<Matrix<SCAL>> (elmat_A_inv);
           local_ndofs_trefftz[element_id.Nr ()] = ndof_trefftz_i;
 
           if (stats)
@@ -883,13 +886,15 @@ namespace ngcomp
 
     if constexpr (std::is_same_v<double, SCAL>)
       {
-        this->etmats = etmats;
-        this->etmats_inv = etmats_inv;
+        this->etmats = std::move (etmats);
+        this->etmats_inv = std::move (etmats_inv);
+        this->etmats_trefftz_inv = std::move (etmats_trefftz_inv);
       }
     else
       {
-        this->etmatsc = etmats;
-        this->etmatsc_inv = etmats_inv;
+        this->etmatsc = std::move (etmats);
+        this->etmatsc_inv = std::move (etmats_inv);
+        this->etmatsc_trefftz_inv = std::move (etmats_trefftz_inv);
       }
     this->local_ndofs_trefftz = local_ndofs_trefftz;
     this->psol = particular_solution_vec;
@@ -973,8 +978,9 @@ namespace ngcomp
 
           if (fes->IsComplex ())
             {
-              const size_t width = (*etmatsc_inv[element_id.Nr ()]).Width ();
-              auto elmat_T_inv = (*etmatsc_inv[element_id.Nr ()])
+              const size_t width
+                  = (*etmatsc_trefftz_inv[element_id.Nr ()]).Width ();
+              auto elmat_T_inv = (*etmatsc_trefftz_inv[element_id.Nr ()])
                                      .Cols (width - dofs_test.Size (), width);
               FlatVector<Complex> partsol (dofs.Size (), lh);
               calculateParticularSolution<Complex> (
@@ -983,8 +989,9 @@ namespace ngcomp
             }
           else
             {
-              const size_t width = (*etmats_inv[element_id.Nr ()]).Width ();
-              auto elmat_T_inv = (*etmats_inv[element_id.Nr ()])
+              const size_t width
+                  = (*etmats_trefftz_inv[element_id.Nr ()]).Width ();
+              auto elmat_T_inv = (*etmats_trefftz_inv[element_id.Nr ()])
                                      .Cols (width - dofs_test.Size (), width);
               FlatVector<double> partsol (dofs.Size (), lh);
               calculateParticularSolution<double> (

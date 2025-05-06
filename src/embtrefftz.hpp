@@ -36,6 +36,11 @@ namespace ngcomp
     Array<optional<Matrix<double>>> etmats_inv;
     Array<optional<Matrix<Complex>>> etmatsc_inv;
 
+    /// (pseudo-)inverse matrices of the Trefftz part of etmats
+    Array<optional<Matrix<double>>> etmats_trefftz_inv;
+    /// (pseudo-)inverse matrices of the Trefftz part of etmatsc
+    Array<optional<Matrix<Complex>>> etmatsc_trefftz_inv;
+
     /// elmat_trefftz.width == local_ndof_trefftz
     /// elmat_conforming.width == elmat.width - local_ndof_trefftz
     ///                        == local_ndof_conforming
