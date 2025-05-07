@@ -23,6 +23,8 @@ namespace ngcomp
     shared_ptr<MeshAccess> ma;
     shared_ptr<BitArray> ignoredofs;
 
+    bool compute_elmat_T_inv = true;
+
     std::variant<size_t, double> ndof_trefftz;
     // shared_ptr<std::map<std::string, Vector<SCAL>>> stats = nullptr;
 
@@ -31,10 +33,6 @@ namespace ngcomp
     /// elmat = (elmat_conforming | elmat_trefftz)
     Array<optional<Matrix<double>>> etmats;
     Array<optional<Matrix<Complex>>> etmatsc;
-
-    /// pseudoinverse matrices of (cop|top)
-    Array<optional<Matrix<double>>> etmats_inv;
-    Array<optional<Matrix<Complex>>> etmatsc_inv;
 
     /// (pseudo-)inverse matrices of the Trefftz part of etmats
     Array<optional<Matrix<double>>> etmats_trefftz_inv;
@@ -81,17 +79,11 @@ namespace ngcomp
     {
       return etmatsc;
     }
+    optional<Matrix<double>> GetEtmat (size_t i) const { return etmats[i]; }
+    optional<Matrix<Complex>> GetEtmatC (size_t i) const { return etmatsc[i]; }
     const Array<size_t> &GetLocalNodfsTrefftz () const noexcept
     {
       return local_ndofs_trefftz;
-    }
-    FlatArray<optional<Matrix<double>>> GetEtmatsInv ()
-    {
-      return this->etmats_inv;
-    }
-    FlatArray<optional<Matrix<Complex>>> GetEtmatsCInv ()
-    {
-      return this->etmatsc_inv;
     }
   };
 
@@ -107,8 +99,7 @@ namespace ngcomp
   {
     shared_ptr<TrefftzEmbedding> emb;
     static_assert (std::is_base_of_v<FESpace, T>, "T must be a FESpace");
-    Array<optional<Matrix<double>>> etmats;
-    Array<optional<Matrix<Complex>>> etmatsc;
+
     shared_ptr<T> fes;
     shared_ptr<const FESpace> fes_conformity;
     shared_ptr<const BitArray> ignoredofs;
@@ -117,9 +108,8 @@ namespace ngcomp
     Table<DofId> elnr_to_dofs;
 
     /// (pseudo-)inverse matrices of etmats
-    const FlatArray<optional<Matrix<double>>> etmats_inv;
-    /// (pseudo-)inverse matrices of etmatsc
-    const FlatArray<optional<Matrix<Complex>>> etmatsc_inv;
+    Array<optional<Matrix<double>>> etmats_inv;
+    Array<optional<Matrix<Complex>>> etmatsc_inv;
 
   public:
     EmbTrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags,
@@ -132,8 +122,7 @@ namespace ngcomp
     EmbTrefftzFESpace (shared_ptr<TrefftzEmbedding> aemb)
         : T (aemb->GetFES ()->GetMeshAccess (), aemb->GetFES ()->GetFlags (),
              false),
-          emb (aemb), etmats_inv (emb->GetEtmatsInv ()),
-          etmatsc_inv (emb->GetEtmatsCInv ())
+          emb (aemb)
     {
       fes = dynamic_pointer_cast<T> (aemb->GetFES ());
       assert (fes && "fes may not be nullptr");
@@ -145,8 +134,9 @@ namespace ngcomp
         for (auto space : fes->Spaces ())
           this->AddSpace (space);
 
-      etmats = emb->GetEtmats ();
-      etmatsc = emb->GetEtmatsC ();
+      etmats_inv.SetSize (this->ma->GetNE (VOL));
+      etmatsc_inv.SetSize (this->ma->GetNE (VOL));
+
       fes_conformity = emb->GetFESconf ();
       ignoredofs = emb->GetIgnoredDofs ();
 

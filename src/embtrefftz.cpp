@@ -522,42 +522,34 @@ namespace ngbla
   }
 #endif
 
-  /// `A = U * Sigma * V`
-  /// A gets overwritten with Sigma
-  /// @param A has dimension n * m
-  /// @param U has dimension n * n
-  /// @param V has dimension m * m
-  template <typename SCAL>
-  void getSVD (FlatMatrix<SCAL, ngbla::ColMajor> A,
-               FlatMatrix<SCAL, ColMajor> U, FlatMatrix<SCAL, ColMajor> V)
-  {
-#ifdef NGSTREFFTZ_USE_LAPACK
-    LapackSVD (A, U, V);
-#else
-    cout << "No Lapack, using CalcSVD" << endl;
-    CalcSVD (A, U, V);
-#endif
-  }
-
-  /// `A = U * Sigma * V`
-  /// A gets overwritten with Sigma
+  /// `A^T = V * Sigma^T * U^T`
+  /// A gets overwritten with Sigma^T
   /// @param A has dimension n * m
   /// @param U has dimension n * n
   /// @param V has dimension m * m
   template <typename SCAL, typename TDIST>
-  void getSVD (MatrixView<SCAL, ngbla::RowMajor, size_t, size_t, TDIST> A,
-               FlatMatrix<SCAL, ColMajor> U, FlatMatrix<SCAL, ColMajor> V)
+  void
+  getSVD (MatrixView<SCAL, ngbla::RowMajor, size_t, size_t, TDIST> A_to_sigmaT,
+          FlatMatrix<SCAL, ColMajor> UT, FlatMatrix<SCAL, ColMajor> V)
   {
-    auto [height, width] = A.Shape ();
-    Matrix<SCAL, ColMajor> AA (height, width);
-    AA = A;
+    auto [Aheight, Awidth] = A_to_sigmaT.Shape ();
+    FlatMatrix<SCAL, ColMajor> AT (Awidth, Aheight, &A_to_sigmaT (0, 0));
+    // FlatMatrix<SCAL, ColMajor> VT (Aheight, Aheight, &UT(0,0));
+    // FlatMatrix<SCAL, ColMajor> U (Awidth, Awidth, &V(0,0));
+    // Matrix<SCAL, ColMajor> AA (height, width);
+    // AA = A;
 
-    getSVD (AA, U, V);
+#ifdef NGSTREFFTZ_USE_LAPACK
+    LapackSVD (AT, V, UT);
+#else
+    cout << "No Lapack, using CalcSVD" << endl;
+    CalcSVD (AT, V, UT);
+#endif
 
-    A = static_cast<SCAL> (0.0);
-    // A.Diag(0)=AA.Diag();
-    for (size_t i = 0; i < min (A.Width (), A.Height ()); i++)
-      A (i, i) = AA (i, i);
+    // A = static_cast<SCAL> (0.0);
+    //  A.Diag(0)=AA.Diag();
+    // for (size_t i = 0; i < min (A.Width (), A.Height ()); i++)
+    // A (i, i) = AA (i, i);
   }
 }
 
@@ -566,40 +558,40 @@ namespace ngbla
 /// allocations)
 template <typename SCAL, typename TDIST, ORDERING SIG_ORD>
 Matrix<SCAL>
-invertSVD (const FlatMatrix<SCAL, ColMajor> &U,
+invertSVD (const FlatMatrix<SCAL, ColMajor> &UT,
            const MatrixView<SCAL, SIG_ORD, size_t, size_t, TDIST> &Sigma,
            const FlatMatrix<SCAL, ColMajor> &V, size_t num_zero, LocalHeap &lh)
 {
   const HeapReset hr (lh);
   const auto [m, n] = Sigma.Shape ();
 
-  FlatMatrix<SCAL> sigma_inv_times_ut (n, U.Height (), lh);
+  FlatMatrix<SCAL> sigma_inv_times_ut (n, UT.Width (), lh);
   for (size_t i = 0; i < n; i++)
     if (i < min (n - num_zero, m))
-      sigma_inv_times_ut.Row (i) = 1.0 / Sigma (i, i) * U.Col (i);
+      sigma_inv_times_ut.Row (i) = 1.0 / Sigma (i, i) * UT.Row (i);
     else
       sigma_inv_times_ut.Row (i) = SCAL (0.);
 
-  return Trans (V) * sigma_inv_times_ut;
+  return V * sigma_inv_times_ut;
 }
 
 /// @returns the pseudo-inverse of `mat`
 /// @param num_zero number of (near) zero singular values in `mat`
 template <typename SCAL>
-Matrix<SCAL> getPseudoInverse (const FlatMatrix<SCAL> mat,
-                               const size_t num_zero, LocalHeap &lh)
+Matrix<SCAL>
+getPseudoInverse (const FlatMatrix<SCAL> mat, const size_t num_zero)
 {
-  const HeapReset hr (lh);
+  LocalHeap lh = LocalHeap (100 * 1000 * 1000, "embt");
   const auto [n, m] = mat.Shape ();
-  FlatMatrix<SCAL, ColMajor> sigma (n, m, lh);
-  FlatMatrix<SCAL, ColMajor> U (n, n, lh);
+  FlatMatrix<SCAL> sigma (n, m, lh);
+  FlatMatrix<SCAL, ColMajor> UT (n, n, lh);
   FlatMatrix<SCAL, ColMajor> V (m, m, lh);
 
   Matrix<SCAL> elmat_inv (m, n);
 
   sigma = mat;
-  getSVD (sigma, U, V);
-  elmat_inv = invertSVD (U, sigma, V, num_zero, lh);
+  getSVD (sigma, UT, V);
+  elmat_inv = invertSVD (UT, sigma, V, num_zero, lh);
   return elmat_inv;
 }
 
@@ -691,7 +683,6 @@ namespace ngcomp
       }
 
     Array<optional<Matrix<SCAL>>> etmats (num_elements);
-    Array<optional<Matrix<SCAL>>> etmats_inv (num_elements);
     Array<optional<Matrix<SCAL>>> etmats_trefftz_inv (num_elements);
     Array<size_t> local_ndofs_trefftz (num_elements);
 
@@ -795,9 +786,9 @@ namespace ngcomp
           // #TODO: why is this necessary?
           reorderMatrixColumns (elmat_Cr, dofs_conforming, lh);
 
-          FlatMatrix<SCAL, ColMajor> U (elmat_A.Height (), lh),
+          FlatMatrix<SCAL, ColMajor> UT (elmat_A.Height (), lh),
               V (elmat_A.Width (), lh);
-          getSVD<SCAL> (elmat_A, U, V);
+          getSVD<SCAL> (elmat_A, UT, V);
 
           // # TODO: incorporate the double variant
           const size_t ndof_trefftz_i
@@ -807,7 +798,7 @@ namespace ngcomp
             throw std::invalid_argument ("zero trefftz dofs");
 
           const auto elmat_A_inv_expr
-              = invertSVD (U, elmat_A, V, ndof_trefftz_i, lh);
+              = invertSVD (UT, elmat_A, V, ndof_trefftz_i, lh);
           FlatMatrix<SCAL> elmat_A_inv (ndof, ndof_conforming + ndof_test, lh);
           // Calculate the matrix entries and write them to memory.
           elmat_A_inv = elmat_A_inv_expr;
@@ -821,16 +812,22 @@ namespace ngcomp
 
           // if (get_range)
           // elmat_Tt = U.Cols (0, dofs.Size () - ndof_trefftz_i);
-          elmat_Tt = Trans (V.Rows (ndof - ndof_trefftz_i, ndof));
+          elmat_Tt = V.Cols (ndof - ndof_trefftz_i, ndof);
 
-          if (trhs)
+          if (compute_elmat_T_inv)
             {
               auto elmat_T_inv = elmat_A_inv.Cols (
                   ndof_conforming, ndof_conforming + ndof_test);
-              FlatVector<SCAL> partsol (dofs.Size (), lh);
-              calculateParticularSolution<SCAL> (
-                  partsol, lfis, *fes_test, element_id, *ma, elmat_T_inv, lh);
-              particular_solution_vec->SetIndirect (dofs, partsol);
+              if (trhs)
+                {
+                  FlatVector<SCAL> partsol (dofs.Size (), lh);
+                  calculateParticularSolution<SCAL> (partsol, lfis, *fes_test,
+                                                     element_id, *ma,
+                                                     elmat_T_inv, lh);
+                  particular_solution_vec->SetIndirect (dofs, partsol);
+                }
+              etmats_trefftz_inv[element_id.Nr ()]
+                  = make_optional<Matrix<SCAL>> (elmat_A_inv);
             }
 
           if (ignoredofs)
@@ -838,10 +835,6 @@ namespace ngcomp
                                           ignoredofs);
 
           etmats[element_id.Nr ()] = make_optional<Matrix<SCAL>> (elmat_T);
-          etmats_inv[element_id.Nr ()] = make_optional<Matrix<SCAL>> (
-              getPseudoInverse (elmat_T, 0, lh));
-          etmats_trefftz_inv[element_id.Nr ()]
-              = make_optional<Matrix<SCAL>> (elmat_A_inv);
           local_ndofs_trefftz[element_id.Nr ()] = ndof_trefftz_i;
 
           if (stats)
@@ -887,13 +880,11 @@ namespace ngcomp
     if constexpr (std::is_same_v<double, SCAL>)
       {
         this->etmats = std::move (etmats);
-        this->etmats_inv = std::move (etmats_inv);
         this->etmats_trefftz_inv = std::move (etmats_trefftz_inv);
       }
     else
       {
         this->etmatsc = std::move (etmats);
-        this->etmatsc_inv = std::move (etmats_inv);
         this->etmatsc_trefftz_inv = std::move (etmats_trefftz_inv);
       }
     this->local_ndofs_trefftz = local_ndofs_trefftz;
@@ -978,10 +969,7 @@ namespace ngcomp
 
           if (fes->IsComplex ())
             {
-              const size_t width
-                  = (*etmatsc_trefftz_inv[element_id.Nr ()]).Width ();
-              auto elmat_T_inv = (*etmatsc_trefftz_inv[element_id.Nr ()])
-                                     .Cols (width - dofs_test.Size (), width);
+              auto elmat_T_inv = (*etmatsc_trefftz_inv[element_id.Nr ()]);
               FlatVector<Complex> partsol (dofs.Size (), lh);
               calculateParticularSolution<Complex> (
                   partsol, lfis, *fes_test, element_id, *ma, elmat_T_inv, lh);
@@ -989,10 +977,7 @@ namespace ngcomp
             }
           else
             {
-              const size_t width
-                  = (*etmats_trefftz_inv[element_id.Nr ()]).Width ();
-              auto elmat_T_inv = (*etmats_trefftz_inv[element_id.Nr ()])
-                                     .Cols (width - dofs_test.Size (), width);
+              auto elmat_T_inv = *etmats_trefftz_inv[element_id.Nr ()];
               FlatVector<double> partsol (dofs.Size (), lh);
               calculateParticularSolution<double> (
                   partsol, lfis, *fes_test, element_id, *ma, elmat_T_inv, lh);
@@ -1102,21 +1087,21 @@ namespace ngcomp
     if (!this->IsComplex ())
       {
         Table<DofId> _table_dummy{};
-        createConformingTrefftzTables (_table_dummy, elnr_to_dofs, etmats,
-                                       emb->GetLocalNodfsTrefftz (), *fes,
-                                       fes_conformity, ignoredofs);
-        for (size_t i = 0; i < etmats.Size (); i++)
-          if (etmats[i])
+        createConformingTrefftzTables (
+            _table_dummy, elnr_to_dofs, emb->GetEtmats (),
+            emb->GetLocalNodfsTrefftz (), *fes, fes_conformity, ignoredofs);
+        for (size_t i = 0; i < emb->GetEtmats ().Size (); i++)
+          if (emb->GetEtmat (i))
             QuickSort (elnr_to_dofs[i]);
       }
     else
       {
         Table<DofId> _table_dummy{};
-        createConformingTrefftzTables (_table_dummy, elnr_to_dofs, etmatsc,
-                                       emb->GetLocalNodfsTrefftz (), *fes,
-                                       fes_conformity, ignoredofs);
-        for (size_t i = 0; i < etmatsc.Size (); i++)
-          if (etmatsc[i])
+        createConformingTrefftzTables (
+            _table_dummy, elnr_to_dofs, emb->GetEtmatsC (),
+            emb->GetLocalNodfsTrefftz (), *fes, fes_conformity, ignoredofs);
+        for (size_t i = 0; i < emb->GetEtmatsC ().Size (); i++)
+          if (emb->GetEtmatC (i))
             QuickSort (elnr_to_dofs[i]);
       }
 
@@ -1129,8 +1114,8 @@ namespace ngcomp
     for (auto ei : this->ma->Elements (VOL))
       {
         // skip this element, if there is no element matrix defined
-        if ((this->IsComplex () && !etmatsc[ei.Nr ()])
-            || (!this->IsComplex () && !etmats[ei.Nr ()]))
+        if ((this->IsComplex () && !emb->GetEtmatC (ei.Nr ()))
+            || (!this->IsComplex () && !emb->GetEtmat (ei.Nr ())))
           continue;
 
         const size_t ndof_trefftz_local
@@ -1240,7 +1225,7 @@ namespace ngcomp
   EmbTrefftzFESpace<T>::VTransformMR (ElementId ei, SliceMatrix<double> mat,
                                       TRANSFORM_TYPE type) const
   {
-    const auto elmat = *etmats[ei.Nr ()];
+    const auto elmat = *(emb->GetEtmat (ei.Nr ()));
     etFesVTransformM (mat, type, elmat);
   }
 
@@ -1249,16 +1234,16 @@ namespace ngcomp
   EmbTrefftzFESpace<T>::VTransformMC (ElementId ei, SliceMatrix<Complex> mat,
                                       TRANSFORM_TYPE type) const
   {
-    const auto elmat = *etmatsc[ei.Nr ()];
+    const auto elmat = *(emb->GetEtmatC (ei.Nr ()));
     etFesVTransformM (mat, type, elmat);
   }
 
   /// double/complex generic implementation for the methods VTransformV(R | C)
   /// for the embedded Trefftz FESpace.
   template <typename SCAL>
-  void
-  etFesVTransformV (SliceVector<SCAL> &vec, const TRANSFORM_TYPE type,
-                    const Matrix<SCAL> &elmat, const Matrix<SCAL> &elmat_inv)
+  void etFesVTransformV (SliceVector<SCAL> &vec, const TRANSFORM_TYPE type,
+                         const Matrix<SCAL> &elmat,
+                         optional<Matrix<SCAL>> elmat_inv)
   {
     const size_t ndof = elmat.Width ();
 
@@ -1282,8 +1267,8 @@ namespace ngcomp
               "given vec does not match the needed dimension.");
 
         // const auto elmat_inv = getPseudoInverse (elmat, 0);
-        Vector<SCAL> tmp_vec (elmat_inv.Height ());
-        tmp_vec = elmat_inv * vec;
+        Vector<SCAL> tmp_vec ((*elmat_inv).Height ());
+        tmp_vec = (*elmat_inv) * vec;
         vec = tmp_vec;
       }
     else
@@ -1302,8 +1287,12 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    etFesVTransformV (vec, type, *this->etmats[ei.Nr ()],
-                      *this->etmats_inv[ei.Nr ()]);
+    if (type == TRANSFORM_SOL_INVERSE && !etmats_inv[ei.Nr ()])
+      etmats_inv[ei.Nr ()] = make_optional<Matrix<double>> (
+          getPseudoInverse<double> (*emb->GetEtmat (ei.Nr ()), 0));
+
+    etFesVTransformV (vec, type, *(emb->GetEtmat (ei.Nr ())),
+                      this->etmats_inv[ei.Nr ()]);
   }
 
   template <typename T>
@@ -1314,8 +1303,12 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    etFesVTransformV (vec, type, *this->etmatsc[ei.Nr ()],
-                      *this->etmatsc_inv[ei.Nr ()]);
+    if (type == TRANSFORM_SOL_INVERSE && !etmatsc_inv[ei.Nr ()])
+      etmatsc_inv[ei.Nr ()] = make_optional<Matrix<Complex>> (
+          getPseudoInverse<Complex> (*emb->GetEtmatC (ei.Nr ()), 0));
+
+    etFesVTransformV (vec, type, *(emb->GetEtmatC (ei.Nr ())),
+                      this->etmatsc_inv[ei.Nr ()]);
   }
 
   // template class EmbTrefftzFESpace<L2HighOrderFESpace,
