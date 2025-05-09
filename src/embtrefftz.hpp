@@ -108,8 +108,9 @@ namespace ngcomp
     Table<DofId> elnr_to_dofs;
 
     /// (pseudo-)inverse matrices of etmats
-    Array<optional<Matrix<double>>> etmats_inv;
-    Array<optional<Matrix<Complex>>> etmatsc_inv;
+    mutable Array<optional<Matrix<double>>> etmats_inv;
+    mutable Array<optional<Matrix<Complex>>> etmatsc_inv;
+    mutable once_flag etmats_inv_computed;
 
   public:
     EmbTrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags,
@@ -166,6 +167,9 @@ namespace ngcomp
   private:
     /// adjusts the dofs of the space. Will be called by SetOp.
     void adjustDofsAfterSetOp ();
+
+    optional<FlatMatrix<double>> GetEtmatInv (size_t idx) const;
+    optional<FlatMatrix<Complex>> GetEtmatCInv (size_t idx) const;
   };
 }
 

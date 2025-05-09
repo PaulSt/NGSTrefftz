@@ -1181,6 +1181,34 @@ namespace ngcomp
         }
   }
 
+  template <typename T>
+  optional<FlatMatrix<double>>
+  EmbTrefftzFESpace<T>::GetEtmatInv (size_t idx) const
+  {
+    std::call_once (this->etmats_inv_computed, [&] () {
+      this->fes->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
+        optional<Matrix<double>> etmat = emb->GetEtmat (ei.Nr ());
+        this->etmats_inv[ei.Nr ()]
+            = (etmat) ? make_optional (getPseudoInverse (*etmat, 0)) : nullopt;
+      });
+    });
+    return this->etmats_inv[idx];
+  }
+
+  template <typename T>
+  optional<FlatMatrix<Complex>>
+  EmbTrefftzFESpace<T>::GetEtmatCInv (size_t idx) const
+  {
+    std::call_once (this->etmats_inv_computed, [&] () {
+      this->fes->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
+        optional<Matrix<Complex>> etmat = emb->GetEtmatC (ei.Nr ());
+        this->etmatsc_inv[ei.Nr ()]
+            = (etmat) ? make_optional (getPseudoInverse (*etmat, 0)) : nullopt;
+      });
+    });
+    return this->etmatsc_inv[idx];
+  }
+
   /// double/complex generic implementation for the methods VTransformM(R | C)
   /// for the embedded Trefftz FESpace.
   template <typename SCAL>
@@ -1243,7 +1271,7 @@ namespace ngcomp
   template <typename SCAL>
   void etFesVTransformV (SliceVector<SCAL> &vec, const TRANSFORM_TYPE type,
                          const Matrix<SCAL> &elmat,
-                         optional<Matrix<SCAL>> elmat_inv)
+                         optional<FlatMatrix<SCAL>> elmat_inv)
   {
     const size_t ndof = elmat.Width ();
 
@@ -1287,12 +1315,10 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    if (type == TRANSFORM_SOL_INVERSE && !etmats_inv[ei.Nr ()])
-      etmats_inv[ei.Nr ()] = make_optional<Matrix<double>> (
-          getPseudoInverse<double> (*emb->GetEtmat (ei.Nr ()), 0));
-
     etFesVTransformV (vec, type, *(emb->GetEtmat (ei.Nr ())),
-                      this->etmats_inv[ei.Nr ()]);
+                      (type == TRANSFORM_SOL_INVERSE)
+                          ? this->GetEtmatInv (ei.Nr ())
+                          : nullopt);
   }
 
   template <typename T>
@@ -1303,12 +1329,10 @@ namespace ngcomp
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    if (type == TRANSFORM_SOL_INVERSE && !etmatsc_inv[ei.Nr ()])
-      etmatsc_inv[ei.Nr ()] = make_optional<Matrix<Complex>> (
-          getPseudoInverse<Complex> (*emb->GetEtmatC (ei.Nr ()), 0));
-
     etFesVTransformV (vec, type, *(emb->GetEtmatC (ei.Nr ())),
-                      this->etmatsc_inv[ei.Nr ()]);
+                      (type == TRANSFORM_SOL_INVERSE)
+                          ? this->GetEtmatCInv (ei.Nr ())
+                          : nullopt);
   }
 
   // template class EmbTrefftzFESpace<L2HighOrderFESpace,
