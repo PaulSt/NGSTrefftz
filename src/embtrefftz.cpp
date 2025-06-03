@@ -1011,6 +1011,9 @@ namespace ngcomp
         createConformingTrefftzTables (table, table2, etmatsc,
                                        local_ndofs_trefftz, *fes,
                                        fes_conformity, ignoredofs);
+        for (size_t i = 0; i < etmatsc.Size (); i++)
+          if (etmatsc[i])
+            QuickSort (table2[i]);
       }
     else
       {
@@ -1018,6 +1021,9 @@ namespace ngcomp
         createConformingTrefftzTables (table, table2, etmats,
                                        local_ndofs_trefftz, *fes,
                                        fes_conformity, ignoredofs);
+        for (size_t i = 0; i < etmats.Size (); i++)
+          if (etmats[i])
+            QuickSort (table2[i]);
       }
     if (fes_conformity)
       vec->SetScalar (0.0);
