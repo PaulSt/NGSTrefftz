@@ -23,6 +23,8 @@ namespace ngcomp
     shared_ptr<MeshAccess> ma;
     shared_ptr<BitArray> ignoredofs;
 
+    bool compute_elmat_T_inv = true;
+
     std::variant<size_t, double> ndof_trefftz;
     // shared_ptr<std::map<std::string, Vector<SCAL>>> stats = nullptr;
 
@@ -32,9 +34,10 @@ namespace ngcomp
     Array<optional<Matrix<double>>> etmats;
     Array<optional<Matrix<Complex>>> etmatsc;
 
-    /// pseudoinverse matrices of (cop|top)
-    Array<optional<Matrix<double>>> etmats_inv;
-    Array<optional<Matrix<Complex>>> etmatsc_inv;
+    /// (pseudo-)inverse matrices of the Trefftz part of etmats
+    Array<optional<Matrix<double>>> etmats_trefftz_inv;
+    /// (pseudo-)inverse matrices of the Trefftz part of etmatsc
+    Array<optional<Matrix<Complex>>> etmatsc_trefftz_inv;
 
     /// elmat_trefftz.width == local_ndof_trefftz
     /// elmat_conforming.width == elmat.width - local_ndof_trefftz
@@ -76,17 +79,11 @@ namespace ngcomp
     {
       return etmatsc;
     }
+    optional<Matrix<double>> GetEtmat (size_t i) const { return etmats[i]; }
+    optional<Matrix<Complex>> GetEtmatC (size_t i) const { return etmatsc[i]; }
     const Array<size_t> &GetLocalNodfsTrefftz () const noexcept
     {
       return local_ndofs_trefftz;
-    }
-    FlatArray<optional<Matrix<double>>> GetEtmatsInv ()
-    {
-      return this->etmats_inv;
-    }
-    FlatArray<optional<Matrix<Complex>>> GetEtmatsCInv ()
-    {
-      return this->etmatsc_inv;
     }
   };
 
@@ -112,9 +109,9 @@ namespace ngcomp
     Table<DofId> elnr_to_dofs;
 
     /// (pseudo-)inverse matrices of etmats
-    const FlatArray<optional<Matrix<double>>> etmats_inv;
-    /// (pseudo-)inverse matrices of etmatsc
-    const FlatArray<optional<Matrix<Complex>>> etmatsc_inv;
+    mutable Array<optional<Matrix<double>>> etmats_inv;
+    mutable Array<optional<Matrix<Complex>>> etmatsc_inv;
+    mutable once_flag etmats_inv_computed;
 
   public:
     EmbTrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags,
@@ -130,9 +127,7 @@ namespace ngcomp
           emb (aemb), etmats (emb->GetEtmats ()), etmatsc (emb->GetEtmatsC ()),
           fes (dynamic_pointer_cast<T> (aemb->GetFES ())),
           fes_conformity (emb->GetFESconf ()),
-          ignoredofs (emb->GetIgnoredDofs ()),
-          etmats_inv (emb->GetEtmatsInv ()),
-          etmatsc_inv (emb->GetEtmatsCInv ())
+          ignoredofs (emb->GetIgnoredDofs ())
     {
       assert (fes && "fes may not be nullptr");
       this->name = "EmbTrefftzFESpace(" + fes->GetClassName () + ")";
@@ -142,6 +137,9 @@ namespace ngcomp
       if constexpr (std::is_same_v<CompoundFESpace, T>)
         for (auto space : fes->Spaces ())
           this->AddSpace (space);
+
+      etmats_inv.SetSize (this->ma->GetNE (VOL));
+      etmatsc_inv.SetSize (this->ma->GetNE (VOL));
 
       adjustDofsAfterSetOp ();
       // this->Update();
@@ -171,6 +169,9 @@ namespace ngcomp
   private:
     /// adjusts the dofs of the space. Will be called by SetOp.
     void adjustDofsAfterSetOp ();
+
+    optional<FlatMatrix<double>> GetEtmatInv (size_t idx) const;
+    optional<FlatMatrix<Complex>> GetEtmatCInv (size_t idx) const;
   };
 }
 
