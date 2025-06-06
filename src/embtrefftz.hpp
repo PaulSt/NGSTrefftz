@@ -67,6 +67,8 @@ namespace ngcomp
     shared_ptr<const BaseVector> GetParticularSolution () const;
     shared_ptr<const BaseVector>
     GetParticularSolution (shared_ptr<SumOfIntegrals> _trhs) const;
+    shared_ptr<const BaseVector>
+    GetParticularSolution (shared_ptr<const BaseVector> _trhsvec) const;
     shared_ptr<const BaseMatrix> GetEmbedding () const;
     shared_ptr<FESpace> GetFES () const noexcept { return fes; }
     shared_ptr<FESpace> GetFESconf () const noexcept { return fes_conformity; }
