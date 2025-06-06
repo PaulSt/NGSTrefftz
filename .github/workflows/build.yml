@@ -100,7 +100,7 @@ jobs:
           - os: ubuntu-latest
             doit: ${{ inputs.level == 'quick' }}
             cibw_build: cp313-*
-          - os: windows-2019
+          - os: windows-2022
             cibw-arch: AMD64
             cmake-generator: "Visual Studio 16 2019"
             cmake_generator_platform: "x64"
