@@ -896,9 +896,10 @@ namespace ngcomp
       shared_ptr<SumOfIntegrals> _cop, shared_ptr<SumOfIntegrals> _crhs,
       size_t _ndof_trefftz, double _eps, shared_ptr<FESpace> _fes,
       shared_ptr<FESpace> _fes_test, shared_ptr<FESpace> _fes_conformity,
-      shared_ptr<BitArray> _ignoredofs)
+      shared_ptr<BitArray> _ignoredofs,
+      shared_ptr<std::map<std::string, Vector<double>>> _stats)
       : top (_top), trhs (_trhs), cop (_cop), crhs (_crhs),
-        ignoredofs (_ignoredofs)
+        ignoredofs (_ignoredofs), stats (_stats)
   {
     if (_ndof_trefftz == 0)
       ndof_trefftz = _eps;
@@ -1485,11 +1486,30 @@ void ExportEmbTrefftz (py::module m)
                 at best dim(fes)-dim(fes_test) and may increase by zero singular values of `top`
                 (with respect to the threshold `eps`).
             )mydelimiter")
-      .def (py::init<shared_ptr<SumOfIntegrals>, shared_ptr<SumOfIntegrals>,
-                     shared_ptr<SumOfIntegrals>, shared_ptr<SumOfIntegrals>,
-                     size_t, double, shared_ptr<FESpace>, shared_ptr<FESpace>,
-                     shared_ptr<FESpace>, shared_ptr<BitArray>> (),
-            R"mydelimiter(
+      .def (
+          // could be py::init<..,optional<py::dict>>() but we translate to map
+          py::init ([] (shared_ptr<SumOfIntegrals> top,
+                        shared_ptr<SumOfIntegrals> trhs,
+                        shared_ptr<SumOfIntegrals> cop,
+                        shared_ptr<SumOfIntegrals> crhs, size_t ndof_trefftz,
+                        double eps, shared_ptr<FESpace> fes,
+                        shared_ptr<FESpace> fes_test,
+                        shared_ptr<FESpace> fes_conformity,
+                        shared_ptr<BitArray> ignoredofs,
+                        optional<py::dict> pystats) {
+            shared_ptr<std::map<std::string, Vector<double>>> stats = nullptr;
+            if (pystats)
+              stats = make_shared<std::map<std::string, Vector<double>>> ();
+            std::shared_ptr<TrefftzEmbedding> emb
+                = std::make_shared<TrefftzEmbedding> (
+                    top, trhs, cop, crhs, ndof_trefftz, eps, fes, fes_test,
+                    fes_conformity, ignoredofs, stats);
+            if (pystats)
+              for (auto const &x : *stats)
+                (*pystats)[py::cast (x.first)] = py::cast (x.second);
+            return emb;
+          }),
+          R"mydelimiter(
                 Constructs a new Trefftz embedding object.
 
                  :param top: the differential operation. Can be None
@@ -1510,12 +1530,13 @@ void ExportEmbTrefftz (py::module m)
                  :param fes_conformity: finite element space of the conformity operation (optional,
                      determined from `cop` if not given)
             )mydelimiter",
-            py::arg ("top") = nullptr, py::arg ("trhs") = nullptr,
-            py::arg ("cop") = nullptr, py::arg ("crhs") = nullptr,
-            py::arg ("ndof_trefftz") = 0, py::arg ("eps") = 0.0,
-            py::arg ("fes") = nullptr, py::arg ("fes_test") = nullptr,
-            py::arg ("fes_conformity") = nullptr,
-            py::arg ("ignoredofs") = nullptr)
+          py::arg ("top") = nullptr, py::arg ("trhs") = nullptr,
+          py::arg ("cop") = nullptr, py::arg ("crhs") = nullptr,
+          py::arg ("ndof_trefftz") = 0, py::arg ("eps") = 0.0,
+          py::arg ("fes") = nullptr, py::arg ("fes_test") = nullptr,
+          py::arg ("fes_conformity") = nullptr,
+          py::arg ("ignoredofs") = nullptr,
+          py::arg ("stats") = nullopt) // py::none ())
       .def ("Embed", &ngcomp::TrefftzEmbedding::Embed,
             "Embed a Trefftz GridFunction into the underlying FESpace")
       .def ("GetEmbedding", &ngcomp::TrefftzEmbedding::GetEmbedding,

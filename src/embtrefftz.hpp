@@ -26,7 +26,6 @@ namespace ngcomp
     bool compute_elmat_T_inv = true;
 
     std::variant<size_t, double> ndof_trefftz;
-    // shared_ptr<std::map<std::string, Vector<SCAL>>> stats = nullptr;
 
     shared_ptr<std::map<std::string, Vector<double>>> stats = nullptr;
 
@@ -60,7 +59,9 @@ namespace ngcomp
                       double _eps, shared_ptr<FESpace> _fes = nullptr,
                       shared_ptr<FESpace> _fes_test = nullptr,
                       shared_ptr<FESpace> _fes_conformity = nullptr,
-                      shared_ptr<BitArray> _ignoredofs = nullptr);
+                      shared_ptr<BitArray> _ignoredofs = nullptr,
+                      shared_ptr<std::map<std::string, Vector<double>>> _stats
+                      = nullptr);
 
     shared_ptr<BaseVector>
     Embed (const shared_ptr<const BaseVector> tgfu) const;
