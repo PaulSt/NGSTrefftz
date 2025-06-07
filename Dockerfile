@@ -8,8 +8,8 @@ WORKDIR /home/app
 #RUN cd /home/app/ngstrefftz/docs && sphinx-build -M html . _build -vvv
 
 RUN pip install ngstrefftz --pre
-ENV PYTHONPATH=$PYTHONPATH:/usr/local/lib/python3.10/site-packages/
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
+ENV PYTHONPATH=/usr/local/lib/python3.10/site-packages/
+ENV LD_LIBRARY_PATH=/usr/local/lib/
 
 RUN pip3 install numpy webgui_jupyter_widgets notebook
 #RUN pip3 install jupyter_contrib_nbextensions 
@@ -18,10 +18,9 @@ RUN pip3 install numpy webgui_jupyter_widgets notebook
 
 ARG NB_USER=jovyan
 ARG NB_UID=1000
-ENV USER ${NB_USER}
-ENV NB_UID ${NB_UID}
-ENV HOME /home/${NB_USER}
-#ENV mv /home/app/ngstrefftz/* /home/${NB_USER}/
+ENV USER=${NB_USER}
+ENV NB_UID=${NB_UID}
+ENV HOME=/home/${NB_USER}
 
 RUN adduser --disabled-password \
     --gecos "Default user" \
