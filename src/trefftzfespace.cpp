@@ -214,9 +214,9 @@ namespace ngcomp
   }
 
   shared_ptr<GridFunction>
-  TrefftzFESpace ::GetEWSolution (shared_ptr<CoefficientFunction> acoeffF)
+  TrefftzFESpace ::GetParticularSolution (shared_ptr<CoefficientFunction> acoeffF)
   {
-    static Timer t ("QTEll - GetEWSolution");
+    static Timer t ("QTEll - GetParticularSolution");
     RegionTimer reg (t);
     LocalHeap lh (1000 * 1000 * 1000);
 
@@ -1548,10 +1548,10 @@ void ExportTrefftzFESpace (py::module m)
             )mydelimiter",
           py::arg ("acoeffA"), py::arg ("acoeffB") = nullptr,
           py::arg ("acoeffC") = nullptr)
-      .def ("GetEWSolution",
+      .def ("GetParticularSolution",
             static_cast<shared_ptr<GridFunction> (TrefftzFESpace::*) (
                 shared_ptr<CoefficientFunction>)> (
-                &TrefftzFESpace::GetEWSolution),
+                &TrefftzFESpace::GetParticularSolution),
             R"mydelimiter(
                 Compute a element-wise particular solution for given right hand side.
 

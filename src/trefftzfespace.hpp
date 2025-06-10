@@ -186,7 +186,7 @@ namespace ngcomp
                    shared_ptr<CoefficientFunction> acoeffC = nullptr);
 
     shared_ptr<GridFunction>
-    GetEWSolution (shared_ptr<CoefficientFunction> acoeffF);
+    GetParticularSolution (shared_ptr<CoefficientFunction> acoeffF);
     string GetClassName () const override { return "trefftz"; }
     void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
     FiniteElement &GetFE (ElementId ei, Allocator &alloc) const override;

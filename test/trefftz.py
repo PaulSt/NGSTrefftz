@@ -289,7 +289,7 @@ def qtell(mesh,order):
     fes = trefftzfespace(mesh,order=order,eq="qtelliptic")
     with TaskManager():
         fes.SetCoeff(A,B,C)
-        uf = fes.GetEWSolution(rhs)
+        uf = fes.GetParticularSolution(rhs)
 
     a,f = dgell(fes,Dbndc,rhs=rhs,uf=uf,A=A,B=B,C=C)
     with TaskManager():
