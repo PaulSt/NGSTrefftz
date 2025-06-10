@@ -169,6 +169,8 @@ namespace ngcomp
 
     shared_ptr<TrefftzEmbedding> GetEmbedding () const noexcept { return emb; }
 
+    const shared_ptr<T> GetBasefes () const noexcept { return fes; }
+
   private:
     /// adjusts the dofs of the space. Will be called by SetOp.
     void adjustDofsAfterSetOp ();

@@ -1420,6 +1420,8 @@ template <typename T> void ExportETSpace (py::module m, string label)
 
   pyspace.def ("GetEmbedding", &ngcomp::EmbTrefftzFESpace<T>::GetEmbedding,
                "Get the TrefftzEmbedding");
+  pyspace.def ("GetBasefes", &ngcomp::EmbTrefftzFESpace<T>::GetBasefes,
+               "Get the underlying fes");
 
   // pyspace.def (py::init ([pyspace] (shared_ptr<T> fes) {
   // py::list info;
