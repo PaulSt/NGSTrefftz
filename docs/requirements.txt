@@ -21,6 +21,6 @@ myst_parser>=3.0.1
 numpy>=2.0.0
 scipy>=1.13.1
 webgui-jupyter-widgets>=0.2.35
-#ngstrefftz==0.3.2501
+#ngstrefftz==0.3.2503
 #ngsolve==6.2.2404.post22.dev0
-xfem==2.1.2501
+xfem==2.1.2503
