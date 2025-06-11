@@ -72,6 +72,7 @@ namespace ngcomp
     GetParticularSolution (shared_ptr<const BaseVector> _trhsvec) const;
     shared_ptr<const BaseMatrix> GetEmbedding () const;
     shared_ptr<FESpace> GetFES () const noexcept { return fes; }
+    shared_ptr<FESpace> GetFEStest () const noexcept { return fes_test; }
     shared_ptr<FESpace> GetFESconf () const noexcept { return fes_conformity; }
     shared_ptr<const BitArray> GetIgnoredDofs () const { return ignoredofs; }
     const Array<optional<Matrix<double>>> &GetEtmats () const noexcept
@@ -168,8 +169,6 @@ namespace ngcomp
     virtual string GetClassName () const override;
 
     shared_ptr<TrefftzEmbedding> GetEmbedding () const noexcept { return emb; }
-
-    const shared_ptr<T> GetBasefes () const noexcept { return fes; }
 
   private:
     /// adjusts the dofs of the space. Will be called by SetOp.

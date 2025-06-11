@@ -213,8 +213,8 @@ namespace ngcomp
     UpdateBasis ();
   }
 
-  shared_ptr<GridFunction>
-  TrefftzFESpace ::GetParticularSolution (shared_ptr<CoefficientFunction> acoeffF)
+  shared_ptr<GridFunction> TrefftzFESpace ::GetParticularSolution (
+      shared_ptr<CoefficientFunction> acoeffF)
   {
     static Timer t ("QTEll - GetParticularSolution");
     RegionTimer reg (t);

@@ -1420,8 +1420,10 @@ template <typename T> void ExportETSpace (py::module m, string label)
 
   pyspace.def ("GetEmbedding", &ngcomp::EmbTrefftzFESpace<T>::GetEmbedding,
                "Get the TrefftzEmbedding");
-  pyspace.def ("GetBasefes", &ngcomp::EmbTrefftzFESpace<T>::GetBasefes,
-               "Get the underlying fes");
+  pyspace.def_property_readonly (
+      "emb", [] (shared_ptr<ngcomp::EmbTrefftzFESpace<T>> fes) {
+        return fes->GetEmbedding ();
+      });
 
   // pyspace.def (py::init ([pyspace] (shared_ptr<T> fes) {
   // py::list info;
@@ -1560,7 +1562,17 @@ void ExportEmbTrefftz (py::module m)
                 shared_ptr<const BaseVector>) const> (
                 &ngcomp::TrefftzEmbedding::GetParticularSolution),
             "Particular solution as GridFunction vector of the underlying "
-            "FESpace, given a trhs as vector");
+            "FESpace, given a trhs as vector")
+      .def_property_readonly (
+          "fes",
+          [] (shared_ptr<TrefftzEmbedding> emb) { return emb->GetFES (); })
+      .def_property_readonly (
+          "fes_test",
+          [] (shared_ptr<TrefftzEmbedding> emb) { return emb->GetFEStest (); })
+      .def_property_readonly ("fes_conformity",
+                              [] (shared_ptr<TrefftzEmbedding> emb) {
+                                return emb->GetFESconf ();
+                              });
 }
 
 #endif // NGS_PYTHON
