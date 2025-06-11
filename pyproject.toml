@@ -4,7 +4,7 @@ dynamic = ["version"]
 authors = [ {name = "Paul Stocker", email = "paul.stocker@univie.ac.at"} ]
 description='NGSTrefftz is an add-on to NGSolve for Trefftz methods.'
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
   "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
 ]
@@ -52,7 +52,7 @@ skip = """
 """
 
 [tool.cibuildwheel.linux]
-repair-wheel-command = "mv {wheel} {dest_dir} && rename linux_x86_64 manylinux_2_17_x86_64.manylinux2014_x86_64 {dest_dir}/*-linux_x86_64*.whl"
+repair-wheel-command = "mv {wheel} {dest_dir} && rename linux_x86_64 manylinux_2_28_x86_64.manylinux2014_x86_64 {dest_dir}/*-linux_x86_64*.whl"
 
 [tool.cibuildwheel.macos]
 environment = {MACOSX_DEPLOYMENT_TARGET="10.15"}
