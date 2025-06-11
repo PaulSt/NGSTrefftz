@@ -9,7 +9,7 @@ classifiers = [
   "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
 ]
 dependencies = [
-  "ngsolve==6.2.2503",
+  "ngsolve==6.2.2504",
 ]
 
 
@@ -18,7 +18,7 @@ Documentation = "https://paulst.github.io/NGSTrefftz"
 Repository = "https://github.com/PaulSt/ngstrefftz"
 
 [build-system]
-requires = ["ngsolve==6.2.2503",
+requires = ["ngsolve==6.2.2504",
             "scikit-build-core>=0.9.0",
             "pybind11_stubgen",
             "setuptools>=45",
