@@ -18,7 +18,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_BINARY_DIR}/cmake_modules)
 
 set(addon_name ngstrefftz)
 project(ngstrefftz)
-include_directories(${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src)
+include_directories(SYSTEM ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src) # SYSTEM to suppress warnings from headers
 include(${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
 add_ngsolve_addon(ngstrefftz
     ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp
@@ -50,6 +50,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         -Wpedantic
         -Wno-vla # ngsolve uses VLAs anyway
     )
+    set_source_files_properties( 
+        ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp 
+        PROPERTIES COMPILE_FLAGS "-w" #suppress all warnings
+    )
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(ngstrefftz PRIVATE
         -Wall
@@ -57,6 +61,10 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         -pedantic
         -Wtype-limits
         -Wuninitialized
+    )
+    set_source_files_properties( 
+        ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp 
+        PROPERTIES COMPILE_FLAGS "-w" #suppress all warnings
     )
 endif()
 
