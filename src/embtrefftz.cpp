@@ -1057,7 +1057,8 @@ namespace ngcomp
     shared_ptr<BaseVector> vec;
 
     Table<int> table, table2;
-    if (fes->IsComplex ())
+    const bool fes_is_complex = fes->IsComplex ();
+    if (fes_is_complex)
       {
         vec = make_shared<VVector<Complex>> (fes->GetNDof ());
         createConformingTrefftzTables (table, table2, etmatsc,
@@ -1077,37 +1078,33 @@ namespace ngcomp
           if (etmats[i])
             QuickSort (table2[i]);
       }
-    if (fes_conformity)
-      vec->SetScalar (0.0);
+    vec->SetZero ();
 
-    ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
-      Array<DofId> dofs, tdofs;
-      dofs = table[ei.Nr ()];
-      tdofs = table2[ei.Nr ()];
+    // Makes use of the element coloring of the FESpace
+    // to prevent race conditions when writing to `vec`.
+    IterateElements ((fes_conformity) ? *fes_conformity : *fes, VOL, lh,
+                     [&] (auto ei, LocalHeap &mlh) {
+                       Array<DofId> dofs, tdofs;
+                       dofs = table[ei.Nr ()];
+                       tdofs = table2[ei.Nr ()];
 
-      if (fes->IsComplex ())
-        {
-          FlatVector<Complex> telvec (tdofs.Size (), mlh);
-          tvec->GetIndirect (tdofs, telvec);
-          FlatVector<Complex> elvec (dofs.Size (), mlh);
-          elvec = *etmatsc[ei.Nr ()] * telvec;
-          if (fes_conformity)
-            vec->AddIndirect (dofs, elvec, true);
-          else
-            vec->SetIndirect (dofs, elvec);
-        }
-      else
-        {
-          FlatVector<> telvec (tdofs.Size (), mlh);
-          tvec->GetIndirect (tdofs, telvec);
-          FlatVector<> elvec (dofs.Size (), mlh);
-          elvec = *etmats[ei.Nr ()] * telvec;
-          if (fes_conformity)
-            vec->AddIndirect (dofs, elvec, true);
-          else
-            vec->SetIndirect (dofs, elvec);
-        }
-    });
+                       if (fes_is_complex)
+                         {
+                           FlatVector<Complex> telvec (tdofs.Size (), mlh);
+                           tvec->GetIndirect (tdofs, telvec);
+                           FlatVector<Complex> elvec (dofs.Size (), mlh);
+                           elvec = *etmatsc[ei.Nr ()] * telvec;
+                           vec->AddIndirect (dofs, elvec);
+                         }
+                       else
+                         {
+                           FlatVector<> telvec (tdofs.Size (), mlh);
+                           tvec->GetIndirect (tdofs, telvec);
+                           FlatVector<> elvec (dofs.Size (), mlh);
+                           elvec = *etmats[ei.Nr ()] * telvec;
+                           vec->AddIndirect (dofs, elvec);
+                         }
+                     });
     return vec;
   }
 
