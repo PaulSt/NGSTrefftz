@@ -19,13 +19,14 @@ from ngsolve import (
     GridFunction,
     Integrate,
     Mesh,
+    TaskManager,
     comp,
     dx,
     sqrt,
     x,
     y,
 )
-from ngstrefftz import EmbeddedTrefftzFES, L2EmbTrefftzFESpace, TrefftzEmbedding 
+from ngstrefftz import EmbeddedTrefftzFES, L2EmbTrefftzFESpace, TrefftzEmbedding
 
 # import matplotlib.pyplot as plt
 
@@ -291,6 +292,10 @@ def test_ConstrainedTrefftzCpp(
 
     >>> test_ConstrainedTrefftzCpp(order=3, debug=False) # doctest:+ELLIPSIS
     3.6...e-05
+
+    >>> with TaskManager():
+    ...   test_ConstrainedTrefftzCpp(order=3, debug=False) # doctest:+ELLIPSIS
+    3.6...e-05
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=maxh))
 
@@ -306,7 +311,12 @@ def test_ConstrainedTrefftzCpp(
     crhs = uF * vF * dx(element_boundary=True)
 
     emb = TrefftzEmbedding(
-        top=top, fes=fes, cop=cop, crhs=crhs, fes_conformity=fes_conformity, ndof_trefftz=2 * order + 1 - 3
+        top=top,
+        fes=fes,
+        cop=cop,
+        crhs=crhs,
+        fes_conformity=fes_conformity,
+        ndof_trefftz=2 * order + 1 - 3,
     )
     P = emb.GetEmbedding()
 
@@ -344,6 +354,10 @@ def test_conformiting_trefftz_with_rhs(order, order_conformity):
     """
     >>> test_conformiting_trefftz_with_rhs(5, 2) # doctest:+ELLIPSIS
     3...e-09
+
+    >>> with TaskManager():
+    ...   test_conformiting_trefftz_with_rhs(5, 2) # doctest:+ELLIPSIS
+    3...e-09
     """
     mesh = Mesh(unit_square.GenerateMesh(maxh=0.3))
     fes = L2(mesh, order=order, dgjumps=True)
@@ -362,9 +376,7 @@ def test_conformiting_trefftz_with_rhs(order, order_conformity):
     cop = u * vF * dx(element_boundary=True)
     crhs = uF * vF * dx(element_boundary=True)
 
-    emb = TrefftzEmbedding(
-        top, lop, cop, crhs, ndof_trefftz = 2 * order + 1
-    )
+    emb = TrefftzEmbedding(top, lop, cop, crhs, ndof_trefftz=2 * order + 1)
     PP = emb.GetEmbedding()
     uf = emb.GetParticularSolution()
     PPT = PP.CreateTranspose()
@@ -382,6 +394,9 @@ def test_conformiting_trefftz_trivial_mixed_mode(order, order_conformity):
     if no test space is given.
 
     >>> test_conformiting_trefftz_trivial_mixed_mode(5, 3)
+
+    >>> with TaskManager():
+    ...   test_conformiting_trefftz_trivial_mixed_mode(5, 3)
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
     fes = L2(mesh2d, order=order, dgjumps=True)
@@ -401,12 +416,14 @@ def test_conformiting_trefftz_trivial_mixed_mode(order, order_conformity):
     cop = u * vF * dx(element_boundary=True)
     crhs = uF * vF * dx(element_boundary=True)
 
-    emba = TrefftzEmbedding(top, lop, cop, crhs, ndof_trefftz = 2 * order + 3 - 1)
-    ta=emba.GetEmbedding()
-    va=emba.GetParticularSolution()
-    embb = TrefftzEmbedding( top, lop, cop, crhs, ndof_trefftz = 2 * order + 3 - 1, fes_test=fes)
-    tb=embb.GetEmbedding()
-    vb=embb.GetParticularSolution()
+    emba = TrefftzEmbedding(top, lop, cop, crhs, ndof_trefftz=2 * order + 3 - 1)
+    ta = emba.GetEmbedding()
+    va = emba.GetParticularSolution()
+    embb = TrefftzEmbedding(
+        top, lop, cop, crhs, ndof_trefftz=2 * order + 3 - 1, fes_test=fes
+    )
+    tb = embb.GetEmbedding()
+    vb = embb.GetParticularSolution()
 
     import scipy.sparse as sp
 
@@ -415,17 +432,21 @@ def test_conformiting_trefftz_trivial_mixed_mode(order, order_conformity):
     rows, cols, vals = tb.COO()
     Tb = sp.csr_matrix((vals, (rows, cols)))
 
-    assert np.isclose(
-        Ta.toarray(), Tb.toarray()
-    ).all(), "The embedding matrices do not agree"
-    assert np.isclose(
-        va.FV().NumPy(), vb.FV().NumPy()
-    ).all(), "The particular solutions disagree"
+    assert np.isclose(Ta.toarray(), Tb.toarray()).all(), (
+        "The embedding matrices do not agree"
+    )
+    assert np.isclose(va.FV().NumPy(), vb.FV().NumPy()).all(), (
+        "The particular solutions disagree"
+    )
 
 
 def test_conforming_trefftz_mixed_mode(order, order_conformity):
     """
     >>> test_conforming_trefftz_mixed_mode(6, 2) # doctest:+ELLIPSIS
+    6...e-11
+
+    >>> with TaskManager():
+    ...   test_conforming_trefftz_mixed_mode(6, 2) # doctest:+ELLIPSIS
     6...e-11
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=0.3))
@@ -448,10 +469,7 @@ def test_conforming_trefftz_mixed_mode(order, order_conformity):
     cop = u * vF * dx(element_boundary=True)
     crhs = uF * vF * dx(element_boundary=True)
 
-    emb = TrefftzEmbedding(
-        top, lop, cop, crhs,
-        ndof_trefftz = 2 * order + 3 - 1
-    )
+    emb = TrefftzEmbedding(top, lop, cop, crhs, ndof_trefftz=2 * order + 3 - 1)
     PP = emb.GetEmbedding()
     PPT = PP.CreateTranspose()
     uf = emb.GetParticularSolution()
@@ -486,9 +504,7 @@ def test_conforming_trefftz_without_op(order, order_conformity):
     cop = u * vF * dx(element_boundary=True)
     crhs = uF * vF * dx(element_boundary=True)
 
-    emb = TrefftzEmbedding(
-        top, lop,  cop, crhs, ndof_trefftz = 2 * order + 3 - 1
-    )
+    emb = TrefftzEmbedding(top, lop, cop, crhs, ndof_trefftz=2 * order + 3 - 1)
     PP = emb.GetEmbedding()
     PPT = PP.CreateTranspose()
     uf = emb.GetParticularSolution()
@@ -512,6 +528,10 @@ def test_ConstrainedTrefftzFESpace(
 
     >>> test_ConstrainedTrefftzFESpace(order=3, debug=False) # doctest:+ELLIPSIS
     3...e-05
+
+    >>> with TaskManager():
+    ...   test_ConstrainedTrefftzFESpace(order=3, debug=False) # doctest:+ELLIPSIS
+    3...e-05
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=maxh))
 
@@ -527,7 +547,9 @@ def test_ConstrainedTrefftzFESpace(
     cop = u * vF * dx(element_boundary=True)
     crhs = uF * vF * dx(element_boundary=True)
 
-    emb = TrefftzEmbedding(top=top,cop=cop,crhs=crhs,ndof_trefftz=2 * order + 1 - 3)
+    emb = TrefftzEmbedding(
+        top=top, cop=cop, crhs=crhs, ndof_trefftz=2 * order + 1 - 3
+    )
     fes_trefftz = EmbeddedTrefftzFES(emb)
 
     a, f = dg.dgell(fes_trefftz, dg.exactlap)
@@ -548,6 +570,9 @@ def test_ConstrainedTrefftzFESpace(
 def test_ConstrainedTrefftzFESpaceDirichlet():
     """
     >>> test_ConstrainedTrefftzFESpaceDirichlet()
+
+    >>> with TaskManager():
+    ...   test_ConstrainedTrefftzFESpaceDirichlet()
     """
     mesh = Mesh(unit_square.GenerateMesh(maxh=0.2))
     fes_base = L2(mesh, order=4)
@@ -577,4 +602,5 @@ def test_ConstrainedTrefftzFESpaceDirichlet():
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()
