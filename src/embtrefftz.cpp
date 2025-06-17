@@ -1420,10 +1420,7 @@ template <typename T> void ExportETSpace (py::module m, string label)
 
   pyspace.def ("GetEmbedding", &ngcomp::EmbTrefftzFESpace<T>::GetEmbedding,
                "Get the TrefftzEmbedding");
-  pyspace.def_property_readonly (
-      "emb", [] (shared_ptr<ngcomp::EmbTrefftzFESpace<T>> fes) {
-        return fes->GetEmbedding ();
-      });
+  pyspace.def_property_readonly ("emb", &EmbTrefftzFESpace<T>::GetEmbedding);
 
   // pyspace.def (py::init ([pyspace] (shared_ptr<T> fes) {
   // py::list info;
@@ -1440,43 +1437,6 @@ template <typename T> void ExportETSpace (py::module m, string label)
 
 void ExportEmbTrefftz (py::module m)
 {
-  ExportETSpace<ngcomp::L2HighOrderFESpace> (m, "L2EmbTrefftzFESpace");
-  ExportETSpace<ngcomp::VectorL2FESpace> (m, "VectorL2EmbTrefftzFESpace");
-  ExportETSpace<ngcomp::MonomialFESpace> (m, "MonomialEmbTrefftzFESpace");
-  ExportETSpace<ngcomp::CompoundFESpace> (m, "CompoundEmbTrefftzFESpace");
-
-  m.def (
-      "EmbeddedTrefftzFES",
-      [] (shared_ptr<ngcomp::TrefftzEmbedding> emb)
-          -> shared_ptr<ngcomp::FESpace> {
-        shared_ptr<ngcomp::FESpace> fes = emb->GetFES ();
-        shared_ptr<ngcomp::FESpace> nfes;
-        if (dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes))
-          nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::L2HighOrderFESpace>> (emb);
-        else if (dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes))
-          nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::VectorL2FESpace>> (emb);
-        else if (dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes))
-          nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::MonomialFESpace>> (emb);
-        else if (dynamic_pointer_cast<ngcomp::CompoundFESpace> (fes))
-          nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::CompoundFESpace>> (emb);
-        else
-          throw Exception ("Unknown base fes");
-        return nfes;
-      },
-      R"mydelimiter(
-        Given a TrefftzEmbedding this wrapper produces a Trefftz FESpace using local projections,
-        following the Embedded Trefftz-DG methodology.
-
-        :param TrefftzEmbedding: The Trefftz embedding object.
-
-        :return: EmbTrefftzFES
-        )mydelimiter",
-      py::arg ("emb"));
-
   py::class_<TrefftzEmbedding, shared_ptr<TrefftzEmbedding>> (
       m, "TrefftzEmbedding",
       R"mydelimiter(
@@ -1573,6 +1533,43 @@ void ExportEmbTrefftz (py::module m)
                               [] (shared_ptr<TrefftzEmbedding> emb) {
                                 return emb->GetFESconf ();
                               });
+
+  ExportETSpace<ngcomp::L2HighOrderFESpace> (m, "L2EmbTrefftzFESpace");
+  ExportETSpace<ngcomp::VectorL2FESpace> (m, "VectorL2EmbTrefftzFESpace");
+  ExportETSpace<ngcomp::MonomialFESpace> (m, "MonomialEmbTrefftzFESpace");
+  ExportETSpace<ngcomp::CompoundFESpace> (m, "CompoundEmbTrefftzFESpace");
+
+  m.def (
+      "EmbeddedTrefftzFES",
+      [] (shared_ptr<ngcomp::TrefftzEmbedding> emb)
+          -> shared_ptr<ngcomp::FESpace> {
+        shared_ptr<ngcomp::FESpace> fes = emb->GetFES ();
+        shared_ptr<ngcomp::FESpace> nfes;
+        if (dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes))
+          nfes = make_shared<
+              ngcomp::EmbTrefftzFESpace<ngcomp::L2HighOrderFESpace>> (emb);
+        else if (dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes))
+          nfes = make_shared<
+              ngcomp::EmbTrefftzFESpace<ngcomp::VectorL2FESpace>> (emb);
+        else if (dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes))
+          nfes = make_shared<
+              ngcomp::EmbTrefftzFESpace<ngcomp::MonomialFESpace>> (emb);
+        else if (dynamic_pointer_cast<ngcomp::CompoundFESpace> (fes))
+          nfes = make_shared<
+              ngcomp::EmbTrefftzFESpace<ngcomp::CompoundFESpace>> (emb);
+        else
+          throw Exception ("Unknown base fes");
+        return nfes;
+      },
+      R"mydelimiter(
+        Given a TrefftzEmbedding this wrapper produces a Trefftz FESpace using local projections,
+        following the Embedded Trefftz-DG methodology.
+
+        :param TrefftzEmbedding: The Trefftz embedding object.
+
+        :return: EmbTrefftzFES
+        )mydelimiter",
+      py::arg ("emb"));
 }
 
 #endif // NGS_PYTHON
