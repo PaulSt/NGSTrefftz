@@ -146,7 +146,7 @@ FlatMatrix<SCAL> extractVisibleDofs (
   if (ignoredofs)
     for (size_t i = 0; i < vdofs.Size (); i++)
       if (ignoredofs->Test (vdofs[i]))
-        vdofs.RemoveElement (i);
+        vdofs.RemoveElement (i--);
   // vdofs.DeleteElement (i); if we dont need to retain the order
   fes_test.GetDofNrs (element_id, vdofs_test, VISIBLE_DOF);
   if (fes_conformity)
