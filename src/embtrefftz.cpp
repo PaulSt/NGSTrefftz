@@ -840,23 +840,22 @@ namespace ngcomp
           if (stats)
             {
               const lock_guard<mutex> lock (stats_mutex);
+              auto diag = elmat_A.Diag (0);
               if (sing_val_avg.Size () == 0)
                 {
-                  sing_val_avg.SetSize (elmat_A.Height ());
-                  sing_val_max.SetSize (elmat_A.Height ());
-                  sing_val_min.SetSize (elmat_A.Height ());
+                  sing_val_avg.SetSize (diag.Size ()); // elmat_A.Height ());
+                  sing_val_max.SetSize (diag.Size ());
+                  sing_val_min.SetSize (diag.Size ());
                   sing_val_avg = 0;
                   sing_val_max = 0;
                   sing_val_min = DBL_MAX;
                 }
               active_elements += 1;
-              for (size_t i = 0; i < elmat_A.Height (); i++)
+              for (size_t i = 0; i < diag.Size (); i++)
                 {
-                  sing_val_avg[i] += abs (elmat_A (i, i));
-                  sing_val_max[i]
-                      = max (sing_val_max[i], abs (elmat_A (i, i)));
-                  sing_val_min[i]
-                      = min (sing_val_min[i], abs (elmat_A (i, i)));
+                  sing_val_avg[i] += abs (diag (i));
+                  sing_val_max[i] = max (sing_val_max[i], abs (diag (i)));
+                  sing_val_min[i] = min (sing_val_min[i], abs (diag (i)));
                 }
             }
 
