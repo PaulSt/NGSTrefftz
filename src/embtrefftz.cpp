@@ -788,6 +788,9 @@ namespace ngcomp
 
           FlatMatrix<SCAL, ColMajor> UT (elmat_A.Height (), lh),
               V (elmat_A.Width (), lh);
+          Matrix<SCAL> elmat_A_copy;
+          if (fes_conformity && check_conformity > 0)
+            elmat_A_copy = elmat_A;
           getSVD<SCAL> (elmat_A, UT, V);
 
           // # TODO: incorporate the double variant
@@ -804,11 +807,25 @@ namespace ngcomp
           elmat_A_inv = elmat_A_inv_expr;
 
           // T = (T_c | T_t)
-          Matrix<SCAL> elmat_T (ndof, ndof_trefftz_i + ndof_conforming);
+          Matrix<SCAL> elmat_T (ndof, ndof_conforming + ndof_trefftz_i);
           auto [elmat_Tc, elmat_Tt] = elmat_T.SplitCols (ndof_conforming);
 
           // T_c solves A @ T_c = B,
           elmat_Tc = elmat_A_inv * elmat_B;
+
+          if (fes_conformity && check_conformity > 0)
+            {
+              Matrix<SCAL> test = elmat_A_copy * elmat_Tc - elmat_B;
+              double maxentry = 0.0;
+              for (size_t i = 0; i < test.Height (); i++)
+                for (size_t j = 0; j < test.Width (); j++)
+                  if (abs (test (i, j)) > maxentry)
+                    maxentry = abs (test (i, j));
+              if (maxentry > check_conformity)
+                throw Exception ("too many conformity constraints in Trefftz "
+                                 "embedding, max entry: "
+                                 + std::to_string (maxentry));
+            }
 
           // if (get_range)
           // elmat_Tt = U.Cols (0, dofs.Size () - ndof_trefftz_i);
@@ -896,9 +913,11 @@ namespace ngcomp
       size_t _ndof_trefftz, double _eps, shared_ptr<FESpace> _fes,
       shared_ptr<FESpace> _fes_test, shared_ptr<FESpace> _fes_conformity,
       shared_ptr<BitArray> _ignoredofs,
-      shared_ptr<std::map<std::string, Vector<double>>> _stats)
+      shared_ptr<std::map<std::string, Vector<double>>> _stats,
+      double _check_conformity)
       : top (_top), trhs (_trhs), cop (_cop), crhs (_crhs),
-        ignoredofs (_ignoredofs), stats (_stats)
+        ignoredofs (_ignoredofs), stats (_stats),
+        check_conformity (_check_conformity)
   {
     if (_ndof_trefftz == 0)
       ndof_trefftz = _eps;
@@ -1459,14 +1478,14 @@ void ExportEmbTrefftz (py::module m)
                         shared_ptr<FESpace> fes_test,
                         shared_ptr<FESpace> fes_conformity,
                         shared_ptr<BitArray> ignoredofs,
-                        optional<py::dict> pystats) {
+                        optional<py::dict> pystats, double check_conformity) {
             shared_ptr<std::map<std::string, Vector<double>>> stats = nullptr;
             if (pystats)
               stats = make_shared<std::map<std::string, Vector<double>>> ();
             std::shared_ptr<TrefftzEmbedding> emb
                 = std::make_shared<TrefftzEmbedding> (
                     top, trhs, cop, crhs, ndof_trefftz, eps, fes, fes_test,
-                    fes_conformity, ignoredofs, stats);
+                    fes_conformity, ignoredofs, stats, check_conformity);
             if (pystats)
               for (auto const &x : *stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
@@ -1492,14 +1511,18 @@ void ExportEmbTrefftz (py::module m)
                      determined from `top` if not given)
                  :param fes_conformity: finite element space of the conformity operation (optional,
                      determined from `cop` if not given)
+                 :param ignoredofs: BitArray of dofs from fes to be ignored in the embedding
+                 :param stats: optional dictionary to store statistics about the singular values,
+                     input dictionary is modified 
+                 :param check_conformity: if > 0 checks the viability of the conformity constraint
             )mydelimiter",
           py::arg ("top") = nullptr, py::arg ("trhs") = nullptr,
           py::arg ("cop") = nullptr, py::arg ("crhs") = nullptr,
           py::arg ("ndof_trefftz") = 0, py::arg ("eps") = 0.0,
           py::arg ("fes") = nullptr, py::arg ("fes_test") = nullptr,
           py::arg ("fes_conformity") = nullptr,
-          py::arg ("ignoredofs") = nullptr,
-          py::arg ("stats") = nullopt) // py::none ())
+          py::arg ("ignoredofs") = nullptr, py::arg ("stats") = nullopt,
+          py::arg ("check_conformity") = 0.0) // py::none ())
       .def ("Embed", &ngcomp::TrefftzEmbedding::Embed,
             "Embed a Trefftz GridFunction into the underlying FESpace")
       .def ("GetEmbedding", &ngcomp::TrefftzEmbedding::GetEmbedding,
