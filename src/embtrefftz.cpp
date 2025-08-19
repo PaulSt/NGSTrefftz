@@ -875,15 +875,6 @@ namespace ngcomp
                   sing_val_min[i] = min (sing_val_min[i], abs (diag (i)));
                 }
             }
-
-          (*testout) << "element " << element_id << endl
-                     << "fes has ndof:" << ndof
-                     << "fes_test has ndof:" << ndof_test
-                     << "fes_conformity has ndof:" << ndof_conforming << endl
-                     << "elmat_t1" << endl
-                     << elmat_Tc << endl
-                     << "elmat_t2" << endl
-                     << elmat_Tt << endl;
         });
     if (stats)
       {
@@ -1513,7 +1504,7 @@ void ExportEmbTrefftz (py::module m)
                      determined from `cop` if not given)
                  :param ignoredofs: BitArray of dofs from fes to be ignored in the embedding
                  :param stats: optional dictionary to store statistics about the singular values,
-                     input dictionary is modified 
+                     input dictionary is modified
                  :param check_conformity: if > 0 checks the viability of the conformity constraint
             )mydelimiter",
           py::arg ("top") = nullptr, py::arg ("trhs") = nullptr,
