@@ -800,11 +800,8 @@ namespace ngcomp
           if (ndof_trefftz_i + ndof_conforming == 0)
             throw std::invalid_argument ("zero trefftz dofs");
 
-          const auto elmat_A_inv_expr
+          const Matrix<SCAL> elmat_A_inv
               = invertSVD (UT, elmat_A, V, ndof_trefftz_i, lh);
-          FlatMatrix<SCAL> elmat_A_inv (ndof, ndof_conforming + ndof_test, lh);
-          // Calculate the matrix entries and write them to memory.
-          elmat_A_inv = elmat_A_inv_expr;
 
           // T = (T_c | T_t)
           Matrix<SCAL> elmat_T (ndof, ndof_conforming + ndof_trefftz_i);
