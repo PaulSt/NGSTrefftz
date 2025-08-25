@@ -800,11 +800,8 @@ namespace ngcomp
           if (ndof_trefftz_i + ndof_conforming == 0)
             throw std::invalid_argument ("zero trefftz dofs");
 
-          const auto elmat_A_inv_expr
+          const Matrix<SCAL> elmat_A_inv
               = invertSVD (UT, elmat_A, V, ndof_trefftz_i, lh);
-          FlatMatrix<SCAL> elmat_A_inv (ndof, ndof_conforming + ndof_test, lh);
-          // Calculate the matrix entries and write them to memory.
-          elmat_A_inv = elmat_A_inv_expr;
 
           // T = (T_c | T_t)
           Matrix<SCAL> elmat_T (ndof, ndof_conforming + ndof_trefftz_i);
@@ -875,15 +872,6 @@ namespace ngcomp
                   sing_val_min[i] = min (sing_val_min[i], abs (diag (i)));
                 }
             }
-
-          (*testout) << "element " << element_id << endl
-                     << "fes has ndof:" << ndof
-                     << "fes_test has ndof:" << ndof_test
-                     << "fes_conformity has ndof:" << ndof_conforming << endl
-                     << "elmat_t1" << endl
-                     << elmat_Tc << endl
-                     << "elmat_t2" << endl
-                     << elmat_Tt << endl;
         });
     if (stats)
       {
@@ -1513,7 +1501,7 @@ void ExportEmbTrefftz (py::module m)
                      determined from `cop` if not given)
                  :param ignoredofs: BitArray of dofs from fes to be ignored in the embedding
                  :param stats: optional dictionary to store statistics about the singular values,
-                     input dictionary is modified 
+                     input dictionary is modified
                  :param check_conformity: if > 0 checks the viability of the conformity constraint
             )mydelimiter",
           py::arg ("top") = nullptr, py::arg ("trhs") = nullptr,
