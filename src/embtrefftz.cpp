@@ -576,11 +576,10 @@ invertSVD (const FlatMatrix<SCAL, ColMajor> &UT,
     num_zeros = i;
 
   FlatMatrix<SCAL> sigma_inv_times_ut (n, UT.Width (), lh);
-  for (size_t i = 0; i < n; i++)
-    if (i < min (n - num_zeros, m))
-      sigma_inv_times_ut.Row (i) = 1.0 / Sigma (i, i) * UT.Row (i);
-    else
-      sigma_inv_times_ut.Row (i) = SCAL (0.);
+  const size_t nonzero_diag_len = min (n - num_zeros, m);
+  for (size_t i = 0; i < nonzero_diag_len; i++)
+    sigma_inv_times_ut.Row (i) = 1.0 / Sigma (i, i) * UT.Row (i);
+  sigma_inv_times_ut.Rows (nonzero_diag_len, n) = SCAL (0.);
 
   return V * sigma_inv_times_ut;
 }
