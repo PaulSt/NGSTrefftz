@@ -553,24 +553,33 @@ namespace ngbla
   }
 }
 
-/// @param num_zero number of singular values `sigma_i = 0` in the matrix Sigma
+/// @param num_zeros_guess Guess (lower bound) for the number of singular
+///     values `sigma_i = 0` in the matrix Sigma. Is useful when there are
+///     very-close-to-zero singular values that you can detect in advance.
 /// @return pseudoinverse of A (as some `ngbla::Expr` type to avoid
 /// allocations)
 template <typename SCAL, typename TDIST, ORDERING SIG_ORD>
 Matrix<SCAL>
 invertSVD (const FlatMatrix<SCAL, ColMajor> &UT,
            const MatrixView<SCAL, SIG_ORD, size_t, size_t, TDIST> &Sigma,
-           const FlatMatrix<SCAL, ColMajor> &V, size_t num_zero, LocalHeap &lh)
+           const FlatMatrix<SCAL, ColMajor> &V, size_t num_zeros_guess,
+           LocalHeap &lh)
 {
   const HeapReset hr (lh);
   const auto [m, n] = Sigma.Shape ();
+  const size_t diag_len = min (m, n);
+
+  // find out if the guess was too low
+  size_t num_zeros = num_zeros_guess;
+  for (size_t i = num_zeros_guess + 1;
+       i <= diag_len && Sigma (diag_len - i, diag_len - i) == 0.; i++)
+    num_zeros = i;
 
   FlatMatrix<SCAL> sigma_inv_times_ut (n, UT.Width (), lh);
-  for (size_t i = 0; i < n; i++)
-    if (i < min (n - num_zero, m))
-      sigma_inv_times_ut.Row (i) = 1.0 / Sigma (i, i) * UT.Row (i);
-    else
-      sigma_inv_times_ut.Row (i) = SCAL (0.);
+  const size_t nonzero_diag_len = min (n - num_zeros, m);
+  for (size_t i = 0; i < nonzero_diag_len; i++)
+    sigma_inv_times_ut.Row (i) = 1.0 / Sigma (i, i) * UT.Row (i);
+  sigma_inv_times_ut.Rows (nonzero_diag_len, n) = SCAL (0.);
 
   return V * sigma_inv_times_ut;
 }
