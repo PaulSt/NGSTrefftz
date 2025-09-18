@@ -28,7 +28,7 @@ namespace ngcomp
     std::variant<size_t, double> ndof_trefftz;
 
     shared_ptr<std::map<std::string, Vector<double>>> stats = nullptr;
-    double check_conformity = 0.0;
+    const double check_conformity;
 
     /// elmat = (elmat_conforming | elmat_trefftz)
     Array<optional<Matrix<double>>> etmats;

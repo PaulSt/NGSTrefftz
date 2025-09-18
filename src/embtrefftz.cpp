@@ -663,6 +663,7 @@ namespace ngcomp
     Vector<double> sing_val_max;
     Vector<double> sing_val_min;
     std::atomic<size_t> active_elements = 0;
+    double check_conformity_max_deviation = 0.0;
 
     auto ma = fes->GetMeshAccess ();
     const size_t num_elements = ma->GetNE (VOL);
@@ -810,18 +811,20 @@ namespace ngcomp
           // T_c solves A @ T_c = B,
           elmat_Tc = elmat_A_inv * elmat_B;
 
+          double maxentry = 0.0;
           if (fes_conformity && check_conformity > 0)
             {
               Matrix<SCAL> test = elmat_A_copy * elmat_Tc - elmat_B;
-              double maxentry = 0.0;
               for (size_t i = 0; i < test.Height (); i++)
                 for (size_t j = 0; j < test.Width (); j++)
                   if (abs (test (i, j)) > maxentry)
                     maxentry = abs (test (i, j));
               if (maxentry > check_conformity)
-                throw Exception ("too many conformity constraints in Trefftz "
-                                 "embedding, max entry: "
-                                 + std::to_string (maxentry));
+                throw Exception ((std::stringstream{}
+                                  << "too many conformity constraints in "
+                                     "Trefftz embedding, max entry: "
+                                  << std::scientific << maxentry)
+                                     .str ());
             }
 
           // if (get_range)
@@ -871,6 +874,8 @@ namespace ngcomp
                   sing_val_max[i] = max (sing_val_max[i], abs (diag (i)));
                   sing_val_min[i] = min (sing_val_min[i], abs (diag (i)));
                 }
+              check_conformity_max_deviation
+                  = std::max (check_conformity_max_deviation, maxentry);
             }
         });
     if (stats)
@@ -879,6 +884,8 @@ namespace ngcomp
         (*stats)["singavg"] = Vector<double> (sing_val_avg);
         (*stats)["singmax"] = Vector<double> (sing_val_max);
         (*stats)["singmin"] = Vector<double> (sing_val_min);
+        (*stats)["conformity_deviation"]
+            = Vector<double> ({ check_conformity_max_deviation });
       }
 
     if constexpr (std::is_same_v<double, SCAL>)
