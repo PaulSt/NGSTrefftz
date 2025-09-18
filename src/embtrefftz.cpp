@@ -1078,7 +1078,8 @@ namespace ngcomp
           if (etmats[i])
             QuickSort (table2[i]);
       }
-    vec->SetZero ();
+    if (fes_conformity)
+      vec->SetZero ();
 
     // Makes use of the element coloring of the FESpace
     // to prevent race conditions when writing to `vec`.
@@ -1094,7 +1095,10 @@ namespace ngcomp
                            tvec->GetIndirect (tdofs, telvec);
                            FlatVector<Complex> elvec (dofs.Size (), mlh);
                            elvec = *etmatsc[ei.Nr ()] * telvec;
-                           vec->AddIndirect (dofs, elvec);
+                           if (fes_conformity)
+                             vec->AddIndirect (dofs, elvec);
+                           else
+                             vec->SetIndirect (dofs, elvec);
                          }
                        else
                          {
@@ -1102,7 +1106,10 @@ namespace ngcomp
                            tvec->GetIndirect (tdofs, telvec);
                            FlatVector<> elvec (dofs.Size (), mlh);
                            elvec = *etmats[ei.Nr ()] * telvec;
-                           vec->AddIndirect (dofs, elvec);
+                           if (fes_conformity)
+                             vec->AddIndirect (dofs, elvec);
+                           else
+                             vec->SetIndirect (dofs, elvec);
                          }
                      });
     return vec;
