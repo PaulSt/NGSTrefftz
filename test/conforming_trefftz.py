@@ -13,15 +13,19 @@ from ngsolve import (
     H1,
     L2,
     BilinearForm,
+    CoefficientFunction,
     Draw,
     FacetFESpace,
     FESpace,
     GridFunction,
     Integrate,
     Mesh,
+    NormalFacetFESpace,
     TaskManager,
     comp,
     dx,
+    grad,
+    specialcf,
     sqrt,
     x,
     y,
@@ -598,6 +602,113 @@ def test_ConstrainedTrefftzFESpaceDirichlet():
     fes_conformity_freedofs = fes_conformity.FreeDofs()
     for i in range(fes_conformity.ndof):
         assert fes_freedofs[i] == fes_conformity_freedofs[i]
+
+
+def test_ConstrainedTrefftzFESpaceEmbed():
+    """
+    Tests, whether the embedded gfu matches the gfu of the EmbeddedTrefftzFES.
+    >>> [test_ConstrainedTrefftzFESpaceEmbed()] # doctest:+ELLIPSIS
+    [...e-32]
+    """
+
+    def hesse(f: CoefficientFunction) -> CoefficientFunction:
+        return f.Operator("hesse")
+
+    def del_x(f: CoefficientFunction) -> CoefficientFunction:
+        return grad(f)[0]
+
+    def del_y(f: CoefficientFunction) -> CoefficientFunction:
+        return grad(f)[1]
+
+    def del_xx(f: CoefficientFunction) -> CoefficientFunction:
+        return hesse(f)[0, 0]
+
+    def del_xy(f: CoefficientFunction) -> CoefficientFunction:
+        return hesse(f)[0, 1]
+
+    def del_yy(f: CoefficientFunction) -> CoefficientFunction:
+        return hesse(f)[1, 1]
+
+    mesh = Mesh(unit_square.GenerateMesh(maxh=0.2))
+
+    order = 7
+    fes = L2(mesh, order=order)
+
+    vertex_value_space = H1(mesh, order=1)
+    deriv_x_value_space = H1(mesh, order=1)
+    deriv_y_value_space = H1(mesh, order=1)
+    deriv_xx_value_space = H1(mesh, order=1)
+    deriv_xy_value_space = H1(mesh, order=1)
+    deriv_yy_value_space = H1(mesh, order=1)
+    normal_deriv_moment_space = NormalFacetFESpace(mesh, order=order - 5)
+    facet_moment_space = FacetFESpace(mesh, order=order - 6)
+
+    conformity_space = (
+        vertex_value_space
+        * deriv_x_value_space
+        * deriv_y_value_space
+        * deriv_xx_value_space
+        * deriv_xy_value_space
+        * deriv_yy_value_space
+        * normal_deriv_moment_space
+        * facet_moment_space
+    )
+
+    u = fes.TrialFunction()
+    (u_, u_dx, u_dy, u_dxx, u_dxy, u_dyy, u_n, u_f) = (
+        conformity_space.TrialFunction()
+    )
+    (v_, v_dx, v_dy, v_dxx, v_dxy, v_dyy, v_n, v_f) = (
+        conformity_space.TestFunction()
+    )
+
+    dVertex = dx(element_vb=BBND)
+    dFace = dx(element_vb=BND)
+    n = specialcf.normal(2)
+
+    cop_lhs = (
+        u * v_ * dVertex
+        + del_x(u) * v_dx * dVertex
+        + del_y(u) * v_dy * dVertex
+        + del_xx(u) * v_dxx * dVertex
+        + del_xy(u) * v_dxy * dVertex
+        + del_yy(u) * v_dyy * dVertex
+        + grad(u) * n * v_n * n * dFace
+        + u * v_f * dFace
+    )
+    cop_rhs = (
+        u_ * v_ * dVertex
+        + u_dx * v_dx * dVertex
+        + u_dy * v_dy * dVertex
+        + u_dxx * v_dxx * dVertex
+        + u_dxy * v_dxy * dVertex
+        + u_dyy * v_dyy * dVertex
+        + u_n * n * v_n * n * dFace
+        + u_f * v_f * dFace
+    )
+
+    embedding = TrefftzEmbedding(cop=cop_lhs, crhs=cop_rhs, ndof_trefftz=0)
+
+    argyris = EmbeddedTrefftzFES(embedding)
+
+    assert type(argyris) is L2EmbTrefftzFESpace
+
+    gfu = GridFunction(argyris)
+    for i in range(0, len(gfu.vec), 2):
+        gfu.vec.data[i] = 1.0
+    base_gfu = GridFunction(fes)
+    base_gfu.vec.data[:] = embedding.Embed(gfu.vec)
+    base_gfu_2 = embedding.Embed(gfu)
+
+    # 1. Test, if Embed(gfu) gives the same result as Embed(gfu.vec)
+    assert len(base_gfu.vec) == len(base_gfu_2.vec)
+    for i in range(len(base_gfu.vec)):
+        assert base_gfu.vec.data[i] == base_gfu_2.vec.data[i], (
+            f"i: {i}, {base_gfu.vec.data[i]} != {base_gfu_2.vec.data[i]}"
+        )
+
+    # 2. Test, if the L2 gfu is the same function as the Argyris gfu
+    return Integrate((gfu - base_gfu) ** 2, mesh)
 
 
 if __name__ == "__main__":

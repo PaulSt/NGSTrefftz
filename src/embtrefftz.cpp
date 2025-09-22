@@ -952,6 +952,28 @@ namespace ngcomp
       EmbTrefftz<Complex> ();
     else
       EmbTrefftz<double> ();
+
+    // compute tdof_nrs
+    if (!fes->IsComplex ())
+      {
+        Table<DofId> _table_dummy{};
+        createConformingTrefftzTables (
+            _table_dummy, tdof_nrs, this->GetEtmats (),
+            this->GetLocalNodfsTrefftz (), *fes, fes_conformity, ignoredofs);
+        for (size_t i = 0; i < this->GetEtmats ().Size (); i++)
+          if (this->GetEtmat (i))
+            QuickSort (tdof_nrs[i]);
+      }
+    else
+      {
+        Table<DofId> _table_dummy{};
+        createConformingTrefftzTables (
+            _table_dummy, tdof_nrs, this->GetEtmatsC (),
+            this->GetLocalNodfsTrefftz (), *fes, fes_conformity, ignoredofs);
+        for (size_t i = 0; i < this->GetEtmatsC ().Size (); i++)
+          if (this->GetEtmatC (i))
+            QuickSort (tdof_nrs[i]);
+      }
   }
 
   shared_ptr<const BaseVector> TrefftzEmbedding::GetParticularSolution () const
@@ -1074,32 +1096,16 @@ namespace ngcomp
   shared_ptr<BaseVector>
   TrefftzEmbedding::Embed (const shared_ptr<const BaseVector> tvec) const
   {
-    LocalHeap lh (100 * 1000 * 1000, "embt", true);
+    LocalHeap lh (sizeof (Complex) * 10000, "embt", true);
 
-    shared_ptr<BaseVector> vec;
-
-    Table<int> table, table2;
     const bool fes_is_complex = fes->IsComplex ();
-    if (fes_is_complex)
-      {
-        vec = make_shared<VVector<Complex>> (fes->GetNDof ());
-        createConformingTrefftzTables (table, table2, etmatsc,
-                                       local_ndofs_trefftz, *fes,
-                                       fes_conformity, ignoredofs);
-        for (size_t i = 0; i < etmatsc.Size (); i++)
-          if (etmatsc[i])
-            QuickSort (table2[i]);
-      }
-    else
-      {
-        vec = make_shared<VVector<double>> (fes->GetNDof ());
-        createConformingTrefftzTables (table, table2, etmats,
-                                       local_ndofs_trefftz, *fes,
-                                       fes_conformity, ignoredofs);
-        for (size_t i = 0; i < etmats.Size (); i++)
-          if (etmats[i])
-            QuickSort (table2[i]);
-      }
+    shared_ptr<BaseVector> vec
+        = (fes_is_complex)
+              ? static_cast<shared_ptr<BaseVector>> (
+                    make_shared<VVector<Complex>> (fes->GetNDof ()))
+              : static_cast<shared_ptr<BaseVector>> (
+                    make_shared<VVector<double>> (fes->GetNDof ()));
+
     if (fes_conformity)
       vec->SetZero ();
 
@@ -1107,9 +1113,18 @@ namespace ngcomp
     // to prevent race conditions when writing to `vec`.
     IterateElements ((fes_conformity) ? *fes_conformity : *fes, VOL, lh,
                      [&] (auto ei, LocalHeap &mlh) {
-                       Array<DofId> dofs, tdofs;
-                       dofs = table[ei.Nr ()];
-                       tdofs = table2[ei.Nr ()];
+                       const HeapReset hr (mlh);
+                       Array<DofId> dofs;
+                       // FlatArray<DofId> tdofs;
+                       //  dofs = table[ei.Nr ()];
+                       // tdofs = table2[ei.Nr ()];
+                       fes->GetDofNrs (ei, dofs);
+                       const FlatArray<DofId> tdofs
+                           = this->GetTDofNrs (ei.Nr ());
+                       // if (tdofs != tdofs2)
+                       //   cerr << "tdofs: " << tdofs << "\ntdofs2: " <<
+                       //   tdofs2
+                       //        << endl;
 
                        if (fes_is_complex)
                          {
@@ -1135,6 +1150,16 @@ namespace ngcomp
                          }
                      });
     return vec;
+  }
+
+  shared_ptr<GridFunction>
+  TrefftzEmbedding::Embed (const shared_ptr<const GridFunction> tgfu) const
+  {
+    const shared_ptr<GridFunction> gfu
+        = CreateGridFunction (this->fes, tgfu->GetName (), Flags ());
+    gfu->Update ();
+    *gfu->GetVectorPtr () = *this->Embed (tgfu->GetVectorPtr ());
+    return gfu;
   }
 
   ////////////////////////// EmbTrefftzFESpace ///////////////////////////
@@ -1166,28 +1191,6 @@ namespace ngcomp
   template <typename T> void EmbTrefftzFESpace<T>::adjustDofsAfterSetOp ()
   {
     static_assert (std::is_base_of_v<FESpace, T>, "T must be a FESpace");
-
-    // #TODO: what about hidden dofs?
-    if (!this->IsComplex ())
-      {
-        Table<DofId> _table_dummy{};
-        createConformingTrefftzTables (
-            _table_dummy, elnr_to_dofs, emb->GetEtmats (),
-            emb->GetLocalNodfsTrefftz (), *fes, fes_conformity, ignoredofs);
-        for (size_t i = 0; i < emb->GetEtmats ().Size (); i++)
-          if (emb->GetEtmat (i))
-            QuickSort (elnr_to_dofs[i]);
-      }
-    else
-      {
-        Table<DofId> _table_dummy{};
-        createConformingTrefftzTables (
-            _table_dummy, elnr_to_dofs, emb->GetEtmatsC (),
-            emb->GetLocalNodfsTrefftz (), *fes, fes_conformity, ignoredofs);
-        for (size_t i = 0; i < emb->GetEtmatsC ().Size (); i++)
-          if (emb->GetEtmatC (i))
-            QuickSort (elnr_to_dofs[i]);
-      }
 
     const size_t ndof_conformity
         = (fes_conformity) ? fes_conformity->GetNDof () : 0;
@@ -1246,7 +1249,7 @@ namespace ngcomp
       return;
     // 1. Provide the dof nrs of the conforming Trefftz space, that are
     // associated to the element ei.
-    const FlatArray<DofId> tdofnrs = elnr_to_dofs[ei.Nr ()];
+    const FlatArray<DofId> tdofnrs = this->emb->GetTDofNrs (ei.Nr ());
 
     // 2. In order to properly hook into ngsolve's assembly routine,
     // we need to provide as many dofs as the underlying space T has.
@@ -1531,8 +1534,17 @@ void ExportEmbTrefftz (py::module m)
           py::arg ("fes_conformity") = nullptr,
           py::arg ("ignoredofs") = nullptr, py::arg ("stats") = nullopt,
           py::arg ("check_conformity") = 0.0) // py::none ())
-      .def ("Embed", &ngcomp::TrefftzEmbedding::Embed,
-            "Embed a Trefftz GridFunction into the underlying FESpace")
+      .def ("Embed",
+            static_cast<shared_ptr<BaseVector> (ngcomp::TrefftzEmbedding::*) (
+                const shared_ptr<const BaseVector>) const> (
+                &ngcomp::TrefftzEmbedding::Embed),
+            "Embed a Trefftz GridFunction Vector into the underlying FESpace")
+      .def (
+          "Embed",
+          static_cast<shared_ptr<GridFunction> (ngcomp::TrefftzEmbedding::*) (
+              const shared_ptr<const GridFunction>) const> (
+              &ngcomp::TrefftzEmbedding::Embed),
+          "Embed a Trefftz GridFunction into the underlying FESpace")
       .def ("GetEmbedding", &ngcomp::TrefftzEmbedding::GetEmbedding,
             "Get the sparse embedding matrix")
       .def ("GetParticularSolution",
