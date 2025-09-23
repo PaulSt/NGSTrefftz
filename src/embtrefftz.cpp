@@ -563,7 +563,7 @@ Matrix<SCAL>
 invertSVD (const FlatMatrix<SCAL, ColMajor> &UT,
            const MatrixView<SCAL, SIG_ORD, size_t, size_t, TDIST> &Sigma,
            const FlatMatrix<SCAL, ColMajor> &V, size_t num_zeros_guess,
-           LocalHeap &lh)
+           LocalHeap &lh, bool take_sqrt = false)
 {
   const HeapReset hr (lh);
   const auto [m, n] = Sigma.Shape ();
@@ -578,7 +578,10 @@ invertSVD (const FlatMatrix<SCAL, ColMajor> &UT,
   FlatMatrix<SCAL> sigma_inv_times_ut (n, UT.Width (), lh);
   const size_t nonzero_diag_len = min (n - num_zeros, m);
   for (size_t i = 0; i < nonzero_diag_len; i++)
-    sigma_inv_times_ut.Row (i) = 1.0 / Sigma (i, i) * UT.Row (i);
+    if (take_sqrt)
+      sigma_inv_times_ut.Row (i) = 1.0 / sqrt (Sigma (i, i)) * UT.Row (i);
+    else
+      sigma_inv_times_ut.Row (i) = 1.0 / Sigma (i, i) * UT.Row (i);
   sigma_inv_times_ut.Rows (nonzero_diag_len, n) = SCAL (0.);
 
   return V * sigma_inv_times_ut;
@@ -602,6 +605,21 @@ getPseudoInverse (const FlatMatrix<SCAL> mat, const size_t num_zero)
   getSVD (sigma, UT, V);
   elmat_inv = invertSVD (UT, sigma, V, num_zero, lh);
   return elmat_inv;
+}
+
+template <typename SCAL>
+void getPseudoInverse (FlatMatrix<SCAL> mat, const size_t num_zero,
+                       LocalHeap &lh, int take_sqrt = false)
+{
+  HeapReset hr (lh);
+  const auto [n, m] = mat.Shape ();
+  FlatMatrix<SCAL> sigma (n, m, lh);
+  FlatMatrix<SCAL, ColMajor> UT (n, n, lh);
+  FlatMatrix<SCAL, ColMajor> V (m, m, lh);
+
+  sigma = mat;
+  getSVD (sigma, UT, V);
+  mat = invertSVD (UT, sigma, V, num_zero, lh, take_sqrt);
 }
 
 /// calculates from the given space and linear form integrators a particular
@@ -691,6 +709,9 @@ namespace ngcomp
         calculateBilinearFormIntegrators (*cop, cop_lhs_integrators);
         calculateBilinearFormIntegrators (*crhs, cop_rhs_integrators);
       }
+    Array<shared_ptr<BilinearFormIntegrator>> fes_ip_integrators[4];
+    if (fes_ip)
+      calculateBilinearFormIntegrators (*fes_ip, fes_ip_integrators);
 
     Array<optional<Matrix<SCAL>>> etmats (num_elements);
     Array<optional<Matrix<SCAL>>> etmats_trefftz_inv (num_elements);
@@ -764,6 +785,24 @@ namespace ngcomp
                 }
             }
 
+          shared_ptr<FlatMatrix<double>> fes_ip_sqinv = nullptr;
+          if (fes_ip)
+            {
+              fes_ip_sqinv = make_shared<FlatMatrix<double>> (ndof, ndof, lh);
+              *fes_ip_sqinv = 0.;
+
+              addIntegrationToElementMatrix (*fes_ip_sqinv,
+                                             fes_ip_integrators[VOL], *ma,
+                                             element_id, *fes, *fes, lh);
+
+              getPseudoInverse (*fes_ip_sqinv, 0, lh, true);
+
+              FlatMatrix<SCAL> elmat_A_temp (elmat_A.Height (),
+                                             elmat_A.Width (), lh);
+              elmat_A_temp = elmat_A * (*fes_ip_sqinv);
+              elmat_A.Assign (elmat_A_temp);
+            }
+
           if (any_fes_has_inactive_dofs || ignoredofs)
             {
               if (fes_conformity)
@@ -810,7 +849,7 @@ namespace ngcomp
           if (ndof_trefftz_i + ndof_conforming == 0)
             throw std::invalid_argument ("zero trefftz dofs");
 
-          const Matrix<SCAL> elmat_A_inv
+          Matrix<SCAL> elmat_A_inv
               = invertSVD (UT, elmat_A, V, ndof_trefftz_i, lh);
 
           // T = (T_c | T_t)
@@ -838,6 +877,13 @@ namespace ngcomp
 
           // if (get_range)
           // elmat_Tt = U.Cols (0, dofs.Size () - ndof_trefftz_i);
+
+          if (fes_ip)
+            {
+              FlatMatrix<SCAL, ColMajor> Vtemp (V.Width (), V.Height (), lh);
+              Vtemp = (*fes_ip_sqinv) * V;
+              V.Assign (Vtemp);
+            }
           elmat_Tt = V.Cols (ndof - ndof_trefftz_i, ndof);
 
           if (compute_elmat_T_inv)
@@ -916,10 +962,10 @@ namespace ngcomp
       shared_ptr<SumOfIntegrals> _cop, shared_ptr<SumOfIntegrals> _crhs,
       size_t _ndof_trefftz, double _eps, shared_ptr<FESpace> _fes,
       shared_ptr<FESpace> _fes_test, shared_ptr<FESpace> _fes_conformity,
-      shared_ptr<BitArray> _ignoredofs,
+      shared_ptr<SumOfIntegrals> _fes_ip, shared_ptr<BitArray> _ignoredofs,
       shared_ptr<std::map<std::string, Vector<double>>> _stats,
       double _check_conformity)
-      : top (_top), trhs (_trhs), cop (_cop), crhs (_crhs),
+      : top (_top), trhs (_trhs), cop (_cop), crhs (_crhs), fes_ip (_fes_ip),
         ignoredofs (_ignoredofs), stats (_stats),
         check_conformity (_check_conformity)
   {
@@ -1488,6 +1534,7 @@ void ExportEmbTrefftz (py::module m)
                         double eps, shared_ptr<FESpace> fes,
                         shared_ptr<FESpace> fes_test,
                         shared_ptr<FESpace> fes_conformity,
+                        shared_ptr<SumOfIntegrals> fes_ip,
                         shared_ptr<BitArray> ignoredofs,
                         optional<py::dict> pystats, double check_conformity) {
             shared_ptr<std::map<std::string, Vector<double>>> stats = nullptr;
@@ -1496,7 +1543,8 @@ void ExportEmbTrefftz (py::module m)
             std::shared_ptr<TrefftzEmbedding> emb
                 = std::make_shared<TrefftzEmbedding> (
                     top, trhs, cop, crhs, ndof_trefftz, eps, fes, fes_test,
-                    fes_conformity, ignoredofs, stats, check_conformity);
+                    fes_conformity, fes_ip, ignoredofs, stats,
+                    check_conformity);
             if (pystats)
               for (auto const &x : *stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
@@ -1531,7 +1579,7 @@ void ExportEmbTrefftz (py::module m)
           py::arg ("cop") = nullptr, py::arg ("crhs") = nullptr,
           py::arg ("ndof_trefftz") = 0, py::arg ("eps") = 0.0,
           py::arg ("fes") = nullptr, py::arg ("fes_test") = nullptr,
-          py::arg ("fes_conformity") = nullptr,
+          py::arg ("fes_conformity") = nullptr, py::arg ("fes_ip") = nullptr,
           py::arg ("ignoredofs") = nullptr, py::arg ("stats") = nullopt,
           py::arg ("check_conformity") = 0.0) // py::none ())
       .def ("Embed",
