@@ -20,6 +20,7 @@ namespace ngcomp
     const shared_ptr<SumOfIntegrals> trhs;
     const shared_ptr<SumOfIntegrals> cop;
     const shared_ptr<SumOfIntegrals> crhs;
+    const shared_ptr<SumOfIntegrals> fes_ip;
     shared_ptr<MeshAccess> ma;
     shared_ptr<BitArray> ignoredofs;
 
@@ -64,6 +65,7 @@ namespace ngcomp
                       double _eps, shared_ptr<FESpace> _fes = nullptr,
                       shared_ptr<FESpace> _fes_test = nullptr,
                       shared_ptr<FESpace> _fes_conformity = nullptr,
+                      shared_ptr<SumOfIntegrals> _fes_ip = nullptr,
                       shared_ptr<BitArray> _ignoredofs = nullptr,
                       shared_ptr<std::map<std::string, Vector<double>>> _stats
                       = nullptr,
@@ -151,8 +153,10 @@ namespace ngcomp
         for (auto space : fes->Spaces ())
           this->AddSpace (space);
 
-      etmats_inv.SetSize (this->ma->GetNE (VOL));
-      etmatsc_inv.SetSize (this->ma->GetNE (VOL));
+      if (this->IsComplex ())
+        etmatsc_inv.SetSize (this->ma->GetNE (VOL));
+      else
+        etmats_inv.SetSize (this->ma->GetNE (VOL));
 
       adjustDofsAfterSetOp ();
       // this->Update();
