@@ -10,6 +10,12 @@
 
 namespace ngcomp
 {
+  /// Copies `source` to the beginning of `target`.
+  ///
+  /// For `source.Size() > target.Size()`,
+  /// the behaviour is undefined.
+  void copyBitArray (const shared_ptr<BitArray> target,
+                     const shared_ptr<const BitArray> source);
 
   class TrefftzEmbedding
   {
@@ -117,9 +123,8 @@ namespace ngcomp
   {
     const shared_ptr<TrefftzEmbedding> emb;
     static_assert (std::is_base_of_v<FESpace, T>, "T must be a FESpace");
-    const Array<optional<Matrix<double>>> etmats;
-    const Array<optional<Matrix<Complex>>> etmatsc;
-    const shared_ptr<T> fes;
+    const FlatArray<optional<Matrix<double>>> etmats;
+    const FlatArray<optional<Matrix<Complex>>> etmatsc;
     const shared_ptr<const FESpace> fes_conformity;
     const shared_ptr<const BitArray> ignoredofs;
 
@@ -140,17 +145,17 @@ namespace ngcomp
         : T (aemb->GetFES ()->GetMeshAccess (), aemb->GetFES ()->GetFlags (),
              false),
           emb (aemb), etmats (emb->GetEtmats ()), etmatsc (emb->GetEtmatsC ()),
-          fes (dynamic_pointer_cast<T> (aemb->GetFES ())),
           fes_conformity (emb->GetFESconf ()),
           ignoredofs (emb->GetIgnoredDofs ())
     {
       assert (fes && "fes may not be nullptr");
-      this->name = "EmbTrefftzFESpace(" + fes->GetClassName () + ")";
+      this->name
+          = "EmbTrefftzFESpace(" + emb->GetFES ()->GetClassName () + ")";
       this->type = "embt";
       this->needs_transform_vec = true;
-      this->iscomplex = fes->IsComplex ();
+      this->iscomplex = emb->GetFES ()->IsComplex ();
       if constexpr (std::is_same_v<CompoundFESpace, T>)
-        for (auto space : fes->Spaces ())
+        for (auto space : static_pointer_cast<T> (emb->GetFES ())->Spaces ())
           this->AddSpace (space);
 
       if (this->IsComplex ())
@@ -158,11 +163,14 @@ namespace ngcomp
       else
         etmats_inv.SetSize (this->ma->GetNE (VOL));
 
-      adjustDofsAfterSetOp ();
-      // this->Update();
+      this->Update ();
       // this->UpdateDofTables();
       // this->UpdateCouplingDofArray();
-      // this->FinalizeUpdate();
+      this->FinalizeUpdate ();
+
+      // needs previous FinalizeUpdate to construct free_dofs for `this`
+      if (fes_conformity)
+        copyBitArray (this->GetFreeDofs (), fes_conformity->GetFreeDofs ());
     }
 
     void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
@@ -183,10 +191,9 @@ namespace ngcomp
 
     shared_ptr<TrefftzEmbedding> GetEmbedding () const noexcept { return emb; }
 
-  private:
-    /// adjusts the dofs of the space. Will be called by SetOp.
-    void adjustDofsAfterSetOp ();
+    virtual void UpdateCouplingDofArray () override;
 
+  private:
     optional<FlatMatrix<double>> GetEtmatInv (size_t idx) const;
     optional<FlatMatrix<Complex>> GetEtmatCInv (size_t idx) const;
   };

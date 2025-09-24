@@ -1234,14 +1234,10 @@ namespace ngcomp
       }
   }
 
-  template <typename T> void EmbTrefftzFESpace<T>::adjustDofsAfterSetOp ()
+  template <typename T> void EmbTrefftzFESpace<T>::UpdateCouplingDofArray ()
   {
-    static_assert (std::is_base_of_v<FESpace, T>, "T must be a FESpace");
-
     const size_t ndof_conformity
         = (fes_conformity) ? fes_conformity->GetNDof () : 0;
-
-    T::Update ();
 
     size_t ndof_trefftz = 0;
     for (auto ei : this->ma->Elements (VOL))
@@ -1265,7 +1261,6 @@ namespace ngcomp
     // dofs in the conformity space.
     const size_t new_ndof = ignored_dofs + ndof_conformity + ndof_trefftz;
     this->SetNDof (new_ndof);
-
     this->ctofdof.SetSize (new_ndof);
 
     // We start the numbering of the dofs with the conformity dofs,
@@ -1273,17 +1268,11 @@ namespace ngcomp
     if (ignoredofs)
       for (size_t i = 0, idof = 0; i < ignoredofs->Size (); i++)
         if (ignoredofs->Test (i))
-          this->ctofdof[idof++] = fes->GetDofCouplingType (i);
+          this->ctofdof[idof++] = emb->GetFES ()->GetDofCouplingType (i);
     for (size_t i = ignored_dofs; i < ndof_conformity; i++)
       this->ctofdof[i] = fes_conformity->GetDofCouplingType (i);
     for (size_t i = ignored_dofs + ndof_conformity; i < new_ndof; i++)
       this->ctofdof[i] = LOCAL_DOF;
-
-    T::FinalizeUpdate ();
-
-    // needs previous FinalizeUpdate to construct free_dofs for `this`
-    if (fes_conformity)
-      copyBitArray (this->GetFreeDofs (), fes_conformity->GetFreeDofs ());
   }
 
   template <typename T>
@@ -1319,7 +1308,7 @@ namespace ngcomp
   EmbTrefftzFESpace<T>::GetEtmatInv (size_t idx) const
   {
     std::call_once (this->etmats_inv_computed, [&] () {
-      this->fes->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
+      this->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
         optional<Matrix<double>> etmat = emb->GetEtmat (ei.Nr ());
         this->etmats_inv[ei.Nr ()]
             = (etmat) ? make_optional (getPseudoInverse (*etmat, 0)) : nullopt;
@@ -1333,7 +1322,7 @@ namespace ngcomp
   EmbTrefftzFESpace<T>::GetEtmatCInv (size_t idx) const
   {
     std::call_once (this->etmats_inv_computed, [&] () {
-      this->fes->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
+      this->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
         optional<Matrix<Complex>> etmat = emb->GetEtmatC (ei.Nr ());
         this->etmatsc_inv[ei.Nr ()]
             = (etmat) ? make_optional (getPseudoInverse (*etmat, 0)) : nullopt;

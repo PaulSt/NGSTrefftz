@@ -37,6 +37,8 @@ namespace ngcomp
     string GetClassName () const override { return "monomialfespace"; }
     static DocInfo GetDocu ();
 
+    virtual ~MonomialFESpace () = default;
+
   protected:
     template <int D> CSR MonomialBasis (int ord) const
     {
