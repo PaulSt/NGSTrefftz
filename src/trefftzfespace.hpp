@@ -176,7 +176,8 @@ namespace ngcomp
     FiniteElement &TGetFE (ElementId ei, Allocator &alloc) const;
 
   public:
-    TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
+    TrefftzFESpace (shared_ptr<MeshAccess> ama, const Flags &flags,
+                    bool checkflags = false);
     ~TrefftzFESpace ();
     void Update () override;
     void UpdateCouplingDofArray () override;

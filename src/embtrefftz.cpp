@@ -1,5 +1,6 @@
 #include "embtrefftz.hpp"
 #include "monomialfespace.hpp"
+#include "trefftzfespace.hpp"
 #include <cfloat>
 #include <compressedfespace.hpp>
 
@@ -1617,6 +1618,7 @@ void ExportEmbTrefftz (py::module m)
   ExportETSpace<ngcomp::VectorL2FESpace> (m, "VectorL2EmbTrefftzFESpace");
   ExportETSpace<ngcomp::MonomialFESpace> (m, "MonomialEmbTrefftzFESpace");
   ExportETSpace<ngcomp::CompoundFESpace> (m, "CompoundEmbTrefftzFESpace");
+  ExportETSpace<ngcomp::TrefftzFESpace> (m, "TrefftzEmbTrefftzFESpace");
 
   m.def (
       "EmbeddedTrefftzFES",
@@ -1636,6 +1638,9 @@ void ExportEmbTrefftz (py::module m)
         else if (dynamic_pointer_cast<ngcomp::CompoundFESpace> (fes))
           nfes = make_shared<
               ngcomp::EmbTrefftzFESpace<ngcomp::CompoundFESpace>> (emb);
+        else if (dynamic_pointer_cast<ngcomp::TrefftzFESpace> (fes))
+          nfes = make_shared<
+              ngcomp::EmbTrefftzFESpace<ngcomp::TrefftzFESpace>> (emb);
         else
           throw Exception ("Unknown base fes");
         return nfes;

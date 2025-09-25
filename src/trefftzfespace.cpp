@@ -95,8 +95,8 @@ namespace ngcomp
   }
 
   TrefftzFESpace ::TrefftzFESpace (shared_ptr<MeshAccess> ama,
-                                   const Flags &flags)
-      : FESpace (ama, flags)
+                                   const Flags &flags, bool checkflags)
+      : FESpace (ama, flags, checkflags)
   {
     type = "trefftzfespace";
 
