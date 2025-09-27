@@ -39,7 +39,6 @@ namespace ngcomp
     std::variant<size_t, double> ndof_trefftz;
 
     shared_ptr<std::map<std::string, Vector<double>>> stats = nullptr;
-    const double check_conformity;
 
     /// elmat = (elmat_conforming | elmat_trefftz)
     Array<optional<Matrix<double>>> etmats;
@@ -74,8 +73,7 @@ namespace ngcomp
                       shared_ptr<SumOfIntegrals> _fes_ip = nullptr,
                       shared_ptr<BitArray> _ignoredofs = nullptr,
                       shared_ptr<std::map<std::string, Vector<double>>> _stats
-                      = nullptr,
-                      double _check_conformity = 0.0);
+                      = nullptr);
 
     shared_ptr<BaseVector>
     Embed (const shared_ptr<const BaseVector> tgfu) const;

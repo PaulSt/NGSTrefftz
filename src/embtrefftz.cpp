@@ -691,7 +691,8 @@ namespace ngcomp
     Vector<double> sing_val_max;
     Vector<double> sing_val_min;
     std::atomic<size_t> active_elements = 0;
-    double check_conformity_max_deviation = 0.0;
+    double conformity_residual = 0.0;
+    double trefftz_residual = 0.0;
 
     auto ma = fes->GetMeshAccess ();
     const size_t num_elements = ma->GetNE (VOL);
@@ -759,15 +760,16 @@ namespace ngcomp
           size_t ndof = dofs.Size ();
           size_t ndof_test = dofs_test.Size ();
           size_t ndof_conforming = dofs_conforming.Size ();
-          FlatMatrix<SCAL> elmat_A (ndof_test + ndof_conforming, ndof, lh);
-          auto [elmat_Cl, elmat_L] = elmat_A.SplitRows (ndof_conforming);
 
+          FlatMatrix<SCAL> elmat_A (ndof_test + ndof_conforming, ndof, lh);
           FlatMatrix<SCAL> elmat_B (ndof_test + ndof_conforming,
                                     ndof_conforming, lh);
+          Matrix<SCAL> elmat_A_copy;
           elmat_A = static_cast<SCAL> (0.);
           elmat_B = static_cast<SCAL> (0.);
 
-          // elmat_cr is a view into elamt_b
+          // split conformity part
+          auto [elmat_Cl, elmat_L] = elmat_A.SplitRows (ndof_conforming);
           auto elmat_Cr = elmat_B.Rows (ndof_conforming);
 
           // the diff. operator L operates only on volume terms
@@ -838,8 +840,7 @@ namespace ngcomp
 
           FlatMatrix<SCAL, ColMajor> UT (elmat_A.Height (), lh),
               V (elmat_A.Width (), lh);
-          Matrix<SCAL> elmat_A_copy;
-          if (fes_conformity && check_conformity > 0)
+          if (stats)
             elmat_A_copy = elmat_A;
           getSVD<SCAL> (elmat_A, UT, V);
 
@@ -860,25 +861,8 @@ namespace ngcomp
           // T_c solves A @ T_c = B,
           elmat_Tc = elmat_A_inv * elmat_B;
 
-          double maxentry = 0.0;
-          if (fes_conformity && check_conformity > 0)
-            {
-              Matrix<SCAL> test = elmat_A_copy * elmat_Tc - elmat_B;
-              for (size_t i = 0; i < test.Height (); i++)
-                for (size_t j = 0; j < test.Width (); j++)
-                  if (abs (test (i, j)) > maxentry)
-                    maxentry = abs (test (i, j));
-              if (maxentry > check_conformity)
-                throw Exception ((std::stringstream{}
-                                  << "too many conformity constraints in "
-                                     "Trefftz embedding, max entry: "
-                                  << std::scientific << maxentry)
-                                     .str ());
-            }
-
           // if (get_range)
           // elmat_Tt = U.Cols (0, dofs.Size () - ndof_trefftz_i);
-
           if (fes_ip)
             {
               FlatMatrix<SCAL, ColMajor> Vtemp (V.Width (), V.Height (), lh);
@@ -930,18 +914,26 @@ namespace ngcomp
                   sing_val_max[i] = max (sing_val_max[i], abs (diag (i)));
                   sing_val_min[i] = min (sing_val_min[i], abs (diag (i)));
                 }
-              check_conformity_max_deviation
-                  = std::max (check_conformity_max_deviation, maxentry);
+              Matrix<SCAL> test = elmat_A_copy * elmat_Tc - elmat_B;
+              for (auto &cr : test.AsVector ())
+                if (abs (cr) > conformity_residual)
+                  conformity_residual = abs (cr);
+              test = elmat_A_copy * elmat_Tt;
+              for (auto &tr : test.AsVector ())
+                if (abs (tr) > trefftz_residual)
+                  trefftz_residual = abs (tr);
             }
         });
+
     if (stats)
       {
         sing_val_avg /= active_elements.load ();
         (*stats)["singavg"] = Vector<double> (sing_val_avg);
         (*stats)["singmax"] = Vector<double> (sing_val_max);
         (*stats)["singmin"] = Vector<double> (sing_val_min);
-        (*stats)["conformity_deviation"]
-            = Vector<double> ({ check_conformity_max_deviation });
+        (*stats)["conformity_residual"]
+            = Vector<double> ({ conformity_residual });
+        (*stats)["trefftz_residual"] = Vector<double> ({ trefftz_residual });
       }
 
     if constexpr (std::is_same_v<double, SCAL>)
@@ -964,11 +956,9 @@ namespace ngcomp
       size_t _ndof_trefftz, double _eps, shared_ptr<FESpace> _fes,
       shared_ptr<FESpace> _fes_test, shared_ptr<FESpace> _fes_conformity,
       shared_ptr<SumOfIntegrals> _fes_ip, shared_ptr<BitArray> _ignoredofs,
-      shared_ptr<std::map<std::string, Vector<double>>> _stats,
-      double _check_conformity)
+      shared_ptr<std::map<std::string, Vector<double>>> _stats)
       : top (_top), trhs (_trhs), cop (_cop), crhs (_crhs), fes_ip (_fes_ip),
-        ignoredofs (_ignoredofs), stats (_stats),
-        check_conformity (_check_conformity)
+        ignoredofs (_ignoredofs), stats (_stats)
   {
     if (_ndof_trefftz == 0)
       ndof_trefftz = _eps;
@@ -1526,15 +1516,14 @@ void ExportEmbTrefftz (py::module m)
                         shared_ptr<FESpace> fes_conformity,
                         shared_ptr<SumOfIntegrals> fes_ip,
                         shared_ptr<BitArray> ignoredofs,
-                        optional<py::dict> pystats, double check_conformity) {
+                        optional<py::dict> pystats) {
             shared_ptr<std::map<std::string, Vector<double>>> stats = nullptr;
             if (pystats)
               stats = make_shared<std::map<std::string, Vector<double>>> ();
             std::shared_ptr<TrefftzEmbedding> emb
                 = std::make_shared<TrefftzEmbedding> (
                     top, trhs, cop, crhs, ndof_trefftz, eps, fes, fes_test,
-                    fes_conformity, fes_ip, ignoredofs, stats,
-                    check_conformity);
+                    fes_conformity, fes_ip, ignoredofs, stats);
             if (pystats)
               for (auto const &x : *stats)
                 (*pystats)[py::cast (x.first)] = py::cast (x.second);
@@ -1563,15 +1552,14 @@ void ExportEmbTrefftz (py::module m)
                  :param ignoredofs: BitArray of dofs from fes to be ignored in the embedding
                  :param stats: optional dictionary to store statistics about the singular values,
                      input dictionary is modified
-                 :param check_conformity: if > 0 checks the viability of the conformity constraint
             )mydelimiter",
           py::arg ("top") = nullptr, py::arg ("trhs") = nullptr,
           py::arg ("cop") = nullptr, py::arg ("crhs") = nullptr,
           py::arg ("ndof_trefftz") = 0, py::arg ("eps") = 0.0,
           py::arg ("fes") = nullptr, py::arg ("fes_test") = nullptr,
           py::arg ("fes_conformity") = nullptr, py::arg ("fes_ip") = nullptr,
-          py::arg ("ignoredofs") = nullptr, py::arg ("stats") = nullopt,
-          py::arg ("check_conformity") = 0.0) // py::none ())
+          py::arg ("ignoredofs") = nullptr,
+          py::arg ("stats") = nullopt) // py::none ())
       .def ("Embed",
             static_cast<shared_ptr<BaseVector> (ngcomp::TrefftzEmbedding::*) (
                 const shared_ptr<const BaseVector>) const> (
