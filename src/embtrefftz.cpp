@@ -960,7 +960,7 @@ namespace ngcomp
       : top (_top), trhs (_trhs), cop (_cop), crhs (_crhs), fes_ip (_fes_ip),
         ignoredofs (_ignoredofs), stats (_stats)
   {
-    if (_ndof_trefftz == 0)
+    if (_ndof_trefftz == std::numeric_limits<size_t>::max ())
       ndof_trefftz = _eps;
     else if (_eps == 0.0)
       ndof_trefftz = _ndof_trefftz;
@@ -1555,10 +1555,10 @@ void ExportEmbTrefftz (py::module m)
             )mydelimiter",
           py::arg ("top") = nullptr, py::arg ("trhs") = nullptr,
           py::arg ("cop") = nullptr, py::arg ("crhs") = nullptr,
-          py::arg ("ndof_trefftz") = 0, py::arg ("eps") = 0.0,
-          py::arg ("fes") = nullptr, py::arg ("fes_test") = nullptr,
-          py::arg ("fes_conformity") = nullptr, py::arg ("fes_ip") = nullptr,
-          py::arg ("ignoredofs") = nullptr,
+          py::arg ("ndof_trefftz") = std::numeric_limits<size_t>::max (),
+          py::arg ("eps") = 0.0, py::arg ("fes") = nullptr,
+          py::arg ("fes_test") = nullptr, py::arg ("fes_conformity") = nullptr,
+          py::arg ("fes_ip") = nullptr, py::arg ("ignoredofs") = nullptr,
           py::arg ("stats") = nullopt) // py::none ())
       .def ("Embed",
             static_cast<shared_ptr<BaseVector> (ngcomp::TrefftzEmbedding::*) (
