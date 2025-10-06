@@ -10,8 +10,26 @@ if(NOT WIN32)
   set(BoldWhite   "${Esc}[1;37m")
 endif()
 
+function(download_if_possible url file)
+  get_filename_component(dir "${file}" DIRECTORY)
+  file(MAKE_DIRECTORY "${dir}")
+  file(DOWNLOAD "${url}" "${file}.tmp" STATUS status SHOW_PROGRESS TIMEOUT 10)
+  list(GET status 0 code)
+  if(NOT code EQUAL 0)
+    if(EXISTS "${file}")
+      message(WARNING "offline: using existing ${file}")
+    else()
+      message(FATAL_ERROR "failed to download ${file}")
+    endif()
+  else()
+    file(RENAME "${file}.tmp" "${file}")
+  endif()
+endfunction()
+
 set(ngsolve_addon_commit_hash refs/heads/main)
-file(DOWNLOAD https://raw.githubusercontent.com/NGSolve/ngsolve-addon-template/${ngsolve_addon_commit_hash}/ngsolve_addon.cmake ${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
+download_if_possible (
+    "https://raw.githubusercontent.com/NGSolve/ngsolve-addon-template/${ngsolve_addon_commit_hash}/ngsolve_addon.cmake"
+    "${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_BINARY_DIR}/cmake_modules)
 
 ### ngstrefftz
@@ -76,9 +94,9 @@ set(NGSTREFFTZ_USE_LAPACK ${NGSOLVE_USE_LAPACK} CACHE BOOL "Try to use lapack fr
 
 ### link LAPACK or MKL if possible
 if (NGSTREFFTZ_USE_MKL)
-    file(DOWNLOAD
-    https://raw.githubusercontent.com/NGSolve/ngsolve/master/cmake/cmake_modules/FindMKL.cmake
-    ${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake)
+    download_if_possible(
+        "https://raw.githubusercontent.com/NGSolve/ngsolve/master/cmake/cmake_modules/FindMKL.cmake"
+        "${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake")
 
     #file(COPY ${CMAKE_SOURCE_DIR}/FindMKL.cmake DESTINATION
     #"${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake")
