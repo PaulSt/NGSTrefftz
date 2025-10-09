@@ -146,7 +146,6 @@ namespace ngcomp
           fes_conformity (emb->GetFESconf ()),
           ignoredofs (emb->GetIgnoredDofs ())
     {
-      assert (fes && "fes may not be nullptr");
       this->name
           = "EmbTrefftzFESpace(" + emb->GetFES ()->GetClassName () + ")";
       this->type = "embt";

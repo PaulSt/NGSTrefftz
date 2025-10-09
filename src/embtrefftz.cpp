@@ -789,6 +789,8 @@ namespace ngcomp
             }
 
           shared_ptr<FlatMatrix<double>> fes_ip_sqinv = nullptr;
+          if (stats)
+            elmat_A_copy = elmat_A;
           if (fes_ip)
             {
               fes_ip_sqinv = make_shared<FlatMatrix<double>> (ndof, ndof, lh);
@@ -840,8 +842,6 @@ namespace ngcomp
 
           FlatMatrix<SCAL, ColMajor> UT (elmat_A.Height (), lh),
               V (elmat_A.Width (), lh);
-          if (stats)
-            elmat_A_copy = elmat_A;
           getSVD<SCAL> (elmat_A, UT, V);
 
           // # TODO: incorporate the double variant
