@@ -55,6 +55,7 @@ add_ngsolve_addon(ngstrefftz
     src/pufe.cpp
     src/pufespace.cpp
     src/boxintegral.cpp
+    src/tp0fespace.cpp
     #src/airy.cpp #for testing, requires boost
   )
 target_compile_definitions(ngstrefftz PRIVATE NGSTREFFTZ_EXPORTS)
