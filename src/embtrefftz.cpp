@@ -1100,7 +1100,8 @@ namespace ngcomp
 
           if (fes->IsComplex ())
             {
-              Matrix<Complex> elmat_T_inv = (*etmatsc_trefftz_inv[element_id.Nr ()]);
+              Matrix<Complex> elmat_T_inv
+                  = (*etmatsc_trefftz_inv[element_id.Nr ()]);
               FlatVector<Complex> partsol (dofs.Size (), lh);
               FlatVector<Complex> elvec (dofs_test.Size (), lh);
               _trhsvec->GetIndirect (dofs_test, elvec);
