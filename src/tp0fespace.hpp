@@ -75,8 +75,11 @@ namespace ngcomp
 
   class TP0FESpace : public FESpace
   {
-    int local_ndof;
     int nel;
+    Array<int> order_inner;
+    Array<int> first_element_dof;
+
+    int LocalNDof (int order) const { return (order + 1) * (order - 1); }
 
   public:
     TP0FESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
@@ -87,6 +90,9 @@ namespace ngcomp
 
     void Update () override;
     virtual void UpdateCouplingDofArray () override;
+
+    virtual void SetOrder (NodeId ni, int norder) override;
+    virtual int GetOrder (NodeId ni) const override;
 
     void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
     FiniteElement &GetFE (ElementId ei, Allocator &alloc) const override;

@@ -35,13 +35,9 @@ namespace ngcomp
   {
     AutoDiff<2> x (ip.Point ()[0], 0);
     AutoDiff<2> y (ip.Point ()[1], 1);
-    AutoDiff<2> sigma[4]
-        = { (1 - x) + (1 - y), x + (1 - y), x + y, (1 - x) + y };
+    AutoDiff<2> xi = (2 * x - 1);
+    AutoDiff<2> eta = (2 * y - 1);
 
-    IVec<4> f = GetFaceSort (0, vnums);
-
-    AutoDiff<2> xi = sigma[f[0]] - sigma[f[1]];
-    AutoDiff<2> eta = sigma[f[0]] - sigma[f[3]];
     if (zero_axis == 1)
       swap (xi, eta);
 
@@ -58,7 +54,7 @@ namespace ngcomp
     for (size_t i = 0, ii = 0; i <= p; i++)
       for (size_t j = 0; j <= q; j++)
         {
-          AutoDiff<2> shape = polx[i] * poly[j] * (1 + eta) * (1 - eta);
+          AutoDiff<2> shape = polx[i] * poly[j] * (1 - eta) * (1 + eta);
           dshape (ii, 0) = shape.DValue (0);
           dshape (ii++, 1) = shape.DValue (1);
         }
@@ -70,7 +66,6 @@ namespace ngcomp
     type = "TP0FESpace";
 
     order = int (flags.GetNumFlag ("order", 3));
-    local_ndof = (order + 1) * (order - 1);
 
     if (ma->GetDimension () == 2)
       {
@@ -93,10 +88,65 @@ namespace ngcomp
   void TP0FESpace ::Update ()
   {
     FESpace::Update ();
-    nel = ma->GetNE ();
-    ndof = local_ndof * nel;
-    SetNDof (ndof);
+    if (order_policy == OLDSTYLE_ORDER)
+      order_policy = CONSTANT_ORDER;
+    if (order_policy == CONSTANT_ORDER || order_inner.Size () == 0)
+      {
+        order_inner.SetSize (0);
+        nel = ma->GetNE ();
+        ndof = LocalNDof (this->order) * nel;
+        SetNDof (ndof);
+      }
+    else if (order_policy == VARIABLE_ORDER)
+      {
+        nel = ma->GetNE ();
+        ndof = 0;
+        first_element_dof.SetSize (nel);
+        first_element_dof.SetSize0 ();
+        for (int i = 0; i < nel; i++)
+          {
+            first_element_dof.Append (ndof);
+            ndof += LocalNDof (order_inner[i]);
+          }
+        SetNDof (ndof);
+      }
+    else
+      throw Exception ("TP0FESpace: invalid order policy");
+
     UpdateCouplingDofArray ();
+  }
+
+  void TP0FESpace ::SetOrder (NodeId ni, int norder)
+  {
+    if (order_policy == CONSTANT_ORDER || order_policy == NODE_TYPE_ORDER)
+      throw Exception ("In TP0FESpace::SetOrder. Order policy is "
+                       "constant or node-type!");
+    else if (order_policy == OLDSTYLE_ORDER)
+      order_policy = VARIABLE_ORDER;
+
+    if (order < 0)
+      order = 0;
+
+    if (CoDimension (ni.GetType (), ma->GetDimension ()) == 0)
+      {
+        if (order_inner.Size () == 0)
+          {
+            order_inner.SetSize (ma->GetNE ());
+            order_inner = this->order;
+          }
+        order_inner[ni.GetNr ()] = norder;
+      }
+    else
+      throw Exception (
+          "TP0FESpace::SetOrder requires NodeType of codimension 0!");
+  }
+
+  int TP0FESpace ::GetOrder (NodeId ni) const
+  {
+    if (CoDimension (ni.GetType (), ma->GetDimension ()) == 0
+        && ni.GetNr () < order_inner.Size ())
+      return order_inner[ni.GetNr ()];
+    return 0;
   }
 
   void TP0FESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
@@ -104,9 +154,20 @@ namespace ngcomp
     dnums.SetSize (0);
     if (!DefinedOn (ei) || ei.VB () != VOL)
       return;
-    for (size_t j = ei.Nr () * local_ndof; j < local_ndof * (ei.Nr () + 1);
-         j++)
-      dnums.Append (j);
+    if (first_element_dof.Size () > 0 && order_inner.Size () > 0)
+      {
+        int first_dof = first_element_dof[ei.Nr ()];
+        int local_ndof = LocalNDof (order_inner[ei.Nr ()]);
+        for (int j = first_dof; j < first_dof + local_ndof; j++)
+          dnums.Append (j);
+      }
+    else
+      {
+        int local_ndof = LocalNDof (this->order);
+        for (size_t j = ei.Nr () * local_ndof; j < local_ndof * (ei.Nr () + 1);
+             j++)
+          dnums.Append (j);
+      }
   }
 
   void TP0FESpace ::UpdateCouplingDofArray ()
@@ -128,6 +189,7 @@ namespace ngcomp
     Ngs_Element ngel = ma->GetElement (ei);
     ELEMENT_TYPE eltype = ngel.GetType ();
     int D = ma->GetDimension ();
+    int order = order_inner.Size () > 0 ? order_inner[ei.Nr ()] : this->order;
 
     if (ei.IsVolume ())
       {
@@ -141,10 +203,11 @@ namespace ngcomp
               trafo.CalcJacobian (ip, jac);
               double xscale = L2Norm (jac.Col (0));
               double yscale = L2Norm (jac.Col (1));
-
               int zero_axis = yscale > xscale ? 1 : 0;
-              return *(new (alloc) TP0FE (
-                  local_ndof, order, IVec<4> (ngel.Vertices ()), zero_axis));
+
+              return *(new (alloc)
+                           TP0FE (LocalNDof (order), order,
+                                  IVec<4> (ngel.Vertices ()), zero_axis));
               break;
             }
           default:
