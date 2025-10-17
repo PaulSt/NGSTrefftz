@@ -163,6 +163,16 @@ namespace ngcomp
       this->Update ();
       // this->UpdateDofTables();
       // this->UpdateCouplingDofArray();
+
+      if (this->order_policy == ORDER_POLICY::VARIABLE_ORDER)
+        {
+          this->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
+            NodeId ni (NODE_TYPE::NT_ELEMENT, ei.Nr ());
+            this->SetOrder (ni, emb->GetFES ()->GetOrder (ni));
+          });
+          this->Update ();
+        }
+
       this->FinalizeUpdate ();
 
       // needs previous FinalizeUpdate to construct free_dofs for `this`
