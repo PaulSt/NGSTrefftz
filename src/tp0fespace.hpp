@@ -14,6 +14,7 @@ namespace ngcomp
     TP0FE (int ndof, int order, FlatArray<int> avnums, int azero_axis)
         : FiniteElement (ndof, order), vnums (avnums), zero_axis (azero_axis)
     {
+      ;
     }
     ELEMENT_TYPE ElementType () const override { return ET_QUAD; }
 
@@ -25,11 +26,11 @@ namespace ngcomp
   class MyDiffOpId : public DiffOp<MyDiffOpId>
   {
   public:
-    static constexpr int DIM = 1;         // dimension of the input
-    static constexpr int DIM_SPACE = 2;   // dimension of the space
-    static constexpr int DIM_ELEMENT = 2; // dimension of the element
-    static constexpr int DIM_DMAT = 1;    // dimension of the output
-    static constexpr int DIFFORDER = 0;   // order of differentiation
+    static constexpr int DIM = 1;
+    static constexpr int DIM_SPACE = 2;
+    static constexpr int DIM_ELEMENT = 2;
+    static constexpr int DIM_DMAT = 1;
+    static constexpr int DIFFORDER = 0;
 
     template <typename MIP, typename MAT>
     static void GenerateMatrix (const FiniteElement &fel, const MIP &mip,
@@ -48,11 +49,11 @@ namespace ngcomp
   class MyDiffOpGradient : public DiffOp<MyDiffOpGradient>
   {
   public:
-    static constexpr int DIM = 1;         // dimension of the input
-    static constexpr int DIM_SPACE = 2;   // dimension of the space
-    static constexpr int DIM_ELEMENT = 2; // dimension of the element
-    static constexpr int DIM_DMAT = 2;    // dimension of the output
-    static constexpr int DIFFORDER = 1;   // order of differentiation
+    static constexpr int DIM = 1;
+    static constexpr int DIM_SPACE = 2;
+    static constexpr int DIM_ELEMENT = 2;
+    static constexpr int DIM_DMAT = 2;
+    static constexpr int DIFFORDER = 1;
 
     static string Name () { return "grad"; }
 
@@ -80,7 +81,6 @@ namespace ngcomp
   public:
     TP0FESpace (shared_ptr<MeshAccess> ama, const Flags &flags);
 
-    // a name for our new fe-space
     string GetClassName () const override { return "TP0FESpace"; }
 
     static DocInfo GetDocu ();

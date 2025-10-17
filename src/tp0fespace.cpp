@@ -8,17 +8,10 @@ namespace ngcomp
   void
   TP0FE ::CalcShape (const IntegrationPoint &ip, BareSliceVector<> shape) const
   {
-    // double x = ip.x, y = ip.y;
     double x = ip.Point ()[0], y = ip.Point ()[1];
     double xi = (2 * x - 1);
     double eta = (2 * y - 1);
-    // double sigma[4] = { (1 - x) + (1 - y), x + (1 - y), x + y, (1 - x) + y
-    // };
 
-    // IVec<4> f = GetFaceSort (0, vnums);
-
-    // double xi = sigma[f[0]] - sigma[f[1]];
-    // double eta = sigma[f[0]] - sigma[f[3]];
     if (zero_axis == 1)
       swap (xi, eta);
 
@@ -82,22 +75,12 @@ namespace ngcomp
     if (ma->GetDimension () == 2)
       {
         evaluator[VOL] = make_shared<T_DifferentialOperator<MyDiffOpId>> ();
-        // evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpId<2>>>
-        // ();
         flux_evaluator[VOL]
             = make_shared<T_DifferentialOperator<MyDiffOpGradient>> ();
-        //= make_shared<T_DifferentialOperator<DiffOpGradient<2>>> ();
-        // additional_evaluators.Set (
-        //"Grad", make_shared<T_DifferentialOperator<DiffOpGradient<2>>> ());
       }
     else
       {
         throw Exception ("TP0FESpace implemented only in 2D");
-        // flux_evaluator[VOL] =
-        // make_shared<T_DifferentialOperator<DiffOpGradient<3>>>();
-        // evaluator[VOL] = make_shared<T_DifferentialOperator<DiffOpId<3>>>();
-        // additional_evaluators.Set ("Grad",
-        // make_shared<T_DifferentialOperator<DiffOpGradient<3>>>());
       }
   }
 
