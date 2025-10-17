@@ -1,0 +1,177 @@
+#include <comp.hpp>
+#include <python_comp.hpp>
+#include "tp0fespace.hpp"
+
+namespace ngcomp
+{
+
+  void
+  TP0FE ::CalcShape (const IntegrationPoint &ip, BareSliceVector<> shape) const
+  {
+    double x = ip.Point ()[0], y = ip.Point ()[1];
+    double xi = (2 * x - 1);
+    double eta = (2 * y - 1);
+
+    if (zero_axis == 1)
+      swap (xi, eta);
+
+    size_t p = order;
+    size_t q = order - 2;
+
+    STACK_ARRAY (double, mem, p + q + 2);
+    double *polx = &mem[0];
+    double *poly = &mem[p + 1];
+
+    LegendrePolynomial (p, xi, polx);
+    LegendrePolynomial (q, eta, poly);
+
+    for (size_t i = 0, ii = 0; i <= p; i++)
+      for (size_t j = 0; j <= q; j++)
+        shape[ii++] = polx[i] * poly[j] * (1 - eta) * (1 + eta);
+  }
+
+  void TP0FE ::CalcDShape (const IntegrationPoint &ip,
+                           BareSliceMatrix<> dshape) const
+  {
+    AutoDiff<2> x (ip.Point ()[0], 0);
+    AutoDiff<2> y (ip.Point ()[1], 1);
+    AutoDiff<2> sigma[4]
+        = { (1 - x) + (1 - y), x + (1 - y), x + y, (1 - x) + y };
+
+    IVec<4> f = GetFaceSort (0, vnums);
+
+    AutoDiff<2> xi = sigma[f[0]] - sigma[f[1]];
+    AutoDiff<2> eta = sigma[f[0]] - sigma[f[3]];
+    if (zero_axis == 1)
+      swap (xi, eta);
+
+    size_t p = order;
+    size_t q = order - 2;
+
+    STACK_ARRAY (AutoDiff<2>, mem, p + q + 2);
+    AutoDiff<2> *polx = &mem[0];
+    AutoDiff<2> *poly = &mem[p + 1];
+
+    LegendrePolynomial (p, xi, polx);
+    LegendrePolynomial (q, eta, poly);
+
+    for (size_t i = 0, ii = 0; i <= p; i++)
+      for (size_t j = 0; j <= q; j++)
+        {
+          AutoDiff<2> shape = polx[i] * poly[j] * (1 + eta) * (1 - eta);
+          dshape (ii, 0) = shape.DValue (0);
+          dshape (ii++, 1) = shape.DValue (1);
+        }
+  }
+
+  TP0FESpace ::TP0FESpace (shared_ptr<MeshAccess> ama, const Flags &flags)
+      : FESpace (ama, flags)
+  {
+    type = "TP0FESpace";
+
+    order = int (flags.GetNumFlag ("order", 3));
+    local_ndof = (order + 1) * (order - 1);
+
+    if (ma->GetDimension () == 2)
+      {
+        evaluator[VOL] = make_shared<T_DifferentialOperator<MyDiffOpId>> ();
+        flux_evaluator[VOL]
+            = make_shared<T_DifferentialOperator<MyDiffOpGradient>> ();
+      }
+    else
+      {
+        throw Exception ("TP0FESpace implemented only in 2D");
+      }
+  }
+
+  DocInfo TP0FESpace ::GetDocu ()
+  {
+    auto docu = FESpace::GetDocu ();
+    return docu;
+  }
+
+  void TP0FESpace ::Update ()
+  {
+    FESpace::Update ();
+    nel = ma->GetNE ();
+    ndof = local_ndof * nel;
+    SetNDof (ndof);
+    UpdateCouplingDofArray ();
+  }
+
+  void TP0FESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
+  {
+    dnums.SetSize (0);
+    if (!DefinedOn (ei) || ei.VB () != VOL)
+      return;
+    for (size_t j = ei.Nr () * local_ndof; j < local_ndof * (ei.Nr () + 1);
+         j++)
+      dnums.Append (j);
+  }
+
+  void TP0FESpace ::UpdateCouplingDofArray ()
+  {
+    ctofdof.SetSize (ndof);
+    for (auto i : Range (ma->GetNE ()))
+      {
+        bool definedon = DefinedOn (ElementId (VOL, i));
+        Array<DofId> dofs;
+        GetDofNrs (i, dofs);
+        for (auto r : dofs)
+          ctofdof[r] = definedon ? LOCAL_DOF : UNUSED_DOF;
+      }
+  }
+
+  FiniteElement &TP0FESpace ::GetFE (ElementId ei, Allocator &alloc) const
+  {
+
+    Ngs_Element ngel = ma->GetElement (ei);
+    ELEMENT_TYPE eltype = ngel.GetType ();
+    int D = ma->GetDimension ();
+
+    if (ei.IsVolume ())
+      {
+        switch (D)
+          {
+          case 2:
+            {
+              ElementTransformation &trafo = ma->GetTrafo (ei, alloc);
+              IntegrationPoint ip;
+              Mat<2, 2> jac;
+              trafo.CalcJacobian (ip, jac);
+              double xscale = L2Norm (jac.Col (0));
+              double yscale = L2Norm (jac.Col (1));
+
+              int zero_axis = yscale > xscale ? 1 : 0;
+              return *(new (alloc) TP0FE (
+                  local_ndof, order, IVec<4> (ngel.Vertices ()), zero_axis));
+              break;
+            }
+          default:
+            throw Exception ("dimension not supported in TP0FE");
+          }
+      }
+    try
+      {
+        return SwitchET<ET_POINT, ET_SEGM, ET_TRIG, ET_QUAD> (
+            eltype, [&alloc] (auto et) -> FiniteElement & {
+              return *new (alloc) DummyFE<et.ElementType ()>;
+            });
+      }
+    catch (Exception &e)
+      {
+        throw Exception ("illegal element type in Trefftz::GetSurfaceFE");
+      }
+  }
+
+  static RegisterFESpace<TP0FESpace> initifes ("TP0FESpace");
+}
+
+#ifdef NGS_PYTHON
+void ExportTP0FESpace (py::module m)
+{
+  using namespace ngcomp;
+
+  ExportFESpace<TP0FESpace> (m, "TP0FESpace");
+}
+#endif // NGS_PYTHON

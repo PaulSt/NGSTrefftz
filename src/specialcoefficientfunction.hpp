@@ -86,6 +86,38 @@ namespace ngfem
     ~PrintCF () { ofs->close (); }
   };
 
+  class AdjacentFaceSizeCF : public CoefficientFunction
+  {
+  public:
+    AdjacentFaceSizeCF () : CoefficientFunction (1, false) { ; }
+    virtual double
+    Evaluate (const BaseMappedIntegrationPoint &ip) const override
+    {
+      LocalHeap lh (100000, "AdjacentFaceSizeCF::Evaluate");
+      if (ip.IP ().FacetNr () != -1) // on a boundary facet of the element
+        {
+          switch (ip.DimSpace ())
+            {
+            case 2:
+              {
+                const MappedIntegrationPoint<2, 2> &mp
+                    = static_cast<const MappedIntegrationPoint<2, 2> &> (ip);
+                IntegrationPoint rip = mp.IP ();
+                if (rip.Point ()[0] == 0 || rip.Point ()[0] == 1)
+                  return L2Norm (mp.GetJacobian ().Col (0));
+                else
+                  return L2Norm (mp.GetJacobian ().Col (1));
+              }
+            default:
+              throw Exception ("Illegal dimension in MeshSizeCF");
+            }
+        }
+      else
+        throw Exception (
+            "AdjacentFaceSizeCF::Evaluate - not on a boundary facet");
+    }
+  };
+
 }
 
 #ifdef NGS_PYTHON

@@ -313,6 +313,10 @@ void ExportSpecialCoefficientFunction (py::module m)
             }),
             py::arg ("mesh"), py::arg ("CoefficientFunction"));
 
+  py::class_<AdjacentFaceSizeCF, shared_ptr<AdjacentFaceSizeCF>,
+             CoefficientFunction> (m, "AdjacentFaceSizeCF")
+      .def (py::init ([] () { return new AdjacentFaceSizeCF (); }));
+
   // py::class_<TrefftzCoefficientFunction,
   // shared_ptr<TrefftzCoefficientFunction>, CoefficientFunction> (m,
   //"TrefftzCoefficient", "") .def(py::init<>()) .def(py::init<int>())

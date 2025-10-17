@@ -884,7 +884,7 @@ namespace ngcomp
                   particular_solution_vec->SetIndirect (dofs, partsol);
                 }
               etmats_trefftz_inv[element_id.Nr ()]
-                  = make_optional<Matrix<SCAL>> (elmat_A_inv);
+                  = make_optional<Matrix<SCAL>> (elmat_T_inv);
             }
 
           if (ignoredofs)
@@ -1100,7 +1100,8 @@ namespace ngcomp
 
           if (fes->IsComplex ())
             {
-              auto elmat_T_inv = (*etmatsc_trefftz_inv[element_id.Nr ()]);
+              Matrix<Complex> elmat_T_inv
+                  = (*etmatsc_trefftz_inv[element_id.Nr ()]);
               FlatVector<Complex> partsol (dofs.Size (), lh);
               FlatVector<Complex> elvec (dofs_test.Size (), lh);
               _trhsvec->GetIndirect (dofs_test, elvec);
@@ -1109,7 +1110,7 @@ namespace ngcomp
             }
           else
             {
-              auto elmat_T_inv = *etmats_trefftz_inv[element_id.Nr ()];
+              Matrix<> elmat_T_inv = *etmats_trefftz_inv[element_id.Nr ()];
               FlatVector<double> partsol (dofs.Size (), lh);
               FlatVector<double> elvec (dofs_test.Size (), lh);
               _trhsvec->GetIndirect (dofs_test, elvec);
