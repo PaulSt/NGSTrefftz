@@ -37,12 +37,20 @@ namespace ngcomp
                                 MAT &mat, LocalHeap &lh)
     {
       HeapReset hr (lh);
-      Cast (fel).CalcShape (mip.IP (), mat.Row (0));
-    }
-
-    static const TP0FE &Cast (const FiniteElement &fel)
-    {
-      return static_cast<const TP0FE &> (fel);
+      // Cast (fel).CalcShape (mip.IP (), mat.Row (0));
+      switch (fel.ElementType ())
+        {
+        case ET_QUAD:
+          static_cast<const TP0FE &> (fel).CalcShape (mip.IP (), mat.Row (0));
+          break;
+        case ET_TRIG:
+          static_cast<const L2HighOrderFE<ET_TRIG> &> (fel).CalcShape (
+              mip.IP (), mat.Row (0));
+          break;
+        default:
+          throw Exception ("MyDiffOpId: " + ToString (fel.ElementType ())
+                           + " not supported");
+        }
     }
   };
 
@@ -79,7 +87,7 @@ namespace ngcomp
     Array<int> order_inner;
     Array<int> first_element_dof;
 
-    int LocalNDof (int order) const { return (order + 1) * (order - 1); }
+    int LocalNDof (ELEMENT_TYPE eltype, int order) const;
 
   public:
     TP0FESpace (shared_ptr<MeshAccess> ama, const Flags &flags);

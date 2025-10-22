@@ -85,28 +85,48 @@ namespace ngcomp
     return docu;
   }
 
+  int TP0FESpace ::LocalNDof (ELEMENT_TYPE eltype, int order) const
+  {
+    switch (eltype)
+      {
+      case ET_TRIG:
+        return (order - 1) * order / 2;
+      case ET_QUAD:
+        return (order + 1) * (order - 1);
+      default:
+        throw Exception ("TP0FESpace::LocalNDof: element type not supported");
+      }
+  }
+
   void TP0FESpace ::Update ()
   {
     FESpace::Update ();
     if (order_policy == OLDSTYLE_ORDER)
       order_policy = CONSTANT_ORDER;
+
+    nel = ma->GetNE ();
+    first_element_dof.SetSize (nel);
     if (order_policy == CONSTANT_ORDER || order_inner.Size () == 0)
       {
-        order_inner.SetSize (0);
-        nel = ma->GetNE ();
-        ndof = LocalNDof (this->order) * nel;
+        order_inner.SetSize0 ();
+        ndof = 0;
+        for (int i = 0; i < nel; i++)
+          {
+            first_element_dof[i] = ndof;
+            ndof += LocalNDof (ma->GetElement (ElementId (VOL, i)).GetType (),
+                               this->order);
+          }
+        // ndof = LocalNDof (this->order) * nel;
         SetNDof (ndof);
       }
     else if (order_policy == VARIABLE_ORDER)
       {
-        nel = ma->GetNE ();
         ndof = 0;
-        first_element_dof.SetSize (nel);
-        first_element_dof.SetSize0 ();
         for (int i = 0; i < nel; i++)
           {
-            first_element_dof.Append (ndof);
-            ndof += LocalNDof (order_inner[i]);
+            first_element_dof[i] = ndof;
+            ndof += LocalNDof (ma->GetElement (ElementId (VOL, i)).GetType (),
+                               order_inner[i]);
           }
         SetNDof (ndof);
       }
@@ -154,20 +174,15 @@ namespace ngcomp
     dnums.SetSize (0);
     if (!DefinedOn (ei) || ei.VB () != VOL)
       return;
-    if (first_element_dof.Size () > 0 && order_inner.Size () > 0)
-      {
-        int first_dof = first_element_dof[ei.Nr ()];
-        int local_ndof = LocalNDof (order_inner[ei.Nr ()]);
-        for (int j = first_dof; j < first_dof + local_ndof; j++)
-          dnums.Append (j);
-      }
+    int first_dof = first_element_dof[ei.Nr ()];
+    int local_ndof;
+    if (order_inner.Size () > 0)
+      local_ndof
+          = LocalNDof (ma->GetElement (ei).GetType (), order_inner[ei.Nr ()]);
     else
-      {
-        int local_ndof = LocalNDof (this->order);
-        for (size_t j = ei.Nr () * local_ndof; j < local_ndof * (ei.Nr () + 1);
-             j++)
-          dnums.Append (j);
-      }
+      local_ndof = LocalNDof (ma->GetElement (ei).GetType (), this->order);
+    for (int j = first_dof; j < first_dof + local_ndof; j++)
+      dnums.Append (j);
   }
 
   void TP0FESpace ::UpdateCouplingDofArray ()
@@ -193,26 +208,41 @@ namespace ngcomp
 
     if (ei.IsVolume ())
       {
-        switch (D)
-          {
-          case 2:
+        if (D == 2)
+          switch (eltype)
             {
-              ElementTransformation &trafo = ma->GetTrafo (ei, alloc);
-              IntegrationPoint ip;
-              Mat<2, 2> jac;
-              trafo.CalcJacobian (ip, jac);
-              double xscale = L2Norm (jac.Col (0));
-              double yscale = L2Norm (jac.Col (1));
-              int zero_axis = yscale > xscale ? 1 : 0;
+            case ET_QUAD:
+              {
+                ElementTransformation &trafo = ma->GetTrafo (ei, alloc);
+                IntegrationPoint ip;
+                Mat<2, 2> jac;
+                trafo.CalcJacobian (ip, jac);
+                double xscale = L2Norm (jac.Col (0));
+                double yscale = L2Norm (jac.Col (1));
+                int zero_axis = yscale > xscale ? 1 : 0;
 
-              return *(new (alloc)
-                           TP0FE (LocalNDof (order), order,
-                                  IVec<4> (ngel.Vertices ()), zero_axis));
-              break;
+                return *(new (alloc)
+                             TP0FE (LocalNDof (ET_QUAD, order), order,
+                                    IVec<4> (ngel.Vertices ()), zero_axis));
+                break;
+              }
+            case ET_TRIG:
+              {
+                Ngs_Element ngel
+                    = ma->GetElement<ET_trait<ET_TRIG>::DIM, VOL> (ei.Nr ());
+                L2HighOrderFE<ET_TRIG> *hofe
+                    = new (alloc) L2HighOrderFE<ET_TRIG> ();
+                hofe->SetVertexNumbers (ngel.vertices);
+                hofe->L2HighOrderFE<ET_TRIG>::SetOrder (order - 2);
+                hofe->L2HighOrderFE<ET_TRIG>::ComputeNDof ();
+                return *hofe;
+                break;
+              }
+            default:
+              throw Exception ("eltype not supported in TP0FE");
             }
-          default:
-            throw Exception ("dimension not supported in TP0FE");
-          }
+        else
+          throw Exception ("dimension not supported in TP0FE");
       }
     try
       {
