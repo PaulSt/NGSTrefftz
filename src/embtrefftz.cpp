@@ -761,6 +761,14 @@ namespace ngcomp
           size_t ndof_test = dofs_test.Size ();
           size_t ndof_conforming = dofs_conforming.Size ();
 
+          if (ndof_test == 0 && ndof_conforming == 0)
+            {
+              Identity Id (ndof);
+              etmats[element_id.Nr ()] = make_optional<Matrix<SCAL>> (Id);
+              local_ndofs_trefftz[element_id.Nr ()] = ndof;
+              return;
+            }
+
           FlatMatrix<SCAL> elmat_A (ndof_test + ndof_conforming, ndof, lh);
           FlatMatrix<SCAL> elmat_B (ndof_test + ndof_conforming,
                                     ndof_conforming, lh);

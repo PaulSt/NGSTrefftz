@@ -200,13 +200,12 @@ namespace ngcomp
 
   FiniteElement &TP0FESpace ::GetFE (ElementId ei, Allocator &alloc) const
   {
-
     Ngs_Element ngel = ma->GetElement (ei);
     ELEMENT_TYPE eltype = ngel.GetType ();
     int D = ma->GetDimension ();
     int order = order_inner.Size () > 0 ? order_inner[ei.Nr ()] : this->order;
 
-    if (ei.IsVolume ())
+    if (ei.IsVolume () && order > 1)
       {
         if (D == 2)
           switch (eltype)

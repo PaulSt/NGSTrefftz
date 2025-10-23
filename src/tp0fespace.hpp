@@ -38,6 +38,8 @@ namespace ngcomp
     {
       HeapReset hr (lh);
       // Cast (fel).CalcShape (mip.IP (), mat.Row (0));
+      if (fel.Order () < 2)
+        return;
       switch (fel.ElementType ())
         {
         case ET_QUAD:
