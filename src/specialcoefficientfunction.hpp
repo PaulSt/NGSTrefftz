@@ -100,13 +100,22 @@ namespace ngfem
             {
             case 2:
               {
-                const MappedIntegrationPoint<2, 2> &mp
+                const MappedIntegrationPoint<2, 2> &mip
                     = static_cast<const MappedIntegrationPoint<2, 2> &> (ip);
-                IntegrationPoint rip = mp.IP ();
-                if (rip.Point ()[0] == 0 || rip.Point ()[0] == 1)
-                  return L2Norm (mp.GetJacobian ().Col (0));
+                IntegrationPoint rip = mip.IP ();
+                ELEMENT_TYPE eltype
+                    = mip.GetTransformation ().GetElementType ();
+                if (eltype == ET_QUAD)
+                  {
+                    if (rip.Point ()[0] == 0 || rip.Point ()[0] == 1)
+                      return L2Norm (mip.GetJacobian ().Col (0));
+                    else
+                      return L2Norm (mip.GetJacobian ().Col (1));
+                  }
                 else
-                  return L2Norm (mp.GetJacobian ().Col (1));
+                  {
+                    return fabs (mip.GetJacobiDet ()) / mip.GetMeasure ();
+                  }
               }
             default:
               throw Exception ("Illegal dimension in MeshSizeCF");
