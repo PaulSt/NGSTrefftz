@@ -124,14 +124,15 @@ namespace ngcomp
     PP->SetZero ();
     // finished output matrix
 
+    bool elim_only_hidden = true;
+
     ma->IterateElements (VOL, lh, [&] (auto ei, LocalHeap &mlh) {
       Array<DofId> dofs1;
       fes->GetDofNrs (ei, dofs1);
       Array<int> idofs1 (dofs1.Size (), mlh), odofs1 (dofs1.Size (), mlh);
       idofs1.SetSize0 ();
       odofs1.SetSize0 ();
-      auto ctype
-          = HIDDEN_DOF; // elim_only_hidden ? HIDDEN_DOF : CONDENSABLE_DOF;
+      auto ctype = elim_only_hidden ? HIDDEN_DOF : CONDENSABLE_DOF;
       for (auto i : dofs1)
         {
           auto ct = fes->GetDofCouplingType (i);
@@ -157,8 +158,7 @@ namespace ngcomp
           Array<int> idofs2 (dofs2.Size (), mlh), odofs2 (dofs2.Size (), mlh);
           idofs2.SetSize0 ();
           odofs2.SetSize0 ();
-          auto ctype
-              = HIDDEN_DOF; // elim_only_hidden ? HIDDEN_DOF : CONDENSABLE_DOF;
+          auto ctype = elim_only_hidden ? HIDDEN_DOF : CONDENSABLE_DOF;
           for (auto i : dofs2)
             {
               auto ct = fes->GetDofCouplingType (i);
@@ -189,8 +189,7 @@ namespace ngcomp
                   odofs3 (dofs3.Size (), mlh);
               idofs3.SetSize0 ();
               odofs3.SetSize0 ();
-              auto ctype = HIDDEN_DOF; // elim_only_hidden ? HIDDEN_DOF :
-                                       // CONDENSABLE_DOF;
+              auto ctype = elim_only_hidden ? HIDDEN_DOF : CONDENSABLE_DOF;
               for (auto i : dofs3)
                 {
                   auto ct = fes->GetDofCouplingType (i);
@@ -206,7 +205,7 @@ namespace ngcomp
               FlatMatrix<> BDC (odofs2.Size (), odofs3.Size (), mlh);
               BDC = 0.0;
               // GetSubMatrix<double> (smat, odofs2, odofs3, AA);
-              SubAB (BB, CC, BDC); // AA <--- -b c = -b d^-1 c why no SubABt?
+              SubAB (BB, CC, BDC); // BDC is -b c = -b d^-1 c why no SubABt?
               PP->AddElementMatrix (odofs2, odofs3, BDC, true);
               // smat->AddElementMatrix (odofs2, odofs3, BDC, true);
             }

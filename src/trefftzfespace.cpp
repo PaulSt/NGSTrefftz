@@ -633,8 +633,6 @@ namespace ngcomp
                 case 0:
                   if (tracker > basis)
                     {
-                      // trefftzbasis( i, setbasis++ ) = 1.0; //set the l-th
-                      // coeff to 1
                       trefftzbasis (basis, indexmap) = 1;
                       tracker = -1;
                     }
@@ -755,8 +753,6 @@ namespace ngcomp
             {
               if (tracker > basis)
                 {
-                  // trefftzbasis( i, setbasis++ ) = 1.0; //set the l-th
-                  // coeff to 1
                   trefftzbasis (basis, indexmap) = 1;
                   tracker = -1;
                 }
