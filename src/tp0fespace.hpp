@@ -86,8 +86,11 @@ namespace ngcomp
     int nel;
     Array<int> order_inner;
     Array<int> first_element_dof;
+    bool allow_both_axes_zero = false;
 
-    int LocalNDof (ELEMENT_TYPE eltype, int order) const;
+    int LocalNDof (ElementId el, int order) const;
+
+    int GetZeroAxis (ElementId ei) const;
 
   public:
     TP0FESpace (shared_ptr<MeshAccess> ama, const Flags &flags);

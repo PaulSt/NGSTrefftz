@@ -17,6 +17,8 @@ namespace ngcomp
 
     size_t p = order;
     size_t q = order - 2;
+    if (zero_axis == 2)
+      p = q;
 
     STACK_ARRAY (double, mem, p + q + 2);
     double *polx = &mem[0];
@@ -27,7 +29,11 @@ namespace ngcomp
 
     for (size_t i = 0, ii = 0; i <= p; i++)
       for (size_t j = 0; j <= q; j++)
-        shape[ii++] = polx[i] * poly[j] * (1 - eta) * (1 + eta);
+        if (zero_axis == 2)
+          shape[ii++] = polx[i] * poly[j] * (1 - eta) * (1 + eta) * (1 - xi)
+                        * (1 + xi);
+        else
+          shape[ii++] = polx[i] * poly[j] * (1 - eta) * (1 + eta);
   }
 
   void TP0FE ::CalcDShape (const IntegrationPoint &ip,
@@ -66,6 +72,8 @@ namespace ngcomp
     type = "TP0FESpace";
 
     order = int (flags.GetNumFlag ("order", 3));
+    DefineDefineFlag ("allow_both_axes_zero");
+    allow_both_axes_zero = flags.GetDefineFlag ("allow_both_axes_zero");
 
     if (ma->GetDimension () == 2)
       {
@@ -79,20 +87,36 @@ namespace ngcomp
       }
   }
 
-  DocInfo TP0FESpace ::GetDocu ()
+  // axis with zero boundary functions
+  // 0: x-axis, 1: y-axis, 2: both axes
+  int TP0FESpace ::GetZeroAxis (ElementId ei) const
   {
-    auto docu = FESpace::GetDocu ();
-    return docu;
+    LocalHeap lh (10000);
+    ElementTransformation &trafo = ma->GetTrafo (ei, lh);
+    IntegrationPoint ip;
+    Mat<2, 2> jac;
+    trafo.CalcJacobian (ip, jac);
+    double xscale = L2Norm (jac.Col (0));
+    double yscale = L2Norm (jac.Col (1));
+    int zero_axis = yscale > xscale ? 1 : 0;
+    if (abs (xscale - yscale) < 1e-8 && allow_both_axes_zero)
+      zero_axis = 2;
+    return zero_axis;
   }
 
-  int TP0FESpace ::LocalNDof (ELEMENT_TYPE eltype, int order) const
+  int TP0FESpace ::LocalNDof (ElementId el, int order) const
   {
+    ELEMENT_TYPE eltype = ma->GetElement (el).GetType ();
+    int zero_axis = GetZeroAxis (el);
     switch (eltype)
       {
       case ET_TRIG:
         return (order - 1) * order / 2;
       case ET_QUAD:
-        return (order + 1) * (order - 1);
+        if (zero_axis == 2)
+          return (order - 1) * (order - 1);
+        else
+          return (order + 1) * (order - 1);
       default:
         throw Exception ("TP0FESpace::LocalNDof: element type not supported");
       }
@@ -113,8 +137,7 @@ namespace ngcomp
         for (int i = 0; i < nel; i++)
           {
             first_element_dof[i] = ndof;
-            ndof += LocalNDof (ma->GetElement (ElementId (VOL, i)).GetType (),
-                               this->order);
+            ndof += LocalNDof (ElementId (VOL, i), this->order);
           }
         // ndof = LocalNDof (this->order) * nel;
         SetNDof (ndof);
@@ -125,8 +148,7 @@ namespace ngcomp
         for (int i = 0; i < nel; i++)
           {
             first_element_dof[i] = ndof;
-            ndof += LocalNDof (ma->GetElement (ElementId (VOL, i)).GetType (),
-                               order_inner[i]);
+            ndof += LocalNDof (ElementId (VOL, i), order_inner[i]);
           }
         SetNDof (ndof);
       }
@@ -177,10 +199,9 @@ namespace ngcomp
     int first_dof = first_element_dof[ei.Nr ()];
     int local_ndof;
     if (order_inner.Size () > 0)
-      local_ndof
-          = LocalNDof (ma->GetElement (ei).GetType (), order_inner[ei.Nr ()]);
+      local_ndof = LocalNDof (ei, order_inner[ei.Nr ()]);
     else
-      local_ndof = LocalNDof (ma->GetElement (ei).GetType (), this->order);
+      local_ndof = LocalNDof (ei, this->order);
     for (int j = first_dof; j < first_dof + local_ndof; j++)
       dnums.Append (j);
   }
@@ -212,16 +233,9 @@ namespace ngcomp
             {
             case ET_QUAD:
               {
-                ElementTransformation &trafo = ma->GetTrafo (ei, alloc);
-                IntegrationPoint ip;
-                Mat<2, 2> jac;
-                trafo.CalcJacobian (ip, jac);
-                double xscale = L2Norm (jac.Col (0));
-                double yscale = L2Norm (jac.Col (1));
-                int zero_axis = yscale > xscale ? 1 : 0;
-
+                int zero_axis = GetZeroAxis (ei);
                 return *(new (alloc)
-                             TP0FE (LocalNDof (ET_QUAD, order), order,
+                             TP0FE (LocalNDof (ei, order), order,
                                     IVec<4> (ngel.Vertices ()), zero_axis));
                 break;
               }
@@ -254,6 +268,26 @@ namespace ngcomp
       {
         throw Exception ("illegal element type in Trefftz::GetSurfaceFE");
       }
+  }
+
+  DocInfo TP0FESpace ::GetDocu ()
+  {
+    DocInfo docu = FESpace::GetDocu ();
+
+    docu.short_docu = "L2 FES with zero boundary on quads";
+    docu.long_docu =
+        R"raw_string(The space is meant as a test space for embedded Trefftz methods.
+      On quadrilateral elements, the shape functions are zero on the longer
+      edges of the element. On triangular elements, standard L2 shape functions
+      of order (order-2) are used.
+      )raw_string";
+
+    docu.Arg ("allow_both_axes_zero")
+        = "bool = False\n"
+          "  If true, on quadrilateral elements with equal edge lengths, "
+          "both\n"
+          "  coordinate axes are treated as zero axes.";
+    return docu;
   }
 
   static RegisterFESpace<TP0FESpace> initifes ("TP0FESpace");
