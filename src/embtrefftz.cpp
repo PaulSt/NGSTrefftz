@@ -906,7 +906,8 @@ namespace ngcomp
             {
               const lock_guard<mutex> lock (stats_mutex);
               auto diag = elmat_A.Diag (0);
-              if (sing_val_avg.Size () == 0)
+              // suboptimal fix for different sizes of local matrices
+              if (sing_val_avg.Size () < diag.Size ())
                 {
                   sing_val_avg.SetSize (diag.Size ()); // elmat_A.Height ());
                   sing_val_max.SetSize (diag.Size ());
