@@ -8,226 +8,257 @@ namespace ngfem
 {
   using namespace ngcomp;
 
-  double ClipCoefficientFunction ::Evaluate (
-      const BaseMappedIntegrationPoint &ip) const
+  /* \class ClipCoefficientFunction
+   * \brief A class that represents a coefficient function with one clipped
+   * dimension.
+   */
+  class ClipCoefficientFunction : public CoefficientFunction
   {
-    ip.GetPoint ()[clipdim] = clipvalue;
-    return coef->Evaluate (ip);
-  }
+  private:
+    shared_ptr<CoefficientFunction> coef;
+    int clipdim;
+    double clipvalue;
 
-  void
-  ClipCoefficientFunction ::Evaluate (const BaseMappedIntegrationPoint &ip,
-                                      FlatVector<> result) const
+  public:
+    ClipCoefficientFunction (shared_ptr<CoefficientFunction> acoef,
+                             int adimension, int aclipdim, double aclipvalue,
+                             bool ais_complex = false)
+        : CoefficientFunction (adimension, ais_complex), coef (acoef),
+          clipdim (aclipdim), clipvalue (aclipvalue)
+    {
+      ;
+    }
+    using CoefficientFunction::Evaluate;
+    double Evaluate (const BaseMappedIntegrationPoint &ip) const override
+    {
+      ip.GetPoint ()[clipdim] = clipvalue;
+      return coef->Evaluate (ip);
+    }
+    void Evaluate (const BaseMappedIntegrationPoint &ip,
+                   FlatVector<> result) const override
+    {
+      ip.GetPoint ()[clipdim] = clipvalue;
+      coef->Evaluate (ip, result);
+    }
+  };
+
+  /* \class IntegrationPointFunction
+   * \brief A class that represents a coefficient function defined by IP values
+   */
+  class IntegrationPointFunction : public CoefficientFunction
   {
-    ip.GetPoint ()[clipdim] = clipvalue;
-    coef->Evaluate (ip, result);
-  }
+  private:
+    vector<vector<double>> values;
+    shared_ptr<MeshAccess> ma;
+    IntegrationRule intrule;
 
-  IntegrationPointFunction ::IntegrationPointFunction (
-      shared_ptr<MeshAccess> mesh, IntegrationRule &intrule, Vector<> ipdata)
-      : CoefficientFunction (1)
-  {
-    this->ma = mesh;
-    this->intrule.SetSize (intrule.Size ());
-    for (size_t i = 0; i < intrule.Size (); i++)
-      this->intrule[i] = (intrule)[i];
-    this->intrule.SetDim (intrule.Dim ());
+  public:
+    IntegrationPointFunction (shared_ptr<MeshAccess> mesh,
+                              IntegrationRule &intrule, Vector<> ipdata)
+    {
+      this->ma = mesh;
+      this->intrule.SetSize (intrule.Size ());
+      for (size_t i = 0; i < intrule.Size (); i++)
+        this->intrule[i] = (intrule)[i];
+      this->intrule.SetDim (intrule.Dim ());
 
-    values.resize (mesh->GetNE ());
-    int elnr = 0;
-    for (auto &vec : values)
-      {
-        vec.resize (intrule.GetNIP ());
-        for (size_t i = 0; i < vec.size (); i++)
-          {
-            // input data from vector with mip values sorted per element
-            vec[i] = ipdata[intrule.Size () * elnr + i];
-          }
-        elnr++;
-      }
-  }
-
-  IntegrationPointFunction ::IntegrationPointFunction (
-      shared_ptr<MeshAccess> mesh, IntegrationRule &intrule, Matrix<> ipdata)
-      : CoefficientFunction (1)
-  {
-    this->ma = mesh;
-    this->intrule.SetSize (intrule.Size ());
-    for (size_t i = 0; i < intrule.Size (); i++)
-      this->intrule[i] = (intrule)[i];
-    this->intrule.SetDim (intrule.Dim ());
-
-    values.resize (mesh->GetNE ());
-    int elnr = 0;
-    for (auto &vec : values)
-      {
-        vec.resize (intrule.GetNIP ());
-        for (size_t i = 0; i < vec.size (); i++)
-          {
-            // input data from matrix with elnr in rows, mip values in cols
-            vec[i] = ipdata (elnr, i);
-          }
-        elnr++;
-      }
-  }
-
-  double IntegrationPointFunction ::Evaluate (
-      const BaseMappedIntegrationPoint &ip) const
-  {
-    size_t p = ip.GetIPNr ();
-    int el = ip.GetTransformation ().GetElementNr ();
-
-    if (p >= values[el].size ())
-      {
-        cout << "got illegal integration point number " << p << endl;
-        return 0;
-      }
-
-    return values[el][p];
-  }
-
-  void IntegrationPointFunction ::PrintTable ()
-  {
-    for (size_t i = 0; i < values.size (); i++)
-      {
-        for (size_t j = 0; j < values[i].size (); j++)
-          {
-            cout << values[i][j] << ", ";
-          }
-        cout << endl;
-      }
-    cout << endl;
-  }
-
-  vector<vector<double>> IntegrationPointFunction ::Export ()
-  {
-    LocalHeap lh (1000 * 1000 * 100, "export intpointfct");
-
-    vector<vector<double>> pointnvalues;
-    pointnvalues.resize (ma->GetNE () * intrule.GetNIP ());
-    for (size_t elnr = 0; elnr < ma->GetNE (); elnr++)
-      {
-        switch (ma->GetDimension ())
-          {
-          case 2:
+      values.resize (mesh->GetNE ());
+      int elnr = 0;
+      for (auto &vec : values)
+        {
+          vec.resize (intrule.GetNIP ());
+          for (size_t i = 0; i < vec.size (); i++)
             {
-              MappedIntegrationRule<2, 2> mir (intrule,
-                                               ma->GetTrafo (elnr, lh), lh);
-              for (auto mip : mir)
-                {
-                  auto &vec = pointnvalues[elnr * intrule.GetNIP ()
-                                           + mip.GetIPNr ()];
-                  vec.resize (3);
-                  for (int i = 0; i < 2; i++)
-                    vec[i] = mip.Point ()[i];
-                  vec[2] = values[elnr][mip.GetIPNr ()];
-                }
-              break;
+              // input data from vector with mip values sorted per element
+              vec[i] = ipdata[intrule.Size () * elnr + i];
             }
-          case 3:
+          elnr++;
+        }
+    }
+    IntegrationPointFunction (shared_ptr<MeshAccess> mesh,
+                              IntegrationRule &intrule, Matrix<> ipdata)
+    {
+      this->ma = mesh;
+      this->intrule.SetSize (intrule.Size ());
+      for (size_t i = 0; i < intrule.Size (); i++)
+        this->intrule[i] = (intrule)[i];
+      this->intrule.SetDim (intrule.Dim ());
+
+      values.resize (mesh->GetNE ());
+      int elnr = 0;
+      for (auto &vec : values)
+        {
+          vec.resize (intrule.GetNIP ());
+          for (size_t i = 0; i < vec.size (); i++)
             {
-              MappedIntegrationRule<3, 3> mir (intrule,
-                                               ma->GetTrafo (elnr, lh), lh);
-              for (auto mip : mir)
-                {
-                  auto &vec = pointnvalues[elnr * intrule.GetNIP ()
-                                           + mip.GetIPNr ()];
-                  vec.resize (4);
-                  for (int i = 0; i < 3; i++)
-                    vec[i] = mip.Point ()[i];
-                  vec[3] = values[elnr][mip.GetIPNr ()];
-                }
-              break;
+              // input data from matrix with elnr in rows, mip values in cols
+              vec[i] = ipdata (elnr, i);
             }
-          }
-      }
-    return pointnvalues;
-  }
+          elnr++;
+        }
+    }
+    virtual double Evaluate (const BaseMappedIntegrationPoint &ip) const
+    {
+      size_t p = ip.GetIPNr ();
+      int el = ip.GetTransformation ().GetElementNr ();
 
-  WeightedRadiusFunction ::WeightedRadiusFunction (
-      shared_ptr<MeshAccess> mesh, shared_ptr<CoefficientFunction> wavespeedcf)
-      : CoefficientFunction (1)
-  {
-    LocalHeap lh (1000 * 1000 * 100);
-    values.SetSize (mesh->GetNE ());
-    for (size_t elnr = 0; elnr < mesh->GetNE (); elnr++)
-      {
-        double anisotropicdiam = 0.0;
-        int D = mesh->GetDimension ();
-        Vector<> center (D);
-        center = 0;
-        Vector<> v1 (D);
-        auto vertices_index = mesh->GetElVertices (elnr);
-        switch (mesh->GetDimension ())
-          {
-          case 2:
-            for (auto vertex : vertices_index)
-              center += mesh->GetPoint<2> (vertex);
-            break;
-          case 3:
-            for (auto vertex : vertices_index)
-              center += mesh->GetPoint<3> (vertex);
-            break;
-          }
-        center *= (1.0 / vertices_index.Size ());
+      if (p >= values[el].size ())
+        {
+          cout << "got illegal integration point number " << p << endl;
+          return 0;
+        }
 
-        ElementId ei = ElementId (elnr);
-        IntegrationRule ir (mesh->GetElType (ei), 0);
-        ElementTransformation &trafo = mesh->GetTrafo (ei, lh);
+      return values[el][p];
+    }
+    void PrintTable ()
+    {
+      for (size_t i = 0; i < values.size (); i++)
+        {
+          for (size_t j = 0; j < values[i].size (); j++)
+            {
+              cout << values[i][j] << ", ";
+            }
+          cout << endl;
+        }
+      cout << endl;
+    }
+    vector<vector<double>> Export ()
+    {
+      LocalHeap lh (1000 * 1000 * 100, "export intpointfct");
 
-        double maxc = 0;
-        for (auto vertex1 : vertices_index)
-          {
-            double c1 = 0, c2 = 0;
-            switch (mesh->GetDimension ())
+      vector<vector<double>> pointnvalues;
+      pointnvalues.resize (ma->GetNE () * intrule.GetNIP ());
+      for (size_t elnr = 0; elnr < ma->GetNE (); elnr++)
+        {
+          switch (ma->GetDimension ())
+            {
+            case 2:
               {
-              case 2:
-                {
-                  MappedIntegrationPoint<2, 2> mip (ir[0], trafo);
-                  v1 = mesh->GetPoint<2> (vertex1);
-                  mip.Point () = v1;
-                  c1 = wavespeedcf->Evaluate (mip);
-                  maxc = max (abs (c1), maxc);
-                  mip.Point () = center;
-                  c2 = wavespeedcf->Evaluate (mip);
-                  maxc = max (abs (c2), maxc);
-                  break;
-                }
-              case 3:
-                {
-                  MappedIntegrationPoint<3, 3> mip (ir[0], trafo);
-                  v1 = mesh->GetPoint<3> (vertex1);
-                  mip.Point () = v1;
-                  c1 = wavespeedcf->Evaluate (mip);
-                  maxc = max (abs (c1), maxc);
-                  mip.Point () = center;
-                  c2 = wavespeedcf->Evaluate (mip);
-                  maxc = max (abs (c2), maxc);
-                  break;
-                }
+                MappedIntegrationRule<2, 2> mir (intrule,
+                                                 ma->GetTrafo (elnr, lh), lh);
+                for (auto mip : mir)
+                  {
+                    auto &vec = pointnvalues[elnr * intrule.GetNIP ()
+                                             + mip.GetIPNr ()];
+                    vec.resize (3);
+                    for (int i = 0; i < 2; i++)
+                      vec[i] = mip.Point ()[i];
+                    vec[2] = values[elnr][mip.GetIPNr ()];
+                  }
+                break;
               }
-            anisotropicdiam = max (
-                anisotropicdiam,
-                sqrt (L2Norm2 (v1 (0, D - 1) - center (0, D - 1))
-                      + pow (c1 * v1 (D - 1) - c2 * center (D - 1), 2)));
-          }
-        values[elnr] = anisotropicdiam / maxc;
-      }
-  }
+            case 3:
+              {
+                MappedIntegrationRule<3, 3> mir (intrule,
+                                                 ma->GetTrafo (elnr, lh), lh);
+                for (auto mip : mir)
+                  {
+                    auto &vec = pointnvalues[elnr * intrule.GetNIP ()
+                                             + mip.GetIPNr ()];
+                    vec.resize (4);
+                    for (int i = 0; i < 3; i++)
+                      vec[i] = mip.Point ()[i];
+                    vec[3] = values[elnr][mip.GetIPNr ()];
+                  }
+                break;
+              }
+            }
+        }
+      return pointnvalues;
+    }
+  };
 
-  double WeightedRadiusFunction ::Evaluate (
-      const BaseMappedIntegrationPoint &ip) const
+  /* \class WeightedRadiusFunction
+   * \brief
+   */
+  class WeightedRadiusFunction : public CoefficientFunction
   {
-    size_t el = ip.GetTransformation ().GetElementNr ();
+  private:
+    Vector<> values;
 
-    if (el >= values.Size ())
-      {
-        cout << "got illegal element number " << el << endl;
-        return 0;
-      }
+  public:
+    WeightedRadiusFunction (shared_ptr<MeshAccess> mesh,
+                            shared_ptr<CoefficientFunction> wavespeedcf)
+    {
+      LocalHeap lh (1000 * 1000 * 100);
+      values.SetSize (mesh->GetNE ());
+      for (size_t elnr = 0; elnr < mesh->GetNE (); elnr++)
+        {
+          double anisotropicdiam = 0.0;
+          int D = mesh->GetDimension ();
+          Vector<> center (D);
+          center = 0;
+          Vector<> v1 (D);
+          auto vertices_index = mesh->GetElVertices (elnr);
+          switch (mesh->GetDimension ())
+            {
+            case 2:
+              for (auto vertex : vertices_index)
+                center += mesh->GetPoint<2> (vertex);
+              break;
+            case 3:
+              for (auto vertex : vertices_index)
+                center += mesh->GetPoint<3> (vertex);
+              break;
+            }
+          center *= (1.0 / vertices_index.Size ());
 
-    return values[el];
-  }
+          ElementId ei = ElementId (elnr);
+          IntegrationRule ir (mesh->GetElType (ei), 0);
+          ElementTransformation &trafo = mesh->GetTrafo (ei, lh);
+
+          double maxc = 0;
+          for (auto vertex1 : vertices_index)
+            {
+              double c1 = 0, c2 = 0;
+              switch (mesh->GetDimension ())
+                {
+                case 2:
+                  {
+                    MappedIntegrationPoint<2, 2> mip (ir[0], trafo);
+                    v1 = mesh->GetPoint<2> (vertex1);
+                    mip.Point () = v1;
+                    c1 = wavespeedcf->Evaluate (mip);
+                    maxc = max (abs (c1), maxc);
+                    mip.Point () = center;
+                    c2 = wavespeedcf->Evaluate (mip);
+                    maxc = max (abs (c2), maxc);
+                    break;
+                  }
+                case 3:
+                  {
+                    MappedIntegrationPoint<3, 3> mip (ir[0], trafo);
+                    v1 = mesh->GetPoint<3> (vertex1);
+                    mip.Point () = v1;
+                    c1 = wavespeedcf->Evaluate (mip);
+                    maxc = max (abs (c1), maxc);
+                    mip.Point () = center;
+                    c2 = wavespeedcf->Evaluate (mip);
+                    maxc = max (abs (c2), maxc);
+                    break;
+                  }
+                }
+              anisotropicdiam = max (
+                  anisotropicdiam,
+                  sqrt (L2Norm2 (v1 (0, D - 1) - center (0, D - 1))
+                        + pow (c1 * v1 (D - 1) - c2 * center (D - 1), 2)));
+            }
+          values[elnr] = anisotropicdiam / maxc;
+        }
+    }
+    double Evaluate (const BaseMappedIntegrationPoint &ip) const
+    {
+      size_t el = ip.GetTransformation ().GetElementNr ();
+
+      if (el >= values.Size ())
+        {
+          cout << "got illegal element number " << el << endl;
+          return 0;
+        }
+
+      return values[el];
+    }
+  };
 
   // class TrefftzCoefficientFunction : public CoefficientFunction
   //{
@@ -255,25 +286,97 @@ namespace ngfem
   //}
   //};
 
-  double PrintCF::Evaluate (const BaseMappedIntegrationPoint &mip) const
+  /**
+   * \class PrintCF
+   * \brief A class that represents a coefficient function for printing
+   * integration point values to a CSV file.
+   *
+   * This class inherits from the CoefficientFunction class and provides
+   * functionality for writing the the world coordinates of evaluated mapped
+   * integration points to a CSV file.
+   */
+  class PrintCF : public CoefficientFunction
   {
-    if (ofs)
-      {
-        for (int i = 0; i < mip.GetTransformation ().SpaceDim (); i++)
-          {
-            if (i > 0)
-              *ofs << "\t";
-            *ofs << mip.GetPoint ()[i];
-          }
-        *ofs << "\t" << mip.GetWeight ();
-        *ofs << endl;
-      }
-    return 1.0;
-  }
+    string filename = "printcf.csv";
+    shared_ptr<ofstream> ofs = nullptr;
+
+  public:
+    PrintCF (const string &a_filename)
+    {
+      filename = a_filename;
+      ofs = make_shared<ofstream> (filename);
+    }
+
+    double Evaluate (const BaseMappedIntegrationPoint &mip) const
+    {
+      if (ofs)
+        {
+          for (int i = 0; i < mip.GetTransformation ().SpaceDim (); i++)
+            {
+              if (i > 0)
+                *ofs << "\t";
+              *ofs << mip.GetPoint ()[i];
+            }
+          *ofs << "\t" << mip.GetWeight ();
+          *ofs << endl;
+        }
+      return 1.0;
+    }
+
+    ~PrintCF () { ofs->close (); }
+  };
+
+  /* \class AdjacentFaceSizeCF
+   * \brief size of the adjacent facet
+   *
+   * required for anisotropic elements. use Other() to get the neighboring
+   * element's adjacent facet size
+   */
+  class AdjacentFaceSizeCF : public CoefficientFunction
+  {
+  public:
+    AdjacentFaceSizeCF () : CoefficientFunction (1, false) { ; }
+    virtual double
+    Evaluate (const BaseMappedIntegrationPoint &ip) const override
+    {
+      LocalHeap lh (100000, "AdjacentFaceSizeCF::Evaluate");
+      if (ip.IP ().FacetNr () != -1) // on a boundary facet of the element
+        {
+          switch (ip.DimSpace ())
+            {
+            case 2:
+              {
+                const MappedIntegrationPoint<2, 2> &mip
+                    = static_cast<const MappedIntegrationPoint<2, 2> &> (ip);
+                IntegrationPoint rip = mip.IP ();
+                ELEMENT_TYPE eltype
+                    = mip.GetTransformation ().GetElementType ();
+                if (eltype == ET_QUAD)
+                  {
+                    if (rip.Point ()[0] == 0 || rip.Point ()[0] == 1)
+                      return L2Norm (mip.GetJacobian ().Col (0));
+                    else
+                      return L2Norm (mip.GetJacobian ().Col (1));
+                  }
+                else
+                  {
+                    return fabs (mip.GetJacobiDet ()) / mip.GetMeasure ();
+                  }
+              }
+            default:
+              throw Exception ("Illegal dimension in MeshSizeCF");
+            }
+        }
+      else
+        throw Exception (
+            "AdjacentFaceSizeCF::Evaluate - not on a boundary facet");
+    }
+  };
 
 }
 
 #ifdef NGS_PYTHON
+#include <python_ngstd.hpp>
 void ExportSpecialCoefficientFunction (py::module m)
 {
   using namespace ngcomp;
