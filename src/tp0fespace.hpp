@@ -87,6 +87,7 @@ namespace ngcomp
     Array<int> order_inner;
     Array<int> first_element_dof;
     bool allow_both_axes_zero = false;
+    double small_quad;
 
     int LocalNDof (ElementId el, int order) const;
 

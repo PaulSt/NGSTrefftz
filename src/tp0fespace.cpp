@@ -74,6 +74,8 @@ namespace ngcomp
     order = int (flags.GetNumFlag ("order", 3));
     DefineDefineFlag ("allow_both_axes_zero");
     allow_both_axes_zero = flags.GetDefineFlag ("allow_both_axes_zero");
+    DefineNumFlag ("small_quad");
+    small_quad = flags.GetNumFlag ("small_quad", 0);
 
     if (ma->GetDimension () == 2)
       {
@@ -98,9 +100,12 @@ namespace ngcomp
     trafo.CalcJacobian (ip, jac);
     double xscale = L2Norm (jac.Col (0));
     double yscale = L2Norm (jac.Col (1));
+    double scale = pow (pow (xscale, 2) + pow (yscale, 2), 0.5);
     int zero_axis = yscale > xscale ? 1 : 0;
+
     if (abs (xscale - yscale) < 1e-8 && allow_both_axes_zero)
-      zero_axis = 2;
+      if (small_quad == 0 || scale < small_quad)
+        zero_axis = 2;
     return zero_axis;
   }
 
@@ -284,9 +289,12 @@ namespace ngcomp
 
     docu.Arg ("allow_both_axes_zero")
         = "bool = False\n"
-          "  If true, on quadrilateral elements with equal edge lengths, "
-          "both\n"
-          "  coordinate axes are treated as zero axes.";
+          "  If true, on quadrilateral elements with equal edge lengths,\n"
+          "  both coordinate axes are treated as zero axes.";
+    docu.Arg ("small_quad")
+        = "double = 0\n"
+          "  If nonzero, both axes zero only applies to quads smaller than \n"
+          "  this threshold.";
     return docu;
   }
 
