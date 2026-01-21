@@ -84,21 +84,24 @@ def testlaptrefftz(order,mesh):
 # Helmholtz
 ########################################################################
 
-def testhelmtrefftz(order,mesh):
+def testhelmtrefftz(order,mesh,omega=1):
     """
     >>> order = 5
     >>> mesh = Mesh(unit_square.GenerateMesh(maxh=0.4))
     >>> [testhelmtrefftz(order,mesh)] # doctest:+ELLIPSIS
     [...e-09]
+    >>> [testhelmtrefftz(order,mesh,5)] # doctest:+ELLIPSIS
+    [...e-05]
     """
-    omega=1
-    exact = exp(1j*sqrt(0.5)*(x+y))
+    exact = exp(1j*sqrt(0.5)*omega*(x+y))
     gradexact = CoefficientFunction((sqrt(0.5)*1j*exact, sqrt(0.5)*1j*exact))
     n = specialcf.normal(mesh.dim)
-    bndc = CoefficientFunction((sqrt(0.5)*1j*exact, sqrt(0.5)*1j*exact))*n + 1j*omega*exact
+    bndc = CoefficientFunction((sqrt(0.5)*1j*omega*exact, sqrt(0.5)*1j*omega*exact))*n + 1j*omega*exact
 
     fes = trefftzfespace(mesh,order=order,eq="helmholtz",complex=True,dgjumps=True)
     fes2 = trefftzfespace(mesh,order=order,eq="helmholtzconj",complex=True,dgjumps=True)
+    fes.SetCoeff(omega)
+    fes2.SetCoeff(omega)
     a,f = dghelm(fes,fes2,bndc,omega)
     gfu = GridFunction(fes)
     with TaskManager():

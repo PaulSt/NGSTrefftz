@@ -49,7 +49,7 @@ namespace ngfem
     for (int i = 0; i < this->ndof; ++i)
       {
         Vec<D> dir = GetDirection (i);
-        shape (i) = exp (Complex (0, InnerProduct (cpoint, dir) * conj));
+        shape (i) = exp (Complex (0, c * InnerProduct (cpoint, dir) * conj));
       }
   }
 
@@ -65,8 +65,8 @@ namespace ngfem
         {
           Vec<D> dir = GetDirection (i);
           dshape (i, d)
-              = Complex (0, dir[d] * conj)
-                * exp (Complex (0, InnerProduct (cpoint, dir) * conj));
+              = Complex (0, c * dir[d] * conj)
+                * exp (Complex (0, c * InnerProduct (cpoint, dir) * conj));
         }
   }
 
