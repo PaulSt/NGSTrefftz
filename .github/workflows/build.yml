@@ -45,9 +45,9 @@ jobs:
           submodules: true
           path: "NGSTrefftz"
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
-      #- uses: actions/setup-python@v5
-      #with:
-      #python-version: "3.12"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
       - name: install ngstrefftz
         #env:
         #NGSTREFFTZ_USE_GTEST: 'ON'
@@ -66,7 +66,7 @@ jobs:
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - uses: Bacondish2023/setup-googletest@v1
         with:
           tag: v1.15.2
@@ -227,7 +227,7 @@ jobs:
         run: id=$(docker create ngstpyodide) && docker cp $id:/root/output/ngstrefftz_pyodide.tar.bz2 $GITHUB_WORKSPACE/
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
       - name: Build the JupyterLite site
         run: |
           cd $GITHUB_WORKSPACE/NGSTrefftz/.github/workflows/pyodide && python -m pip install -r requirements.txt
