@@ -39,7 +39,7 @@ jobs:
     container: archlinux:latest
     steps:
       - name: setup
-        run: pacman -Syu --noconfirm && pacman -S --noconfirm python python-pip python-setuptools git gcc make cmake python-numpy python-scipy
+        run: pacman -Syu --noconfirm && pacman -S --noconfirm python python-pip python-setuptools git gcc make cmake
       - uses: actions/checkout@v4
         with:
           submodules: true
@@ -51,7 +51,9 @@ jobs:
       - name: install ngstrefftz
         #env:
         #NGSTREFFTZ_USE_GTEST: 'ON'
-        run: cd NGSTrefftz && pip install --break-system-packages . -v
+        run: |
+          python3 -m pip install --break-system-packages numpy scipy
+          cd NGSTrefftz && python3 -m pip install --break-system-packages . -v
       - name: run test
         run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
 
@@ -91,7 +93,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-13, ubuntu-latest]
+        os: [macos-15-intel, ubuntu-latest]
         doit: 
           - ${{ inputs.level != 'quick' }}
         cibw_build: 
