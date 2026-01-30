@@ -260,26 +260,23 @@ jobs:
           pattern: cibw-wheels-ubuntu*
           path: wheels
           merge-multiple: true
-      - name: Display structure of downloaded files
-        run: ls -R $GITHUB_WORKSPACE/wheels
-      - name: install ngstrefftz
-        run: pip install $GITHUB_WORKSPACE/wheels/*-cp313-cp313-manylinux_2_28_x86_64.manylinux2014_x86_64.whl
-      - name: Build and Commit
-        uses: sphinx-notes/pages@v3
-        with:
-          repository_path: "NGSTrefftz"
-          #requirements_path: ./docs/requirements.txt
-      - name: Download pyodide stuff
-        if: false
-        uses: actions/download-artifact@v7
-        with:
-          name: ngst-pyodide
-          path: NGSTrefftz/ngst-pyodide
+      #- name: Display structure of downloaded files
+        #run: ls -R $GITHUB_WORKSPACE/wheels
+      #- name: install ngstrefftz
+        #run: pip install $GITHUB_WORKSPACE/wheels/*-cp313-cp313-manylinux_2_28_x86_64.manylinux2014_x86_64.whl
+      - name: Build Sphinx HTML
+        run: sphinx-build -b html $GITHUB_WORKSPACE/NGSTrefftz/docs $GITHUB_WORKSPACE/NGSTrefftz/docs/_build/html
+      #- name: Download pyodide stuff
+        #if: false
+        #uses: actions/download-artifact@v7
+        #with:
+          #name: ngst-pyodide
+          #path: NGSTrefftz/ngst-pyodide
       #- run: tree -d .
-      - name: Upload
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: "NGSTrefftz/"
+          path: ${{ github.workspace }}/NGSTrefftz/docs/_build/html
 
   deploy-docs:
     needs: docs
