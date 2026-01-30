@@ -4,12 +4,12 @@ dynamic = ["version"]
 authors = [ {name = "Paul Stocker", email = "paul.stocker@univie.ac.at"} ]
 description='NGSTrefftz is an add-on to NGSolve for Trefftz methods.'
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
   "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
 ]
 dependencies = [
-  "ngsolve==6.2.2506",
+  "ngsolve==6.2.2601",
 ]
 
 
@@ -18,7 +18,7 @@ Documentation = "https://paulst.github.io/NGSTrefftz"
 Repository = "https://github.com/PaulSt/ngstrefftz"
 
 [build-system]
-requires = ["ngsolve==6.2.2506",
+requires = ["ngsolve==6.2.2601",
             "scikit-build-core>=0.9.0",
             "pybind11_stubgen",
             "setuptools>=45",
@@ -43,7 +43,7 @@ local_scheme = "no-local-version"
 
 [tool.cibuildwheel]
 #build-verbosity = 1
-manylinux-x86_64-image = "cerbsim/manylinux_2_28_x86_64_cuda_12.8"
+manylinux-x86_64-image = "cerbsim/manylinux_2_28_x86_64_cuda_12.9"
 skip = """
   pp*
   *_i686

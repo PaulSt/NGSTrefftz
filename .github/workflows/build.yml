@@ -13,7 +13,7 @@ on:
         - quick
         - full
   push:
-    branches: ["main**"]
+    branches: [main, main-dev]
   release:
     types: [created]
     
@@ -23,7 +23,7 @@ jobs:
     name: Check Formatting with Clang Format
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
           path: "NGSTrefftz"
@@ -40,12 +40,12 @@ jobs:
     steps:
       - name: setup
         run: pacman -Syu --noconfirm && pacman -S --noconfirm python python-pip python-setuptools git gcc make cmake
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
           path: "NGSTrefftz"
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - name: install ngstrefftz
@@ -61,12 +61,12 @@ jobs:
     name: Test GTest on Linux
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
           path: "NGSTrefftz"
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - uses: Bacondish2023/setup-googletest@v1
@@ -97,7 +97,7 @@ jobs:
         doit: 
           - ${{ inputs.level != 'quick' }}
         cibw_build: 
-          - cp39-* cp310-* cp311-* cp312-* cp313-*
+          - cp310-* cp311-* cp312-* cp313-* cp314-*
         include:
           - os: ubuntu-latest
             doit: ${{ inputs.level == 'quick' }}
@@ -107,11 +107,11 @@ jobs:
             cmake-generator: "Visual Studio 16 2019"
             cmake_generator_platform: "x64"
             doit: ${{ inputs.level != 'quick' }}
-            cibw_build: cp39-* cp310-* cp311-* cp312-* cp313-*
+            cibw_build: cp310-* cp311-* cp312-* cp313-* cp314-*
     env:
       CIBW_BUILD: ${{ matrix.cibw_build }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         if: ${{ matrix.doit }}
         with:
           submodules: true
@@ -119,13 +119,13 @@ jobs:
           fetch-depth: 0
       - name: Build wheels
         if: ${{ matrix.doit }}
-        uses: pypa/cibuildwheel@v2.23.2
+        uses: pypa/cibuildwheel@v3.2.1
         env:
           CIBW_BUILD_VERBOSITY: 1
       - name: Setup tmate session
         if: ${{ failure() }}
         uses: mxschmitt/action-tmate@v3
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: ${{ matrix.doit }}
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
@@ -138,14 +138,14 @@ jobs:
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
           fetch-tags: true
           fetch-depth: 0
       - name: Build sdist
         run: pipx run build --sdist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: cibw-sdist
           path: dist/*.tar.gz
@@ -157,7 +157,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: cibw-*
           path: dist
@@ -178,10 +178,10 @@ jobs:
     needs: [upload_pypi]
     runs-on: ubuntu-latest
     steps:
-      - name: clear cache
-        run: rm -rf /opt/hostedtoolcache
+      #- name: clear cache
+        #run: rm -rf /opt/hostedtoolcache
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -216,7 +216,7 @@ jobs:
     steps:
       - name: clear cache
         run: rm -rf /opt/hostedtoolcache
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
           submodules: true
@@ -227,17 +227,15 @@ jobs:
         run: cd $GITHUB_WORKSPACE/NGSTrefftz && docker build -t ngstpyodide -f .github/workflows/pyodide/Dockerfile .
       - name: retrieve tar
         run: id=$(docker create ngstpyodide) && docker cp $id:/root/output/ngstrefftz_pyodide.tar.bz2 $GITHUB_WORKSPACE/
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - name: Build the JupyterLite site
         run: |
           cd $GITHUB_WORKSPACE/NGSTrefftz/.github/workflows/pyodide && python -m pip install -r requirements.txt
           cd $GITHUB_WORKSPACE && jupyter lite build --pyodide ngstrefftz_pyodide.tar.bz2 --contents ./NGSTrefftz/docs/notebooks/ --output-dir ngst-pyodide
-        #uses: actions/upload-pages-artifact@v3
-      #- name: upload
       - name: Store the sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ngst-pyodide
           path: ./ngst-pyodide
@@ -247,7 +245,7 @@ jobs:
     runs-on: ubuntu-latest
     container: python:3.13
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
           submodules: true
@@ -257,7 +255,7 @@ jobs:
           apt update -y && DEBIAN_FRONTEND="noninteractive" apt install -y git pandoc
           pip install -r $GITHUB_WORKSPACE/NGSTrefftz/docs/requirements.txt
         # cd $GITHUB_WORKSPACE/NGSTrefftz && pip install .
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: cibw-wheels-ubuntu*
           path: wheels
@@ -267,19 +265,19 @@ jobs:
       - name: install ngstrefftz
         run: pip install $GITHUB_WORKSPACE/wheels/*-cp313-cp313-manylinux_2_28_x86_64.manylinux2014_x86_64.whl
       - name: Build and Commit
-        uses: sphinx-notes/pages@v2
+        uses: sphinx-notes/pages@v3
         with:
           repository_path: "NGSTrefftz"
           #requirements_path: ./docs/requirements.txt
       - name: Download pyodide stuff
         if: false
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ngst-pyodide
           path: NGSTrefftz/ngst-pyodide
       #- run: tree -d .
       - name: Upload
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: "NGSTrefftz/"
 
@@ -301,11 +299,11 @@ jobs:
 
   paper:
     runs-on: ubuntu-latest
-    if: ${{ inputs.level != 'quick' || inputs.level != 'test_only' }}
+    if: ${{ inputs.level == 'full' }}
     name: Paper Draft
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Build draft PDF
         uses: openjournals/openjournals-draft-action@master
         with:
