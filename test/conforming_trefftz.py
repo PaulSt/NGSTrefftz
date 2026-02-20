@@ -30,7 +30,7 @@ from ngsolve import (
     x,
     y,
 )
-from ngstrefftz import EmbeddedTrefftzFES, L2EmbTrefftzFESpace, TrefftzEmbedding
+from ngstrefftz import EmbeddedTrefftzFES, TrefftzEmbedding
 
 # import matplotlib.pyplot as plt
 
@@ -595,7 +595,7 @@ def test_ConstrainedTrefftzFESpaceDirichlet():
     emb = TrefftzEmbedding(top=None, cop=cop, crhs=crhs)
     fes = EmbeddedTrefftzFES(emb)
 
-    assert type(fes) is L2EmbTrefftzFESpace
+    assert type(fes) is EmbeddedTrefftzFES
     assert fes.ndof >= fes_conformity.ndof
 
     fes_freedofs = fes.FreeDofs()
@@ -691,7 +691,7 @@ def test_ConstrainedTrefftzFESpaceEmbed():
 
     argyris = EmbeddedTrefftzFES(embedding)
 
-    assert type(argyris) is L2EmbTrefftzFESpace
+    assert type(argyris) is EmbeddedTrefftzFES
 
     gfu = GridFunction(argyris)
     for i in range(0, len(gfu.vec), 2):

@@ -1209,7 +1209,7 @@ namespace ngcomp
     return gfu;
   }
 
-  ////////////////////////// EmbTrefftzFESpace ///////////////////////////
+  ////////////////////////// EmbeddedTrefftzFES ///////////////////////////
 
   /// Copies `source` to the beginning of `target`.
   ///
@@ -1235,7 +1235,123 @@ namespace ngcomp
       }
   }
 
-  template <typename T> void EmbTrefftzFESpace<T>::UpdateCouplingDofArray ()
+  EmbeddedTrefftzFES::EmbeddedTrefftzFES (shared_ptr<TrefftzEmbedding> aemb)
+      : FESpace (aemb->GetFES ()->GetMeshAccess (),
+                 aemb->GetFES ()->GetFlags (), false),
+        emb (aemb), basefes (aemb->GetFES ()), etmats (emb->GetEtmats ()),
+        etmatsc (emb->GetEtmatsC ()), fes_conformity (emb->GetFESconf ()),
+        ignoredofs (emb->GetIgnoredDofs ())
+  {
+    this->name = "EmbeddedTrefftzFES(" + basefes->GetClassName () + ")";
+    this->type = "embt";
+    this->needs_transform_vec = true;
+    this->iscomplex = basefes->IsComplex ();
+
+    for (auto vb : { VOL, BND, BBND, BBBND })
+      {
+        this->evaluator[vb] = basefes->GetEvaluator (vb);
+        this->flux_evaluator[vb] = basefes->GetFluxEvaluator (vb);
+      }
+
+    if (this->IsComplex ())
+      etmatsc_inv.SetSize (this->ma->GetNE (VOL));
+    else
+      etmats_inv.SetSize (this->ma->GetNE (VOL));
+
+    this->Update ();
+
+    if (this->order_policy == ORDER_POLICY::VARIABLE_ORDER)
+      {
+        this->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
+          NodeId ni (NODE_TYPE::NT_ELEMENT, ei.Nr ());
+          this->SetOrder (ni, basefes->GetOrder (ni));
+        });
+        this->Update ();
+      }
+
+    this->FinalizeUpdate ();
+
+    if (fes_conformity)
+      copyBitArray (this->GetFreeDofs (), fes_conformity->GetFreeDofs ());
+  }
+
+  void EmbeddedTrefftzFES::Update ()
+  {
+    basefes->Update ();
+    if (fes_conformity)
+      fes_conformity->Update ();
+
+    if (this->order_policy == ORDER_POLICY::VARIABLE_ORDER)
+      {
+        this->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
+          NodeId ni (NODE_TYPE::NT_ELEMENT, ei.Nr ());
+          this->SetOrder (ni, basefes->GetOrder (ni));
+        });
+      }
+
+    for (auto vb : { VOL, BND, BBND, BBBND })
+      {
+        this->evaluator[vb] = basefes->GetEvaluator (vb);
+        this->flux_evaluator[vb] = basefes->GetFluxEvaluator (vb);
+      }
+    this->iscomplex = basefes->IsComplex ();
+
+    this->UpdateDofTables ();
+    this->UpdateCouplingDofArray ();
+    this->UpdateFreeDofs ();
+    FESpace::Update ();
+  }
+
+  void EmbeddedTrefftzFES::UpdateDofTables ()
+  {
+    size_t ndof_conforming = fes_conformity ? fes_conformity->GetNDof () : 0;
+    size_t ignored_dofs = ignoredofs ? ignoredofs->NumSet () : 0;
+    size_t ndof_trefftz = 0;
+    for (auto ei : this->ma->Elements (VOL))
+      {
+        if ((this->IsComplex () && !emb->GetEtmatC (ei.Nr ()))
+            || (!this->IsComplex () && !emb->GetEtmat (ei.Nr ())))
+          continue;
+        ndof_trefftz += emb->GetLocalNodfsTrefftz ()[ei.Nr ()];
+      }
+    this->SetNDof (ndof_conforming + ignored_dofs + ndof_trefftz);
+
+    if (this->IsComplex ())
+      etmatsc_inv.SetSize (this->ma->GetNE (VOL));
+    else
+      etmats_inv.SetSize (this->ma->GetNE (VOL));
+  }
+
+  void EmbeddedTrefftzFES::UpdateFreeDofs ()
+  {
+    this->free_dofs = make_shared<BitArray> (this->GetNDof ());
+    this->free_dofs->Set ();
+
+    size_t ndof_conforming = fes_conformity ? fes_conformity->GetNDof () : 0;
+    if (fes_conformity)
+      {
+        auto conf_free = fes_conformity->GetFreeDofs ();
+        for (size_t i = 0;
+             i < min<size_t> (ndof_conforming, conf_free->Size ()); i++)
+          if (!conf_free->Test (i))
+            this->free_dofs->Clear (i);
+      }
+
+    if (ignoredofs)
+      {
+        auto base_free = basefes->GetFreeDofs ();
+        size_t idof = ndof_conforming;
+        for (size_t i = 0; i < ignoredofs->Size (); i++)
+          if (ignoredofs->Test (i))
+            {
+              if (i < base_free->Size () && !base_free->Test (i))
+                this->free_dofs->Clear (idof);
+              idof++;
+            }
+      }
+  }
+
+  void EmbeddedTrefftzFES::UpdateCouplingDofArray ()
   {
     const size_t ndof_conformity
         = (fes_conformity) ? fes_conformity->GetNDof () : 0;
@@ -1258,42 +1374,40 @@ namespace ngcomp
       ignored_dofs = ignoredofs->NumSet ();
 
     // The conformity dofs might overlap.
-    // Overall, they add up to exactly the number of
-    // dofs in the conformity space.
+    // Overall, they add up to dofs in the conformity space.
     const size_t new_ndof = ignored_dofs + ndof_conformity + ndof_trefftz;
     this->SetNDof (new_ndof);
     this->ctofdof.SetSize (new_ndof);
 
-    // We start the numbering of the dofs with the conformity dofs,
-    // and continue with the Trefftz dofs.
+    // Global dof ordering (consistent with createConformingTrefftzTables):
+    //   [0 .. ndof_conformity-1]                 conforming dofs
+    //   [ndof_conformity .. ndof_conformity+ignored_dofs-1] ignored base dofs
+    //   [ndof_conformity+ignored_dofs .. end]    element-wise Trefftz dofs
+    if (fes_conformity)
+      for (size_t i = 0; i < ndof_conformity; i++)
+        this->ctofdof[i] = fes_conformity->GetDofCouplingType (i);
+
     if (ignoredofs)
-      for (size_t i = 0, idof = 0; i < ignoredofs->Size (); i++)
-        if (ignoredofs->Test (i))
-          this->ctofdof[idof++] = emb->GetFES ()->GetDofCouplingType (i);
-    for (size_t i = ignored_dofs; i < ndof_conformity; i++)
-      this->ctofdof[i] = fes_conformity->GetDofCouplingType (i);
-    for (size_t i = ignored_dofs + ndof_conformity; i < new_ndof; i++)
+      {
+        size_t idof = ndof_conformity;
+        for (size_t i = 0; i < ignoredofs->Size (); i++)
+          if (ignoredofs->Test (i))
+            this->ctofdof[idof++] = basefes->GetDofCouplingType (i);
+      }
+
+    for (size_t i = ndof_conformity + ignored_dofs; i < new_ndof; i++)
       this->ctofdof[i] = LOCAL_DOF;
   }
 
-  template <typename T>
-  void
-  EmbTrefftzFESpace<T>::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
+  void EmbeddedTrefftzFES::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
   {
     // TODO: ignore dofs for BND, BBND, BBBND?
-    if (!T::DefinedOn (ei) || ei.VB () != VOL)
+    if (!basefes->DefinedOn (ei) || ei.VB () != VOL)
       return;
-    // 1. Provide the dof nrs of the conforming Trefftz space, that are
-    // associated to the element ei.
     const FlatArray<DofId> tdofnrs = this->emb->GetTDofNrs (ei.Nr ());
 
-    // 2. In order to properly hook into ngsolve's assembly routine,
-    // we need to provide as many dofs as the underlying space T has.
-    // So, we first provide tdofnrs, which may contain fewer dofs than
-    // required. The rest of the array dnums, we fill up with the non-regular
-    // DofId NO_DOF_NR_CONDENSE, which marks these excess dofs to be condensed
-    // out.
-    T::GetDofNrs (ei, dnums);
+    // need to provide as many dofs as the wrapped base space has.
+    basefes->GetDofNrs (ei, dnums);
     for (size_t i = 0; i < dnums.Size (); i++)
       if (IsRegularDof (dnums[i]))
         {
@@ -1304,9 +1418,14 @@ namespace ngcomp
         }
   }
 
-  template <typename T>
+  FiniteElement &
+  EmbeddedTrefftzFES::GetFE (ElementId ei, Allocator &alloc) const
+  {
+    return basefes->GetFE (ei, alloc);
+  }
+
   optional<FlatMatrix<double>>
-  EmbTrefftzFESpace<T>::GetEtmatInv (size_t idx) const
+  EmbeddedTrefftzFES::GetEtmatInv (size_t idx) const
   {
     std::call_once (this->etmats_inv_computed, [&] () {
       this->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
@@ -1318,9 +1437,8 @@ namespace ngcomp
     return this->etmats_inv[idx];
   }
 
-  template <typename T>
   optional<FlatMatrix<Complex>>
-  EmbTrefftzFESpace<T>::GetEtmatCInv (size_t idx) const
+  EmbeddedTrefftzFES::GetEtmatCInv (size_t idx) const
   {
     std::call_once (this->etmats_inv_computed, [&] () {
       this->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
@@ -1332,11 +1450,21 @@ namespace ngcomp
     return this->etmatsc_inv[idx];
   }
 
-  /// double/complex generic implementation for the methods VTransformM(R | C)
-  /// for the embedded Trefftz FESpace.
+  ProxyNode EmbeddedTrefftzFES::MakeProxyFunction (
+      bool testfunction,
+      const function<shared_ptr<ProxyFunction> (shared_ptr<ProxyFunction>)>
+          &addblock) const
+  {
+    ProxyNode pn = basefes->MakeProxyFunction (testfunction, addblock);
+    auto self = dynamic_pointer_cast<FESpace> (
+        const_cast<EmbeddedTrefftzFES *> (this)->shared_from_this ());
+    pn.SetFESpace (self);
+    return pn;
+  }
+
   template <typename SCAL>
-  void etFesVTransformM (SliceMatrix<SCAL> mat, const TRANSFORM_TYPE type,
-                         const Matrix<SCAL> elmat)
+  void T_VTransformM (SliceMatrix<SCAL> mat, const TRANSFORM_TYPE type,
+                      const Matrix<SCAL> elmat)
   {
     static Timer timer ("EmbTrefftz: MTransform");
     RegionTimer reg (timer);
@@ -1371,30 +1499,25 @@ namespace ngcomp
       }
   }
 
-  template <typename T>
-  void
-  EmbTrefftzFESpace<T>::VTransformMR (ElementId ei, SliceMatrix<double> mat,
-                                      TRANSFORM_TYPE type) const
+  void EmbeddedTrefftzFES::VTransformMR (ElementId ei, SliceMatrix<double> mat,
+                                         TRANSFORM_TYPE type) const
   {
     const auto elmat = *(emb->GetEtmat (ei.Nr ()));
-    etFesVTransformM (mat, type, elmat);
+    T_VTransformM (mat, type, elmat);
   }
 
-  template <typename T>
   void
-  EmbTrefftzFESpace<T>::VTransformMC (ElementId ei, SliceMatrix<Complex> mat,
-                                      TRANSFORM_TYPE type) const
+  EmbeddedTrefftzFES::VTransformMC (ElementId ei, SliceMatrix<Complex> mat,
+                                    TRANSFORM_TYPE type) const
   {
     const auto elmat = *(emb->GetEtmatC (ei.Nr ()));
-    etFesVTransformM (mat, type, elmat);
+    T_VTransformM (mat, type, elmat);
   }
 
-  /// double/complex generic implementation for the methods VTransformV(R | C)
-  /// for the embedded Trefftz FESpace.
   template <typename SCAL>
-  void etFesVTransformV (SliceVector<SCAL> &vec, const TRANSFORM_TYPE type,
-                         const Matrix<SCAL> &elmat,
-                         optional<FlatMatrix<SCAL>> elmat_inv)
+  void T_VTransformV (SliceVector<SCAL> &vec, const TRANSFORM_TYPE type,
+                      const Matrix<SCAL> &elmat,
+                      optional<FlatMatrix<SCAL>> elmat_inv)
   {
     const size_t ndof = elmat.Width ();
 
@@ -1430,76 +1553,38 @@ namespace ngcomp
       }
   }
 
-  template <typename T>
-  void
-  EmbTrefftzFESpace<T>::VTransformVR (ElementId ei, SliceVector<double> vec,
-                                      TRANSFORM_TYPE type) const
+  void EmbeddedTrefftzFES::VTransformVR (ElementId ei, SliceVector<double> vec,
+                                         TRANSFORM_TYPE type) const
   {
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    etFesVTransformV (vec, type, *(emb->GetEtmat (ei.Nr ())),
-                      (type == TRANSFORM_SOL_INVERSE)
-                          ? this->GetEtmatInv (ei.Nr ())
-                          : nullopt);
+    T_VTransformV (vec, type, *(emb->GetEtmat (ei.Nr ())),
+                   (type == TRANSFORM_SOL_INVERSE)
+                       ? this->GetEtmatInv (ei.Nr ())
+                       : nullopt);
   }
 
-  template <typename T>
   void
-  EmbTrefftzFESpace<T>::VTransformVC (ElementId ei, SliceVector<Complex> vec,
-                                      TRANSFORM_TYPE type) const
+  EmbeddedTrefftzFES::VTransformVC (ElementId ei, SliceVector<Complex> vec,
+                                    TRANSFORM_TYPE type) const
   {
     static Timer timer ("EmbTrefftz: VTransform");
     RegionTimer reg (timer);
 
-    etFesVTransformV (vec, type, *(emb->GetEtmatC (ei.Nr ())),
-                      (type == TRANSFORM_SOL_INVERSE)
-                          ? this->GetEtmatCInv (ei.Nr ())
-                          : nullopt);
+    T_VTransformV (vec, type, *(emb->GetEtmatC (ei.Nr ())),
+                   (type == TRANSFORM_SOL_INVERSE)
+                       ? this->GetEtmatCInv (ei.Nr ())
+                       : nullopt);
   }
 
-  // template class EmbTrefftzFESpace<L2HighOrderFESpace,
-  // shared_ptr<L2HighOrderFESpace>>;
-  // static RegisterFESpace<
-  // EmbTrefftzFESpace<L2HighOrderFESpace, shared_ptr<L2HighOrderFESpace>>>
-  // initembt ("L2EmbTrefftzFESpace");
-  // template class EmbTrefftzFESpace<MonomialFESpace,
-  // shared_ptr<MonomialFESpace>>;
-  // static RegisterFESpace<
-  // EmbTrefftzFESpace<MonomialFESpace, shared_ptr<MonomialFESpace>>>
-  // initembt3 ("MonomialEmbTrefftzFESpace");
 }
 
-template <typename T> string EmbTrefftzFESpace<T>::GetClassName () const
-{
-  return this->name;
-}
+string EmbeddedTrefftzFES::GetClassName () const { return this->name; }
 
 ////////////////////////// python interface ///////////////////////////
 
 #ifdef NGS_PYTHON
-template <typename T> void ExportETSpace (py::module m, string label)
-{
-  auto pyspace
-      = ngcomp::ExportFESpace<ngcomp::EmbTrefftzFESpace<T>> (m, label);
-
-  pyspace.def ("GetEmbedding", &ngcomp::EmbTrefftzFESpace<T>::GetEmbedding,
-               "Get the TrefftzEmbedding");
-  pyspace.def_property_readonly ("emb", &EmbTrefftzFESpace<T>::GetEmbedding);
-
-  // pyspace.def (py::init ([pyspace] (shared_ptr<T> fes) {
-  // py::list info;
-  // auto ma = fes->GetMeshAccess ();
-  // info.append (ma);
-  // auto nfes = make_shared<ngcomp::EmbTrefftzFESpace<T>> (fes);
-  // nfes->Update ();
-  // nfes->FinalizeUpdate ();
-  // connect_auto_update (nfes.get ());
-  // return nfes;
-  //}),
-  // py::arg ("fes"));
-}
-
 void ExportEmbTrefftz (py::module m)
 {
   py::class_<TrefftzEmbedding, shared_ptr<TrefftzEmbedding>> (
@@ -1612,46 +1697,35 @@ void ExportEmbTrefftz (py::module m)
                                 return emb->GetFESconf ();
                               });
 
-  ExportETSpace<ngcomp::L2HighOrderFESpace> (m, "L2EmbTrefftzFESpace");
-  ExportETSpace<ngcomp::VectorL2FESpace> (m, "VectorL2EmbTrefftzFESpace");
-  ExportETSpace<ngcomp::MonomialFESpace> (m, "MonomialEmbTrefftzFESpace");
-  ExportETSpace<ngcomp::CompoundFESpace> (m, "CompoundEmbTrefftzFESpace");
-  ExportETSpace<ngcomp::TrefftzFESpace> (m, "TrefftzEmbTrefftzFESpace");
+  auto pyspace = ngcomp::ExportFESpace<ngcomp::EmbeddedTrefftzFES> (
+      m, "EmbeddedTrefftzFES");
 
-  m.def (
-      "EmbeddedTrefftzFES",
-      [] (shared_ptr<ngcomp::TrefftzEmbedding> emb)
-          -> shared_ptr<ngcomp::FESpace> {
-        shared_ptr<ngcomp::FESpace> fes = emb->GetFES ();
-        shared_ptr<ngcomp::FESpace> nfes;
-        if (dynamic_pointer_cast<ngcomp::L2HighOrderFESpace> (fes))
-          nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::L2HighOrderFESpace>> (emb);
-        else if (dynamic_pointer_cast<ngcomp::VectorL2FESpace> (fes))
-          nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::VectorL2FESpace>> (emb);
-        else if (dynamic_pointer_cast<ngcomp::MonomialFESpace> (fes))
-          nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::MonomialFESpace>> (emb);
-        else if (dynamic_pointer_cast<ngcomp::CompoundFESpace> (fes))
-          nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::CompoundFESpace>> (emb);
-        else if (dynamic_pointer_cast<ngcomp::TrefftzFESpace> (fes))
-          nfes = make_shared<
-              ngcomp::EmbTrefftzFESpace<ngcomp::TrefftzFESpace>> (emb);
-        else
-          throw Exception ("Unknown base fes");
-        return nfes;
-      },
-      R"mydelimiter(
-        Given a TrefftzEmbedding this wrapper produces a Trefftz FESpace using local projections,
-        following the Embedded Trefftz-DG methodology.
+  pyspace.def (py::init ([] (shared_ptr<ngcomp::TrefftzEmbedding> emb) {
+                 auto nfes = make_shared<ngcomp::EmbeddedTrefftzFES> (emb);
+                 nfes->Update ();
+                 connect_auto_update (nfes.get ());
+                 return nfes;
+               }),
+               R"mydelimiter(
+                Constructs a new EmbeddedTrefftzFESpace from a TrefftzEmbedding.
 
-        :param TrefftzEmbedding: The Trefftz embedding object.
+                :param emb: TrefftzEmbedding object that defines the embedding
+               )mydelimiter",
+               py::arg ("emb"));
 
-        :return: EmbTrefftzFES
-        )mydelimiter",
-      py::arg ("emb"));
+  pyspace.def ("GetEmbedding", &ngcomp::EmbeddedTrefftzFES::GetEmbedding,
+               "Get the TrefftzEmbedding");
+  pyspace.def_property_readonly ("emb", &EmbeddedTrefftzFES::GetEmbedding);
+  pyspace.def_property_readonly ("base", &EmbeddedTrefftzFES::GetBaseFESpace);
+  pyspace.def_property_readonly (
+      "components", [] (shared_ptr<EmbeddedTrefftzFES> self) {
+        py::list lst;
+        auto base = self->GetBaseFESpace ();
+        if (auto comp = dynamic_pointer_cast<CompoundFESpace> (base))
+          for (auto sp : comp->Spaces ())
+            lst.append (sp);
+        return lst;
+      });
 }
 
 #endif // NGS_PYTHON
