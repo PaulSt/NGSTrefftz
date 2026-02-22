@@ -97,8 +97,14 @@ namespace ngcomp
     {
       return etmatsc;
     }
-    optional<Matrix<double>> GetEtmat (size_t i) const { return etmats[i]; }
-    optional<Matrix<Complex>> GetEtmatC (size_t i) const { return etmatsc[i]; }
+    const optional<Matrix<double>> &GetEtmat (size_t i) const
+    {
+      return etmats[i];
+    }
+    const optional<Matrix<Complex>> &GetEtmatC (size_t i) const
+    {
+      return etmatsc[i];
+    }
     const Array<size_t> &GetLocalNodfsTrefftz () const noexcept
     {
       return local_ndofs_trefftz;

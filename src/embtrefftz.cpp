@@ -836,23 +836,23 @@ namespace ngcomp
                 }
             }
 
-          shared_ptr<FlatMatrix<double>> fes_ip_sqinv = nullptr;
+          FlatMatrix<double> fes_ip_sqinv;
           if (stats)
             elmat_A_copy = elmat_A;
           if (fes_ip)
             {
-              fes_ip_sqinv = make_shared<FlatMatrix<double>> (ndof, ndof, lh);
-              *fes_ip_sqinv = 0.;
+              fes_ip_sqinv.AssignMemory (ndof, ndof, lh);
+              fes_ip_sqinv = 0.;
 
-              addIntegrationToElementMatrix (*fes_ip_sqinv,
+              addIntegrationToElementMatrix (fes_ip_sqinv,
                                              fes_ip_integrators[VOL], *ma,
                                              element_id, *fes, *fes, lh);
 
-              getPseudoInverse (*fes_ip_sqinv, 0, lh, true);
+              getPseudoInverse (fes_ip_sqinv, 0, lh, true);
 
               FlatMatrix<SCAL> elmat_A_temp (elmat_A.Height (),
                                              elmat_A.Width (), lh);
-              elmat_A_temp = elmat_A * (*fes_ip_sqinv);
+              elmat_A_temp = elmat_A * fes_ip_sqinv;
               elmat_A.Assign (elmat_A_temp);
             }
 
@@ -915,7 +915,7 @@ namespace ngcomp
           if (fes_ip)
             {
               FlatMatrix<SCAL, ColMajor> Vtemp (V.Width (), V.Height (), lh);
-              Vtemp = (*fes_ip_sqinv) * V;
+              Vtemp = fes_ip_sqinv * V;
               V.Assign (Vtemp);
             }
           elmat_Tt = V.Cols (ndof - ndof_trefftz_i, ndof);
@@ -1098,7 +1098,8 @@ namespace ngcomp
 
           if (fes->IsComplex ())
             {
-              auto elmat_T_inv = (*etmatsc_trefftz_inv[element_id.Nr ()]);
+              const auto &elmat_T_inv
+                  = (*etmatsc_trefftz_inv[element_id.Nr ()]);
               FlatVector<Complex> partsol (dofs.Size (), lh);
               calculateParticularSolution<Complex> (
                   partsol, lfis, *fes_test, element_id, *ma, elmat_T_inv, lh);
@@ -1106,7 +1107,7 @@ namespace ngcomp
             }
           else
             {
-              auto elmat_T_inv = *etmats_trefftz_inv[element_id.Nr ()];
+              const auto &elmat_T_inv = *etmats_trefftz_inv[element_id.Nr ()];
               FlatVector<double> partsol (dofs.Size (), lh);
               calculateParticularSolution<double> (
                   partsol, lfis, *fes_test, element_id, *ma, elmat_T_inv, lh);
@@ -1144,7 +1145,7 @@ namespace ngcomp
 
           if (fes->IsComplex ())
             {
-              Matrix<Complex> elmat_T_inv
+              const Matrix<Complex> &elmat_T_inv
                   = (*etmatsc_trefftz_inv[element_id.Nr ()]);
               FlatVector<Complex> partsol (dofs.Size (), lh);
               FlatVector<Complex> elvec (dofs_test.Size (), lh);
@@ -1154,7 +1155,8 @@ namespace ngcomp
             }
           else
             {
-              Matrix<> elmat_T_inv = *etmats_trefftz_inv[element_id.Nr ()];
+              const Matrix<> &elmat_T_inv
+                  = *etmats_trefftz_inv[element_id.Nr ()];
               FlatVector<double> partsol (dofs.Size (), lh);
               FlatVector<double> elvec (dofs_test.Size (), lh);
               _trhsvec->GetIndirect (dofs_test, elvec);
@@ -1473,7 +1475,7 @@ namespace ngcomp
   {
     std::call_once (this->etmats_inv_computed, [&] () {
       this->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
-        optional<Matrix<double>> etmat = emb->GetEtmat (ei.Nr ());
+        const optional<Matrix<double>> &etmat = emb->GetEtmat (ei.Nr ());
         this->etmats_inv[ei.Nr ()]
             = (etmat) ? make_optional (getPseudoInverse (*etmat, 0)) : nullopt;
       });
@@ -1486,7 +1488,7 @@ namespace ngcomp
   {
     std::call_once (this->etmats_inv_computed, [&] () {
       this->GetMeshAccess ()->IterateElements (VOL, [&] (ElementId ei) {
-        optional<Matrix<Complex>> etmat = emb->GetEtmatC (ei.Nr ());
+        const optional<Matrix<Complex>> &etmat = emb->GetEtmatC (ei.Nr ());
         this->etmatsc_inv[ei.Nr ()]
             = (etmat) ? make_optional (getPseudoInverse (*etmat, 0)) : nullopt;
       });
@@ -1508,7 +1510,7 @@ namespace ngcomp
 
   template <typename SCAL>
   void T_VTransformM (SliceMatrix<SCAL> mat, const TRANSFORM_TYPE type,
-                      const Matrix<SCAL> elmat)
+                      const Matrix<SCAL> &elmat)
   {
     static Timer timer ("EmbTrefftz: TransformM");
     RegionTimer reg (timer);
@@ -1546,16 +1548,14 @@ namespace ngcomp
   void EmbeddedTrefftzFES::VTransformMR (ElementId ei, SliceMatrix<double> mat,
                                          TRANSFORM_TYPE type) const
   {
-    const auto elmat = *(emb->GetEtmat (ei.Nr ()));
-    T_VTransformM (mat, type, elmat);
+    T_VTransformM (mat, type, *etmats[ei.Nr ()]);
   }
 
   void
   EmbeddedTrefftzFES::VTransformMC (ElementId ei, SliceMatrix<Complex> mat,
                                     TRANSFORM_TYPE type) const
   {
-    const auto elmat = *(emb->GetEtmatC (ei.Nr ()));
-    T_VTransformM (mat, type, elmat);
+    T_VTransformM (mat, type, *etmatsc[ei.Nr ()]);
   }
 
   template <typename SCAL>
