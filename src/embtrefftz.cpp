@@ -132,6 +132,30 @@ INLINE bool IsInactiveOrHiddenDof (const FESpace &fes, DofId d)
   return fes.GetDofCouplingType (d) <= HIDDEN_DOF;
 }
 
+INLINE bool
+IsIgnoredRegularDof (shared_ptr<const BitArray> ignoredofs, DofId d)
+{
+  if (!ignoredofs)
+    return false;
+  if (!IsRegularDof (d))
+    return false;
+  const size_t id = size_t (d);
+  return (id < ignoredofs->Size ()) && ignoredofs->Test (id);
+}
+
+INLINE void
+RemoveIgnoredDofs (Array<DofId> &dofs, shared_ptr<const BitArray> ignoredofs)
+{
+  if (!ignoredofs)
+    return;
+
+  size_t w = 0;
+  for (size_t i = 0; i < dofs.Size (); i++)
+    if (!IsIgnoredRegularDof (ignoredofs, dofs[i]))
+      dofs[w++] = dofs[i];
+  dofs.SetSize (w);
+}
+
 /// Extracts the submatrix of `elmat`,
 /// consisting only of entries `elmat[i,j]`, where `i` and `j`
 /// are visible dofs.
@@ -166,7 +190,7 @@ FlatMatrix<SCAL> extractVisibleDofs (
       DofId d = dofs[j];
       if (IsInactiveOrHiddenDof (fes, d))
         continue;
-      if (ignoredofs->Test (d))
+      if (IsIgnoredRegularDof (ignoredofs, d))
         continue;
       pos_trial.Append (j);
       vdofs.Append (d);
@@ -231,7 +255,7 @@ Matrix<SCAL> putbackVisibleDofs (
   size_t all_ignored_dofs = 0;
   if (ignoredofs)
     for (size_t j = 0; j < dofs.Size (); j++)
-      if (ignoredofs->Test (dofs[j]))
+      if (IsIgnoredRegularDof (ignoredofs, dofs[j]))
         all_ignored_dofs++;
 
   Matrix<SCAL> elmat (dofs.Size (), velmat.Width () + all_ignored_dofs);
@@ -240,23 +264,27 @@ Matrix<SCAL> putbackVisibleDofs (
   // vdofs are assumed to be in the same local order as dofs, just filtered.
   size_t vj = 0;
   size_t ignored_col = 0;
+
   for (size_t j = 0; j < dofs.Size (); j++)
     {
       DofId d = dofs[j];
       bool is_hidden = IsInactiveOrHiddenDof (fes, d);
-      bool is_ignored = ignoredofs->Test (d);
+      bool is_ignored = IsIgnoredRegularDof (ignoredofs, d);
+
       if (!is_hidden && !is_ignored)
         {
           for (size_t i = 0; i < velmat.Width (); i++)
-            elmat (j, all_ignored_dofs + i) = velmat (vj, i);
+            elmat (j, i) = velmat (vj, i);
           vj++;
         }
+
       if (is_ignored)
         {
-          elmat (j, ignored_col) = static_cast<SCAL> (1.0);
+          elmat (j, velmat.Width () + ignored_col) = static_cast<SCAL> (1.0);
           ignored_col++;
         }
     }
+
   return elmat;
 }
 
@@ -297,74 +325,74 @@ createConformingTrefftzTables (Table<int> &table, Table<int> &table2,
   const auto ma = fes.GetMeshAccess ();
   const size_t ne = ma->GetNE (VOL);
   const size_t ndof_conforming
-      = (fes_conformity) ? fes_conformity->GetNDof () : 0;
-  TableCreator<int> creator (ne);
-  TableCreator<int> creator2 (ne);
+      = fes_conformity ? fes_conformity->GetNDof () : 0;
 
-  size_t trefftz_dof_offset = ndof_conforming;
+  size_t global_trefftz_ndof = 0;
+  for (auto ei : ma->Elements (VOL))
+    if (etmats[ei.Nr ()])
+      global_trefftz_ndof += local_ndofs_trefftz[ei.Nr ()];
 
-  Array<DofId> new_ignore_dofnrs; // TODO: should be keyd
+  Array<DofId> new_ignore_dofnrs;
+  size_t nignored = 0;
   if (ignoredofs)
     {
       new_ignore_dofnrs.SetSize (fes.GetNDof ());
-      for (size_t i = 0; i < fes.GetNDof (); i++)
+      new_ignore_dofnrs = NO_DOF_NR;
+
+      size_t ignored_offset = ndof_conforming + global_trefftz_ndof;
+      for (size_t i = 0; i < ignoredofs->Size (); i++)
         if (ignoredofs->Test (i))
-          new_ignore_dofnrs[i] = trefftz_dof_offset++;
+          new_ignore_dofnrs[i] = ignored_offset + (nignored++);
     }
 
-  size_t global_trefftz_ndof = 0;
+  TableCreator<int> creator (ne);  // rows  (base dofs)
+  TableCreator<int> creator2 (ne); // cols  (embedded dofs)
+
   for (; !creator.Done (); creator++, creator2++)
     {
-      size_t next_trefftz_dof = trefftz_dof_offset;
+      size_t next_trefftz_dof = ndof_conforming;
+
       for (auto ei : ma->Elements (VOL))
         {
           if (!etmats[ei.Nr ()])
             continue;
 
-          // first compute the Trefftz dofs. The dof numbers of the Trefftz
-          // dofs are shifted up by conforming_ndof, to avoid conflicts between
-          // Trefftz and Constraint dofs.
-          size_t nz = local_ndofs_trefftz[ei.Nr ()];
           Array<DofId> dnums;
           fes.GetDofNrs (ei, dnums);
+
           bool hasregdof = false;
           for (DofId d : dnums)
             if (IsRegularDof (d))
               {
                 creator.Add (ei.Nr (), d);
                 hasregdof = true;
-                if (ignoredofs && ignoredofs->Test (d))
-                  creator2.Add (ei.Nr (), new_ignore_dofnrs[d]);
               }
-          // assumption here: Either all or no dof is regular
-          if (hasregdof)
-            {
-              for (size_t d = 0; d < nz; d++)
-                creator2.Add (ei.Nr (), next_trefftz_dof++);
-            }
 
-          // then compute the Constraint dofs.
+          // assumption here: Either all or no dof is regular
+          if (!hasregdof)
+            continue;
+
+          // table2 column order matches local embedding columns [C | T | I]
+          // 1) Conforming dofs
           if (fes_conformity)
             {
               Array<DofId> dofs_conforming;
               fes_conformity->GetDofNrs (ei, dofs_conforming, VISIBLE_DOF);
 
-              bool hasregdof = false;
               for (DofId d : dofs_conforming)
                 if (IsRegularDof (d))
-                  {
-                    // creator.Add (ei.Nr (), d);
-                    hasregdof = true;
-                  }
-              // assumption here: Either all or no dof is regular
-              if (hasregdof)
-                {
-                  for (DofId d : dofs_conforming)
-                    creator2.Add (ei.Nr (), d);
-                }
+                  creator2.Add (ei.Nr (), d);
             }
+          // 2) Element Trefftz dofs
+          size_t nz = local_ndofs_trefftz[ei.Nr ()];
+          for (size_t d = 0; d < nz; d++)
+            creator2.Add (ei.Nr (), next_trefftz_dof++);
+          // 3) Ignored base dofs (local base order), using global renumber
+          if (ignoredofs)
+            for (DofId d : dnums)
+              if (IsIgnoredRegularDof (ignoredofs, d))
+                creator2.Add (ei.Nr (), new_ignore_dofnrs[d]);
         }
-      global_trefftz_ndof = next_trefftz_dof - ndof_conforming;
     }
 
   (*testout) << "created " << global_trefftz_ndof << " many trefftz dofs"
@@ -372,66 +400,38 @@ createConformingTrefftzTables (Table<int> &table, Table<int> &table2,
 
   table = creator.MoveTable ();
   table2 = creator2.MoveTable ();
-  return global_trefftz_ndof + ndof_conforming;
+
+  return ndof_conforming + global_trefftz_ndof + nignored;
 }
 
+/// assembles a global sparse matrix from the given element matrices.
+/// @param etmats vector of all element matrices
+/// @param fes non-Trefftz finite element space
+/// @tparam SCAL scalar type of the matrix entries
 template <typename SCAL>
-INLINE void
-fillSparseMatrixWithData (SparseMatrix<SCAL> &P,
-                          const FlatArray<optional<Matrix<SCAL>>> &etmats,
-                          const Table<int> &table, const Table<int> &table2,
-                          const MeshAccess &ma,
-                          shared_ptr<BitArray> ignoredofs)
+shared_ptr<BaseMatrix>
+Elmats2Sparse (const FlatArray<optional<Matrix<SCAL>>> &etmats,
+               const FlatArray<size_t> &local_ndofs_trefftz,
+               const FESpace &fes, shared_ptr<const FESpace> fes_conformity,
+               shared_ptr<BitArray> ignoredofs)
 {
-  P.SetZero ();
-  for (auto ei : ma.Elements (VOL))
+  const auto ma = fes.GetMeshAccess ();
+
+  Table<int> table, table2;
+  const size_t conformity_plus_trefftz_dofs = createConformingTrefftzTables (
+      table, table2, etmats, local_ndofs_trefftz, fes, fes_conformity,
+      ignoredofs);
+
+  auto P = make_shared<SparseMatrix<SCAL>> (
+      fes.GetNDof (), conformity_plus_trefftz_dofs, table, table2, false);
+
+  P->SetZero ();
+  for (auto ei : ma->Elements (VOL))
     if (etmats[ei.Nr ()])
-      {
-        P.AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()],
-                            *etmats[ei.Nr ()]);
-      }
+      P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()],
+                           *etmats[ei.Nr ()]);
 
-  if (ignoredofs)
-    {
-      Array<int> id_index (ignoredofs->NumSet ());
-      for (size_t i = 0, id = 0; i < ignoredofs->Size (); i++)
-        if (ignoredofs->Test (i))
-          {
-            id_index[id] = P.GetPosition (i, id);
-            id++;
-          }
-      Vector<SCAL> one (id_index.Size ());
-      one = 1.0;
-      P.AsVector ().SetIndirect (id_index, one);
-    }
-}
-
-namespace ngcomp
-{
-  /// assembles a global sparse matrix from the given element matrices.
-  /// @param etmats vector of all element matrices
-  /// @param fes non-Trefftz finite element space
-  /// @tparam SCAL scalar type of the matrix entries
-  template <typename SCAL>
-  shared_ptr<BaseMatrix>
-  Elmats2Sparse (const FlatArray<optional<Matrix<SCAL>>> &etmats,
-                 const FlatArray<size_t> &local_ndofs_trefftz,
-                 const FESpace &fes, shared_ptr<const FESpace> fes_conformity,
-                 shared_ptr<BitArray> ignoredofs)
-  {
-    const auto ma = fes.GetMeshAccess ();
-
-    Table<int> table, table2;
-    const size_t conformity_plus_trefftz_dofs = createConformingTrefftzTables (
-        table, table2, etmats, local_ndofs_trefftz, fes, fes_conformity,
-        ignoredofs);
-
-    auto P = make_shared<SparseMatrix<SCAL>> (
-        fes.GetNDof (), conformity_plus_trefftz_dofs, table, table2, false);
-    fillSparseMatrixWithData (*P, etmats, table, table2, *ma, ignoredofs);
-
-    return P;
-  }
+  return P;
 }
 
 void calculateBilinearFormIntegrators (
@@ -863,7 +863,8 @@ namespace ngcomp
                 {
                   elmat_B.Assign (extractVisibleDofs (
                       elmat_B, *fes_conformity, *fes_test, fes_conformity,
-                      dofs_conforming, dofs_test, dofs_conforming, lh));
+                      dofs_conforming, dofs_test, dofs_conforming, lh, false,
+                      ignoredofs));
                 }
 
               elmat_A.Assign (extractVisibleDofs (
@@ -1092,10 +1093,7 @@ namespace ngcomp
 
           Array<DofId> dofs, dofs_test;
           fes->GetDofNrs (element_id, dofs, VISIBLE_DOF);
-          if (ignoredofs)
-            for (size_t i = 0; i < dofs.Size (); i++)
-              if (ignoredofs->Test (dofs[i]))
-                dofs.RemoveElement (i);
+          RemoveIgnoredDofs (dofs, ignoredofs);
           fes_test->GetDofNrs (element_id, dofs_test, VISIBLE_DOF);
 
           if (fes->IsComplex ())
@@ -1141,10 +1139,7 @@ namespace ngcomp
 
           Array<DofId> dofs, dofs_test;
           fes->GetDofNrs (element_id, dofs, VISIBLE_DOF);
-          if (ignoredofs)
-            for (size_t i = 0; i < dofs.Size (); i++)
-              if (ignoredofs->Test (dofs[i]))
-                dofs.RemoveElement (i);
+          RemoveIgnoredDofs (dofs, ignoredofs);
           fes_test->GetDofNrs (element_id, dofs_test, VISIBLE_DOF);
 
           if (fes->IsComplex ())
@@ -1208,10 +1203,6 @@ namespace ngcomp
                        fes->GetDofNrs (ei, dofs);
                        const FlatArray<DofId> tdofs
                            = this->GetTDofNrs (ei.Nr ());
-                       // if (tdofs != tdofs2)
-                       //   cerr << "tdofs: " << tdofs << "\ntdofs2: " <<
-                       //   tdofs2
-                       //        << endl;
 
                        if (fes_is_complex)
                          {
@@ -1379,8 +1370,21 @@ namespace ngcomp
 
     if (ignoredofs)
       {
+        size_t ndof_trefftz = 0;
+        for (auto ei : this->ma->Elements (VOL))
+          {
+            // skip this element, if there is no element matrix defined
+            if ((this->IsComplex () && !emb->GetEtmatC (ei.Nr ()))
+                || (!this->IsComplex () && !emb->GetEtmat (ei.Nr ())))
+              continue;
+
+            const size_t ndof_trefftz_local
+                = emb->GetLocalNodfsTrefftz ()[ei.Nr ()];
+            ndof_trefftz += ndof_trefftz_local;
+          }
+
         auto base_free = basefes->GetFreeDofs ();
-        size_t idof = ndof_conforming;
+        size_t idof = ndof_conforming + ndof_trefftz;
         for (size_t i = 0; i < ignoredofs->Size (); i++)
           if (ignoredofs->Test (i))
             {
@@ -1418,25 +1422,25 @@ namespace ngcomp
     const size_t new_ndof = ignored_dofs + ndof_conformity + ndof_trefftz;
     this->SetNDof (new_ndof);
     this->ctofdof.SetSize (new_ndof);
-
     // Global dof ordering (consistent with createConformingTrefftzTables):
-    //   [0 .. ndof_conformity-1]                 conforming dofs
-    //   [ndof_conformity .. ndof_conformity+ignored_dofs-1] ignored base dofs
-    //   [ndof_conformity+ignored_dofs .. end]    element-wise Trefftz dofs
+    //   [0 .. ndof_conformity-1]                                  conforming
+    //   dofs [ndof_conformity .. ndof_conformity+ndof_trefftz-1] element-wise
+    //   Trefftz dofs [ndof_conformity+ndof_trefftz .. end] ignored base dofs
+    // 1) Conformity block (preserve base coupling types)
     if (fes_conformity)
       for (size_t i = 0; i < ndof_conformity; i++)
         this->ctofdof[i] = fes_conformity->GetDofCouplingType (i);
-
+    // 2) Trefftz block
+    for (size_t i = ndof_conformity; i < ndof_conformity + ndof_trefftz; i++)
+      this->ctofdof[i] = LOCAL_DOF;
+    // 3) Ignored block (preserve base coupling types)
     if (ignoredofs)
       {
-        size_t idof = ndof_conformity;
+        size_t idof = ndof_conformity + ndof_trefftz;
         for (size_t i = 0; i < ignoredofs->Size (); i++)
           if (ignoredofs->Test (i))
             this->ctofdof[idof++] = basefes->GetDofCouplingType (i);
       }
-
-    for (size_t i = ndof_conformity + ignored_dofs; i < new_ndof; i++)
-      this->ctofdof[i] = LOCAL_DOF;
   }
 
   void EmbeddedTrefftzFES::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
