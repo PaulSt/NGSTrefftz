@@ -255,7 +255,7 @@ void fesFromOp (const SumOfIntegrals &op, shared_ptr<FESpace> &fes,
 /// the Trefftz embedding.
 /// @tparam NZ_FUNC has signature `(ElementId) -> size_t`
 template <typename SCAL>
-size_t
+std::tuple<size_t, size_t, size_t>
 createConformingTrefftzTables (Table<int> &table, Table<int> &table2,
                                const FlatArray<optional<Matrix<SCAL>>> &etmats,
                                const FlatArray<size_t> &local_ndofs_trefftz,
@@ -342,7 +342,7 @@ createConformingTrefftzTables (Table<int> &table, Table<int> &table2,
   table = creator.MoveTable ();
   table2 = creator2.MoveTable ();
 
-  return ndof_conforming + global_trefftz_ndof + nignored;
+  return { ndof_conforming, global_trefftz_ndof, nignored };
 }
 
 template <typename T> Table<T> DeepCopyTable (const Table<T> &src)
@@ -369,21 +369,31 @@ Elmats2Sparse (const FlatArray<optional<Matrix<SCAL>>> &etmats,
   const auto ma = fes.GetMeshAccess ();
 
   Table<int> table, table2;
-  const size_t conformity_plus_trefftz_dofs = createConformingTrefftzTables (
-      table, table2, etmats, local_ndofs_trefftz, fes, fes_conformity,
-      ignoredofs);
+  const auto [ndof_conforming, global_trefftz_ndof, nignored]
+      = createConformingTrefftzTables (table, table2, etmats,
+                                       local_ndofs_trefftz, fes,
+                                       fes_conformity, ignoredofs);
+  size_t sumndof = ndof_conforming + global_trefftz_ndof + nignored;
 
   Table<int> table2_graph = DeepCopyTable (table2);
 
-  auto P = make_shared<SparseMatrix<SCAL>> (fes.GetNDof (),
-                                            conformity_plus_trefftz_dofs,
-                                            table, table2_graph, false);
+  auto P = make_shared<SparseMatrix<SCAL>> (fes.GetNDof (), sumndof, table,
+                                            table2_graph, false);
 
   P->SetZero ();
   for (auto ei : ma->Elements (VOL))
     if (etmats[ei.Nr ()])
       P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()],
                            *etmats[ei.Nr ()]);
+
+  // make sure that overlapping ignoredofs are correct identity
+  if (ignoredofs)
+    {
+      size_t ignored_offset = ndof_conforming + global_trefftz_ndof;
+      for (size_t i = 0; i < ignoredofs->Size (); i++)
+        if (ignoredofs->Test (i))
+          P->operator() (i, ignored_offset++) = static_cast<SCAL> (1.0);
+    }
 
   return P;
 }
@@ -1218,6 +1228,44 @@ namespace ngcomp
                              vec->SetIndirect (dofs, elvec);
                          }
                      });
+
+    // careful with overlapping ignoredofs, needs setindirect
+    if (fes_conformity && ignoredofs && ignoredofs->NumSet ())
+      {
+        const size_t nignored = ignoredofs->NumSet ();
+        if (size_t (tvec->Size ()) < nignored)
+          throw Exception (
+              "TrefftzEmbedding::Embed: tvec too small for ignored block");
+
+        const size_t ignored_offset = size_t (tvec->Size ()) - nignored;
+
+        Array<DofId> ignored_base_dofs, ignored_emb_dofs;
+        ignored_base_dofs.SetSize (nignored);
+        ignored_emb_dofs.SetSize (nignored);
+
+        size_t k = 0;
+        for (size_t d = 0; d < ignoredofs->Size (); d++)
+          if (ignoredofs->Test (d))
+            {
+              ignored_base_dofs[k] = DofId (d);
+              ignored_emb_dofs[k] = DofId (ignored_offset + k);
+              k++;
+            }
+
+        if (fes_is_complex)
+          {
+            FlatVector<Complex> vals (nignored, lh);
+            tvec->GetIndirect (ignored_emb_dofs, vals);
+            vec->SetIndirect (ignored_base_dofs, vals);
+          }
+        else
+          {
+            FlatVector<double> vals (nignored, lh);
+            tvec->GetIndirect (ignored_emb_dofs, vals);
+            vec->SetIndirect (ignored_base_dofs, vals);
+          }
+      }
+
     return vec;
   }
 
