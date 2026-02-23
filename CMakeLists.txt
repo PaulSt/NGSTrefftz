@@ -244,33 +244,31 @@ set_tests_properties(embtrefftz trefftz tents
     PROPERTIES ENVIRONMENT PYTHONPATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON}:$ENV{PYTHONPATH})
 
 if(NGSTREFFTZ_USE_GTEST)
-    #target_compile_options(_trefftz PRIVATE -Wall)# -Wextra -Wpedantic)
     find_package(GTest REQUIRED)
     include(GoogleTest)
-    add_executable( trefftz_gtest
-      ${CMAKE_SOURCE_DIR}/test/embtrefftz_gtest.cpp
-    )
-    target_include_directories( trefftz_gtest BEFORE PRIVATE
-      $<TARGET_PROPERTY:ngsolve,INTERFACE_INCLUDE_DIRECTORIES>
-      ${CMAKE_SOURCE_DIR}/src
-      )
     if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
-      find_package(Python3 REQUIRED COMPONENTS Development.Embed)
+        find_package(Python3 REQUIRED COMPONENTS Development.Embed)
     endif()
-    target_link_libraries( trefftz_gtest PUBLIC
-      GTest::gtest
-      GTest::gtest_main
-      Python3::Python
-      ${LAPACK_LIBRARIES}
-      ngsolve
-      ngstrefftz
-      GTest::gtest_main
+    add_executable(trefftz_gtest
+        ${CMAKE_SOURCE_DIR}/test/embtrefftz_gtest.cpp
     )
-    target_compile_definitions(trefftz_gtest PRIVATE NGSTREFFTZ_USE_LAPACK)
-    set_target_properties(trefftz_gtest PROPERTIES PREFIX "" CXX_STANDARD 17)
-    set(GTEST_DISABLE_AUTO_DISCOVER 1)
-    gtest_discover_tests(trefftz_gtest)
-endif(NGSTREFFTZ_USE_GTEST)
+    target_include_directories(trefftz_gtest BEFORE PRIVATE
+        $<TARGET_PROPERTY:ngsolve,INTERFACE_INCLUDE_DIRECTORIES>
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    target_link_libraries(trefftz_gtest PRIVATE
+        GTest::gtest_main
+        Python3::Python
+        ngsolve
+        ngstrefftz
+    )
+    set_target_properties(trefftz_gtest PROPERTIES
+        PREFIX ""
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED ON
+    )
+    gtest_add_tests(TARGET trefftz_gtest)
+endif()
 
 # make uninstall
 add_custom_target("uninstall" COMMENT "Uninstall installed files")

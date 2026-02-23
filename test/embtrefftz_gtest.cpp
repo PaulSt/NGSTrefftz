@@ -1,108 +1,34 @@
 #include <gtest/gtest.h>
+#include "embtrefftz.hpp"
 
-#include "embtrefftz.cpp"
-
-TEST (reorderMatrixColumnsTest, throwOnDimensionMismatch)
-{
-  LocalHeap lh (1000);
-
-  FlatMatrix<double> mat (1, 2, lh);
-  Array<DofId> empty_arr (1);
-
-  ASSERT_THROW (reorderMatrixColumns (mat, empty_arr, lh),
-                std::invalid_argument);
-}
-
-TEST (reorderMatrixColumnsTest, doesNotFailOnEmptyInput)
-{
-  LocalHeap lh (1000);
-
-  FlatMatrix<double> mat (0, 0, lh);
-  Array<DofId> empty_arr (0);
-
-  reorderMatrixColumns (mat, empty_arr, lh);
-}
-
-TEST (reorderMatrixColumnsTest, workOnSingularInput)
-{
-  LocalHeap lh (1000);
-
-  FlatMatrix<int> mat (1, 1, lh);
-  FlatMatrix<int> mat_expected (1, 1, lh);
-  Array<DofId> arr (1);
-
-  arr[0] = 1;
-  mat (0, 0) = 3;
-  mat_expected (0, 0) = 3;
-
-  reorderMatrixColumns (mat, arr, lh);
-  ASSERT_EQ (mat (0, 0), mat_expected (0, 0));
-}
-
-TEST (reorderMatrixColumnsTest, sortProperly)
-{
-  LocalHeap lh (1000);
-
-  FlatMatrix<int> mat (1, 3, lh);
-  FlatMatrix<int> mat_expected (1, 3, lh);
-  Array<DofId> arr (3);
-
-  arr[0] = 3;
-  arr[1] = 2;
-  arr[2] = 1;
-  mat (0, 0) = 4;
-  mat (0, 1) = 5;
-  mat (0, 2) = 6;
-  mat_expected (0, 0) = 6;
-  mat_expected (0, 1) = 5;
-  mat_expected (0, 2) = 4;
-
-  reorderMatrixColumns (mat, arr, lh);
-  for (int j : { 0, 1, 2 })
-    {
-      EXPECT_EQ (mat (0, j), mat_expected (0, j));
-    }
-}
-
-TEST (max_a_minus_b_or_0_Test, aBiggerThanB)
-{
-  ASSERT_EQ (max_a_minus_b_or_0 (3, 2), 1);
-}
-
-TEST (max_a_minus_b_or_0_Test, aEqualsB)
-{
-  ASSERT_EQ (max_a_minus_b_or_0 (4, 4), 0);
-}
-
-TEST (max_a_minus_b_or_0_Test, aLessThanBNoUnderflow)
-{
-  ASSERT_EQ (max_a_minus_b_or_0 (3, 4), 0);
-}
+using namespace ngcomp;
 
 TEST (calcNdofTrefftzTest, noTrefftzOp)
 {
-  ASSERT_EQ (
-      calcNdofTrefftz (3, 3, 1, size_t (3), true, SliceVector<double>{}), 2);
+  ASSERT_EQ (calcNdofTrefftz<double> (3, 3, 1, size_t (3), true,
+                                      SliceVector<double>{}),
+             2);
 }
 
 TEST (calcNdofTrefftzTest, noTrefftzOpUnderflow)
 {
-  ASSERT_EQ (
-      calcNdofTrefftz (3, 3, 4, size_t (3), true, SliceVector<double>{}), 0);
+  ASSERT_EQ (calcNdofTrefftz<double> (3, 3, 4, size_t (3), true,
+                                      SliceVector<double>{}),
+             0);
 }
 
 TEST (calcNdofTrefftzTest, NdofTrefftzGiven)
 {
-  ASSERT_EQ (
-      calcNdofTrefftz (3, 4, 5, size_t (42), false, SliceVector<double>{}),
-      42);
+  ASSERT_EQ (calcNdofTrefftz<double> (3, 4, 5, size_t (42), false,
+                                      SliceVector<double>{}),
+             42);
 }
 
 TEST (calcNdofTrefftzTest, EpsilonGiven)
 {
-  ASSERT_EQ (
-      calcNdofTrefftz (42, 4, 5, double (1e-2), false, SliceVector<double>{}),
-      42 - 4 - 5);
+  ASSERT_EQ (calcNdofTrefftz<double> (42, 4, 5, double (1e-2), false,
+                                      SliceVector<double>{}),
+             42 - 4 - 5);
 }
 
 TEST (calcNdofTrefftzTest, EpsilonGivenWithSingularValues)
@@ -130,9 +56,9 @@ TEST (copyBitArrayTest, CopySourceZeros)
   copyBitArray (target, source);
 
   for (size_t i = 0; i < source->Size (); i++)
-    EXPECT_EQ (target->Test (i), false);
+    EXPECT_FALSE (target->Test (i));
   for (size_t i = source->Size (); i < target->Size (); i++)
-    EXPECT_EQ (target->Test (i), true);
+    EXPECT_TRUE (target->Test (i));
 }
 
 TEST (copyBitArrayTest, CopySourceOnes)
@@ -146,7 +72,41 @@ TEST (copyBitArrayTest, CopySourceOnes)
   copyBitArray (target, source);
 
   for (size_t i = 0; i < source->Size (); i++)
-    EXPECT_EQ (target->Test (i), true);
+    EXPECT_TRUE (target->Test (i));
   for (size_t i = source->Size (); i < target->Size (); i++)
-    EXPECT_EQ (target->Test (i), false);
+    EXPECT_FALSE (target->Test (i));
+}
+
+TEST (TrefftzEmbeddingCtorTest, NdofAndEpsModeSelection)
+{
+  using std::make_shared;
+  using std::shared_ptr;
+
+  // Case 1: conflicting inputs => must throw invalid_argument immediately
+  EXPECT_THROW (
+      (ngcomp::TrefftzEmbedding (nullptr, nullptr, nullptr, nullptr,
+                                 /*_ndof_trefftz=*/5,
+                                 /*_eps=*/1e-8, nullptr, nullptr, nullptr,
+                                 nullptr, nullptr, nullptr)),
+      std::invalid_argument);
+
+  // Case 2: valid arguments, but no FESpace, fail later
+  try
+    {
+      ngcomp::TrefftzEmbedding emb (
+          nullptr, nullptr, nullptr, nullptr,
+          /*_ndof_trefftz=*/std::numeric_limits<size_t>::max (),
+          /*_eps=*/1e-8, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+
+      FAIL () << "Expected constructor to throw due to missing FESpace";
+    }
+  catch (const std::invalid_argument &)
+    {
+      FAIL () << "Wrong branch taken: constructor treated sentinel "
+                 "ndof_trefftz as conflict";
+    }
+  catch (...)
+    {
+      SUCCEED (); // expected: later failure (e.g. no fespace found)
+    }
 }
