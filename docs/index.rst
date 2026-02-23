@@ -22,6 +22,7 @@
     </style>
 
 .. only:: html
+
     .. role:: raw-html(raw)
         :format: html
 
@@ -44,8 +45,6 @@ NGSTrefftz is an add-On to NGSolve for Trefftz methods.
    :maxdepth: 1
 
    docu
-
-
 
 .. toctree::
    :caption: Notebooks

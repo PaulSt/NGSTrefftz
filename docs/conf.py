@@ -93,6 +93,7 @@ nbsphinx_prolog = r"""
     </style>
 
 .. only:: html
+
     .. role:: raw-html(raw)
         :format: html
 """

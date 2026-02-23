@@ -5,10 +5,10 @@
 To get an overview of the project, check out the [README](README.md).
 
 The [issue tracker](https://github.com/paulst/ngstrefftz/issues)
-is the preferred channel for [bug reports](#bugs), [features
-requests](#features) and [submitting pull requests](#pull-requests). 
+is the preferred channel for [bug reports](#bug-reports), features
+requests and [submitting pull requests](#pull-requests). 
 
-For personal support requests you can reach me at [p.stocker@math.uni-goettingen.de](mailto:p.stocker@math.uni-goettingen.de).
+For personal support requests you can reach me at [paul.stocker@univie.ac.at](mailto:paul.stocker@univie.ac.at).
 
 ## Bug reports
 

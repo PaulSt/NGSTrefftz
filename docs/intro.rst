@@ -12,12 +12,10 @@ We give a short introduction to Trefftz-DG methods for the model problem of the 
     \newcommand{\tjump}[1]{[\![{#1} ]\!]_\tau}
     \newcommand{\avg}[1]{\{\!\!\{#1\}\!\!\}}
     \newcommand{\nx}{n_\mathbf{x}} 
-    \begin{align*} \begin{split}
-        \begin{cases}
-        -\Delta u = 0 &\text{ in } \Omega, \\
-        u=g &\text{ on } \partial \Omega,
-        \end{cases}
-    \end{split} \end{align*}
+    \begin{cases}
+    -\Delta u = 0 &\text{ in } \Omega, \\
+    u=g &\text{ on } \partial \Omega,
+    \end{cases}
 
 
 Harmonic polynomials
@@ -26,29 +24,20 @@ For an element :math:`K` in out mesh :math:`\Th` we define the local Trefftz spa
 
 .. math::
 
-    \begin{align*} \begin{split}
-    \mathbb{T}^p(K):=\big\{
-    f\in\mathbb{P}^p(K) \mid \Delta f = 0
-    \big\},
-    \qquad p\in \mathbb{N}.
-    \end{split} \end{align*}
+    \mathbb{T}^p(K):=\big\{ f\in\mathbb{P}^p(K) \mid \Delta f = 0 \big\}, \qquad p\in \mathbb{N}.
 
 
 For the Laplace problem the Trefftz space is given by harmonic polynomials, e.g. for polynomials of order 3 in two dimensions the space is given by
 
 .. math::
 
-    \begin{align*} \begin{split}
     \mathbb{T}^3(K)=\text{span}\{1,x,y,xy,x^2-y^2,x^3-3y^2x,y^3-3x^2y\}
-    \end{split} \end{align*}
 
 The local degrees of freedom are reduced from the dimension of the full polynomials, given by :math:`\big(\begin{smallmatrix}p+n\\p\end{smallmatrix}\big)`, to
 
 .. math::
 
-    \begin{align*} \begin{split}
     \dim\mathbb{T}^p(K)=\begin{cases} 2 & n=1\\ 2p+1 & n=2\\ (p+1)^2 & n=3\end{cases}.
-    \end{split} \end{align*}
 
 Numerical treatment
 ----------------------------------------
@@ -57,15 +46,13 @@ The IP-DG method for the Laplace equation is given by
 
 .. math::
 
-    \begin{align}\label{eq:dglap}
-        \begin{split}
-        a_h(u,v) &= \int_\dom \nabla u\nabla v\ dV
-        -\int_{\Fh^\text{int}}\left(\avg{\nabla u}\jump{v}+\avg{\nabla v}\jump{u} 
-        - \frac{\alpha p^2}{h}\jump{u}\jump{v} \right) dS \\
-               &\qquad -\int_{\Fh^\text{bnd}}\left(\nx\cdot\nabla u v+\nx\cdot\nabla v u-\frac{\alpha p^2}{h} u v \right) dS\\
-        \ell(v) &= \int_{\Fh^\text{bnd}}\left(\frac{\alpha p^2}{h} gv -\nx\cdot\nabla vg\right) dS.
-        \end{split}
-    \end{align}
+    \begin{aligned}
+    a_h(u,v) &= \int_\dom \nabla u\nabla v\ dV
+    -\int_{\Fh^\text{int}}\left(\avg{\nabla u}\jump{v}+\avg{\nabla v}\jump{u} 
+    - \frac{\alpha p^2}{h}\jump{u}\jump{v} \right) dS \\
+           &\qquad -\int_{\Fh^\text{bnd}}\left(\nx\cdot\nabla u v+\nx\cdot\nabla v u-\frac{\alpha p^2}{h} u v \right) dS\\
+    \ell(v) &= \int_{\Fh^\text{bnd}}\left(\frac{\alpha p^2}{h} gv -\nx\cdot\nabla vg\right) dS.
+    \end{aligned}
 
 where :math:`h` is the mesh size, :math:`p` is the polynomial degree and :math:`\alpha>0`.
 
@@ -82,9 +69,7 @@ For a given mesh we construct the Trefftz finite element space as
 
 .. math::
 
-    \begin{align*} \begin{split}
     \mathbb{T}^p(\Th):=\prod_{K\in\Th} \mathbb{T}^p(K)
-    \end{split} \end{align*}
 
 in NGSolve this is done by
 
