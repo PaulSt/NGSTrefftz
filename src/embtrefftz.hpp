@@ -10,12 +10,15 @@
 
 namespace ngcomp
 {
-  /// Copies `source` to the beginning of `target`.
-  ///
-  /// For `source.Size() > target.Size()`,
-  /// the behaviour is undefined.
   void copyBitArray (const shared_ptr<BitArray> target,
                      const shared_ptr<const BitArray> source);
+
+  template <typename SCAL>
+  size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
+                          const size_t ndof_conforming,
+                          const std::variant<size_t, double> ndof_trefftz,
+                          const bool trefftz_op_is_null,
+                          const SliceVector<SCAL> singular_values);
 
   class TrefftzEmbedding
   {

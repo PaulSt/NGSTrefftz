@@ -13,40 +13,6 @@ INLINE size_t max_a_minus_b_or_0 (const size_t a, const size_t b) noexcept
   return (a >= b) ? a - b : 0;
 }
 
-/// Derives the correct local Trefftz ndof form several parameters.
-template <typename SCAL>
-size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
-                        const size_t ndof_conforming,
-                        const std::variant<size_t, double> ndof_trefftz,
-                        const bool trefftz_op_is_null,
-                        const SliceVector<SCAL> singular_values)
-{
-
-  if (trefftz_op_is_null)
-    {
-      // ndof - ndof_conforming might underflow
-      return max_a_minus_b_or_0 (ndof, ndof_conforming);
-    }
-  else if (holds_alternative<size_t> (ndof_trefftz))
-    {
-      return std::get<size_t> (ndof_trefftz);
-    }
-  else
-    {
-      const double eps = std::get<double> (ndof_trefftz);
-
-      // ndof - (ndof_test + ndof_conforming) might underflow
-      size_t tndof = max_a_minus_b_or_0 (ndof, ndof_test + ndof_conforming);
-
-      for (const SCAL sigma : singular_values)
-        {
-          if (abs (sigma) < eps)
-            tndof++;
-        }
-      return tndof;
-    }
-}
-
 template <typename SCAL, typename TDIST>
 inline void addIntegrationToElementMatrix (
     MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> elmat,
@@ -703,6 +669,50 @@ void calculateParticularSolution (
 namespace ngcomp
 {
   mutex stats_mutex;
+
+  /// Derives the correct local Trefftz ndof form several parameters.
+  template <typename SCAL>
+  size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
+                          const size_t ndof_conforming,
+                          const std::variant<size_t, double> ndof_trefftz,
+                          const bool trefftz_op_is_null,
+                          const SliceVector<SCAL> singular_values)
+  {
+
+    if (trefftz_op_is_null)
+      {
+        // ndof - ndof_conforming might underflow
+        return max_a_minus_b_or_0 (ndof, ndof_conforming);
+      }
+    else if (holds_alternative<size_t> (ndof_trefftz))
+      {
+        return std::get<size_t> (ndof_trefftz);
+      }
+    else
+      {
+        const double eps = std::get<double> (ndof_trefftz);
+
+        // ndof - (ndof_test + ndof_conforming) might underflow
+        size_t tndof = max_a_minus_b_or_0 (ndof, ndof_test + ndof_conforming);
+
+        for (const SCAL sigma : singular_values)
+          {
+            if (abs (sigma) < eps)
+              tndof++;
+          }
+        return tndof;
+      }
+  }
+
+  template size_t
+  ngcomp::calcNdofTrefftz<double> (size_t, size_t, size_t,
+                                   std::variant<size_t, double>, bool,
+                                   ngbla::SliceVector<double>);
+
+  template size_t
+  ngcomp::calcNdofTrefftz<Complex> (size_t, size_t, size_t,
+                                    std::variant<size_t, double>, bool,
+                                    ngbla::SliceVector<Complex>);
 
   template <typename SCAL> void TrefftzEmbedding::EmbTrefftz ()
   {
