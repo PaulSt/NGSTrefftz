@@ -47,31 +47,6 @@ size_t calcNdofTrefftz (const size_t ndof, const size_t ndof_test,
     }
 }
 
-/// @throw std::invalid_argument The number of columns in the matrix must be
-///   equal to the number of DofIds in `dof_nrs`
-template <typename SCAL, typename TDIST>
-void reorderMatrixColumns (
-    MatrixView<SCAL, ngbla::RowMajor, size_t, size_t, TDIST> &matrix,
-    const Array<DofId> &dof_nrs, LocalHeap &lh)
-{
-  const auto [n, m] = matrix.Shape ();
-  if (m != dof_nrs.Size ())
-    throw std::invalid_argument (
-        "the width of the matrix must match the length of the dof_nrs");
-
-  const auto heap_reset = HeapReset (lh);
-
-  FlatArray<int> map (m, lh);
-  for (size_t i = 0; i < map.Size (); i++)
-    map[i] = i;
-
-  QuickSortI (dof_nrs, map);
-  auto matrix_copy = FlatMatrix<SCAL> (n, m, lh);
-  matrix_copy = matrix;
-  for (auto j : Range (m))
-    matrix.Col (j) = matrix_copy.Col (map[j]);
-}
-
 template <typename SCAL, typename TDIST>
 inline void addIntegrationToElementMatrix (
     MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> elmat,
@@ -404,6 +379,16 @@ createConformingTrefftzTables (Table<int> &table, Table<int> &table2,
   return ndof_conforming + global_trefftz_ndof + nignored;
 }
 
+template <typename T> Table<T> DeepCopyTable (const Table<T> &src)
+{
+  TableCreator<T> creator (src.Size ());
+  for (; !creator.Done (); creator++)
+    for (size_t i = 0; i < src.Size (); i++)
+      for (auto v : src[i])
+        creator.Add (i, v);
+  return creator.MoveTable ();
+}
+
 /// assembles a global sparse matrix from the given element matrices.
 /// @param etmats vector of all element matrices
 /// @param fes non-Trefftz finite element space
@@ -422,8 +407,11 @@ Elmats2Sparse (const FlatArray<optional<Matrix<SCAL>>> &etmats,
       table, table2, etmats, local_ndofs_trefftz, fes, fes_conformity,
       ignoredofs);
 
-  auto P = make_shared<SparseMatrix<SCAL>> (
-      fes.GetNDof (), conformity_plus_trefftz_dofs, table, table2, false);
+  Table<int> table2_graph = DeepCopyTable (table2);
+
+  auto P = make_shared<SparseMatrix<SCAL>> (fes.GetNDof (),
+                                            conformity_plus_trefftz_dofs,
+                                            table, table2_graph, false);
 
   P->SetZero ();
   for (auto ei : ma->Elements (VOL))
@@ -885,9 +873,6 @@ namespace ngcomp
               elmat_L.Assign (elmat_L_tmp);
               elmat_Cr.Assign (elmat_B.Rows (ndof_conforming));
             }
-          // reorder elmat_cr. Needs to happen after visible dof extraction.
-          // #TODO: why is this necessary?
-          reorderMatrixColumns (elmat_Cr, dofs_conforming, lh);
 
           FlatMatrix<SCAL, ColMajor> UT (elmat_A.Height (), lh),
               V (elmat_A.Width (), lh);
@@ -1047,9 +1032,6 @@ namespace ngcomp
         createConformingTrefftzTables (
             _table_dummy, tdof_nrs, this->GetEtmats (),
             this->GetLocalNodfsTrefftz (), *fes, fes_conformity, ignoredofs);
-        for (size_t i = 0; i < this->GetEtmats ().Size (); i++)
-          if (this->GetEtmat (i))
-            QuickSort (tdof_nrs[i]);
       }
     else
       {
@@ -1057,9 +1039,6 @@ namespace ngcomp
         createConformingTrefftzTables (
             _table_dummy, tdof_nrs, this->GetEtmatsC (),
             this->GetLocalNodfsTrefftz (), *fes, fes_conformity, ignoredofs);
-        for (size_t i = 0; i < this->GetEtmatsC ().Size (); i++)
-          if (this->GetEtmatC (i))
-            QuickSort (tdof_nrs[i]);
       }
   }
 
