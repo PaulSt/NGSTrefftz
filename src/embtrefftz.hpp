@@ -37,6 +37,9 @@ namespace ngcomp
     /// of the conforming Trefftz space
     Table<DofId> tdof_nrs;
 
+    // trefftz embedding only in the volume or only on the boundary (surface)
+    VorB vb = VOL;
+
     bool compute_elmat_T_inv = true;
 
     std::variant<size_t, double> ndof_trefftz;
@@ -116,6 +119,7 @@ namespace ngcomp
     {
       return tdof_nrs[elnr];
     }
+    VorB VB () const noexcept { return vb; }
   };
 
   class EmbeddedTrefftzFES : public FESpace
