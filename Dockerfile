@@ -1,4 +1,4 @@
-FROM python:3.10-slim-bullseye
+FROM python:3.14-slim
 
 WORKDIR /home/app
 
@@ -8,7 +8,7 @@ WORKDIR /home/app
 #RUN cd /home/app/ngstrefftz/docs && sphinx-build -M html . _build -vvv
 
 RUN pip install ngstrefftz --pre
-ENV PYTHONPATH=/usr/local/lib/python3.10/site-packages/
+ENV PYTHONPATH=/usr/local/lib/python3.14/site-packages/
 ENV LD_LIBRARY_PATH=/usr/local/lib/
 
 RUN pip3 install numpy webgui_jupyter_widgets notebook
