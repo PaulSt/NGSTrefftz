@@ -368,7 +368,7 @@ Elmats2Sparse (const FlatArray<optional<Matrix<SCAL>>> &etmats,
                shared_ptr<BitArray> ignoredofs)
 {
   const auto ma = fes.GetMeshAccess ();
-  const VorB vb = ma->GetNE(VOL) > 0 ? VOL : BND;
+  const VorB vb = ma->GetNE (VOL) > 0 ? VOL : BND;
 
   Table<int> table, table2;
   const auto [ndof_conforming, global_trefftz_ndof, nignored]
@@ -462,7 +462,7 @@ bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
 {
   for (auto icf : bf.icfs)
     {
-      if (icf->dx.vb == mesh_element.VB())
+      if (icf->dx.vb == mesh_element.VB ())
         if ((!icf->dx.definedonelements)
             || (icf->dx.definedonelements->Test (mesh_element.Nr ())))
           return true;
@@ -848,8 +848,6 @@ namespace ngcomp
             }
 
           FlatMatrix<double> fes_ip_sqinv;
-          if (stats)
-            elmat_A_copy = elmat_A;
           if (fes_ip)
             {
               fes_ip_sqinv.AssignMemory (ndof, ndof, lh);
@@ -896,6 +894,8 @@ namespace ngcomp
               elmat_L.Assign (elmat_L_tmp);
               elmat_Cr.Assign (elmat_B.Rows (ndof_conforming));
             }
+          if (stats)
+            elmat_A_copy = elmat_A;
 
           FlatMatrix<SCAL, ColMajor> UT (elmat_A.Height (), lh),
               V (elmat_A.Width (), lh);
@@ -1444,7 +1444,7 @@ namespace ngcomp
 
     size_t ndof_trefftz = 0;
 
-    for (auto ei : this->ma->Elements (emb->VB()))
+    for (auto ei : this->ma->Elements (emb->VB ()))
       {
         // skip this element, if there is no element matrix defined
         if ((this->IsComplex () && !emb->GetEtmatC (ei.Nr ()))
@@ -1488,7 +1488,7 @@ namespace ngcomp
 
   void EmbeddedTrefftzFES::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
   {
-    if (!basefes->DefinedOn (ei) || ei.VB () != emb->VB())
+    if (!basefes->DefinedOn (ei) || ei.VB () != emb->VB ())
       return;
     const FlatArray<DofId> tdofnrs = this->emb->GetTDofNrs (ei.Nr ());
 
@@ -1514,7 +1514,7 @@ namespace ngcomp
   EmbeddedTrefftzFES::GetEtmatInv (size_t idx) const
   {
     std::call_once (this->etmats_inv_computed, [&] () {
-      this->GetMeshAccess ()->IterateElements (emb->VB(), [&] (ElementId ei) {
+      this->GetMeshAccess ()->IterateElements (emb->VB (), [&] (ElementId ei) {
         const optional<Matrix<double>> &etmat = emb->GetEtmat (ei.Nr ());
         this->etmats_inv[ei.Nr ()]
             = (etmat) ? make_optional (getPseudoInverse (*etmat, 0)) : nullopt;
@@ -1527,7 +1527,7 @@ namespace ngcomp
   EmbeddedTrefftzFES::GetEtmatCInv (size_t idx) const
   {
     std::call_once (this->etmats_inv_computed, [&] () {
-      this->GetMeshAccess ()->IterateElements (emb->VB(), [&] (ElementId ei) {
+      this->GetMeshAccess ()->IterateElements (emb->VB (), [&] (ElementId ei) {
         const optional<Matrix<Complex>> &etmat = emb->GetEtmatC (ei.Nr ());
         this->etmatsc_inv[ei.Nr ()]
             = (etmat) ? make_optional (getPseudoInverse (*etmat, 0)) : nullopt;
