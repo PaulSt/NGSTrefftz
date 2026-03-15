@@ -531,11 +531,11 @@ def test_ConstrainedTrefftzFESpace(
     `debug`: True: print debug info, default: False
 
     >>> test_ConstrainedTrefftzFESpace(order=3, debug=False) # doctest:+ELLIPSIS
-    3...e-05
+    [3...e-05, ...e-12]
 
     >>> with TaskManager():
     ...   test_ConstrainedTrefftzFESpace(order=3, debug=False) # doctest:+ELLIPSIS
-    3...e-05
+    [3...e-05, ...e-12]
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=maxh))
 
@@ -551,8 +551,9 @@ def test_ConstrainedTrefftzFESpace(
     cop = u * vF * dx(element_boundary=True)
     crhs = uF * vF * dx(element_boundary=True)
 
+    stats = {}
     emb = TrefftzEmbedding(
-        top=top, cop=cop, crhs=crhs, ndof_trefftz=2 * order + 1 - 3
+        top=top, cop=cop, crhs=crhs, ndof_trefftz=2 * order + 1 - 3, stats=stats
     )
     fes_trefftz = EmbeddedTrefftzFES(emb)
 
@@ -568,7 +569,7 @@ def test_ConstrainedTrefftzFESpace(
 
         Draw(tpgfu)
         input()
-    return sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d))
+    return [sqrt(Integrate((tpgfu - dg.exactlap) ** 2, mesh2d)), stats['conformity_residual'][0]]
 
 
 def test_ConstrainedTrefftzFESpaceDirichlet():
