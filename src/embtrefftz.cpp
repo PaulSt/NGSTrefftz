@@ -402,23 +402,50 @@ Elmats2Sparse (const FlatArray<optional<Matrix<SCAL>>> &etmats,
 
 void calculateBilinearFormIntegrators (
     const SumOfIntegrals &bf,
-    Array<shared_ptr<BilinearFormIntegrator>> bfis[4])
+    Array<shared_ptr<BilinearFormIntegrator>> bfis[4],
+    shared_ptr<MeshAccess> ma)
 {
   for (auto icf : bf.icfs)
     {
       DifferentialSymbol &dx = icf->dx;
-      bfis[dx.vb] += icf->MakeBilinearFormIntegrator ();
+      shared_ptr<BilinearFormIntegrator> bfi
+          = icf->MakeBilinearFormIntegrator ();
+
+      if (dx.definedon) // DifferentialSymbol cannot set definedon region as it
+                        // has no mesh access.
+        {
+          if (auto definedon_string = get_if<string> (&*dx.definedon);
+              definedon_string)
+            {
+              Region reg (ma, dx.vb, *definedon_string);
+              bfi->SetDefinedOn (reg.Mask ());
+            }
+        }
+
+      bfis[dx.vb] += bfi;
     }
 }
 
 void calculateLinearFormIntegrators (
     const SumOfIntegrals &trhs,
-    Array<shared_ptr<LinearFormIntegrator>> lfis[4])
+    Array<shared_ptr<LinearFormIntegrator>> lfis[4], shared_ptr<MeshAccess> ma)
 {
   for (auto icf : trhs.icfs)
     {
       DifferentialSymbol &dx = icf->dx;
-      lfis[dx.vb] += icf->MakeLinearFormIntegrator ();
+      shared_ptr<LinearFormIntegrator> lfi = icf->MakeLinearFormIntegrator ();
+
+      if (dx.definedon)
+        {
+          if (auto definedon_string = get_if<string> (&*dx.definedon);
+              definedon_string)
+            {
+              Region reg (ma, dx.vb, *definedon_string);
+              lfi->SetDefinedOn (reg.Mask ());
+            }
+        }
+
+      lfis[dx.vb] += lfi;
     }
 }
 
@@ -458,14 +485,31 @@ bool fesHasInactiveDofs (const FESpace &fes)
 }
 
 bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
-                           const Ngs_Element &mesh_element)
+                           const Ngs_Element &mesh_element,
+                           shared_ptr<MeshAccess> ma)
 {
   for (auto icf : bf.icfs)
     {
-      if (icf->dx.vb == mesh_element.VB ())
-        if ((!icf->dx.definedonelements)
-            || (icf->dx.definedonelements->Test (mesh_element.Nr ())))
-          return true;
+      if (icf->dx.vb != mesh_element.VB ())
+        continue;
+
+      if (!icf->dx.definedonelements
+          || icf->dx.definedonelements->Test (mesh_element.Nr ()))
+        return true;
+
+      if (icf->dx.definedon) // check region
+        {
+          if (auto definedon_string = get_if<string> (&*icf->dx.definedon);
+              definedon_string)
+            {
+              Region reg (ma, icf->dx.vb, *definedon_string);
+              const BitArray &definedon = reg.Mask ();
+              size_t mat = ma->GetElIndex (mesh_element);
+              if (mat >= definedon.Size ())
+                return false;
+              return definedon.Test (mat);
+            }
+        }
     }
   return false;
 }
@@ -651,7 +695,8 @@ void calculateParticularSolution (
     {
       for (const auto &lfi : lfis[vorb])
         {
-          if (lfi->DefinedOnElement (ei.Nr ()))
+          if (lfi->DefinedOnElement (ei.Nr ())
+              && lfi->DefinedOn (ma.GetElIndex (ei)))
             {
               auto &mapped_trafo
                   = trafo.AddDeformation (lfi->GetDeformation ().get (), mlh);
@@ -756,15 +801,15 @@ namespace ngcomp
     Array<shared_ptr<BilinearFormIntegrator>> op_integrators[4],
         cop_lhs_integrators[4], cop_rhs_integrators[4];
     if (top)
-      calculateBilinearFormIntegrators (*top, op_integrators);
+      calculateBilinearFormIntegrators (*top, op_integrators, ma);
     if (cop && crhs)
       {
-        calculateBilinearFormIntegrators (*cop, cop_lhs_integrators);
-        calculateBilinearFormIntegrators (*crhs, cop_rhs_integrators);
+        calculateBilinearFormIntegrators (*cop, cop_lhs_integrators, ma);
+        calculateBilinearFormIntegrators (*crhs, cop_rhs_integrators, ma);
       }
     Array<shared_ptr<BilinearFormIntegrator>> fes_ip_integrators[4];
     if (fes_ip)
-      calculateBilinearFormIntegrators (*fes_ip, fes_ip_integrators);
+      calculateBilinearFormIntegrators (*fes_ip, fes_ip_integrators, ma);
 
     Array<optional<Matrix<SCAL>>> etmats (num_elements);
     Array<optional<Matrix<SCAL>>> etmats_trefftz_inv (num_elements);
@@ -779,7 +824,7 @@ namespace ngcomp
     particular_solution_vec->operator= (0.0);
     Array<shared_ptr<LinearFormIntegrator>> lfis[4];
     if (trhs)
-      calculateLinearFormIntegrators (*trhs, lfis);
+      calculateLinearFormIntegrators (*trhs, lfis, ma);
 
     // we compute embedding matrices E_C, E_T and particular solution u_p that
     // satisfy
@@ -797,9 +842,9 @@ namespace ngcomp
 
           // skip this element, if the bilinear forms are not defined
           // on this element
-          if (!(top && bfIsDefinedOnElement (*top, mesh_element))
-              && !(cop && bfIsDefinedOnElement (*cop, mesh_element))
-              && !(crhs && bfIsDefinedOnElement (*crhs, mesh_element)))
+          if (!(top && bfIsDefinedOnElement (*top, mesh_element, ma))
+              && !(cop && bfIsDefinedOnElement (*cop, mesh_element, ma))
+              && !(crhs && bfIsDefinedOnElement (*crhs, mesh_element, ma)))
             return;
 
           Array<DofId> dofs, dofs_test, dofs_conforming;
@@ -1091,7 +1136,7 @@ namespace ngcomp
       particular_solution_vec = make_shared<VVector<double>> (fes->GetNDof ());
     particular_solution_vec->operator= (0.0);
     Array<shared_ptr<LinearFormIntegrator>> lfis[4];
-    calculateLinearFormIntegrators (*_trhs, lfis);
+    calculateLinearFormIntegrators (*_trhs, lfis, ma);
 
     ma->IterateElements (
         vb, clh, [&] (Ngs_Element mesh_element, LocalHeap &lh) {
