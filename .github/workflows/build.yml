@@ -75,8 +75,13 @@ jobs:
       - name: install ngsolve
         run: |
           cd NGSTrefftz
-          pip install numpy scipy  mkl-devel==2025.* mkl==2025.*
-          pip install ngsolve
+          pip install numpy scipy tomli mkl-devel==2025.* mkl==2025.*
+          # pip install ngsolve
+          python3 <<'PY'
+          import tomllib, pathlib, subprocess, sys
+          deps = tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["dependencies"]
+          subprocess.check_call(["pip", "install", *deps])
+          PY
       - name: build ngstrefftz gtest
         run: |
           mkdir $GITHUB_WORKSPACE/NGSTrefftz/make

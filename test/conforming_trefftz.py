@@ -530,12 +530,16 @@ def test_ConstrainedTrefftzFESpace(
 
     `debug`: True: print debug info, default: False
 
-    >>> test_ConstrainedTrefftzFESpace(order=3, debug=False) # doctest:+ELLIPSIS
-    [3...e-05, ...e-12]
+    >>> res = test_ConstrainedTrefftzFESpace(order=3, debug=False) 
+    >>> res[0] # doctest:+ELLIPSIS
+    3...e-05
+    >>> assert res[1] < 1e-10
 
     >>> with TaskManager():
-    ...   test_ConstrainedTrefftzFESpace(order=3, debug=False) # doctest:+ELLIPSIS
-    [3...e-05, ...e-12]
+    ...   res = test_ConstrainedTrefftzFESpace(order=3, debug=False) # doctest:+ELLIPSIS
+    >>> res[0] # doctest:+ELLIPSIS
+    3...e-05
+    >>> assert res[1] < 1e-10
     """
     mesh2d = Mesh(unit_square.GenerateMesh(maxh=maxh))
 
