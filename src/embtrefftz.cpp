@@ -932,6 +932,14 @@ namespace ngcomp
             {
               auto elmat_T_inv = elmat_A_inv.Cols (
                   ndof_conforming, ndof_conforming + ndof_test);
+
+              if (fes_ip)
+                {
+                  FlatMatrix<SCAL> elmat_T_inv_phys (ndof, ndof_test, lh);
+                  elmat_T_inv_phys = fes_ip_sqinv * elmat_T_inv;
+                  elmat_T_inv = elmat_T_inv_phys;
+                }
+
               if (trhs)
                 {
                   FlatVector<SCAL> partsol (dofs.Size (), lh);
