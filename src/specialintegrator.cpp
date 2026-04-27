@@ -106,7 +106,7 @@ namespace ngfem
     auto elvertices = ElementTopology::GetVertices (eltype);
     if (D == 3)
       {
-        const FACE *faces = ElementTopology::GetFaces (eltype);
+        const FACE *faces = ElementTopology::GetFaces (eltype).Data ();
         for (int i = 0; i < nvert_facet; i++)
           {
             for (int j = 0; j < D; j++)
@@ -115,7 +115,7 @@ namespace ngfem
       }
     if (D == 2)
       {
-        const EDGE *edges = ElementTopology::GetEdges (eltype);
+        const EDGE *edges = ElementTopology::GetEdges (eltype).Data ();
         for (int i = 0; i < nvert_facet; i++)
           {
             for (int j = 0; j < D; j++)
@@ -135,8 +135,8 @@ namespace ngfem
     // int nfaces = ElementTopology::GetNFaces (eltype);
     // int nvert_face = ElementTopology::GetNVertices (faces[LocalFacetNr]);
     auto elvertices = ElementTopology::GetVertices (eltype);
-    const FACE *faces = ElementTopology::GetFaces (eltype);
-    const EDGE *edges = ElementTopology::GetEdges (eltype);
+    const FACE *faces = ElementTopology::GetFaces (eltype).Data ();
+    const EDGE *edges = ElementTopology::GetEdges (eltype).Data ();
 
     slabheight = numeric_limits<double>::max ();
     slabwidth = D > 2 ? numeric_limits<double>::max () : 1.0;
