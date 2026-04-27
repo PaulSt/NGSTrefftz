@@ -77,10 +77,9 @@ namespace ngcomp
       }
     else if (eqtype == EqType::helmholtz || eqtype == EqType::helmholtzconj)
       {
-        evaluator[VOL] = make_shared<
-            T_DifferentialOperatorC<DiffOpMappedComplex<Dim>>> ();
-        flux_evaluator[VOL] = make_shared<
-            T_DifferentialOperatorC<DiffOpMappedGradientComplex<Dim>>> ();
+        evaluator[VOL] = make_shared<PlaneWaveValueOperator<Dim>> ();
+        flux_evaluator[VOL] = make_shared<PlaneWaveGradientOperator<Dim>> ();
+        additional_evaluators.Set ("grad", flux_evaluator[VOL]);
       }
     else
       {

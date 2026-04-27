@@ -112,274 +112,289 @@ namespace ngfem
       CalcDShape (mip, dshape);
       return dshape;
     }
+
     virtual Vec<D, Complex>
     EvaluateGradComplex (const BaseMappedIntegrationPoint &ip,
                          BareSliceVector<Complex> x) const;
   };
 
-  /// Identity
-  template <int D, typename FEL = PlaneWaveElement<D>>
-  class DiffOpMappedComplex : public DiffOp<DiffOpMappedComplex<D, FEL>>
+  // --------------------------------------------------------------------------
+  // Direct complex-valued value operator for PlaneWaveElement
+  // --------------------------------------------------------------------------
+  template <int D> class PlaneWaveValueOperator : public DifferentialOperator
   {
   public:
-    enum
-    {
-      DIM = 1
-    };
-    enum
-    {
-      DIM_SPACE = D
-    };
-    enum
-    {
-      DIM_ELEMENT = D
-    };
-    enum
-    {
-      DIM_DMAT = 1
-    };
-    enum
-    {
-      DIFFORDER = 0
-    };
+    PlaneWaveValueOperator () : DifferentialOperator (1, 1, VOL, 0) { ; }
 
-    static string Name () { return "Id"; }
-    static constexpr bool SUPPORT_PML = true;
+    string Name () const override { return "pw-id"; }
 
-    static const FEL &Cast (const FiniteElement &fel)
+  private:
+    static const PlaneWaveElement<D> &Cast (const FiniteElement &fel)
     {
-      return static_cast<const FEL &> (fel);
+      return static_cast<const PlaneWaveElement<D> &> (fel);
     }
 
-    static void
-    GenerateMatrix (const FiniteElement &, const BaseMappedIntegrationPoint &,
-                    BareSliceMatrix<double, ColMajor>, LocalHeap &)
-    {
-      throw Exception ("Not implemented for complex DiffOp");
-    }
-    static void
-    GenerateMatrix (const FiniteElement &fel,
-                    const BaseMappedIntegrationPoint &mip,
-                    BareSliceMatrix<Complex, ColMajor> mat, LocalHeap &)
-    {
-      Cast (fel).CalcShape (mip, mat.Row (0));
-    }
-
-    template <typename MAT>
-    static void GenerateMatrixIR (const FiniteElement &fel,
-                                  const BaseMappedIntegrationRule &mir,
-                                  MAT &mat, LocalHeap &)
-    {
-      Cast (fel).CalcShape (mir, Trans (mat));
-    }
-
-    template <typename MIP, class TVX, class TVY>
-    static void
-    Apply (const FiniteElement &, const MIP &, const TVX &, TVY &, LocalHeap &)
-    {
-      throw Exception ("Not implemented for complex DiffOp");
-    }
-
-    static void
-    Apply (const FiniteElement &fel, const MappedIntegrationPoint<D, D> &mip,
-           const BareSliceVector<Complex> &x, FlatVector<Complex> &y,
-           LocalHeap &)
-    {
-      y (0) = Cast (fel).EvaluateComplex (mip, x);
-    }
-
-    template <class MIR, class TMY>
-    static void ApplyIR (const FiniteElement &, const MIR &,
-                         BareSliceVector<double>, TMY, LocalHeap &)
-    {
-      throw Exception ("Not implemented for complex DiffOp");
-    }
-
-    template <class MIR>
-    static void
-    ApplyIR (const FiniteElement &fel, const MIR &mir,
-             BareSliceVector<Complex> x, SliceMatrix<Complex> y, LocalHeap &)
-    {
-      Cast (fel).Evaluate (mir, x,
-                           FlatVector<Complex> (mir.Size (), &y (0, 0)));
-    }
-
-    template <typename MIP, class TVX, class TVY>
-    static void ApplyTrans (const FiniteElement &, const MIP &, const TVX &,
-                            TVY &, LocalHeap &)
-    {
-      throw Exception ("Not implemented for complex DiffOp");
-    }
-
-    template <typename MIR, class TVX, class TVY>
-    static void ApplyTransIR (const FiniteElement &fel, const MIR &mir,
-                              const TVX &x, TVY &y, LocalHeap &lh)
-    {
-      y.Range (0, DIM * fel.GetNDof ()) = 0.0;
-      for (size_t i = 0; i < mir.Size (); i++)
-        {
-          HeapReset hr (lh);
-          ApplyTransAdd (fel, mir[i], x.Row (i), y, lh);
-        }
-    }
-
-    template <typename MIP, class TVX, class TVY>
-    static void ApplyTransAdd (const FiniteElement &fel, const MIP &mip,
-                               const TVX &x, TVY &y, LocalHeap &lh)
-    {
-      HeapReset hr (lh);
-      typedef typename TVX::TSCAL TSCAL;
-      FlatMatrixFixHeight<DIM_DMAT, TSCAL> mat (DIM * fel.GetNDof (), lh);
-      // Cast(fel).CalcShape (mip, mat.Row(0));
-      GenerateMatrix (fel, mip, mat, lh);
-      // y.Range (DIM * fel.GetNDof ()) += Trans (mat) * x;
-
-      FlatVector<TSCAL> vec (DIM * fel.GetNDof (), lh);
-      vec = Trans (mat) * x;
-      y.Range (DIM * fel.GetNDof ()) += vec;
-    }
-  };
-
-  /// Gradient operator of dimension D
-  template <int D, typename FEL = PlaneWaveElement<D>>
-  class DiffOpMappedGradientComplex
-      : public DiffOp<DiffOpMappedGradientComplex<D, FEL>>
-  {
   public:
-    enum
+    void CalcMatrix (const FiniteElement &fel,
+                     const BaseMappedIntegrationPoint &mip,
+                     BareSliceMatrix<Complex, ColMajor> mat,
+                     LocalHeap &lh) const override
     {
-      DIM = 1
-    };
-    enum
-    {
-      DIM_SPACE = D
-    };
-    enum
-    {
-      DIM_ELEMENT = D
-    };
-    enum
-    {
-      DIM_DMAT = D
-    };
-    enum
-    {
-      DIFFORDER = 1
-    };
+      const size_t ndof = fel.GetNDof ();
 
-    static string Name () { return "grad"; }
-    static constexpr bool SUPPORT_PML = true;
+      FlatVector<Complex> shape (ndof, lh);
+      Cast (fel).CalcShape (mip, shape);
 
-    static const FEL &Cast (const FiniteElement &fel)
-    {
-      return static_cast<const FEL &> (fel);
+      for (size_t j = 0; j < ndof; ++j)
+        mat (0, j) = shape (j);
     }
-
-    template <typename SCALMIP, typename MAT>
-    static void
-    GenerateMatrix (const FiniteElement &fel,
-                    const MappedIntegrationPoint<D, D, SCALMIP> &mip,
-                    MAT &&mat, LocalHeap &)
-    {
-      Cast (fel).CalcDShape (mip, Trans (mat));
-    }
-
-    template <typename MIP, class TVY>
-    static void
-    Apply (const FiniteElement &fel, const MIP &mip,
-           const BareSliceVector<Complex> &x, TVY &&y, LocalHeap &lh)
-    {
-      Vec<D, Complex> hv = Cast (fel).EvaluateGradComplex (mip, x);
-      y = hv;
-      HeapReset hr (lh);
-    }
-
-    template <typename MIP, class TVX, class TVY>
-    static void Apply (const FiniteElement &, const MIP &, const TVX &, TVY &&,
-                       LocalHeap &)
-    {
-      throw Exception ("Not implemented for complex DiffOp ");
-    }
-
-    // using DiffOp<DiffOpMappedGradient<D, FEL> >::ApplyTans;
-    template <typename MIP, class TVX, class TVY>
-    static void ApplyTrans (const FiniteElement &fel, const MIP &mip,
-                            const TVX &x, TVY &y, LocalHeap &lh)
-    {
-      typedef typename TVX::TSCAL TSCAL;
-      Vec<D, TSCAL> vx = x;
-      // auto hv = mip.GetJacobianInverse() * vx;
-      y.Range (0, fel.GetNDof ())
-          = Cast (fel).GetDShape (mip, lh) * vx; //* hv;
-    }
-
-    template <typename MIP, class TVX, class TVY>
-    static void ApplyTransAdd (const FiniteElement &, const MIP &, const TVX &,
-                               TVY &, LocalHeap &)
-    {
-      throw Exception ("Not implemented for complex DiffOp ");
-    }
-    // for complex shapes in lfi, symbolicintegrator.cpp T_CalcFacetVector ->
-    // diffop_impl.hpp ApplyTrans,ApplyTransIR ->
-    template <class MIP>
-    static void ApplyTransAdd (const FiniteElement &fel, const MIP &mip,
-                               FlatVector<Complex> x,
-                               BareSliceVector<Complex> y, LocalHeap &lh)
-    {
-      FlatVector<Complex> vec (DIM * fel.GetNDof (), lh);
-      vec = (Cast (fel).GetDShapeComplex (mip, lh)) * x;
-      y.Range (DIM * fel.GetNDof ()) += vec;
-    }
-
-    template <typename MIR, class TVX, class TVY>
-    static void ApplyTransIR (const FiniteElement &fel, const MIR &mir,
-                              const TVX &x, TVY &y, LocalHeap &lh)
-    {
-      y.Range (0, DIM * fel.GetNDof ()) = 0.0;
-      for (size_t i = 0; i < mir.Size (); i++)
-        {
-          HeapReset hr (lh);
-          ApplyTransAdd (fel, mir[i], x.Row (i), y, lh);
-        }
-    }
-  };
-
-  template <typename DIFFOP>
-  class T_DifferentialOperatorC : public T_DifferentialOperator<DIFFOP>
-  {
-    // copy past form diffop_impl to fix fast compile missing complex functions
 
     void
-    Apply (const FiniteElement &bfel, const BaseMappedIntegrationRule &bmir,
-           BareSliceVector<Complex> x, BareSliceMatrix<Complex> flux,
-           LocalHeap &lh) const
+    CalcMatrix (const FiniteElement &fel, const BaseMappedIntegrationRule &mir,
+                BareSliceMatrix<Complex, ColMajor> mat,
+                LocalHeap &lh) const override
     {
-      auto fluxsize = flux.AddSize (bmir.Size (), DIFFOP::DIM_DMAT);
-      const MappedIntegrationRule<DIFFOP::DIM_ELEMENT, DIFFOP::DIM_SPACE> &mir
-          = static_cast<const MappedIntegrationRule<DIFFOP::DIM_ELEMENT,
-                                                    DIFFOP::DIM_SPACE> &> (
-              bmir);
-      DIFFOP::ApplyIR (bfel, mir, x, fluxsize, lh);
+      const size_t ndof = fel.GetNDof ();
+
+      for (size_t ip = 0; ip < mir.Size (); ++ip)
+        {
+          HeapReset hr (lh);
+
+          FlatVector<Complex> shape (ndof, lh);
+          Cast (fel).CalcShape (mir[ip], shape);
+
+          for (size_t j = 0; j < ndof; ++j)
+            mat (ip, j) = shape (j);
+        }
     }
 
-    void Apply (const FiniteElement &bfel,
-                const SIMD_BaseMappedIntegrationRule &bmir,
-                BareSliceVector<Complex> x,
-                BareSliceMatrix<SIMD<Complex>> flux) const
+    void
+    Apply (const FiniteElement &fel, const BaseMappedIntegrationPoint &mip,
+           BareSliceVector<Complex> x, FlatVector<Complex> value,
+           LocalHeap &lh) const override
     {
-      DIFFOP::ApplySIMDIR (bfel, bmir, x, flux);
+      const size_t ndof = fel.GetNDof ();
+
+      FlatVector<Complex> shape (ndof, lh);
+      Cast (fel).CalcShape (mip, shape);
+
+      Complex sum = 0.0;
+      for (size_t j = 0; j < ndof; ++j)
+        sum += shape (j) * x (j);
+
+      value (0) = sum;
     }
 
-    void ApplyTrans (const FiniteElement &bfel,
-                     const BaseMappedIntegrationRule &bmir,
-                     FlatMatrix<Complex> flux, BareSliceVector<Complex> x,
-                     LocalHeap &lh) const
+    void Apply (const FiniteElement &fel, const BaseMappedIntegrationRule &mir,
+                BareSliceVector<Complex> x, BareSliceMatrix<Complex> values,
+                LocalHeap &lh) const override
     {
-      const MappedIntegrationRule<DIFFOP::DIM_ELEMENT, DIFFOP::DIM_SPACE> &mir
-          = static_cast<const MappedIntegrationRule<DIFFOP::DIM_ELEMENT,
-                                                    DIFFOP::DIM_SPACE> &> (
-              bmir);
-      DIFFOP::ApplyTransIR (bfel, mir, flux, x, lh);
+      auto vals = values.AddSize (mir.Size (), 1);
+
+      for (size_t ip = 0; ip < mir.Size (); ++ip)
+        {
+          HeapReset hr (lh);
+
+          FlatVector<Complex> shape (fel.GetNDof (), lh);
+          Cast (fel).CalcShape (mir[ip], shape);
+
+          Complex sum = 0.0;
+          for (int j = 0; j < fel.GetNDof (); ++j)
+            sum += shape (j) * x (j);
+
+          vals (ip, 0) = sum;
+        }
+    }
+
+    void ApplyTrans (const FiniteElement &fel,
+                     const BaseMappedIntegrationPoint &mip,
+                     FlatVector<Complex> value, BareSliceVector<Complex> x,
+                     LocalHeap &lh) const override
+    {
+      const size_t ndof = fel.GetNDof ();
+
+      auto xr = x.Range (0, ndof);
+      xr = 0.0;
+
+      FlatVector<Complex> shape (ndof, lh);
+      Cast (fel).CalcShape (mip, shape);
+
+      // This is transpose, not conjugate transpose.
+      for (size_t j = 0; j < ndof; ++j)
+        xr (j) += value (0) * shape (j);
+    }
+
+    void
+    ApplyTrans (const FiniteElement &fel, const BaseMappedIntegrationRule &mir,
+                FlatMatrix<Complex> values, BareSliceVector<Complex> x,
+                LocalHeap &lh) const override
+    {
+      const size_t ndof = fel.GetNDof ();
+
+      auto xr = x.Range (0, ndof);
+      xr = 0.0;
+
+      for (size_t ip = 0; ip < mir.Size (); ++ip)
+        {
+          HeapReset hr (lh);
+
+          FlatVector<Complex> shape (ndof, lh);
+          Cast (fel).CalcShape (mir[ip], shape);
+
+          for (size_t j = 0; j < ndof; ++j)
+            xr (j) += values (ip, 0) * shape (j);
+        }
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // Direct complex-valued gradient operator for PlaneWaveElement
+  // --------------------------------------------------------------------------
+  template <int D>
+  class PlaneWaveGradientOperator : public DifferentialOperator
+  {
+  private:
+    static const PlaneWaveElement<D> &Cast (const FiniteElement &fel)
+    {
+      return static_cast<const PlaneWaveElement<D> &> (fel);
+    }
+
+  public:
+    PlaneWaveGradientOperator () : DifferentialOperator (D, 1, VOL, 1) { ; }
+
+    string Name () const override { return "pw-grad"; }
+
+    void CalcMatrix (const FiniteElement &fel,
+                     const BaseMappedIntegrationPoint &mip,
+                     BareSliceMatrix<Complex, ColMajor> mat,
+                     LocalHeap &lh) const override
+    {
+      const size_t ndof = fel.GetNDof ();
+
+      FlatMatrixFixWidth<D, Complex> dshape (ndof, lh);
+      Cast (fel).CalcDShape (mip, dshape);
+
+      // dshape(j,d) = d phi_j / d x_d.
+      // B-matrix convention: rows are components, columns are local dofs.
+      for (int d = 0; d < D; ++d)
+        for (size_t j = 0; j < ndof; ++j)
+          mat (d, j) = dshape (j, d);
+    }
+
+    void
+    CalcMatrix (const FiniteElement &fel, const BaseMappedIntegrationRule &mir,
+                BareSliceMatrix<Complex, ColMajor> mat,
+                LocalHeap &lh) const override
+    {
+      const size_t ndof = fel.GetNDof ();
+
+      for (size_t ip = 0; ip < mir.Size (); ++ip)
+        {
+          HeapReset hr (lh);
+
+          FlatMatrixFixWidth<D, Complex> dshape (ndof, lh);
+          Cast (fel).CalcDShape (mir[ip], dshape);
+
+          for (int d = 0; d < D; ++d)
+            for (size_t j = 0; j < ndof; ++j)
+              mat (ip * D + d, j) = dshape (j, d);
+        }
+    }
+
+    void
+    Apply (const FiniteElement &fel, const BaseMappedIntegrationPoint &mip,
+           BareSliceVector<Complex> x, FlatVector<Complex> grad,
+           LocalHeap &lh) const override
+    {
+      const size_t ndof = fel.GetNDof ();
+
+      FlatMatrixFixWidth<D, Complex> dshape (ndof, lh);
+      Cast (fel).CalcDShape (mip, dshape);
+
+      for (int d = 0; d < D; ++d)
+        {
+          Complex sum = 0.0;
+          for (size_t j = 0; j < ndof; ++j)
+            sum += dshape (j, d) * x (j);
+
+          grad (d) = sum;
+        }
+    }
+
+    void Apply (const FiniteElement &fel, const BaseMappedIntegrationRule &mir,
+                BareSliceVector<Complex> x, BareSliceMatrix<Complex> grads,
+                LocalHeap &lh) const override
+    {
+      auto gradmat = grads.AddSize (mir.Size (), D);
+
+      for (size_t ip = 0; ip < mir.Size (); ++ip)
+        {
+          HeapReset hr (lh);
+
+          FlatMatrixFixWidth<D, Complex> dshape (fel.GetNDof (), lh);
+          Cast (fel).CalcDShape (mir[ip], dshape);
+
+          for (int d = 0; d < D; ++d)
+            {
+              Complex sum = 0.0;
+              for (int j = 0; j < fel.GetNDof (); ++j)
+                sum += dshape (j, d) * x (j);
+
+              gradmat (ip, d) = sum;
+            }
+        }
+    }
+
+    void ApplyTrans (const FiniteElement &fel,
+                     const BaseMappedIntegrationPoint &mip,
+                     FlatVector<Complex> grad, BareSliceVector<Complex> x,
+                     LocalHeap &lh) const override
+    {
+      const size_t ndof = fel.GetNDof ();
+
+      auto xr = x.Range (0, ndof);
+      xr = 0.0;
+
+      FlatMatrixFixWidth<D, Complex> dshape (ndof, lh);
+      Cast (fel).CalcDShape (mip, dshape);
+
+      // This is transpose, not conjugate transpose.
+      for (size_t j = 0; j < ndof; ++j)
+        {
+          Complex sum = 0.0;
+          for (int d = 0; d < D; ++d)
+            sum += dshape (j, d) * grad (d);
+
+          xr (j) += sum;
+        }
+    }
+
+    void
+    ApplyTrans (const FiniteElement &fel, const BaseMappedIntegrationRule &mir,
+                FlatMatrix<Complex> grads, BareSliceVector<Complex> x,
+                LocalHeap &lh) const override
+    {
+      const size_t ndof = fel.GetNDof ();
+
+      auto xr = x.Range (0, ndof);
+      xr = 0.0;
+
+      for (size_t ip = 0; ip < mir.Size (); ++ip)
+        {
+          HeapReset hr (lh);
+
+          FlatMatrixFixWidth<D, Complex> dshape (ndof, lh);
+          Cast (fel).CalcDShape (mir[ip], dshape);
+
+          for (size_t j = 0; j < ndof; ++j)
+            {
+              Complex sum = 0.0;
+              for (int d = 0; d < D; ++d)
+                sum += dshape (j, d) * grads (ip, d);
+
+              xr (j) += sum;
+            }
+        }
     }
   };
 
