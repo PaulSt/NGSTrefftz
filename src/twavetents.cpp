@@ -4,6 +4,30 @@
 #include <fem.hpp>
 #include "trefftzfespace.hpp"
 
+#ifdef _WIN32
+// hotfix windows linker error for missing instantiations
+namespace ngfem
+{
+  template <>
+  FlatArray<IntegrationPoint> ScalarFE<ET_SEGM, 1>::GetNodalPoints () const
+  {
+    return { 0, nullptr };
+  }
+
+  template <>
+  FlatArray<IntegrationPoint> ScalarFE<ET_TRIG, 1>::GetNodalPoints () const
+  {
+    return { 0, nullptr };
+  }
+
+  template <>
+  FlatArray<IntegrationPoint> ScalarFE<ET_TET, 1>::GetNodalPoints () const
+  {
+    return { 0, nullptr };
+  }
+}
+#endif
+
 namespace ngfem
 {
   template <int DIM_ELEMENT, int DIM_SPACE>

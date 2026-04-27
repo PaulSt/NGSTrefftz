@@ -22,5 +22,5 @@ numpy>=2.0.0
 scipy>=1.13.1
 webgui-jupyter-widgets>=0.2.35
 
-ngstrefftz==0.3.2506
-xfem==2.1.2506
+#ngstrefftz==0.3.2506
+xfem==2.1.2603

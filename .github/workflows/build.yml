@@ -45,14 +45,14 @@ jobs:
           submodules: true
           path: "NGSTrefftz"
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
+      #- uses: actions/setup-python@v6
+        #with:
+          #python-version: "3.13"
       - name: install ngstrefftz
         #env:
         #NGSTREFFTZ_USE_GTEST: 'ON'
         run: |
-          python3 -m pip install --break-system-packages numpy scipy
+          python3 -m pip install --break-system-packages numpy scipy 
           cd NGSTrefftz && python3 -m pip install --break-system-packages . -v
       - name: run test
         run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
@@ -75,7 +75,8 @@ jobs:
       - name: install ngsolve
         run: |
           cd NGSTrefftz
-          pip install numpy scipy tomli mkl-devel==2025.* mkl==2025.*
+          pip install tomli numpy scipy 
+          # pip install mkl-devel==2025.* mkl==2025.*
           # pip install ngsolve
           python3 <<'PY'
           import tomllib, pathlib, subprocess, sys
@@ -107,12 +108,12 @@ jobs:
           - os: ubuntu-latest
             doit: ${{ inputs.level == 'quick' }}
             cibw_build: cp313-*
-          - os: windows-2022
+          - os: windows-2025
             cibw-arch: AMD64
-            cmake-generator: "Visual Studio 16 2019"
+            cmake-generator: "Visual Studio 17 2022"
             cmake_generator_platform: "x64"
             doit: ${{ inputs.level != 'quick' }}
-            cibw_build: cp310-* cp311-* cp312-* cp313-* cp314-*
+            cibw_build: cp311-* cp312-* cp313-* cp314-*
     env:
       CIBW_BUILD: ${{ matrix.cibw_build }}
     steps:
@@ -267,8 +268,8 @@ jobs:
           merge-multiple: true
       #- name: Display structure of downloaded files
         #run: ls -R $GITHUB_WORKSPACE/wheels
-      #- name: install ngstrefftz
-        #run: pip install $GITHUB_WORKSPACE/wheels/*-cp313-cp313-manylinux_2_28_x86_64.manylinux2014_x86_64.whl
+      - name: install ngstrefftz
+        run: pip install $GITHUB_WORKSPACE/wheels/*-cp313-cp313-manylinux_2_28_x86_64.manylinux2014_x86_64.whl
       - name: Build Sphinx HTML
         run: sphinx-build -b html $GITHUB_WORKSPACE/NGSTrefftz/docs $GITHUB_WORKSPACE/NGSTrefftz/docs/_build/html
       #- name: Download pyodide stuff

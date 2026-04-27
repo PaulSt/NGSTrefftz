@@ -9,7 +9,9 @@ classifiers = [
   "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
 ]
 dependencies = [
-  "ngsolve==6.2.2601",
+  "mkl>=2024,<2026.0 ; platform_system != 'Darwin'",
+  "mkl-devel>=2024,<2026.0 ; platform_system != 'Darwin'",
+  "ngsolve==6.2.2603",
 ]
 
 
@@ -18,15 +20,16 @@ Documentation = "https://paulst.github.io/NGSTrefftz"
 Repository = "https://github.com/PaulSt/ngstrefftz"
 
 [build-system]
-requires = ["ngsolve==6.2.2601",
+requires = ["ngsolve==6.2.2603",
             "scikit-build-core>=0.9.0",
             "pybind11_stubgen",
             "setuptools>=45",
             "setuptools_scm>=8",
             "toml;  python_version >= '3.11'",
             "tomli>=1.1.0; python_version < '3.11'",
-            "mkl==2025.* ; platform_system != 'Darwin'",
-            "mkl-devel==2025.* ; platform_system != 'Darwin'"]
+            "mkl>=2024,<2026.0 ; platform_system != 'Darwin'",
+            "mkl-devel>=2024,<2026.0 ; platform_system != 'Darwin'",
+            ]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
