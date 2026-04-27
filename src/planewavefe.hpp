@@ -7,11 +7,14 @@
 
 namespace ngfem
 {
-  template <int D> class PlaneWaveElement : public ScalarMappedElement<D>
+  template <int D> class PlaneWaveElement : public BaseScalarMappedElement
   {
   private:
     Vec<D> GetDirection (int i) const;
-    bool iscomplex = true;
+
+    ELEMENT_TYPE eltype;
+    Vec<D> shift;
+
     double elsize;
     double c;
     int conj;
@@ -20,22 +23,24 @@ namespace ngfem
     PlaneWaveElement (int andof, int aord, ELEMENT_TYPE aeltype,
                       Vec<D> ashift = 0, double aelsize = 1, double ac = 1.0,
                       int aconj = 1)
-        : ScalarMappedElement<D> (andof, aord, Matrix<> (), aeltype, ashift,
-                                  1.0),
-          elsize (aelsize), c (ac), conj (aconj)
+        : BaseScalarMappedElement (andof, aord), eltype (aeltype),
+          shift (ashift), elsize (aelsize), c (ac), conj (aconj)
     {
       ;
     }
 
-    using ScalarMappedElement<D>::CalcMappedDShape;
-    using ScalarMappedElement<D>::Evaluate;
-    using ScalarMappedElement<D>::EvaluateGrad;
-    using ScalarMappedElement<D>::AddGradTrans;
-
     bool ComplexShapes () const override { return true; }
 
-    Vec<D> EvaluateGrad (const BaseMappedIntegrationPoint &,
-                         BareSliceVector<>) const override
+    virtual ELEMENT_TYPE ElementType () const override { return eltype; }
+
+    using BaseScalarMappedElement::AddGradTrans;
+    using BaseScalarMappedElement::CalcDShape;
+    using BaseScalarMappedElement::CalcShape;
+    using BaseScalarMappedElement::Evaluate;
+    using BaseScalarMappedElement::EvaluateGrad;
+
+    Vec<D>
+    EvaluateGrad (const BaseMappedIntegrationPoint &, BareSliceVector<>) const
     {
       throw Exception ("EvaluateGrad only complex for PW ");
     }
@@ -54,13 +59,14 @@ namespace ngfem
     {
       throw Exception ("CalcDShape only complex for PW ");
     }
-    void CalcDShape (const BaseMappedIntegrationRule &,
-                     BareSliceMatrix<>) const override
+
+    void
+    CalcDShape (const BaseMappedIntegrationRule &, BareSliceMatrix<>) const
     {
       throw Exception ("CalcDShape only complex for PW ");
     }
     void CalcMappedDDShape (const BaseMappedIntegrationPoint &,
-                            BareSliceMatrix<>) const override
+                            BareSliceMatrix<>) const
     {
       throw Exception ("Not implemented for PW ");
     }
@@ -70,9 +76,9 @@ namespace ngfem
       throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
     }
     void CalcDShape (const SIMD_BaseMappedIntegrationRule &,
-                     BareSliceMatrix<SIMD<double>>) const override
+                     BareSliceMatrix<SIMD<double>>) const
     {
-      throw ExceptionNOSIMD ("SIMD - CalcShape not overloaded");
+      throw ExceptionNOSIMD ("SIMD - CalcDShape not overloaded");
     }
 
     NGST_DLL virtual void
