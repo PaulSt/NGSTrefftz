@@ -97,25 +97,33 @@ jobs:
     name: Build wheels on ${{ matrix.os }}
     needs: [test_linux, gtest_linux]
     runs-on: ${{ matrix.os }}
+
     strategy:
       matrix:
-        os: [macos-15-intel, ubuntu-latest]
-        doit: 
-          - ${{ inputs.level != 'quick' }}
-        cibw_build: 
-          - cp310-* cp311-* cp312-* cp313-* cp314-*
         include:
+          - os: macos-15-intel
+            doit: ${{ inputs.level != 'quick' }}
+            cibw_build: cp310-* cp311-* cp312-* cp313-* cp314-*
+
+          - os: ubuntu-latest
+            doit: ${{ inputs.level != 'quick' }}
+            cibw_build: cp310-* cp311-* cp312-* cp313-* cp314-*
+
           - os: ubuntu-latest
             doit: ${{ inputs.level == 'quick' }}
             cibw_build: cp313-*
-          - os: windows-2025
-            cibw-arch: AMD64
-            cmake-generator: "Visual Studio 17 2022"
-            cmake_generator_platform: "x64"
+
+          - os: windows-2022
             doit: ${{ inputs.level != 'quick' }}
             cibw_build: cp311-* cp312-* cp313-* cp314-*
+
     env:
       CIBW_BUILD: ${{ matrix.cibw_build }}
+      CIBW_ARCHS_WINDOWS: AMD64
+      CIBW_ENVIRONMENT_WINDOWS: >
+        CMAKE_GENERATOR='Visual Studio 17 2022'
+        CMAKE_GENERATOR_PLATFORM=x64
+
     steps:
       - uses: actions/checkout@v6
         if: ${{ matrix.doit }}
@@ -128,9 +136,9 @@ jobs:
         uses: pypa/cibuildwheel@v3.2.1
         env:
           CIBW_BUILD_VERBOSITY: 1
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
+      #- name: Setup tmate session
+        #if: ${{ failure() }}
+        #uses: mxschmitt/action-tmate@v3
       - uses: actions/upload-artifact@v6
         if: ${{ matrix.doit }}
         with:
