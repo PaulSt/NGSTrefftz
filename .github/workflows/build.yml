@@ -150,7 +150,7 @@ jobs:
           fetch-tags: true
           fetch-depth: 0
       - name: Build sdist
-        run: pipx run build --sdist
+        run: uv tool run --from build pyproject-build --sdist
       - uses: actions/upload-artifact@v6
         with:
           name: cibw-sdist
