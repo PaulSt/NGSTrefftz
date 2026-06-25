@@ -11,7 +11,7 @@ classifiers = [
 dependencies = [
   "mkl>=2024,<2026.0 ; platform_system != 'Darwin'",
   "mkl-devel>=2024,<2026.0 ; platform_system != 'Darwin'",
-  "ngsolve==6.2.2603",
+  "ngsolve==6.2.2605",
 ]
 
 
@@ -20,7 +20,7 @@ Documentation = "https://paulst.github.io/NGSTrefftz"
 Repository = "https://github.com/PaulSt/ngstrefftz"
 
 [build-system]
-requires = ["ngsolve==6.2.2603",
+requires = ["ngsolve==6.2.2605",
             "scikit-build-core>=0.9.0",
             "pybind11_stubgen",
             "setuptools>=45",
