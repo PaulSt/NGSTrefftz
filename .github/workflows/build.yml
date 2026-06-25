@@ -83,14 +83,31 @@ jobs:
           deps = tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["dependencies"]
           subprocess.check_call(["pip", "install", *deps])
           PY
-      - name: build ngstrefftz gtest
+      - name: Configure
         run: |
-          mkdir $GITHUB_WORKSPACE/NGSTrefftz/make
-          cd $GITHUB_WORKSPACE/NGSTrefftz/make
-          cmake .. -DNGSTREFFTZ_USE_GTEST=ON
-          make
-      - name: run gtest
-        run: $GITHUB_WORKSPACE/NGSTrefftz/make/trefftz_gtest
+          cmake \
+            -S "$GITHUB_WORKSPACE/NGSTrefftz" \
+            -B "$GITHUB_WORKSPACE/NGSTrefftz/make" \
+            -DNGSTREFFTZ_USE_GTEST=ON \
+            -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: |
+          cmake --build "$GITHUB_WORKSPACE/NGSTrefftz/make" 
+      - name: Run tests
+        run: |
+          NGSOLVE_BLAS_LIBS="$(python - <<'PY'
+          import ngsolve_openblas
+          print(":".join(str(p) for p in ngsolve_openblas.get_libraries()))
+          PY
+          )"
+
+          echo "Preloading NGSolve BLAS libraries:"
+          echo "${NGSOLVE_BLAS_LIBS}"
+
+          LD_PRELOAD="${NGSOLVE_BLAS_LIBS}${LD_PRELOAD:+:${LD_PRELOAD}}" \
+            ctest \
+              --test-dir "$GITHUB_WORKSPACE/NGSTrefftz/make" \
+              --output-on-failure
 
   build_wheels:
     if: ${{ inputs.level != 'test_only' }}
@@ -321,7 +338,7 @@ jobs:
           journal: joss
           paper-path: docs/paper/paper.md
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: joss_paper
           path: docs/paper/paper.pdf

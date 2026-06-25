@@ -526,7 +526,7 @@ namespace ngbla
     ngbla::integer n = A.Width (), m = A.Height ();
     Vector<> S (min (n, m));
     Array<double> work (4 * m * m + 6 * m + m + 100);
-    Array<int> iwork (max (n, m) * 9);
+    Array<ngbla::integer> iwork (max (n, m) * 9);
     ngbla::integer info;
     char jobz = 'A';
     ngbla::integer lda = A.Dist (), ldu = U.Dist (), ldv = V.Dist ();
@@ -551,7 +551,7 @@ namespace ngbla
     ngbla::integer n = A.Width (), m = A.Height ();
     Vector<> S (min (n, m));
     Array<Complex> work (4 * m * m + 6 * m + m + 100);
-    Array<int> iwork (max (n, m) * 9);
+    Array<ngbla::integer> iwork (max (n, m) * 9);
     Array<double> rwork (5 * max (n, m) * min (n, m) + 5 * min (n, m));
     ngbla::integer info;
     char jobz = 'A';

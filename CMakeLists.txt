@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 ########################################################
 project(ngstrefftz)
 ########################################################
@@ -32,12 +32,111 @@ download_if_possible (
     "${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_BINARY_DIR}/cmake_modules)
 
+# -----------------------------------------------------------------------------
+# ngsolve-targets.cmake may reference MKL::MKL before NGSolveConfig.cmake has imported it
+if(NOT TARGET MKL::MKL)
+    set(MKL_INTERFACE "lp64" CACHE STRING "MKL integer interface" FORCE)
+    set(MKL_LINK "sdl" CACHE STRING "MKL linking model" FORCE)
+    set(_NGSTREFFTZ_MKL_HINTS)
+    if(MKL_ROOT)
+        list(APPEND _NGSTREFFTZ_MKL_HINTS "${MKL_ROOT}/lib/cmake/mkl")
+    endif()
+    if(DEFINED ENV{MKLROOT} AND NOT "$ENV{MKLROOT}" STREQUAL "")
+        list(APPEND _NGSTREFFTZ_MKL_HINTS "$ENV{MKLROOT}/lib/cmake/mkl")
+    endif()
+    list(APPEND _NGSTREFFTZ_MKL_HINTS
+        "/opt/intel/oneapi/mkl/latest/lib/cmake/mkl"
+        "$ENV{HOME}/.local/lib/cmake/mkl"
+    )
+    find_package(MKL CONFIG QUIET HINTS ${_NGSTREFFTZ_MKL_HINTS})
+endif()
+
+# Older NGSolve wheels used the PyPI mkl-devel package.
+if(NOT TARGET MKL::MKL)
+    find_package(Python3 QUIET COMPONENTS Interpreter)
+    if(Python3_Interpreter_FOUND)
+        execute_process(
+            COMMAND "${Python3_EXECUTABLE}" -c
+                "from importlib.metadata import files; fs=files('mkl-devel') or []; print(next((str(p.locate().parent.resolve()) for p in fs if p.name == 'MKLConfig.cmake'), ''))"
+            RESULT_VARIABLE _NGSTREFFTZ_MKL_QUERY_RESULT
+            OUTPUT_VARIABLE _NGSTREFFTZ_MKL_CONFIG_DIR
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        if(_NGSTREFFTZ_MKL_QUERY_RESULT EQUAL 0
+           AND _NGSTREFFTZ_MKL_CONFIG_DIR
+           AND EXISTS "${_NGSTREFFTZ_MKL_CONFIG_DIR}/MKLConfig.cmake")
+            find_package(MKL CONFIG QUIET
+                HINTS "${_NGSTREFFTZ_MKL_CONFIG_DIR}"
+                NO_DEFAULT_PATH
+            )
+        endif()
+    endif()
+endif()
+
+if(TARGET MKL::MKL)
+    message(STATUS "Preloaded MKL::MKL for the NGSolve CMake package")
+endif()
+
+unset(_NGSTREFFTZ_MKL_HINTS)
+unset(_NGSTREFFTZ_MKL_QUERY_RESULT)
+unset(_NGSTREFFTZ_MKL_CONFIG_DIR)
+
+function(ngstrefftz_relocate_ngsolve_openblas)
+    if(NOT TARGET ngs_lapack OR APPLE)
+        return()
+    endif()
+
+    get_target_property(_ngs_lapack_libs ngs_lapack INTERFACE_LINK_LIBRARIES)
+    if(NOT _ngs_lapack_libs)
+        return()
+    endif()
+
+    set(_ngs_openblas_paths_are_stale FALSE)
+    foreach(_lib IN LISTS _ngs_lapack_libs)
+        if(IS_ABSOLUTE "${_lib}"
+           AND "${_lib}" MATCHES "ngsolve_openblas"
+           AND NOT EXISTS "${_lib}")
+            set(_ngs_openblas_paths_are_stale TRUE)
+        endif()
+    endforeach()
+
+    if(NOT _ngs_openblas_paths_are_stale)
+        return()
+    endif()
+
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+    execute_process(
+        COMMAND "${Python3_EXECUTABLE}" -c
+            "import importlib.util, pathlib, sys; s=importlib.util.find_spec('ngsolve_openblas'); p=pathlib.Path(next(iter(s.submodule_search_locations))) if s and s.submodule_search_locations else None; libs=([*p.glob('libopenblas*.so*'), *p.glob('libgfortran*.so*')] if p and sys.platform.startswith('linux') else ([p/'openblas.lib'] if p and sys.platform.startswith('win') else [])); print(';'.join(str(x.resolve()) for x in libs if x.exists()))"
+        RESULT_VARIABLE _ngs_openblas_query_result
+        OUTPUT_VARIABLE _ngs_openblas_libraries
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_VARIABLE _ngs_openblas_query_error
+    )
+
+    if(NOT _ngs_openblas_query_result EQUAL 0 OR NOT _ngs_openblas_libraries)
+        message(FATAL_ERROR
+            "NGSolve's ngs_lapack target contains stale ngsolve_openblas paths, "
+            "but the active Python environment does not provide usable OpenBLAS "
+            "libraries. Python error: ${_ngs_openblas_query_error}")
+    endif()
+
+    message(STATUS
+        "Relocating NGSolve OpenBLAS link interface to: ${_ngs_openblas_libraries}")
+    set_property(TARGET ngs_lapack PROPERTY
+        INTERFACE_LINK_LIBRARIES "${_ngs_openblas_libraries}")
+endfunction()
+# -----------------------------------------------------------------------------
+
 ### ngstrefftz
 
 set(addon_name ngstrefftz)
 project(ngstrefftz)
 include_directories(SYSTEM ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src) # SYSTEM to suppress warnings from headers
 include(${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
+ngstrefftz_relocate_ngsolve_openblas()
 add_ngsolve_addon(ngstrefftz
     ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp
     src/python_trefftz.cpp
@@ -90,98 +189,23 @@ endif()
 ### user options
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "build dir")
 set(NGSTREFFTZ_USE_GTEST OFF CACHE BOOL "Try to use gtest")
-set(NGSTREFFTZ_USE_MKL ${NGSOLVE_USE_MKL} CACHE BOOL "Try to use mkl")
-set(NGSTREFFTZ_USE_LAPACK ${NGSOLVE_USE_LAPACK} CACHE BOOL "Try to use lapack from ngsolve")
+set(NGSTREFFTZ_USE_LAPACK ${NGSOLVE_USE_LAPACK} CACHE BOOL
+    "Use the BLAS/LAPACK backend exported by NGSolve")
+set(NGSTREFFTZ_USE_MKL ${NGSOLVE_USE_MKL})
 
-### link LAPACK or MKL if possible
-if (NGSTREFFTZ_USE_MKL)
-    download_if_possible(
-        "https://raw.githubusercontent.com/NGSolve/ngsolve/master/cmake/cmake_modules/FindMKL.cmake"
-        "${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake")
-
-    #file(COPY ${CMAKE_SOURCE_DIR}/FindMKL.cmake DESTINATION
-    #"${CMAKE_BINARY_DIR}/cmake_modules/FindMKL.cmake")
-
-    #message(STATUS "MKL_ROOT=${MKL_ROOT}")
-    #message(STATUS "NGSOLVED=${NGSolve_DIR}")
-
-    #set(PIP_MKL_ROOT FALSE CACHE BOOL "Set to true if MKL_ROOT is set by pip")
-    #message(STATUS "PIP_MKL_ROOT=${PIP_MKL_ROOT}")
-    #if(PIP_MKL_ROOT AND LINUX)
-        #set(MKL_ROOT "${NGSolve_DIR}/../../.." CACHE PATH "MKL root directory" )
-        #set(MKL_LIBRARY "${MKL_ROOT}/lib/libmkl_rt.so.2" CACHE PATH "MKL library" )
-        #set(MKL_INCLUDE_DIR "${MKL_ROOT}/include" CACHE PATH "MKL include directory" )
-        #message(STATUS "set MKL_LIBRARY=${MKL_LIBRARY}")
-    #elseif(PIP_MKL_ROOT AND WIN32)
-        #set(MKL_ROOT "${NGSolve_DIR}/../../../.." CACHE PATH "MKL root directory" )
-        #set(MKL_LIBRARY "${MKL_ROOT}/Library/lib/mkl_rt.lib" CACHE PATH "MKL library" )
-        #set(MKL_INCLUDE_DIR "${MKL_ROOT}/Library/include" CACHE PATH "MKL include directory" )
-    #endif()
-
-    set(MKL_ARCH "intel64")
-    if(NOT MKL_INTERFACE)
-        set(MKL_INTERFACE "lp64")
-    endif(NOT MKL_INTERFACE)
-    set(MKL_MULTI_THREADED ON CACHE BOOL "Use threaded MKL libs")
-    if(NOT MKL_MULTI_THREADED)
-      set(MKL_THREADING sequential)
+### use the LAPACK backend exported by NGSolve hopefully...
+if(NGSTREFFTZ_USE_LAPACK)
+    if(NOT NGSOLVE_USE_LAPACK)
+        message(FATAL_ERROR "NGSTREFFTZ_USE_LAPACK=ON, but NGSolve was built without LAPACK")
+    elseif(NOT TARGET ngs_lapack)
+        message(FATAL_ERROR "NGSolve reports LAPACK support, but did not export the ngs_lapack target")
     endif()
-    set(MKL_STATIC OFF CACHE BOOL "Link static MKL")
-    set(MKL_SDL ON CACHE BOOL "Link single dynamic MKL lib")
-    if(NOT MKL_LINK)
-      if(MKL_STATIC)
-        set(MKL_LINK static)
-      elseif(MKL_SDL)
-        set(MKL_LINK sdl)
-      else()
-        set(MKL_LINK dynamic)
-      endif()
-    endif()
-
-    file(WRITE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/findmklconf.py "from contextlib import suppress;import importlib.metadata; [print( f.locate().parent.resolve().absolute().as_posix()) if f.match('MKLConfig.cmake') else 0 for f in importlib.metadata.files('mkl-devel')]")
-    execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/findmklconf.py ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE MKL_CONF_FROM_PY)
-    if(MKL_CONF_FROM_PY)
-        message(STATUS "MKL_CONF_FROM_PY=${MKL_CONF_FROM_PY}")
-        message(STATUS "pylibdir=${python3_library_dir}")
-        set(MKL_ROOT ${MKL_CONF_FROM_PY}/../../.. CACHE PATH "MKL root directory" )
-        set(MKL_LIBRARY ${MKL_ROOT}/lib/libmkl_rt.so.2 CACHE PATH "MKL library" )
-        set(MKL_INCLUDE_DIR ${MKL_ROOT}/include CACHE PATH "MKL include directory" )
-    endif()
-    #set(MKL_VERSION_H "${MKL_ROOT}/include/mkl_version.h")
-
-    #set(d lib/cmake/mkl)
-    #find_package(MKL CONFIG REQUIRED HINTS ${MKL_CONF} ${MKL_ROOT}/${d} PATHS /opt/intel/oneapi/mkl/latest/${d} ~/.local/${d})
-
-    unset(USE_MPI CACHE)
-    find_package(MKL)
-
-    #if(USE_MUMPS)
-        ## include scalapack
-        #set( LAPACK_LIBRARIES "${MKL_LIBRARIES}")
-        #set( ENABLE_SCALAPACK ON)
-    #else(USE_MUMPS)
-        #set( LAPACK_LIBRARIES "${MKL_MINIMAL_LIBRARIES}")
-    #endif(USE_MUMPS)
-
-    if(MKL_FOUND)
-        message(STATUS "Found MKL_MINIMAL_LIBRARIES=${MKL_MINIMAL_LIBRARIES}")
-        set( LAPACK_LIBRARIES "${MKL_MINIMAL_LIBRARIES}")
-    else()
-        message("${Red}MKL not found!${ColourReset}")
-    endif()
-endif (NGSTREFFTZ_USE_MKL)
-if(NGSTREFFTZ_USE_LAPACK AND NOT LAPACK_LIBRARIES)
-    message(STATUS "Looking for LAPACK")
-    find_package(LAPACK)
-endif(NGSTREFFTZ_USE_LAPACK AND NOT LAPACK_LIBRARIES)
-if(LAPACK_LIBRARIES)
-    #target_link_libraries(ngstrefftz PRIVATE $<BUILD_INTERFACE:ngs_lapack>)
-    message(STATUS "Linking with LAPACK_LIBRARIES=${LAPACK_LIBRARIES}")
-    target_link_libraries(ngstrefftz PRIVATE ${LAPACK_LIBRARIES})
+    message(STATUS "Linking NGSTrefftz against the NGSolve ngs_lapack target")
+    target_link_libraries(ngstrefftz PRIVATE ngs_lapack)
     target_compile_definitions(ngstrefftz PRIVATE NGSTREFFTZ_USE_LAPACK)
-else(LAPACK_LIBRARIES)
-    message("${Red}LAPACK not found, restricted usage${ColourReset}")
-endif(LAPACK_LIBRARIES)
+else()
+    message(WARNING "LAPACK disabled for NGSTrefftz, restricted usage!")
+endif()
 
 ### doc
 option(NGSTREFFTZ_BUILD_DOC "Build documentation" OFF)
@@ -247,11 +271,10 @@ if(NGSTREFFTZ_USE_GTEST)
     find_package(GTest REQUIRED)
     include(GoogleTest)
     if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
-        find_package(Python3 REQUIRED COMPONENTS Development.Embed)
+        find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Embed)
     endif()
-    add_executable(trefftz_gtest
-        ${CMAKE_SOURCE_DIR}/test/embtrefftz_gtest.cpp
-    )
+    add_executable(trefftz_gtest ${CMAKE_SOURCE_DIR}/test/embtrefftz_gtest.cpp)
+
     target_include_directories(trefftz_gtest BEFORE PRIVATE
         $<TARGET_PROPERTY:ngsolve,INTERFACE_INCLUDE_DIRECTORIES>
         ${CMAKE_SOURCE_DIR}/src
@@ -262,9 +285,12 @@ if(NGSTREFFTZ_USE_GTEST)
         ngsolve
         ngstrefftz
     )
+    if(TARGET ngs_lapack)
+        target_link_libraries(trefftz_gtest PRIVATE ngs_lapack)
+    endif()
     set_target_properties(trefftz_gtest PROPERTIES
         PREFIX ""
-        CXX_STANDARD 17
+        CXX_STANDARD 20
         CXX_STANDARD_REQUIRED ON
     )
     gtest_add_tests(TARGET trefftz_gtest)
