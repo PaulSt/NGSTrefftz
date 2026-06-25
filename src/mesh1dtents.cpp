@@ -11,34 +11,47 @@ namespace ngcomp
 
     if (lb != pim->end () && !(pim->key_comp () (p, lb->first)))
       return lb->second;
-    else
-      {
-        // the key does not exist in the map add it to the map
-        netgen::PointIndex newpind (pim->size () + 1);
-        pim->insert (lb, Point2IndexMap::value_type (
-                             p, newpind)); // Use lb as a hint to insert,
-        return newpind;
-      }
+
+    // the key does not exist in the map add it to the map
+    netgen::PointIndex newpind (pim->size () + 1);
+    pim->insert (lb, Point2IndexMap::value_type (p, newpind));
+    return newpind;
   }
 
   netgen::PointIndex AddPointUnique (shared_ptr<netgen::Mesh> ngma,
                                      Point2IndexMap *pim, netgen::Point3d p)
   {
+    const size_t old_size = pim->size ();
     netgen::PointIndex pi = Point2Index (pim, p);
-    if (size_t (pi) == pim->size ())
+    if (pim->size () != old_size)
       ngma->AddPoint (p);
     return pi;
   }
 
+  int AddBoundaryEdgeDescriptor (netgen::Mesh &mesh, int edge_nr,
+                                 int face_descriptor_index, const string &name)
+  {
+    netgen::EdgeDescriptor ed;
+    ed.SetEdgeNr (edge_nr);
+    ed.SetName (name);
+    ed.SetIndex (face_descriptor_index);
+    ed.SetSurfNr (0, 1);
+    ed.SetSurfNr (1, 0);
+    ed.SetDomainIn (1);
+    ed.SetDomainOut (0);
+    ed.SetTLOSurface (edge_nr);
+    return mesh.AddEdgeDescriptor (ed);
+  }
+
   shared_ptr<MeshAccess> NgsTP1dmesh (shared_ptr<TentPitchedSlab> tps)
   {
-    Point2IndexMap *pim = new Point2IndexMap (); // Your map type may vary,
-                                                 // just change the typedef
-    int index = 1;
-    double dt_eps = 0.00001;
+    Point2IndexMap pim;
+    constexpr int domain_index = 1;
+    constexpr double dt_eps = 0.00001;
+
     shared_ptr<MeshAccess> ma = tps->ma;
-    double dt = tps->GetSlabHeight ();
-    // get boundaries of the init mesh
+    const double dt = tps->GetSlabHeight ();
+
     Array<double> bd_points (0);
     for (auto el : ma->Elements (BND))
       bd_points.Append (ma->GetPoint<1> (el.Vertices ()[0]) (0));
@@ -47,120 +60,118 @@ namespace ngcomp
     mesh->SetDimension (ma->GetDimension () + 1);
     netgen::SetGlobalMesh (mesh); // for visualization
     mesh->SetGeometry (make_shared<netgen::NetgenGeometry> ());
-    mesh->SetMaterial (1, "mat");
+    mesh->SetMaterial (domain_index, "mat");
 
     netgen::FaceDescriptor fd (1, 1, 0, 1);
-    // int ind_fd =
     mesh->AddFaceDescriptor (fd);
 
     netgen::FaceDescriptor fdi (1, 1, 0, 1);
-    fdi.SetBCName (new string ("inflow"));
-    int ind_fdi = mesh->AddFaceDescriptor (fdi);
+    fdi.SetBCName ("inflow");
+    const int ind_fdi = mesh->AddFaceDescriptor (fdi);
 
     netgen::FaceDescriptor fdo (2, 1, 0, 2);
-    fdo.SetBCName (new string ("outflow"));
-    int ind_fdo = mesh->AddFaceDescriptor (fdo);
+    fdo.SetBCName ("outflow");
+    const int ind_fdo = mesh->AddFaceDescriptor (fdo);
 
     netgen::FaceDescriptor fdd (3, 1, 0, 3);
-    fdd.SetBCName (new string ("dirichlet"));
-    int ind_fdd = mesh->AddFaceDescriptor (fdd);
+    fdd.SetBCName ("dirichlet");
+    const int ind_fdd = mesh->AddFaceDescriptor (fdd);
+
+    const int ed_inflow
+        = AddBoundaryEdgeDescriptor (*mesh, 1, ind_fdi, "inflow");
+    const int ed_outflow
+        = AddBoundaryEdgeDescriptor (*mesh, 2, ind_fdo, "outflow");
+    const int ed_dirichlet
+        = AddBoundaryEdgeDescriptor (*mesh, 3, ind_fdd, "dirichlet");
+
+    auto AddBoundarySegment
+        = [&mesh] (netgen::PointIndex p0, netgen::PointIndex p1,
+                   int edge_descriptor_index) {
+            netgen::Segment segment;
+            segment[0] = p0;
+            segment[1] = p1;
+            segment.SetIndex (edge_descriptor_index);
+            mesh->AddSegment (segment);
+          };
 
     for (int i = 0; i < tps->GetNTents (); i++)
       {
         const Tent *tent = &tps->GetTent (i);
-        // cout << *tent << endl;
+
         if (tent->ttop < tent->tbot + dt_eps)
           {
-            continue;
             cout << "had to skip degenerate tent" << endl;
+            continue;
           }
-        // Add vertices and 2d Elements to the mesh
+
+        // Add vertices and 2d elements to the mesh
         Vector<netgen::PointIndex> vertices (tent->nbv.Size () + 2);
-        double pointc = ma->GetPoint<1> (tent->vertex) (0);
-        int ibot = tent->nbv[0] > tent->vertex ? 0 : 2;
-        int itop = tent->nbv[0] > tent->vertex ? 2 : 0;
+        const double pointc = ma->GetPoint<1> (tent->vertex) (0);
+        const int ibot = tent->nbv[0] > tent->vertex ? 0 : 2;
+        const int itop = tent->nbv[0] > tent->vertex ? 2 : 0;
+
         vertices[ibot] = AddPointUnique (
-            mesh, pim, netgen::Point3d (pointc, tent->tbot, 0));
+            mesh, &pim, netgen::Point3d (pointc, tent->tbot, 0));
         vertices[itop] = AddPointUnique (
-            mesh, pim, netgen::Point3d (pointc, tent->ttop, 0));
+            mesh, &pim, netgen::Point3d (pointc, tent->ttop, 0));
+
         for (size_t k = 0; k < tent->nbv.Size (); k++)
-          {
-            vertices[2 * k + 1] = AddPointUnique (
-                mesh, pim,
-                netgen::Point3d (ma->GetPoint<1> (tent->nbv[k]) (0),
-                                 tent->nbtime[k], 0));
-          }
-        netgen::Element2d *newel = nullptr;
+          vertices[2 * k + 1] = AddPointUnique (
+              mesh, &pim,
+              netgen::Point3d (ma->GetPoint<1> (tent->nbv[k]) (0),
+                               tent->nbtime[k], 0));
+
         if (tent->nbv.Size () == 1)
           {
-            newel = new netgen::Element2d (netgen::TRIG);
-            for (int i = 0; i < 3; i++)
-              (*newel)[i] = vertices[i];
-            newel->SetIndex (index);
+            netgen::Element2d element (netgen::TRIG);
+            for (int j = 0; j < 3; j++)
+              element[j] = vertices[j];
+            element.SetIndex (domain_index);
+            mesh->AddSurfaceElement (element);
           }
         else if (tent->nbv.Size () == 2)
           {
-            newel = new netgen::Element2d (netgen::QUAD);
-            for (int i = 0; i < 4; i++)
-              (*newel)[i] = vertices[i];
-            newel->SetIndex (index);
+            netgen::Element2d element (netgen::QUAD);
+            for (int j = 0; j < 4; j++)
+              element[j] = vertices[j];
+            element.SetIndex (domain_index);
+            mesh->AddSurfaceElement (element);
           }
-        mesh->AddSurfaceElement (*newel);
 
         for (size_t k = 0; k < tent->nbv.Size (); k++)
           {
             // Add 1d Elements - inflow
             if (tent->tbot < dt_eps && tent->nbtime[k] < dt_eps)
               {
-                netgen::Segment *newel = new netgen::Segment ();
-                (*newel)[tent->vertex < tent->nbv[k] ? 0 : 1] = vertices[ibot];
-                (*newel)[tent->vertex < tent->nbv[k] ? 1 : 0]
-                    = vertices[2 * k + 1];
-                newel->si = ind_fdi;
-                newel->edgenr = index;
-                newel->epgeominfo[0].edgenr = index;
-                newel->epgeominfo[1].edgenr = index;
-                mesh->AddSegment (*newel);
+                if (tent->vertex < tent->nbv[k])
+                  AddBoundarySegment (vertices[ibot], vertices[2 * k + 1],
+                                      ed_inflow);
+                else
+                  AddBoundarySegment (vertices[2 * k + 1], vertices[ibot],
+                                      ed_inflow);
               }
-
             // Add 1d Elements - outflow
             if (tent->ttop > dt - dt_eps && tent->nbtime[k] > dt - dt_eps)
               {
-                netgen::Segment *newel = new netgen::Segment ();
-                (*newel)[tent->vertex < tent->nbv[k] ? 1 : 0] = vertices[itop];
-                (*newel)[tent->vertex < tent->nbv[k] ? 0 : 1]
-                    = vertices[2 * k + 1];
-                newel->si = ind_fdo;
-                newel->edgenr = index;
-                newel->epgeominfo[0].edgenr = index;
-                newel->epgeominfo[1].edgenr = index;
-                mesh->AddSegment (*newel);
+                if (tent->vertex < tent->nbv[k])
+                  AddBoundarySegment (vertices[2 * k + 1], vertices[itop],
+                                      ed_outflow);
+                else
+                  AddBoundarySegment (vertices[itop], vertices[2 * k + 1],
+                                      ed_outflow);
               }
-
             // Add 1d Elements - dirichlet
             if (pointc == bd_points[0] || pointc == bd_points[1])
-              {
-                netgen::Segment *newel = new netgen::Segment ();
-                (*newel)[0] = vertices[2];
-                (*newel)[1] = vertices[0];
-                newel->si = ind_fdd;
-                newel->edgenr = index;
-                newel->epgeominfo[0].edgenr = index;
-                newel->epgeominfo[1].edgenr = index;
-                mesh->AddSegment (*newel);
-              }
+              AddBoundarySegment (vertices[2], vertices[0], ed_dirichlet);
           }
       }
 
-    mesh->SetBCName (1, "inflow");
-    mesh->SetBCName (2, "outflow");
-    mesh->SetBCName (3, "dirichlet");
+    mesh->SetBCName (0, "inflow");
+    mesh->SetBCName (1, "outflow");
+    mesh->SetBCName (2, "dirichlet");
 
-    auto tpmesh = make_shared<MeshAccess> (mesh);
-    // cout << tpmesh->GetMaterials(BND) << endl;
-    return tpmesh;
+    return make_shared<MeshAccess> (mesh);
   }
-
 }
 
 #ifdef NGS_PYTHON

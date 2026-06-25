@@ -11,6 +11,23 @@ import time
 
 # USE tenthight = wavespeed + 3
 
+def TestTentMesh():
+    """
+    >>> stmesh = TestTentMesh()
+    >>> stmesh.dim
+    2
+    >>> stmesh.ne
+    8
+    >>> set(stmesh.GetBoundaries()).symmetric_difference(set(['inflow', 'outflow', 'dirichlet']))
+    set()
+    """
+    mesh = Mesh(SegMesh(4, 0, 1))
+    tents = TentSlab(mesh, method="edge")
+    tents.SetMaxWavespeed(1)
+    tents.PitchTents(dt=0.4, local_ct=True)
+    stmesh = Mesh1dTents(tents)
+    return stmesh
+
 def SolveWaveTents(initmesh, order, c, t_step):
     """
     Solve using tent pitching
