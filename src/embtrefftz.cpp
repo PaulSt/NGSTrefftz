@@ -493,9 +493,9 @@ bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
       if (icf->dx.vb != mesh_element.VB ())
         continue;
 
-      if (!icf->dx.definedonelements
-          || icf->dx.definedonelements->Test (mesh_element.Nr ()))
-        return true;
+      if (icf->dx.definedonelements
+          && !icf->dx.definedonelements->Test (mesh_element.Nr ()))
+        continue;
 
       if (icf->dx.definedon) // check region
         {
@@ -506,10 +506,14 @@ bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
               const BitArray &definedon = reg.Mask ();
               size_t mat = ma->GetElIndex (mesh_element);
               if (mat >= definedon.Size ())
-                return false;
-              return definedon.Test (mat);
+                continue;
+              if (definedon.Test (mat))
+                return true;
+              continue;
             }
         }
+
+      return true;
     }
   return false;
 }
