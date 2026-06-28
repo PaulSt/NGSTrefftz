@@ -62,5 +62,6 @@ NGSTrefftz is an add-On to NGSolve for Trefftz methods.
    notebooks/embTrefftz-helm.ipynb
    notebooks/embTrefftz-adv.ipynb
    notebooks/embTrefftz-stokes.ipynb
+   notebooks/embTrefftz-ns.ipynb
    notebooks/tunfitted.ipynb
    notebooks/twavetents.ipynb
