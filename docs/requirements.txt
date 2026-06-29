@@ -23,4 +23,4 @@ numpy>=2.0.0
 scipy>=1.13.1
 webgui-jupyter-widgets>=0.2.35
 
-xfem==2.1.2605
+xfem==2.1.2606
