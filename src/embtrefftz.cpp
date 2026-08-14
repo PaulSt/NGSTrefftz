@@ -9,516 +9,519 @@ using namespace ngcomp;
 
 namespace
 {
-/// @returns `max(a-b, 0)` without integer underflow risk, if `b > a`.
-INLINE size_t max_a_minus_b_or_0 (const size_t a, const size_t b) noexcept
-{
-  return (a >= b) ? a - b : 0;
-}
+  /// @returns `max(a-b, 0)` without integer underflow risk, if `b > a`.
+  INLINE size_t max_a_minus_b_or_0 (const size_t a, const size_t b) noexcept
+  {
+    return (a >= b) ? a - b : 0;
+  }
 
-template <typename SCAL, typename TDIST>
-inline void addIntegrationToElementMatrix (
-    MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> elmat,
-    const Array<shared_ptr<BilinearFormIntegrator>> &bf_integrators,
-    const MeshAccess &ma, const ElementId &element_id, const FESpace &fes,
-    const FESpace &fes_test, LocalHeap &lh)
-{
-  const HeapReset hr (lh);
+  template <typename SCAL, typename TDIST>
+  inline void addIntegrationToElementMatrix (
+      MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> elmat,
+      const Array<shared_ptr<BilinearFormIntegrator>> &bf_integrators,
+      const MeshAccess &ma, const ElementId &element_id, const FESpace &fes,
+      const FESpace &fes_test, LocalHeap &lh)
+  {
+    const HeapReset hr (lh);
 
-  auto &trafo = ma.GetTrafo (element_id, lh);
+    auto &trafo = ma.GetTrafo (element_id, lh);
 
-  auto &test_fel = fes_test.GetFE (element_id, lh);
-  auto &trial_fel = fes.GetFE (element_id, lh);
+    auto &test_fel = fes_test.GetFE (element_id, lh);
+    auto &trial_fel = fes.GetFE (element_id, lh);
 
-  const bool mixed_mode = std::addressof (fes_test) != std::addressof (fes);
+    const bool mixed_mode = std::addressof (fes_test) != std::addressof (fes);
 
-  bool symmetric_so_far = true;
-  size_t bfi_ind = 0;
-  while (bfi_ind < bf_integrators.Size ())
-    {
-      auto &bfi = bf_integrators[bfi_ind];
-      bfi_ind++;
-      if (bfi->DefinedOnElement (element_id.Nr ()))
-        {
-          auto &mapped_trafo
-              = trafo.AddDeformation (bfi->GetDeformation ().get (), lh);
-          try
-            {
-              if (mixed_mode)
-                {
-                  const auto &mixed_fel
-                      = MixedFiniteElement (trial_fel, test_fel);
-                  bfi->CalcElementMatrixAdd (mixed_fel, mapped_trafo, elmat,
-                                             symmetric_so_far, lh);
-                }
-              else
-                {
-                  bfi->CalcElementMatrixAdd (test_fel, mapped_trafo, elmat,
-                                             symmetric_so_far, lh);
-                }
-            }
-          catch (ExceptionNOSIMD const &e)
-            {
-              elmat = 0.0;
-              cout << IM (6) << "ExceptionNOSIMD " << e.What () << endl
-                   << "switching to scalar evaluation" << endl;
-              bfi->SetSimdEvaluate (false);
-              bfi_ind = 0;
-            }
-        }
-    }
-}
-
-INLINE bool IsInactiveOrHiddenDof (const FESpace &fes, DofId d)
-{
-  if (!IsRegularDof (d))
-    return true;
-  return fes.GetDofCouplingType (d) <= HIDDEN_DOF;
-}
-
-INLINE bool
-IsIgnoredRegularDof (shared_ptr<const BitArray> ignoredofs, DofId d)
-{
-  if (!ignoredofs)
-    return false;
-  if (!IsRegularDof (d))
-    return false;
-  const size_t id = size_t (d);
-  return (id < ignoredofs->Size ()) && ignoredofs->Test (id);
-}
-
-INLINE void
-RemoveIgnoredDofs (Array<DofId> &dofs, shared_ptr<const BitArray> ignoredofs)
-{
-  if (!ignoredofs)
-    return;
-
-  size_t w = 0;
-  for (size_t i = 0; i < dofs.Size (); i++)
-    if (!IsIgnoredRegularDof (ignoredofs, dofs[i]))
-      dofs[w++] = dofs[i];
-  dofs.SetSize (w);
-}
-
-/// Extracts the submatrix of `elmat`,
-/// consisting only of entries `elmat[i,j]`, where `i` and `j`
-/// are visible dofs.
-///
-/// Additionally, `dofs` and `dofs_test` are overwritten by only the visible
-/// dofs.
-///
-/// @returns the extracted submatrix, allocated on the `LocalHeap`.
-template <typename SCAL, typename TDIST>
-FlatMatrix<SCAL> extractVisibleDofs (
-    const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &elmat,
-    const FESpace &fes, const FESpace &fes_test,
-    const shared_ptr<const FESpace> fes_conformity, Array<DofId> &dofs,
-    Array<DofId> &dofs_test, Array<DofId> &conformity_dofs, LocalHeap &lh,
-    bool compute_new_dofs = false, shared_ptr<BitArray> ignoredofs = nullptr)
-{
-  static Timer timer ("EmbTrefftz: extractVisibleDofs");
-  RegionTimer reg (timer);
-  Array<int> pos_trial, pos_test, pos_conf;
-  Array<DofId> vdofs, vdofs_test, vdofs_conformity;
-
-  pos_trial.SetSize0 ();
-  pos_test.SetSize0 ();
-  pos_conf.SetSize0 ();
-
-  vdofs.SetSize0 ();
-  vdofs_test.SetSize0 ();
-  vdofs_conformity.SetSize0 ();
-
-  for (size_t j = 0; j < dofs.Size (); j++)
-    {
-      DofId d = dofs[j];
-      if (IsInactiveOrHiddenDof (fes, d))
-        continue;
-      if (IsIgnoredRegularDof (ignoredofs, d))
-        continue;
-      pos_trial.Append (j);
-      vdofs.Append (d);
-    }
-
-  for (size_t i = 0; i < dofs_test.Size (); i++)
-    {
-      DofId d = dofs_test[i];
-      if (IsInactiveOrHiddenDof (fes_test, d))
-        continue;
-      pos_test.Append (i);
-      vdofs_test.Append (d);
-    }
-
-  if (fes_conformity)
-    for (size_t i = 0; i < conformity_dofs.Size (); i++)
+    bool symmetric_so_far = true;
+    size_t bfi_ind = 0;
+    while (bfi_ind < bf_integrators.Size ())
       {
-        DofId d = conformity_dofs[i];
-        if (IsInactiveOrHiddenDof (*fes_conformity, d))
+        auto &bfi = bf_integrators[bfi_ind];
+        bfi_ind++;
+        if (bfi->DefinedOnElement (element_id.Nr ()))
+          {
+            auto &mapped_trafo
+                = trafo.AddDeformation (bfi->GetDeformation ().get (), lh);
+            try
+              {
+                if (mixed_mode)
+                  {
+                    const auto &mixed_fel
+                        = MixedFiniteElement (trial_fel, test_fel);
+                    bfi->CalcElementMatrixAdd (mixed_fel, mapped_trafo, elmat,
+                                               symmetric_so_far, lh);
+                  }
+                else
+                  {
+                    bfi->CalcElementMatrixAdd (test_fel, mapped_trafo, elmat,
+                                               symmetric_so_far, lh);
+                  }
+              }
+            catch (ExceptionNOSIMD const &e)
+              {
+                elmat = 0.0;
+                cout << IM (6) << "ExceptionNOSIMD " << e.What () << endl
+                     << "switching to scalar evaluation" << endl;
+                bfi->SetSimdEvaluate (false);
+                bfi_ind = 0;
+              }
+          }
+      }
+  }
+
+  INLINE bool IsInactiveOrHiddenDof (const FESpace &fes, DofId d)
+  {
+    if (!IsRegularDof (d))
+      return true;
+    return fes.GetDofCouplingType (d) <= HIDDEN_DOF;
+  }
+
+  INLINE bool
+  IsIgnoredRegularDof (shared_ptr<const BitArray> ignoredofs, DofId d)
+  {
+    if (!ignoredofs)
+      return false;
+    if (!IsRegularDof (d))
+      return false;
+    const size_t id = size_t (d);
+    return (id < ignoredofs->Size ()) && ignoredofs->Test (id);
+  }
+
+  INLINE void
+  RemoveIgnoredDofs (Array<DofId> &dofs, shared_ptr<const BitArray> ignoredofs)
+  {
+    if (!ignoredofs)
+      return;
+
+    size_t w = 0;
+    for (size_t i = 0; i < dofs.Size (); i++)
+      if (!IsIgnoredRegularDof (ignoredofs, dofs[i]))
+        dofs[w++] = dofs[i];
+    dofs.SetSize (w);
+  }
+
+  /// Extracts the submatrix of `elmat`,
+  /// consisting only of entries `elmat[i,j]`, where `i` and `j`
+  /// are visible dofs.
+  ///
+  /// Additionally, `dofs` and `dofs_test` are overwritten by only the visible
+  /// dofs.
+  ///
+  /// @returns the extracted submatrix, allocated on the `LocalHeap`.
+  template <typename SCAL, typename TDIST>
+  FlatMatrix<SCAL> extractVisibleDofs (
+      const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &elmat,
+      const FESpace &fes, const FESpace &fes_test,
+      const shared_ptr<const FESpace> fes_conformity, Array<DofId> &dofs,
+      Array<DofId> &dofs_test, Array<DofId> &conformity_dofs, LocalHeap &lh,
+      bool compute_new_dofs = false, shared_ptr<BitArray> ignoredofs = nullptr)
+  {
+    static Timer timer ("EmbTrefftz: extractVisibleDofs");
+    RegionTimer reg (timer);
+    Array<int> pos_trial, pos_test, pos_conf;
+    Array<DofId> vdofs, vdofs_test, vdofs_conformity;
+
+    pos_trial.SetSize0 ();
+    pos_test.SetSize0 ();
+    pos_conf.SetSize0 ();
+
+    vdofs.SetSize0 ();
+    vdofs_test.SetSize0 ();
+    vdofs_conformity.SetSize0 ();
+
+    for (size_t j = 0; j < dofs.Size (); j++)
+      {
+        DofId d = dofs[j];
+        if (IsInactiveOrHiddenDof (fes, d))
           continue;
-        pos_conf.Append (i);
-        vdofs_conformity.Append (d);
+        if (IsIgnoredRegularDof (ignoredofs, d))
+          continue;
+        pos_trial.Append (j);
+        vdofs.Append (d);
       }
 
-  FlatMatrix<SCAL> velmat (pos_test.Size () + pos_conf.Size (),
-                           pos_trial.Size (), lh);
+    for (size_t i = 0; i < dofs_test.Size (); i++)
+      {
+        DofId d = dofs_test[i];
+        if (IsInactiveOrHiddenDof (fes_test, d))
+          continue;
+        pos_test.Append (i);
+        vdofs_test.Append (d);
+      }
 
-  size_t conformity_offset_old = fes_conformity ? conformity_dofs.Size () : 0;
-  size_t conformity_offset_new = fes_conformity ? pos_conf.Size () : 0;
+    if (fes_conformity)
+      for (size_t i = 0; i < conformity_dofs.Size (); i++)
+        {
+          DofId d = conformity_dofs[i];
+          if (IsInactiveOrHiddenDof (*fes_conformity, d))
+            continue;
+          pos_conf.Append (i);
+          vdofs_conformity.Append (d);
+        }
 
-  if (fes_conformity)
-    for (size_t vi = 0; vi < pos_conf.Size (); vi++)
+    FlatMatrix<SCAL> velmat (pos_test.Size () + pos_conf.Size (),
+                             pos_trial.Size (), lh);
+
+    size_t conformity_offset_old
+        = fes_conformity ? conformity_dofs.Size () : 0;
+    size_t conformity_offset_new = fes_conformity ? pos_conf.Size () : 0;
+
+    if (fes_conformity)
+      for (size_t vi = 0; vi < pos_conf.Size (); vi++)
+        for (size_t vj = 0; vj < pos_trial.Size (); vj++)
+          velmat (vi, vj) = elmat (pos_conf[vi], pos_trial[vj]);
+
+    for (size_t vi = 0; vi < pos_test.Size (); vi++)
       for (size_t vj = 0; vj < pos_trial.Size (); vj++)
-        velmat (vi, vj) = elmat (pos_conf[vi], pos_trial[vj]);
+        velmat (conformity_offset_new + vi, vj)
+            = elmat (conformity_offset_old + pos_test[vi], pos_trial[vj]);
 
-  for (size_t vi = 0; vi < pos_test.Size (); vi++)
-    for (size_t vj = 0; vj < pos_trial.Size (); vj++)
-      velmat (conformity_offset_new + vi, vj)
-          = elmat (conformity_offset_old + pos_test[vi], pos_trial[vj]);
+    if (compute_new_dofs)
+      {
+        conformity_dofs = std::move (vdofs_conformity);
+        dofs = std::move (vdofs);
+        dofs_test = std::move (vdofs_test);
+      }
 
-  if (compute_new_dofs)
-    {
-      conformity_dofs = std::move (vdofs_conformity);
-      dofs = std::move (vdofs);
-      dofs_test = std::move (vdofs_test);
-    }
+    return velmat;
+  }
 
-  return velmat;
-}
+  template <typename SCAL, typename TDIST>
+  Matrix<SCAL> putbackVisibleDofs (
+      const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &velmat,
+      const ElementId &element_id, const FESpace &fes,
+      shared_ptr<BitArray> ignoredofs = nullptr)
+  {
+    static Timer t ("EmbTrefftz: putbackVisibleDofs");
+    RegionTimer reg (t);
+    Array<DofId> dofs;
+    fes.GetDofNrs (element_id, dofs);
 
-template <typename SCAL, typename TDIST>
-Matrix<SCAL> putbackVisibleDofs (
-    const MatrixView<SCAL, RowMajor, size_t, size_t, TDIST> &velmat,
-    const ElementId &element_id, const FESpace &fes,
-    shared_ptr<BitArray> ignoredofs = nullptr)
-{
-  static Timer t ("EmbTrefftz: putbackVisibleDofs");
-  RegionTimer reg (t);
-  Array<DofId> dofs;
-  fes.GetDofNrs (element_id, dofs);
+    size_t all_ignored_dofs = 0;
+    if (ignoredofs)
+      for (size_t j = 0; j < dofs.Size (); j++)
+        if (IsIgnoredRegularDof (ignoredofs, dofs[j]))
+          all_ignored_dofs++;
 
-  size_t all_ignored_dofs = 0;
-  if (ignoredofs)
+    Matrix<SCAL> elmat (dofs.Size (), velmat.Width () + all_ignored_dofs);
+    elmat = static_cast<SCAL> (0.0);
+
+    // vdofs are assumed to be in the same local order as dofs, just filtered.
+    size_t vj = 0;
+    size_t ignored_col = 0;
+
     for (size_t j = 0; j < dofs.Size (); j++)
-      if (IsIgnoredRegularDof (ignoredofs, dofs[j]))
-        all_ignored_dofs++;
+      {
+        DofId d = dofs[j];
+        bool is_hidden = IsInactiveOrHiddenDof (fes, d);
+        bool is_ignored = IsIgnoredRegularDof (ignoredofs, d);
 
-  Matrix<SCAL> elmat (dofs.Size (), velmat.Width () + all_ignored_dofs);
-  elmat = static_cast<SCAL> (0.0);
+        if (!is_hidden && !is_ignored)
+          {
+            for (size_t i = 0; i < velmat.Width (); i++)
+              elmat (j, i) = velmat (vj, i);
+            vj++;
+          }
 
-  // vdofs are assumed to be in the same local order as dofs, just filtered.
-  size_t vj = 0;
-  size_t ignored_col = 0;
+        if (is_ignored)
+          {
+            elmat (j, velmat.Width () + ignored_col) = static_cast<SCAL> (1.0);
+            ignored_col++;
+          }
+      }
 
-  for (size_t j = 0; j < dofs.Size (); j++)
-    {
-      DofId d = dofs[j];
-      bool is_hidden = IsInactiveOrHiddenDof (fes, d);
-      bool is_ignored = IsIgnoredRegularDof (ignoredofs, d);
+    return elmat;
+  }
 
-      if (!is_hidden && !is_ignored)
-        {
-          for (size_t i = 0; i < velmat.Width (); i++)
-            elmat (j, i) = velmat (vj, i);
-          vj++;
-        }
+  void fesFromOp (const SumOfIntegrals &op, shared_ptr<FESpace> &fes,
+                  shared_ptr<FESpace> &fes_test)
+  {
+    Array<shared_ptr<Integral>> ics;
 
-      if (is_ignored)
-        {
-          elmat (j, velmat.Width () + ignored_col) = static_cast<SCAL> (1.0);
-          ignored_col++;
-        }
-    }
+    for (shared_ptr<Integral> icf : op.icfs)
+      icf->cf->TraverseTree ([&] (CoefficientFunction &nodecf) {
+        auto proxy = dynamic_pointer_cast<ProxyFunction> (
+            (&nodecf)->shared_from_this ());
+        if (proxy && proxy->IsTrialFunction () && !fes)
+          fes = proxy->GetFESpace ();
+        else if (proxy && proxy->IsTrialFunction ()
+                 && fes != proxy->GetFESpace ())
+          throw Exception (
+              "Two different trial FESpaces in the same operator");
+        else if (proxy && proxy->IsTestFunction () && !fes_test)
+          fes_test = proxy->GetFESpace ();
+        else if (proxy && proxy->IsTestFunction ()
+                 && fes_test != proxy->GetFESpace ())
+          throw Exception ("Two different test FESpaces in the same operator");
+      });
+  }
 
-  return elmat;
-}
+  /// Fills the two creators with the sparsity pattern needed for
+  /// the Trefftz embedding.
+  /// @tparam NZ_FUNC has signature `(ElementId) -> size_t`
+  template <typename SCAL>
+  std::tuple<size_t, size_t, size_t> createConformingTrefftzTables (
+      Table<int> &table, Table<int> &table2,
+      const FlatArray<optional<Matrix<SCAL>>> &etmats,
+      const FlatArray<size_t> &local_ndofs_trefftz, const FESpace &fes,
+      shared_ptr<const FESpace> fes_conformity,
+      shared_ptr<const BitArray> ignoredofs)
+  {
+    const auto ma = fes.GetMeshAccess ();
+    const VorB vb = ma->GetNE (VOL) > 0 ? VOL : BND;
+    const size_t ne = ma->GetNE (vb);
+    const size_t ndof_conforming
+        = fes_conformity ? fes_conformity->GetNDof () : 0;
 
-void fesFromOp (const SumOfIntegrals &op, shared_ptr<FESpace> &fes,
-                shared_ptr<FESpace> &fes_test)
-{
-  Array<shared_ptr<Integral>> ics;
+    size_t global_trefftz_ndof = 0;
+    for (auto ei : ma->Elements (vb))
+      if (etmats[ei.Nr ()])
+        global_trefftz_ndof += local_ndofs_trefftz[ei.Nr ()];
 
-  for (shared_ptr<Integral> icf : op.icfs)
-    icf->cf->TraverseTree ([&] (CoefficientFunction &nodecf) {
-      auto proxy = dynamic_pointer_cast<ProxyFunction> (
-          (&nodecf)->shared_from_this ());
-      if (proxy && proxy->IsTrialFunction () && !fes)
-        fes = proxy->GetFESpace ();
-      else if (proxy && proxy->IsTrialFunction ()
-               && fes != proxy->GetFESpace ())
-        throw Exception ("Two different trial FESpaces in the same operator");
-      else if (proxy && proxy->IsTestFunction () && !fes_test)
-        fes_test = proxy->GetFESpace ();
-      else if (proxy && proxy->IsTestFunction ()
-               && fes_test != proxy->GetFESpace ())
-        throw Exception ("Two different test FESpaces in the same operator");
-    });
-}
+    Array<DofId> new_ignore_dofnrs;
+    size_t nignored = 0;
+    if (ignoredofs)
+      {
+        new_ignore_dofnrs.SetSize (fes.GetNDof ());
+        new_ignore_dofnrs = NO_DOF_NR;
 
-/// Fills the two creators with the sparsity pattern needed for
-/// the Trefftz embedding.
-/// @tparam NZ_FUNC has signature `(ElementId) -> size_t`
-template <typename SCAL>
-std::tuple<size_t, size_t, size_t>
-createConformingTrefftzTables (Table<int> &table, Table<int> &table2,
-                               const FlatArray<optional<Matrix<SCAL>>> &etmats,
-                               const FlatArray<size_t> &local_ndofs_trefftz,
-                               const FESpace &fes,
-                               shared_ptr<const FESpace> fes_conformity,
-                               shared_ptr<const BitArray> ignoredofs)
-{
-  const auto ma = fes.GetMeshAccess ();
-  const VorB vb = ma->GetNE (VOL) > 0 ? VOL : BND;
-  const size_t ne = ma->GetNE (vb);
-  const size_t ndof_conforming
-      = fes_conformity ? fes_conformity->GetNDof () : 0;
+        size_t ignored_offset = ndof_conforming + global_trefftz_ndof;
+        for (size_t i = 0; i < ignoredofs->Size (); i++)
+          if (ignoredofs->Test (i))
+            new_ignore_dofnrs[i] = ignored_offset + (nignored++);
+      }
 
-  size_t global_trefftz_ndof = 0;
-  for (auto ei : ma->Elements (vb))
-    if (etmats[ei.Nr ()])
-      global_trefftz_ndof += local_ndofs_trefftz[ei.Nr ()];
+    TableCreator<int> creator (ne);  // rows  (base dofs)
+    TableCreator<int> creator2 (ne); // cols  (embedded dofs)
 
-  Array<DofId> new_ignore_dofnrs;
-  size_t nignored = 0;
-  if (ignoredofs)
-    {
-      new_ignore_dofnrs.SetSize (fes.GetNDof ());
-      new_ignore_dofnrs = NO_DOF_NR;
+    for (; !creator.Done (); creator++, creator2++)
+      {
+        size_t next_trefftz_dof = ndof_conforming;
 
-      size_t ignored_offset = ndof_conforming + global_trefftz_ndof;
-      for (size_t i = 0; i < ignoredofs->Size (); i++)
-        if (ignoredofs->Test (i))
-          new_ignore_dofnrs[i] = ignored_offset + (nignored++);
-    }
-
-  TableCreator<int> creator (ne);  // rows  (base dofs)
-  TableCreator<int> creator2 (ne); // cols  (embedded dofs)
-
-  for (; !creator.Done (); creator++, creator2++)
-    {
-      size_t next_trefftz_dof = ndof_conforming;
-
-      for (auto ei : ma->Elements (vb))
-        {
-          if (!etmats[ei.Nr ()])
-            continue;
-
-          Array<DofId> dnums;
-          fes.GetDofNrs (ei, dnums);
-
-          bool hasregdof = false;
-          for (DofId d : dnums)
-            if (IsRegularDof (d))
-              {
-                creator.Add (ei.Nr (), d);
-                hasregdof = true;
-              }
-
-          // assumption here: Either all or no dof is regular
-          if (!hasregdof)
-            continue;
-
-          // table2 column order matches local embedding columns [C | T | I]
-          // 1) Conforming dofs
-          if (fes_conformity)
-            {
-              Array<DofId> dofs_conforming;
-              fes_conformity->GetDofNrs (ei, dofs_conforming, VISIBLE_DOF);
-
-              for (DofId d : dofs_conforming)
-                if (IsRegularDof (d))
-                  creator2.Add (ei.Nr (), d);
-            }
-          // 2) Element Trefftz dofs
-          size_t nz = local_ndofs_trefftz[ei.Nr ()];
-          for (size_t d = 0; d < nz; d++)
-            creator2.Add (ei.Nr (), next_trefftz_dof++);
-          // 3) Ignored base dofs (local base order), using global renumber
-          if (ignoredofs)
-            for (DofId d : dnums)
-              if (IsIgnoredRegularDof (ignoredofs, d))
-                creator2.Add (ei.Nr (), new_ignore_dofnrs[d]);
-        }
-    }
-
-  (*testout) << "created " << global_trefftz_ndof << " many trefftz dofs"
-             << std::endl;
-
-  table = creator.MoveTable ();
-  table2 = creator2.MoveTable ();
-
-  return { ndof_conforming, global_trefftz_ndof, nignored };
-}
-
-template <typename T> Table<T> DeepCopyTable (const Table<T> &src)
-{
-  TableCreator<T> creator (src.Size ());
-  for (; !creator.Done (); creator++)
-    for (size_t i = 0; i < src.Size (); i++)
-      for (auto v : src[i])
-        creator.Add (i, v);
-  return creator.MoveTable ();
-}
-
-/// assembles a global sparse matrix from the given element matrices.
-/// @param etmats vector of all element matrices
-/// @param fes non-Trefftz finite element space
-/// @tparam SCAL scalar type of the matrix entries
-template <typename SCAL>
-shared_ptr<BaseMatrix>
-Elmats2Sparse (const FlatArray<optional<Matrix<SCAL>>> &etmats,
-               const FlatArray<size_t> &local_ndofs_trefftz,
-               const FESpace &fes, shared_ptr<const FESpace> fes_conformity,
-               shared_ptr<BitArray> ignoredofs)
-{
-  const auto ma = fes.GetMeshAccess ();
-  const VorB vb = ma->GetNE (VOL) > 0 ? VOL : BND;
-
-  Table<int> table, table2;
-  const auto [ndof_conforming, global_trefftz_ndof, nignored]
-      = createConformingTrefftzTables (table, table2, etmats,
-                                       local_ndofs_trefftz, fes,
-                                       fes_conformity, ignoredofs);
-  size_t sumndof = ndof_conforming + global_trefftz_ndof + nignored;
-
-  Table<int> table2_graph = DeepCopyTable (table2);
-
-  auto P = make_shared<SparseMatrix<SCAL>> (fes.GetNDof (), sumndof, table,
-                                            table2_graph, false);
-
-  P->SetZero ();
-  for (auto ei : ma->Elements (vb))
-    if (etmats[ei.Nr ()])
-      P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()],
-                           *etmats[ei.Nr ()]);
-
-  // make sure that overlapping ignoredofs are correct identity
-  if (ignoredofs)
-    {
-      size_t ignored_offset = ndof_conforming + global_trefftz_ndof;
-      for (size_t i = 0; i < ignoredofs->Size (); i++)
-        if (ignoredofs->Test (i))
-          P->operator() (i, ignored_offset++) = static_cast<SCAL> (1.0);
-    }
-
-  return P;
-}
-
-void calculateBilinearFormIntegrators (
-    const SumOfIntegrals &bf,
-    Array<shared_ptr<BilinearFormIntegrator>> bfis[4],
-    shared_ptr<MeshAccess> ma)
-{
-  for (auto icf : bf.icfs)
-    {
-      DifferentialSymbol &dx = icf->dx;
-      shared_ptr<BilinearFormIntegrator> bfi
-          = icf->MakeBilinearFormIntegrator ();
-
-      if (dx.definedon) // DifferentialSymbol cannot set definedon region as it
-                        // has no mesh access.
-        {
-          if (auto definedon_string = get_if<string> (&*dx.definedon);
-              definedon_string)
-            {
-              Region reg (ma, dx.vb, *definedon_string);
-              bfi->SetDefinedOn (reg.Mask ());
-            }
-        }
-
-      bfis[dx.vb] += bfi;
-    }
-}
-
-void calculateLinearFormIntegrators (
-    const SumOfIntegrals &trhs,
-    Array<shared_ptr<LinearFormIntegrator>> lfis[4], shared_ptr<MeshAccess> ma)
-{
-  for (auto icf : trhs.icfs)
-    {
-      DifferentialSymbol &dx = icf->dx;
-      shared_ptr<LinearFormIntegrator> lfi = icf->MakeLinearFormIntegrator ();
-
-      if (dx.definedon)
-        {
-          if (auto definedon_string = get_if<string> (&*dx.definedon);
-              definedon_string)
-            {
-              Region reg (ma, dx.vb, *definedon_string);
-              lfi->SetDefinedOn (reg.Mask ());
-            }
-        }
-
-      lfis[dx.vb] += lfi;
-    }
-}
-
-/// @returns true, if `fes` is a CompressedFESpace
-/// or is a CompoundFESpace with a CompressedFESpace as a child.
-bool fesHasCompressedChild (const FESpace &fes)
-{
-  if (dynamic_cast<const CompressedFESpace *> (&fes))
-    return true;
-
-  if (dynamic_cast<const CompoundFESpace *> (&fes))
-    {
-      for (const shared_ptr<FESpace> &component_fes :
-           dynamic_cast<const CompoundFESpace &> (fes).Spaces ())
-        {
-          if (fesHasCompressedChild (*component_fes))
-            return true;
-        }
-    }
-  return false;
-}
-
-/// Determines, if the FESpace has unused or hidden dofs
-/// (which are considered inactive for this purpose).
-///
-/// If the provided space is a CompressedFESpace,
-/// it is assumed that the base space will have inactive dofs.
-bool fesHasInactiveDofs (const FESpace &fes)
-{
-  if (fesHasCompressedChild (fes))
-    return true;
-  const size_t ndof = fes.GetNDof ();
-  for (size_t d = 0; d < ndof; d++)
-    if (fes.GetDofCouplingType (d) <= HIDDEN_DOF)
-      return true;
-  return false;
-}
-
-bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
-                           const Ngs_Element &mesh_element,
-                           shared_ptr<MeshAccess> ma)
-{
-  for (auto icf : bf.icfs)
-    {
-      if (icf->dx.vb != mesh_element.VB ())
-        continue;
-
-      if (icf->dx.definedonelements
-          && !icf->dx.definedonelements->Test (mesh_element.Nr ()))
-        continue;
-
-      if (icf->dx.definedon) // check region
-        {
-          if (auto definedon_string = get_if<string> (&*icf->dx.definedon);
-              definedon_string)
-            {
-              Region reg (ma, icf->dx.vb, *definedon_string);
-              const BitArray &definedon = reg.Mask ();
-              size_t mat = ma->GetElIndex (mesh_element);
-              if (mat >= definedon.Size ())
-                continue;
-              if (definedon.Test (mat))
-                return true;
+        for (auto ei : ma->Elements (vb))
+          {
+            if (!etmats[ei.Nr ()])
               continue;
-            }
-        }
 
+            Array<DofId> dnums;
+            fes.GetDofNrs (ei, dnums);
+
+            bool hasregdof = false;
+            for (DofId d : dnums)
+              if (IsRegularDof (d))
+                {
+                  creator.Add (ei.Nr (), d);
+                  hasregdof = true;
+                }
+
+            // assumption here: Either all or no dof is regular
+            if (!hasregdof)
+              continue;
+
+            // table2 column order matches local embedding columns [C | T | I]
+            // 1) Conforming dofs
+            if (fes_conformity)
+              {
+                Array<DofId> dofs_conforming;
+                fes_conformity->GetDofNrs (ei, dofs_conforming, VISIBLE_DOF);
+
+                for (DofId d : dofs_conforming)
+                  if (IsRegularDof (d))
+                    creator2.Add (ei.Nr (), d);
+              }
+            // 2) Element Trefftz dofs
+            size_t nz = local_ndofs_trefftz[ei.Nr ()];
+            for (size_t d = 0; d < nz; d++)
+              creator2.Add (ei.Nr (), next_trefftz_dof++);
+            // 3) Ignored base dofs (local base order), using global renumber
+            if (ignoredofs)
+              for (DofId d : dnums)
+                if (IsIgnoredRegularDof (ignoredofs, d))
+                  creator2.Add (ei.Nr (), new_ignore_dofnrs[d]);
+          }
+      }
+
+    (*testout) << "created " << global_trefftz_ndof << " many trefftz dofs"
+               << std::endl;
+
+    table = creator.MoveTable ();
+    table2 = creator2.MoveTable ();
+
+    return { ndof_conforming, global_trefftz_ndof, nignored };
+  }
+
+  template <typename T> Table<T> DeepCopyTable (const Table<T> &src)
+  {
+    TableCreator<T> creator (src.Size ());
+    for (; !creator.Done (); creator++)
+      for (size_t i = 0; i < src.Size (); i++)
+        for (auto v : src[i])
+          creator.Add (i, v);
+    return creator.MoveTable ();
+  }
+
+  /// assembles a global sparse matrix from the given element matrices.
+  /// @param etmats vector of all element matrices
+  /// @param fes non-Trefftz finite element space
+  /// @tparam SCAL scalar type of the matrix entries
+  template <typename SCAL>
+  shared_ptr<BaseMatrix>
+  Elmats2Sparse (const FlatArray<optional<Matrix<SCAL>>> &etmats,
+                 const FlatArray<size_t> &local_ndofs_trefftz,
+                 const FESpace &fes, shared_ptr<const FESpace> fes_conformity,
+                 shared_ptr<BitArray> ignoredofs)
+  {
+    const auto ma = fes.GetMeshAccess ();
+    const VorB vb = ma->GetNE (VOL) > 0 ? VOL : BND;
+
+    Table<int> table, table2;
+    const auto [ndof_conforming, global_trefftz_ndof, nignored]
+        = createConformingTrefftzTables (table, table2, etmats,
+                                         local_ndofs_trefftz, fes,
+                                         fes_conformity, ignoredofs);
+    size_t sumndof = ndof_conforming + global_trefftz_ndof + nignored;
+
+    Table<int> table2_graph = DeepCopyTable (table2);
+
+    auto P = make_shared<SparseMatrix<SCAL>> (fes.GetNDof (), sumndof, table,
+                                              table2_graph, false);
+
+    P->SetZero ();
+    for (auto ei : ma->Elements (vb))
+      if (etmats[ei.Nr ()])
+        P->AddElementMatrix (table[ei.Nr ()], table2[ei.Nr ()],
+                             *etmats[ei.Nr ()]);
+
+    // make sure that overlapping ignoredofs are correct identity
+    if (ignoredofs)
+      {
+        size_t ignored_offset = ndof_conforming + global_trefftz_ndof;
+        for (size_t i = 0; i < ignoredofs->Size (); i++)
+          if (ignoredofs->Test (i))
+            P->operator() (i, ignored_offset++) = static_cast<SCAL> (1.0);
+      }
+
+    return P;
+  }
+
+  void calculateBilinearFormIntegrators (
+      const SumOfIntegrals &bf,
+      Array<shared_ptr<BilinearFormIntegrator>> bfis[4],
+      shared_ptr<MeshAccess> ma)
+  {
+    for (auto icf : bf.icfs)
+      {
+        DifferentialSymbol &dx = icf->dx;
+        shared_ptr<BilinearFormIntegrator> bfi
+            = icf->MakeBilinearFormIntegrator ();
+
+        if (dx.definedon) // DifferentialSymbol cannot set definedon region as
+                          // it has no mesh access.
+          {
+            if (auto definedon_string = get_if<string> (&*dx.definedon);
+                definedon_string)
+              {
+                Region reg (ma, dx.vb, *definedon_string);
+                bfi->SetDefinedOn (reg.Mask ());
+              }
+          }
+
+        bfis[dx.vb] += bfi;
+      }
+  }
+
+  void calculateLinearFormIntegrators (
+      const SumOfIntegrals &trhs,
+      Array<shared_ptr<LinearFormIntegrator>> lfis[4],
+      shared_ptr<MeshAccess> ma)
+  {
+    for (auto icf : trhs.icfs)
+      {
+        DifferentialSymbol &dx = icf->dx;
+        shared_ptr<LinearFormIntegrator> lfi
+            = icf->MakeLinearFormIntegrator ();
+
+        if (dx.definedon)
+          {
+            if (auto definedon_string = get_if<string> (&*dx.definedon);
+                definedon_string)
+              {
+                Region reg (ma, dx.vb, *definedon_string);
+                lfi->SetDefinedOn (reg.Mask ());
+              }
+          }
+
+        lfis[dx.vb] += lfi;
+      }
+  }
+
+  /// @returns true, if `fes` is a CompressedFESpace
+  /// or is a CompoundFESpace with a CompressedFESpace as a child.
+  bool fesHasCompressedChild (const FESpace &fes)
+  {
+    if (dynamic_cast<const CompressedFESpace *> (&fes))
       return true;
-    }
-  return false;
-}
+
+    if (dynamic_cast<const CompoundFESpace *> (&fes))
+      {
+        for (const shared_ptr<FESpace> &component_fes :
+             dynamic_cast<const CompoundFESpace &> (fes).Spaces ())
+          {
+            if (fesHasCompressedChild (*component_fes))
+              return true;
+          }
+      }
+    return false;
+  }
+
+  /// Determines, if the FESpace has unused or hidden dofs
+  /// (which are considered inactive for this purpose).
+  ///
+  /// If the provided space is a CompressedFESpace,
+  /// it is assumed that the base space will have inactive dofs.
+  bool fesHasInactiveDofs (const FESpace &fes)
+  {
+    if (fesHasCompressedChild (fes))
+      return true;
+    const size_t ndof = fes.GetNDof ();
+    for (size_t d = 0; d < ndof; d++)
+      if (fes.GetDofCouplingType (d) <= HIDDEN_DOF)
+        return true;
+    return false;
+  }
+
+  bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
+                             const Ngs_Element &mesh_element,
+                             shared_ptr<MeshAccess> ma)
+  {
+    for (auto icf : bf.icfs)
+      {
+        if (icf->dx.vb != mesh_element.VB ())
+          continue;
+
+        if (icf->dx.definedonelements
+            && !icf->dx.definedonelements->Test (mesh_element.Nr ()))
+          continue;
+
+        if (icf->dx.definedon) // check region
+          {
+            if (auto definedon_string = get_if<string> (&*icf->dx.definedon);
+                definedon_string)
+              {
+                Region reg (ma, icf->dx.vb, *definedon_string);
+                const BitArray &definedon = reg.Mask ();
+                size_t mat = ma->GetElIndex (mesh_element);
+                if (mat >= definedon.Size ())
+                  continue;
+                if (definedon.Test (mat))
+                  return true;
+                continue;
+              }
+          }
+
+        return true;
+      }
+    return false;
+  }
 }
 
 namespace
@@ -609,128 +612,130 @@ namespace
 
 namespace
 {
-/// @param num_zeros_guess Guess (lower bound) for the number of singular
-///     values `sigma_i = 0` in the matrix Sigma. Is useful when there are
-///     very-close-to-zero singular values that you can detect in advance.
-/// @return pseudoinverse of A (as some `ngbla::Expr` type to avoid
-/// allocations)
-template <typename SCAL, typename TDIST, ORDERING SIG_ORD>
-Matrix<SCAL>
-invertSVD (const FlatMatrix<SCAL, ColMajor> &UT,
-           const MatrixView<SCAL, SIG_ORD, size_t, size_t, TDIST> &Sigma,
-           const FlatMatrix<SCAL, ColMajor> &V, size_t num_zeros_guess,
-           LocalHeap &lh, bool take_sqrt = false)
-{
-  const HeapReset hr (lh);
-  const auto [m, n] = Sigma.Shape ();
-  const size_t diag_len = min (m, n);
+  /// @param num_zeros_guess Guess (lower bound) for the number of singular
+  ///     values `sigma_i = 0` in the matrix Sigma. Is useful when there are
+  ///     very-close-to-zero singular values that you can detect in advance.
+  /// @return pseudoinverse of A (as some `ngbla::Expr` type to avoid
+  /// allocations)
+  template <typename SCAL, typename TDIST, ORDERING SIG_ORD>
+  Matrix<SCAL>
+  invertSVD (const FlatMatrix<SCAL, ColMajor> &UT,
+             const MatrixView<SCAL, SIG_ORD, size_t, size_t, TDIST> &Sigma,
+             const FlatMatrix<SCAL, ColMajor> &V, size_t num_zeros_guess,
+             LocalHeap &lh, bool take_sqrt = false)
+  {
+    const HeapReset hr (lh);
+    const auto [m, n] = Sigma.Shape ();
+    const size_t diag_len = min (m, n);
 
-  // find out if the guess was too low
-  size_t num_zeros = num_zeros_guess;
-  for (size_t i = num_zeros_guess + 1;
-       i <= diag_len && Sigma (diag_len - i, diag_len - i) == 0.; i++)
-    num_zeros = i;
+    // find out if the guess was too low
+    size_t num_zeros = num_zeros_guess;
+    for (size_t i = num_zeros_guess + 1;
+         i <= diag_len && Sigma (diag_len - i, diag_len - i) == 0.; i++)
+      num_zeros = i;
 
-  FlatMatrix<SCAL> sigma_inv_times_ut (n, UT.Width (), lh);
-  const size_t nonzero_diag_len = min (n - num_zeros, m);
-  for (size_t i = 0; i < nonzero_diag_len; i++)
-    if (take_sqrt)
-      sigma_inv_times_ut.Row (i) = 1.0 / sqrt (Sigma (i, i)) * UT.Row (i);
-    else
-      sigma_inv_times_ut.Row (i) = 1.0 / Sigma (i, i) * UT.Row (i);
-  sigma_inv_times_ut.Rows (nonzero_diag_len, n) = SCAL (0.);
+    FlatMatrix<SCAL> sigma_inv_times_ut (n, UT.Width (), lh);
+    const size_t nonzero_diag_len = min (n - num_zeros, m);
+    for (size_t i = 0; i < nonzero_diag_len; i++)
+      if (take_sqrt)
+        sigma_inv_times_ut.Row (i) = 1.0 / sqrt (Sigma (i, i)) * UT.Row (i);
+      else
+        sigma_inv_times_ut.Row (i) = 1.0 / Sigma (i, i) * UT.Row (i);
+    sigma_inv_times_ut.Rows (nonzero_diag_len, n) = SCAL (0.);
 
-  return V * sigma_inv_times_ut;
-}
+    return V * sigma_inv_times_ut;
+  }
 
-/// @returns the pseudo-inverse of `mat`
-/// @param num_zero number of (near) zero singular values in `mat`
-template <typename SCAL>
-Matrix<SCAL>
-getPseudoInverse (const FlatMatrix<SCAL> mat, const size_t num_zero)
-{
-  LocalHeap lh = LocalHeap (100 * 1000 * 1000, "embt");
-  const auto [n, m] = mat.Shape ();
-  FlatMatrix<SCAL> sigma (n, m, lh);
-  FlatMatrix<SCAL, ColMajor> UT (n, n, lh);
-  FlatMatrix<SCAL, ColMajor> V (m, m, lh);
+  /// @returns the pseudo-inverse of `mat`
+  /// @param num_zero number of (near) zero singular values in `mat`
+  template <typename SCAL>
+  Matrix<SCAL>
+  getPseudoInverse (const FlatMatrix<SCAL> mat, const size_t num_zero)
+  {
+    LocalHeap lh = LocalHeap (100 * 1000 * 1000, "embt");
+    const auto [n, m] = mat.Shape ();
+    FlatMatrix<SCAL> sigma (n, m, lh);
+    FlatMatrix<SCAL, ColMajor> UT (n, n, lh);
+    FlatMatrix<SCAL, ColMajor> V (m, m, lh);
 
-  Matrix<SCAL> elmat_inv (m, n);
+    Matrix<SCAL> elmat_inv (m, n);
 
-  sigma = mat;
-  getSVD (sigma, UT, V);
-  elmat_inv = invertSVD (UT, sigma, V, num_zero, lh);
-  return elmat_inv;
-}
+    sigma = mat;
+    getSVD (sigma, UT, V);
+    elmat_inv = invertSVD (UT, sigma, V, num_zero, lh);
+    return elmat_inv;
+  }
 
-template <typename SCAL>
-void getPseudoInverse (FlatMatrix<SCAL> mat, const size_t num_zero,
-                       LocalHeap &lh, int take_sqrt = false)
-{
-  HeapReset hr (lh);
-  const auto [n, m] = mat.Shape ();
-  FlatMatrix<SCAL> sigma (n, m, lh);
-  FlatMatrix<SCAL, ColMajor> UT (n, n, lh);
-  FlatMatrix<SCAL, ColMajor> V (m, m, lh);
+  template <typename SCAL>
+  void getPseudoInverse (FlatMatrix<SCAL> mat, const size_t num_zero,
+                         LocalHeap &lh, int take_sqrt = false)
+  {
+    HeapReset hr (lh);
+    const auto [n, m] = mat.Shape ();
+    FlatMatrix<SCAL> sigma (n, m, lh);
+    FlatMatrix<SCAL, ColMajor> UT (n, n, lh);
+    FlatMatrix<SCAL, ColMajor> V (m, m, lh);
 
-  sigma = mat;
-  getSVD (sigma, UT, V);
-  mat = invertSVD (UT, sigma, V, num_zero, lh, take_sqrt);
-}
+    sigma = mat;
+    getSVD (sigma, UT, V);
+    mat = invertSVD (UT, sigma, V, num_zero, lh, take_sqrt);
+  }
 
-/// calculates from the given space and linear form integrators a particular
-/// solution. note: allocates the solution on the given local heap.
-/// @param lfis arrays of linear form integrators, for `VOL`, `BND`, `BBND`,
-/// `BBBND`
-/// @return the element-local solution, allocated on the local heap `mlh`
-/// @tparam T type of matrix expression
-template <typename SCAL, typename T>
-void calculateParticularSolution (
-    FlatVector<SCAL> partsol, Array<shared_ptr<LinearFormIntegrator>> lfis[4],
-    const FESpace &fes_test, const ElementId ei, const MeshAccess &ma,
-    const Expr<T> &inverse_elmat, LocalHeap &mlh)
-{
-  Array<DofId> dofs_test;
-  fes_test.GetDofNrs (ei, dofs_test);
+  /// calculates from the given space and linear form integrators a particular
+  /// solution. note: allocates the solution on the given local heap.
+  /// @param lfis arrays of linear form integrators, for `VOL`, `BND`, `BBND`,
+  /// `BBBND`
+  /// @return the element-local solution, allocated on the local heap `mlh`
+  /// @tparam T type of matrix expression
+  template <typename SCAL, typename T>
+  void
+  calculateParticularSolution (FlatVector<SCAL> partsol,
+                               Array<shared_ptr<LinearFormIntegrator>> lfis[4],
+                               const FESpace &fes_test, const ElementId ei,
+                               const MeshAccess &ma,
+                               const Expr<T> &inverse_elmat, LocalHeap &mlh)
+  {
+    Array<DofId> dofs_test;
+    fes_test.GetDofNrs (ei, dofs_test);
 
-  const HeapReset hr (mlh);
-  const auto &test_fel = fes_test.GetFE (ei, mlh);
-  const auto &trafo = ma.GetTrafo (ei, mlh);
-  FlatVector<SCAL> elvec (dofs_test.Size (), mlh),
-      elveci (dofs_test.Size (), mlh);
-  elvec = static_cast<SCAL> (0.0);
+    const HeapReset hr (mlh);
+    const auto &test_fel = fes_test.GetFE (ei, mlh);
+    const auto &trafo = ma.GetTrafo (ei, mlh);
+    FlatVector<SCAL> elvec (dofs_test.Size (), mlh),
+        elveci (dofs_test.Size (), mlh);
+    elvec = static_cast<SCAL> (0.0);
 
-  for (const auto vorb : { VOL, BND, BBND, BBBND })
-    {
-      for (const auto &lfi : lfis[vorb])
-        {
-          if (lfi->DefinedOnElement (ei.Nr ())
-              && lfi->DefinedOn (ma.GetElIndex (ei)))
-            {
-              auto &mapped_trafo
-                  = trafo.AddDeformation (lfi->GetDeformation ().get (), mlh);
-              lfi->CalcElementVector (test_fel, mapped_trafo, elveci, mlh);
-              elvec += elveci;
-            }
-        }
-    }
+    for (const auto vorb : { VOL, BND, BBND, BBBND })
+      {
+        for (const auto &lfi : lfis[vorb])
+          {
+            if (lfi->DefinedOnElement (ei.Nr ())
+                && lfi->DefinedOn (ma.GetElIndex (ei)))
+              {
+                auto &mapped_trafo = trafo.AddDeformation (
+                    lfi->GetDeformation ().get (), mlh);
+                lfi->CalcElementVector (test_fel, mapped_trafo, elveci, mlh);
+                elvec += elveci;
+              }
+          }
+      }
 
-  if (fesHasInactiveDofs (fes_test))
-    {
-      Array<int> pos_test;
-      pos_test.SetSize0 ();
-      for (size_t i = 0; i < dofs_test.Size (); i++)
-        if (!IsInactiveOrHiddenDof (fes_test, dofs_test[i]))
-          pos_test.Append (i);
+    if (fesHasInactiveDofs (fes_test))
+      {
+        Array<int> pos_test;
+        pos_test.SetSize0 ();
+        for (size_t i = 0; i < dofs_test.Size (); i++)
+          if (!IsInactiveOrHiddenDof (fes_test, dofs_test[i]))
+            pos_test.Append (i);
 
-      FlatVector<SCAL> velvec (pos_test.Size (), mlh);
-      for (size_t vi = 0; vi < pos_test.Size (); vi++)
-        velvec[vi] = elvec[pos_test[vi]];
+        FlatVector<SCAL> velvec (pos_test.Size (), mlh);
+        for (size_t vi = 0; vi < pos_test.Size (); vi++)
+          velvec[vi] = elvec[pos_test[vi]];
 
-      elvec.AssignMemory (velvec.Size (), &velvec[0]);
-    }
-  partsol = inverse_elmat * elvec;
-}
+        elvec.AssignMemory (velvec.Size (), &velvec[0]);
+      }
+    partsol = inverse_elmat * elvec;
+  }
 }
 
 namespace ngcomp

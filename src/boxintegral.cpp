@@ -10,246 +10,246 @@ bool symbolic_integrator_uses_diff = false;
 
 namespace
 {
-template <int D>
-INLINE double GetElementSizeCenter (const ElementTransformation &trafo,
-                                    FlatVector<> &center, LocalHeap &lh)
-{
-  center = 0;
-  auto &ip = *(
-      new (lh) IntegrationPoint (1.0 / (D + 1), 1.0 / (D + 1), 1.0 / (D + 1)));
-  auto &mip = *(new (lh) MappedIntegrationPoint<D, D> (ip, trafo));
-  center = mip.GetPoint ();
-  if (D == 1)
-    return mip.GetJacobiDet ();
-  else if (D == 2)
-    return sqrt (mip.GetJacobiDet ());
-  else
-    return cbrt (mip.GetJacobiDet ());
-}
+  template <int D>
+  INLINE double GetElementSizeCenter (const ElementTransformation &trafo,
+                                      FlatVector<> &center, LocalHeap &lh)
+  {
+    center = 0;
+    auto &ip = *(new (lh) IntegrationPoint (1.0 / (D + 1), 1.0 / (D + 1),
+                                            1.0 / (D + 1)));
+    auto &mip = *(new (lh) MappedIntegrationPoint<D, D> (ip, trafo));
+    center = mip.GetPoint ();
+    if (D == 1)
+      return mip.GetJacobiDet ();
+    else if (D == 2)
+      return sqrt (mip.GetJacobiDet ());
+    else
+      return cbrt (mip.GetJacobiDet ());
+  }
 
-/**
- * Maps reference points to physical points and computes weights.
- *
- * @param trafo The element transformation.
- * @param pts_in The input reference points.
- * @param pts_out The output physical points.
- * @param wts_in The input weights.
- * @param wts_out The output weights.
- * @param lh The LocalHeap object.
- */
-template <int D>
-INLINE void
-MapRefPoints (const ElementTransformation &trafo,
-              FlatMatrixFixWidth<D> &pts_in, FlatMatrixFixWidth<D> &pts_out,
-              FlatVector<> &wts_in, FlatVector<> &wts_out, double box_length,
-              bool scale_with_elsize, LocalHeap &lh, VorB element_vb = VOL)
-{
-  FlatVector<> center (D, lh);
-  double h = GetElementSizeCenter<D> (trafo, center, lh);
-  if (scale_with_elsize)
-    box_length *= h;
-  const double box_factor = pow (box_length, element_vb == VOL ? D : D - 1);
-  for (size_t i = 0; i < pts_in.Height (); i++)
-    {
-      for (int d = 0; d < D; d++)
-        pts_out (i, d) = center (d) + box_length * pts_in (i, d);
-      wts_out (i) = box_factor * wts_in (i);
-    }
-}
+  /**
+   * Maps reference points to physical points and computes weights.
+   *
+   * @param trafo The element transformation.
+   * @param pts_in The input reference points.
+   * @param pts_out The output physical points.
+   * @param wts_in The input weights.
+   * @param wts_out The output weights.
+   * @param lh The LocalHeap object.
+   */
+  template <int D>
+  INLINE void
+  MapRefPoints (const ElementTransformation &trafo,
+                FlatMatrixFixWidth<D> &pts_in, FlatMatrixFixWidth<D> &pts_out,
+                FlatVector<> &wts_in, FlatVector<> &wts_out, double box_length,
+                bool scale_with_elsize, LocalHeap &lh, VorB element_vb = VOL)
+  {
+    FlatVector<> center (D, lh);
+    double h = GetElementSizeCenter<D> (trafo, center, lh);
+    if (scale_with_elsize)
+      box_length *= h;
+    const double box_factor = pow (box_length, element_vb == VOL ? D : D - 1);
+    for (size_t i = 0; i < pts_in.Height (); i++)
+      {
+        for (int d = 0; d < D; d++)
+          pts_out (i, d) = center (d) + box_length * pts_in (i, d);
+        wts_out (i) = box_factor * wts_in (i);
+      }
+  }
 
-/**
- * The maximum number of iterations for the Newton method.
- * If the Newton method does not converge within this number of iterations,
- * it is considered to have failed.
- */
-const int NEWTON_ITER_TRESHOLD = 20;
-/**
- * Maximum distance between linearly mapped point and Newton solution that is
- * considered acceptable (scaled w.r.t. element size).
- */
-const double MAX_DIST_NEWTON = 5e-1;
-/**
- * The tolerance for the Newton method.
- */
-const double EPS_FIND_IP = 1e-12;
+  /**
+   * The maximum number of iterations for the Newton method.
+   * If the Newton method does not converge within this number of iterations,
+   * it is considered to have failed.
+   */
+  const int NEWTON_ITER_TRESHOLD = 20;
+  /**
+   * Maximum distance between linearly mapped point and Newton solution that is
+   * considered acceptable (scaled w.r.t. element size).
+   */
+  const double MAX_DIST_NEWTON = 5e-1;
+  /**
+   * The tolerance for the Newton method.
+   */
+  const double EPS_FIND_IP = 1e-12;
 
-/**
- * Find the integration, i.e. the point in the reference element, that maps to
- * the given point in the physical element based on the given point in world
- * coordinates and the element transformation (constant or nonlinear).
- *
- * @tparam D The dimension of the vector.
- * @param ip The integration point to be found.
- * @param trafo The element transformation.
- * @param vec The vector describing the world coordinates.
- * @param lh The local heap.
- */
-template <int D>
-void FindIntegrationPoint (IntegrationPoint &ip,
-                           const ElementTransformation &trafo,
-                           const Vec<D> &vec, LocalHeap &lh)
-{
-  // HeapReset hr (lh);
-  ip.Point ().Range (0, D) = 0.0;
+  /**
+   * Find the integration, i.e. the point in the reference element, that maps
+   * to the given point in the physical element based on the given point in
+   * world coordinates and the element transformation (constant or nonlinear).
+   *
+   * @tparam D The dimension of the vector.
+   * @param ip The integration point to be found.
+   * @param trafo The element transformation.
+   * @param vec The vector describing the world coordinates.
+   * @param lh The local heap.
+   */
+  template <int D>
+  void FindIntegrationPoint (IntegrationPoint &ip,
+                             const ElementTransformation &trafo,
+                             const Vec<D> &vec, LocalHeap &lh)
+  {
+    // HeapReset hr (lh);
+    ip.Point ().Range (0, D) = 0.0;
 
-  FlatVector<> diff (D, lh);
-  FlatVector<> update (D, lh);
+    FlatVector<> diff (D, lh);
+    FlatVector<> update (D, lh);
 
-  // Linear guess
-  auto mip_x0 = new (lh) MappedIntegrationPoint<D, D> (ip, trafo);
-  diff = vec - mip_x0->GetPoint ();
-  update = mip_x0->GetJacobianInverse () * diff;
-  ip.Point ().Range (0, D) += update;
-  const double h = sqrt (mip_x0->GetJacobiDet ());
+    // Linear guess
+    auto mip_x0 = new (lh) MappedIntegrationPoint<D, D> (ip, trafo);
+    diff = vec - mip_x0->GetPoint ();
+    update = mip_x0->GetJacobianInverse () * diff;
+    ip.Point ().Range (0, D) += update;
+    const double h = sqrt (mip_x0->GetJacobiDet ());
 
-  FlatVector<> ip_vec_lin (D, lh);
-  ip_vec_lin = ip.Point ().Range (0, D);
+    FlatVector<> ip_vec_lin (D, lh);
+    ip_vec_lin = ip.Point ().Range (0, D);
 
-  int its = 0;
+    int its = 0;
 
-  while (its == 0
-         || (L2Norm (diff) > EPS_FIND_IP * h && its < NEWTON_ITER_TRESHOLD))
-    {
-      HeapReset hr (lh);
-      auto mip_x0 = new (lh) MappedIntegrationPoint<D, D> (ip, trafo);
-      diff = vec - mip_x0->GetPoint ();
-      update = mip_x0->GetJacobianInverse () * diff;
-      ip.Point ().Range (0, D) += update;
-      its++;
-    }
+    while (its == 0
+           || (L2Norm (diff) > EPS_FIND_IP * h && its < NEWTON_ITER_TRESHOLD))
+      {
+        HeapReset hr (lh);
+        auto mip_x0 = new (lh) MappedIntegrationPoint<D, D> (ip, trafo);
+        diff = vec - mip_x0->GetPoint ();
+        update = mip_x0->GetJacobianInverse () * diff;
+        ip.Point ().Range (0, D) += update;
+        its++;
+      }
 
-  FlatVector<> ip_vec (D, lh);
-  ip_vec = ip.Point ().Range (0, D);
+    FlatVector<> ip_vec (D, lh);
+    ip_vec = ip.Point ().Range (0, D);
 
-  if (its >= NEWTON_ITER_TRESHOLD || L2Norm (diff) > EPS_FIND_IP * h)
-    throw Exception ("Newton did not converge after " + to_string (its)
-                     + " iterations! (" + to_string (D) + "D)");
-  else if (L2Norm (ip_vec - ip_vec_lin) > MAX_DIST_NEWTON * h)
-    {
-      cout << IM (6) << "Distance warning triggered, dist = "
-           << L2Norm (ip_vec - ip_vec_lin) << " its = " << its << endl;
-      cout << IM (6) << "taking a low order guess" << endl;
-      ip.Point ().Range (0, D) = ip_vec_lin;
-    }
-  ip.SetFacetNr (-1, VOL);
-}
+    if (its >= NEWTON_ITER_TRESHOLD || L2Norm (diff) > EPS_FIND_IP * h)
+      throw Exception ("Newton did not converge after " + to_string (its)
+                       + " iterations! (" + to_string (D) + "D)");
+    else if (L2Norm (ip_vec - ip_vec_lin) > MAX_DIST_NEWTON * h)
+      {
+        cout << IM (6) << "Distance warning triggered, dist = "
+             << L2Norm (ip_vec - ip_vec_lin) << " its = " << its << endl;
+        cout << IM (6) << "taking a low order guess" << endl;
+        ip.Point ().Range (0, D) = ip_vec_lin;
+      }
+    ip.SetFacetNr (-1, VOL);
+  }
 
-/**
- * \brief Computes the points and weights for numerical integration over a box
- * part of an element or over the boundary of the box part.
- *
- * \tparam D The dimension of the (box) element.
- * \param order The order of the integration rule.
- * \param lh The local heap for temporary memory allocation.
- * \param element_vb The type of the box integration rule (VOL or BND).
- * \return A tuple containing the matrix of reference points and the vector of
- * reference weights.
- *
- * This function computes the points and weights for numerical integration over
- * a box element. The integration is performed using an integration rule of the
- * specified order. The points and weights are computed separately for the
- * volume (VOL) and boundary (BND) types of elements. The computed
- * points/weights are relative to the center of the box, with the box size
- * being provided.
- */
-template <int D>
-tuple<FlatMatrixFixWidth<D>, FlatVector<>>
-GetBoxPointsAndWeights (int order, LocalHeap &lh, VorB element_vb = VOL,
-                        BOXTYPE type = DEFAULT)
-{
-  const IntegrationRule &ir1d = SelectIntegrationRule (ET_SEGM, order);
-  const int nip1D = ir1d.Size ();
+  /**
+   * \brief Computes the points and weights for numerical integration over a
+   * box part of an element or over the boundary of the box part.
+   *
+   * \tparam D The dimension of the (box) element.
+   * \param order The order of the integration rule.
+   * \param lh The local heap for temporary memory allocation.
+   * \param element_vb The type of the box integration rule (VOL or BND).
+   * \return A tuple containing the matrix of reference points and the vector
+   * of reference weights.
+   *
+   * This function computes the points and weights for numerical integration
+   * over a box element. The integration is performed using an integration rule
+   * of the specified order. The points and weights are computed separately for
+   * the volume (VOL) and boundary (BND) types of elements. The computed
+   * points/weights are relative to the center of the box, with the box size
+   * being provided.
+   */
+  template <int D>
+  tuple<FlatMatrixFixWidth<D>, FlatVector<>>
+  GetBoxPointsAndWeights (int order, LocalHeap &lh, VorB element_vb = VOL,
+                          BOXTYPE type = DEFAULT)
+  {
+    const IntegrationRule &ir1d = SelectIntegrationRule (ET_SEGM, order);
+    const int nip1D = ir1d.Size ();
 
-  if ((type == BOXTYPE::BALL) && (D == 2))
-    {
-      const int ballnip = (order + 1) / 2;
-      const int nip = nip1D * ballnip;
-      FlatMatrixFixWidth<D> ref_pts_mat (nip, lh);
-      FlatVector<> ref_wts_vec (nip, lh);
-      for (int k = 0; k < ballnip; k++)
+    if ((type == BOXTYPE::BALL) && (D == 2))
+      {
+        const int ballnip = (order + 1) / 2;
+        const int nip = nip1D * ballnip;
+        FlatMatrixFixWidth<D> ref_pts_mat (nip, lh);
+        FlatVector<> ref_wts_vec (nip, lh);
+        for (int k = 0; k < ballnip; k++)
+          {
+            double etak = cos ((k + 1) * M_PI / (ballnip + 1));
+            double ak
+                = M_PI / (ballnip + 1) * sin ((k + 1) * M_PI / (ballnip + 1));
+            for (int i : Range (nip1D))
+              {
+                int idx = nip1D * k + i;
+
+                double segp = sqrt (1.0 - etak * etak);
+                double p0 = ref_pts_mat (idx, 0) = etak;
+                double p1 = ref_pts_mat (idx, 1)
+                    = ir1d[i](0) * 2.0 * segp - segp;
+
+                ref_wts_vec (idx) = pow (1.0 - (p0 * p0 + p1 * p1), 3) * ak
+                                    * ir1d[i].Weight () * 2.0 * segp;
+              }
+          }
+        return make_tuple (ref_pts_mat, ref_wts_vec);
+      }
+
+    switch (element_vb)
+      {
+      case VOL:
         {
-          double etak = cos ((k + 1) * M_PI / (ballnip + 1));
-          double ak
-              = M_PI / (ballnip + 1) * sin ((k + 1) * M_PI / (ballnip + 1));
-          for (int i : Range (nip1D))
+          const int nip = pow (nip1D, D);
+          FlatMatrixFixWidth<D> ref_pts_mat (nip, lh);
+          FlatVector<> ref_wts_vec (nip, lh);
+          for (int i : Range (nip))
             {
-              int idx = nip1D * k + i;
-
-              double segp = sqrt (1.0 - etak * etak);
-              double p0 = ref_pts_mat (idx, 0) = etak;
-              double p1 = ref_pts_mat (idx, 1)
-                  = ir1d[i](0) * 2.0 * segp - segp;
-
-              ref_wts_vec (idx) = pow (1.0 - (p0 * p0 + p1 * p1), 3) * ak
-                                  * ir1d[i].Weight () * 2.0 * segp;
+              int idx = i;
+              ref_wts_vec (i) = 1.0;
+              for (int d : Range (D))
+                {
+                  ref_pts_mat (i, d) = ir1d[idx % nip1D](0) - 0.5;
+                  ref_wts_vec (i) *= ir1d[idx % nip1D].Weight ();
+                  idx = idx / nip1D;
+                }
             }
+          return make_tuple (ref_pts_mat, ref_wts_vec);
         }
-      return make_tuple (ref_pts_mat, ref_wts_vec);
-    }
-
-  switch (element_vb)
-    {
-    case VOL:
-      {
-        const int nip = pow (nip1D, D);
-        FlatMatrixFixWidth<D> ref_pts_mat (nip, lh);
-        FlatVector<> ref_wts_vec (nip, lh);
-        for (int i : Range (nip))
-          {
-            int idx = i;
-            ref_wts_vec (i) = 1.0;
-            for (int d : Range (D))
-              {
-                ref_pts_mat (i, d) = ir1d[idx % nip1D](0) - 0.5;
-                ref_wts_vec (i) *= ir1d[idx % nip1D].Weight ();
-                idx = idx / nip1D;
-              }
-          }
-        return make_tuple (ref_pts_mat, ref_wts_vec);
+        break;
+      case BND:
+        {
+          const int nip_f = pow (nip1D, D - 1); // points per facet
+          const int nip = 2 * D * nip_f;
+          FlatMatrixFixWidth<D> ref_pts_mat (nip, lh);
+          ref_pts_mat = 0.0;
+          FlatVector<> ref_wts_vec (nip, lh);
+          ref_wts_vec = 0.0;
+          for (int bd : Range (D))
+            {
+              for (int i : Range (nip_f))
+                {
+                  int idx = i;
+                  ref_wts_vec (2 * bd * nip_f + i) = 1.0;
+                  ref_pts_mat (2 * bd * nip_f + i, bd) = -0.5;
+                  ref_wts_vec (2 * bd * nip_f + i + nip_f) = 1.0;
+                  ref_pts_mat (2 * bd * nip_f + i + nip_f, bd) = 0.5;
+                  for (int d : Range (D))
+                    {
+                      if (d == bd)
+                        continue;
+                      ref_pts_mat (2 * bd * nip_f + i, d)
+                          = ir1d[idx % nip1D](0) - 0.5;
+                      ref_pts_mat (2 * bd * nip_f + i + nip_f, d)
+                          = ir1d[idx % nip1D](0) - 0.5;
+                      ref_wts_vec (2 * bd * nip_f + i)
+                          *= ir1d[idx % nip1D].Weight ();
+                      ref_wts_vec (2 * bd * nip_f + i + nip_f)
+                          *= ir1d[idx % nip1D].Weight ();
+                      idx = idx / nip1D;
+                    }
+                }
+            }
+          return make_tuple (ref_pts_mat, ref_wts_vec);
+        }
+        break;
+      default:
+        throw Exception ("GetBoxPointsAndWeights :: unhandled element_vb");
+        break;
       }
-      break;
-    case BND:
-      {
-        const int nip_f = pow (nip1D, D - 1); // points per facet
-        const int nip = 2 * D * nip_f;
-        FlatMatrixFixWidth<D> ref_pts_mat (nip, lh);
-        ref_pts_mat = 0.0;
-        FlatVector<> ref_wts_vec (nip, lh);
-        ref_wts_vec = 0.0;
-        for (int bd : Range (D))
-          {
-            for (int i : Range (nip_f))
-              {
-                int idx = i;
-                ref_wts_vec (2 * bd * nip_f + i) = 1.0;
-                ref_pts_mat (2 * bd * nip_f + i, bd) = -0.5;
-                ref_wts_vec (2 * bd * nip_f + i + nip_f) = 1.0;
-                ref_pts_mat (2 * bd * nip_f + i + nip_f, bd) = 0.5;
-                for (int d : Range (D))
-                  {
-                    if (d == bd)
-                      continue;
-                    ref_pts_mat (2 * bd * nip_f + i, d)
-                        = ir1d[idx % nip1D](0) - 0.5;
-                    ref_pts_mat (2 * bd * nip_f + i + nip_f, d)
-                        = ir1d[idx % nip1D](0) - 0.5;
-                    ref_wts_vec (2 * bd * nip_f + i)
-                        *= ir1d[idx % nip1D].Weight ();
-                    ref_wts_vec (2 * bd * nip_f + i + nip_f)
-                        *= ir1d[idx % nip1D].Weight ();
-                    idx = idx / nip1D;
-                  }
-              }
-          }
-        return make_tuple (ref_pts_mat, ref_wts_vec);
-      }
-      break;
-    default:
-      throw Exception ("GetBoxPointsAndWeights :: unhandled element_vb");
-      break;
-    }
-  return make_tuple (FlatMatrixFixWidth<D> (), FlatVector<> ());
-}
+    return make_tuple (FlatMatrixFixWidth<D> (), FlatVector<> ());
+  }
 }
 
 BoxIntegral ::BoxIntegral (shared_ptr<CoefficientFunction> _cf,

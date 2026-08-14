@@ -8,37 +8,37 @@
 
 namespace
 {
-using namespace ngcomp;
+  using namespace ngcomp;
 
-/// @returns the corresponding `EqType`.
-/// @throws an `Exception`, if the input String has no associated `EqType`.
-EqType stringToEqType (const std::string str)
-{
-  if (str == "fowave")
-    return EqType::fowave;
-  else if (str == "foqtwave")
-    return EqType::foqtwave;
-  else if (str == "wave")
-    return EqType::wave;
-  else if (str == "fowave_reduced")
-    return EqType::fowave_reduced;
-  else if (str == "heat")
-    return EqType::heat;
-  else if (str == "qtheat")
-    return EqType::qtheat;
-  else if (str == "laplace")
-    return EqType::laplace;
-  else if (str == "qtelliptic")
-    return EqType::qtelliptic;
-  else if (str == "helmholtz")
-    return EqType::helmholtz;
-  else if (str == "helmholtzconj")
-    return EqType::helmholtzconj;
-  else if (str == "qtwave")
-    return EqType::qtwave;
-  else
-    throw Exception ("TrefftzFESpace: unknown EqType");
-}
+  /// @returns the corresponding `EqType`.
+  /// @throws an `Exception`, if the input String has no associated `EqType`.
+  EqType stringToEqType (const std::string str)
+  {
+    if (str == "fowave")
+      return EqType::fowave;
+    else if (str == "foqtwave")
+      return EqType::foqtwave;
+    else if (str == "wave")
+      return EqType::wave;
+    else if (str == "fowave_reduced")
+      return EqType::fowave_reduced;
+    else if (str == "heat")
+      return EqType::heat;
+    else if (str == "qtheat")
+      return EqType::qtheat;
+    else if (str == "laplace")
+      return EqType::laplace;
+    else if (str == "qtelliptic")
+      return EqType::qtelliptic;
+    else if (str == "helmholtz")
+      return EqType::helmholtz;
+    else if (str == "helmholtzconj")
+      return EqType::helmholtzconj;
+    else if (str == "qtwave")
+      return EqType::qtwave;
+    else
+      throw Exception ("TrefftzFESpace: unknown EqType");
+  }
 }
 
 namespace ngcomp
