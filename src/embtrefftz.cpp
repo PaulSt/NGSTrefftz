@@ -1,8 +1,10 @@
 #include "embtrefftz.hpp"
 #include "monomialfespace.hpp"
 #include "trefftzfespace.hpp"
+#include "lapack_loader.hpp"
 #include <cfloat>
 #include <compressedfespace.hpp>
+#include <type_traits>
 
 using namespace ngbla;
 using namespace ngcomp;
@@ -526,7 +528,6 @@ namespace
 
 namespace
 {
-#ifdef NGSTREFFTZ_USE_LAPACK
   void
   LapackSVD (SliceMatrix<double, ColMajor> A, SliceMatrix<double, ColMajor> U,
              SliceMatrix<double, ColMajor> V)
@@ -542,9 +543,11 @@ namespace
     ngbla::integer lda = A.Dist (), ldu = U.Dist (), ldv = V.Dist ();
     ngbla::integer lwork = work.Size ();
 
-    // if(std::is_same<SCAL,double>::value)
-    dgesdd_ (&jobz, &m, &n, A.Data (), &lda, S.Data (), U.Data (), &ldu,
-             V.Data (), &ldv, work.Data (), &lwork, iwork.Data (), &info);
+    auto dgesdd = ngstrefftz::GetLapackGesdd ().realgesdd;
+    if (!dgesdd)
+      throw Exception ("LAPACK dgesdd symbol is not available");
+    dgesdd (&jobz, &m, &n, A.Data (), &lda, S.Data (), U.Data (), &ldu,
+            V.Data (), &ldv, work.Data (), &lwork, iwork.Data (), &info);
     if (info != 0)
       throw Exception ("something went wrong in the svd "
                        + std::to_string (info));
@@ -568,16 +571,18 @@ namespace
     ngbla::integer lda = A.Dist (), ldu = U.Dist (), ldv = V.Dist ();
     ngbla::integer lwork = work.Size ();
 
-    zgesdd_ (&jobz, &m, &n, A.Data (), &lda, S.Data (), U.Data (), &ldu,
-             V.Data (), &ldv, work.Data (), &lwork, rwork.Data (),
-             iwork.Data (), &info);
+    auto zgesdd = ngstrefftz::GetLapackGesdd ().complexgesdd;
+    if (!zgesdd)
+      throw Exception ("LAPACK zgesdd symbol is not available");
+    zgesdd (&jobz, &m, &n, A.Data (), &lda, S.Data (), U.Data (), &ldu,
+            V.Data (), &ldv, work.Data (), &lwork, rwork.Data (),
+            iwork.Data (), &info);
     if (info != 0)
       throw Exception ("something went wrong in the svd "
                        + std::to_string (info));
     A = 0.0;
     A.Diag (0) = S;
   }
-#endif
 
   /// `A^T = V * Sigma^T * U^T`
   /// A gets overwritten with Sigma^T
@@ -596,12 +601,23 @@ namespace
     // Matrix<SCAL, ColMajor> AA (height, width);
     // AA = A;
 
-#ifdef NGSTREFFTZ_USE_LAPACK
-    LapackSVD (AT, V, UT);
-#else
-    cout << "No Lapack, using CalcSVD" << endl;
-    CalcSVD (AT, V, UT);
-#endif
+    const auto &lapack = ngstrefftz::GetLapackGesdd ();
+    if constexpr (std::is_same_v<SCAL, double>)
+      {
+        if (lapack.realgesdd)
+          LapackSVD (AT, V, UT);
+        else
+          CalcSVD (AT, V, UT);
+      }
+    else if constexpr (std::is_same_v<SCAL, Complex>)
+      {
+        if (lapack.complexgesdd)
+          LapackSVD (AT, V, UT);
+        else
+          throw Exception ("complex SVD requires LAPACK zgesdd");
+      }
+    else
+      throw Exception ("SVD only implemented for double and Complex");
 
     // A = static_cast<SCAL> (0.0);
     //  A.Diag(0)=AA.Diag();
