@@ -83,12 +83,37 @@ jobs:
           deps = tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["dependencies"]
           subprocess.check_call(["pip", "install", *deps])
           PY
+      - name: get ngsolve blas
+        id: ngsolve_blas
+        run: |
+          NGSOLVE_BLAS_LINK_DIR="$RUNNER_TEMP/ngsolve-openblas-link"
+          mkdir -p "$NGSOLVE_BLAS_LINK_DIR"
+          python3 - "$NGSOLVE_BLAS_LINK_DIR" <<'PY'
+          import sys
+          from pathlib import Path
+
+          import ngsolve_openblas
+
+          sonames = {
+              "libopenblas": "libopenblas.so.0",
+              "libgfortran": "libgfortran.so.5",
+          }
+          link_dir = Path(sys.argv[1])
+          for library in map(Path, ngsolve_openblas.get_libraries()):
+              for prefix, soname in sonames.items():
+                  if library.name.startswith(prefix):
+                      link = link_dir / soname
+                      link.unlink(missing_ok=True)
+                      link.symlink_to(library)
+          PY
+          echo "link_dir=$NGSOLVE_BLAS_LINK_DIR" >> "$GITHUB_OUTPUT"
       - name: Configure
         run: |
           cmake \
             -S "$GITHUB_WORKSPACE/NGSTrefftz" \
             -B "$GITHUB_WORKSPACE/NGSTrefftz/make" \
             -DNGSTREFFTZ_USE_GTEST=ON \
+            -DCMAKE_EXE_LINKER_FLAGS="-Wl,-rpath-link,${{ steps.ngsolve_blas.outputs.link_dir }}" \
             -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: |
