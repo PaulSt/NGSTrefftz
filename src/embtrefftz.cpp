@@ -7,6 +7,8 @@
 using namespace ngbla;
 using namespace ngcomp;
 
+namespace
+{
 /// @returns `max(a-b, 0)` without integer underflow risk, if `b > a`.
 INLINE size_t max_a_minus_b_or_0 (const size_t a, const size_t b) noexcept
 {
@@ -517,8 +519,9 @@ bool bfIsDefinedOnElement (const SumOfIntegrals &bf,
     }
   return false;
 }
+}
 
-namespace ngbla
+namespace
 {
 #ifdef NGSTREFFTZ_USE_LAPACK
   void
@@ -604,6 +607,8 @@ namespace ngbla
   }
 }
 
+namespace
+{
 /// @param num_zeros_guess Guess (lower bound) for the number of singular
 ///     values `sigma_i = 0` in the matrix Sigma. Is useful when there are
 ///     very-close-to-zero singular values that you can detect in advance.
@@ -725,6 +730,7 @@ void calculateParticularSolution (
       elvec.AssignMemory (velvec.Size (), &velvec[0]);
     }
   partsol = inverse_elmat * elvec;
+}
 }
 
 namespace ngcomp

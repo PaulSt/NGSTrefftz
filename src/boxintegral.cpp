@@ -8,6 +8,8 @@ using namespace ngbla;
 
 bool symbolic_integrator_uses_diff = false;
 
+namespace
+{
 template <int D>
 INLINE double GetElementSizeCenter (const ElementTransformation &trafo,
                                     FlatVector<> &center, LocalHeap &lh)
@@ -247,6 +249,7 @@ GetBoxPointsAndWeights (int order, LocalHeap &lh, VorB element_vb = VOL,
       break;
     }
   return make_tuple (FlatMatrixFixWidth<D> (), FlatVector<> ());
+}
 }
 
 BoxIntegral ::BoxIntegral (shared_ptr<CoefficientFunction> _cf,

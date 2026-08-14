@@ -47,6 +47,11 @@ namespace ngfem
 namespace ngcomp
 {
   using ngstents::RunParallelDependency;
+}
+
+namespace
+{
+  using namespace ngcomp;
 
   template <int D>
   void SetWavespeed (ScalarMappedElement<D> &tel, double wavespeed)
@@ -60,6 +65,11 @@ namespace ngcomp
   {
     return (T (0) <= val) - (val < T (0));
   }
+}
+
+namespace ngcomp
+{
+  using ngstents::RunParallelDependency;
 
   template <int D>
   inline void TWaveTents<D>::Solve (FlatMatrix<double> a, FlatVector<double> b)

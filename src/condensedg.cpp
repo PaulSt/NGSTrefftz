@@ -14,6 +14,11 @@ namespace ngcomp
       for (size_t j = 0; j < dcol.Size (); j++)
         out (i, j) = smat->operator() (drow[i], dcol[j]);
   }
+}
+
+namespace
+{
+  using namespace ngcomp;
 
   // template <typename T>
   // inline void AInvBt (ngbla::FlatMatrix<T> a, ngbla::FlatMatrix<T> b)
@@ -55,7 +60,10 @@ namespace ngcomp
       }
     return els;
   }
+}
 
+namespace ngcomp
+{
   shared_ptr<BaseMatrix>
   CondenseDG (shared_ptr<BaseMatrix> mat, shared_ptr<BaseVector> vec,
               shared_ptr<FESpace> fes)

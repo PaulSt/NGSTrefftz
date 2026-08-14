@@ -2,8 +2,9 @@
 #include "scalarmappedfe.hpp"
 #include "specialintegrator.hpp"
 
-namespace ngfem
+namespace
 {
+  using namespace ngfem;
 
   template <int D>
   bool PointContainedInElement (shared_ptr<ngcomp::MeshAccess> ma,
@@ -31,7 +32,10 @@ namespace ngfem
         throw Exception ("wrong dimension");
       }
   }
+}
 
+namespace ngfem
+{
   template <int D>
   int GetElnrNeighbourByPoint (shared_ptr<ngcomp::MeshAccess> ma,
                                MappedIntegrationPoint<D, D> mip,

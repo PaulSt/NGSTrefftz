@@ -1,8 +1,10 @@
 #include <tents.hpp>
 #include "mesh1dtents.hpp"
 
-namespace ngcomp
+namespace
 {
+  using namespace ngcomp;
+
   typedef map<netgen::Point3d, netgen::PointIndex> Point2IndexMap;
 
   netgen::PointIndex Point2Index (Point2IndexMap *pim, netgen::Point3d p)

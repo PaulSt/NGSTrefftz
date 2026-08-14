@@ -6,6 +6,10 @@
 #include "diffopmapped.hpp"
 #include "planewavefe.hpp"
 
+namespace
+{
+using namespace ngcomp;
+
 /// @returns the corresponding `EqType`.
 /// @throws an `Exception`, if the input String has no associated `EqType`.
 EqType stringToEqType (const std::string str)
@@ -34,6 +38,7 @@ EqType stringToEqType (const std::string str)
     return EqType::qtwave;
   else
     throw Exception ("TrefftzFESpace: unknown EqType");
+}
 }
 
 namespace ngcomp
@@ -449,6 +454,11 @@ namespace ngcomp
   }
 
   static RegisterFESpace<TrefftzFESpace> initi_trefftz ("trefftzfespace");
+}
+
+namespace
+{
+  using namespace ngcomp;
 
   //////////////////////////// Trefftz basis ////////////////////////////
 
@@ -607,7 +617,10 @@ namespace ngcomp
       fac *= factorial (v[i]);
     return fac;
   }
+}
 
+namespace ngcomp
+{
   template <int D>
   CSR TWaveBasis<D>::Basis (int ord, int basistype, int fowave)
   {
