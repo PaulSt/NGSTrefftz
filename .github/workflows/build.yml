@@ -52,10 +52,12 @@ jobs:
         #env:
         #NGSTREFFTZ_USE_GTEST: 'ON'
         run: |
-          python3 -m pip install --break-system-packages numpy scipy 
+          python3 -m pip install --break-system-packages numpy scipy matplotlib
           cd NGSTrefftz && python3 -m pip install --break-system-packages . -v
       - name: install ngstents for tent integration tests
         run: cd $GITHUB_WORKSPACE/NGSTrefftz/external_dependencies/ngstents && python3 -m pip install --break-system-packages . -v
+      - name: verify ngstents installation
+        run: python3 -c "from ngstents import TentSlab; print(TentSlab)"
       - name: run test
         run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
 
@@ -77,7 +79,7 @@ jobs:
       - name: install ngsolve
         run: |
           cd NGSTrefftz
-          pip install tomli numpy scipy 
+          pip install tomli numpy scipy matplotlib
           # pip install mkl-devel==2025.* mkl==2025.*
           # pip install ngsolve
           python3 <<'PY'
@@ -111,6 +113,8 @@ jobs:
           echo "link_dir=$NGSOLVE_BLAS_LINK_DIR" >> "$GITHUB_OUTPUT"
       - name: install ngstents for tent integration tests
         run: python3 -m pip install $GITHUB_WORKSPACE/NGSTrefftz/external_dependencies/ngstents -v
+      - name: verify ngstents installation
+        run: python3 -c "from ngstents import TentSlab; print(TentSlab)"
       - name: Configure
         run: |
           cmake \
