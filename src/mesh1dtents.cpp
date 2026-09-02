@@ -181,7 +181,8 @@ namespace
 void ExportMesh1dTents (py::module m)
 {
   m.def ("Mesh1dTents",
-         [] (shared_ptr<TentPitchedSlab> tps) -> shared_ptr<MeshAccess> {
+         [] (py::object pytps) -> shared_ptr<MeshAccess> {
+           auto tps = py::cast<shared_ptr<TentPitchedSlab>> (pytps);
            return NgsTP1dmesh (tps);
          } //, py::call_guard<py::gil_scoped_release>()
   );

@@ -54,6 +54,8 @@ jobs:
         run: |
           python3 -m pip install --break-system-packages numpy scipy 
           cd NGSTrefftz && python3 -m pip install --break-system-packages . -v
+      - name: install ngstents for tent integration tests
+        run: cd $GITHUB_WORKSPACE/NGSTrefftz/external_dependencies/ngstents && python3 -m pip install --break-system-packages . -v
       - name: run test
         run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
 
@@ -107,6 +109,8 @@ jobs:
                       link.symlink_to(library)
           PY
           echo "link_dir=$NGSOLVE_BLAS_LINK_DIR" >> "$GITHUB_OUTPUT"
+      - name: install ngstents for tent integration tests
+        run: python3 -m pip install $GITHUB_WORKSPACE/NGSTrefftz/external_dependencies/ngstents -v
       - name: Configure
         run: |
           cmake \

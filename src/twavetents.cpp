@@ -1203,9 +1203,10 @@ void ExportTWaveTents (py::module m)
 
   m.def (
       "TWave",
-      [] (int order, shared_ptr<TentPitchedSlab> tps,
+      [] (int order, py::object pytps,
           shared_ptr<CoefficientFunction> wavespeedcf,
           shared_ptr<CoefficientFunction> BBcf) -> shared_ptr<TrefftzTents> {
+        auto tps = py::cast<shared_ptr<TentPitchedSlab>> (pytps);
         shared_ptr<TrefftzTents> tr;
         int D = (tps->ma)->GetDimension ();
         if (!BBcf)
@@ -1230,7 +1231,7 @@ void ExportTWaveTents (py::module m)
                 Create solver for acoustiv wave equation on tent-pitched mesh.
 
                 :param order: Polynomial order of the Trefftz space.
-                :param tps: Tent-pitched slab.
+                :param tps: `ngstents.TentSlab` tent-pitched slab.
                 :param wavespeedcf: PDE Coefficient
                 :param BB: PDE Coefficient
             )mydelimiter",

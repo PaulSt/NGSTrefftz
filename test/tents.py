@@ -1,7 +1,10 @@
 # import sys, os
 # sys.path.append(os.path.join(os.path.dirname(sys.path[0])))
 from ngstrefftz import *
-# from ngstents import TentSlab
+try:
+    from ngstents import TentSlab
+except ImportError:
+    TentSlab = None
 from netgen.geom2d import unit_square
 from netgen.csg import unit_cube
 from ngsolve.TensorProductTools import *
@@ -262,6 +265,10 @@ def SolveWaveTentsFO(initmesh, order, c, t_step):
 
     return error
 
+if TentSlab is None:
+    for value in tuple(globals().values()):
+        if getattr(value, "__module__", None) == __name__:
+            value.__doc__ = None
 
 if __name__ == "__main__":
     # order = 4
