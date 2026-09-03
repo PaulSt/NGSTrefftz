@@ -181,6 +181,14 @@ jobs:
           submodules: true
           fetch-tags: true
           fetch-depth: 0
+      - name: Free disk space for Linux wheel build
+        if: ${{ matrix.doit && matrix.os == 'ubuntu-latest' }}
+        run: |
+          df -h
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          df -h
       - name: Build wheels
         if: ${{ matrix.doit }}
         uses: pypa/cibuildwheel@v3.2.1
