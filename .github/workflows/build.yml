@@ -324,7 +324,7 @@ jobs:
           path: "NGSTrefftz"
       - name: pip install requirements
         run: |
-          apt update -y && DEBIAN_FRONTEND="noninteractive" apt install -y git pandoc
+          apt update -y && DEBIAN_FRONTEND="noninteractive" apt install -y build-essential git pandoc
           pip install -r $GITHUB_WORKSPACE/NGSTrefftz/docs/requirements.txt
         # cd $GITHUB_WORKSPACE/NGSTrefftz && pip install .
       - uses: actions/download-artifact@v7
@@ -336,6 +336,14 @@ jobs:
         #run: ls -R $GITHUB_WORKSPACE/wheels
       - name: install ngstrefftz
         run: pip install $GITHUB_WORKSPACE/wheels/*-cp313-cp313-manylinux_2_28_x86_64.manylinux2014_x86_64.whl
+      - name: install pinned ngstents
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: 2
+        run: |
+          pip install scikit-build-core cmake ninja toml
+          pip install --no-build-isolation --no-deps \
+            "$GITHUB_WORKSPACE/NGSTrefftz/external_dependencies/ngstents"
+          python -c "from ngstents import TentSlab; print(TentSlab)"
       - name: Build Sphinx HTML
         run: sphinx-build -b html $GITHUB_WORKSPACE/NGSTrefftz/docs $GITHUB_WORKSPACE/NGSTrefftz/docs/_build/html
       #- name: Download pyodide stuff
