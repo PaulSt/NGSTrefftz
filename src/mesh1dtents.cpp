@@ -5,9 +5,24 @@ namespace
 {
   using namespace ngcomp;
 
-  typedef map<netgen::Point3d, netgen::PointIndex> Point2IndexMap;
+  // Point<3> has an implicit conversion to const double*, so the default
+  // std::less would compare addresses instead of coordinates.
+  struct PointLess
+  {
+    bool
+    operator() (const netgen::Point<3> &a, const netgen::Point<3> &b) const
+    {
+      for (int i = 0; i < 3; i++)
+        if (a (i) != b (i))
+          return a (i) < b (i);
+      return false;
+    }
+  };
 
-  netgen::PointIndex Point2Index (Point2IndexMap *pim, netgen::Point3d p)
+  typedef map<netgen::Point<3>, netgen::PointIndex, PointLess> Point2IndexMap;
+
+  netgen::PointIndex
+  Point2Index (Point2IndexMap *pim, const netgen::Point<3> &p)
   {
     Point2IndexMap::iterator lb = pim->find (p);
 
@@ -15,13 +30,15 @@ namespace
       return lb->second;
 
     // the key does not exist in the map add it to the map
-    netgen::PointIndex newpind (pim->size () + 1);
+    netgen::PointIndex newpind
+        = IndexBASE<netgen::PointIndex> () + pim->size ();
     pim->insert (lb, Point2IndexMap::value_type (p, newpind));
     return newpind;
   }
 
-  netgen::PointIndex AddPointUnique (shared_ptr<netgen::Mesh> ngma,
-                                     Point2IndexMap *pim, netgen::Point3d p)
+  netgen::PointIndex
+  AddPointUnique (shared_ptr<netgen::Mesh> ngma, Point2IndexMap *pim,
+                  const netgen::Point<3> &p)
   {
     const size_t old_size = pim->size ();
     netgen::PointIndex pi = Point2Index (pim, p);
@@ -113,15 +130,15 @@ namespace
         const int itop = tent->nbv[0] > tent->vertex ? 2 : 0;
 
         vertices[ibot] = AddPointUnique (
-            mesh, &pim, netgen::Point3d (pointc, tent->tbot, 0));
+            mesh, &pim, netgen::Point<3> (pointc, tent->tbot, 0));
         vertices[itop] = AddPointUnique (
-            mesh, &pim, netgen::Point3d (pointc, tent->ttop, 0));
+            mesh, &pim, netgen::Point<3> (pointc, tent->ttop, 0));
 
         for (size_t k = 0; k < tent->nbv.Size (); k++)
           vertices[2 * k + 1] = AddPointUnique (
               mesh, &pim,
-              netgen::Point3d (ma->GetPoint<1> (tent->nbv[k]) (0),
-                               tent->nbtime[k], 0));
+              netgen::Point<3> (ma->GetPoint<1> (tent->nbv[k]) (0),
+                                tent->nbtime[k], 0));
 
         if (tent->nbv.Size () == 1)
           {

@@ -17,16 +17,17 @@ namespace
       {
       case 2:
         {
-          netgen::Point3d p (mip.GetPoint ()[0], mip.GetPoint ()[1], 0);
+          netgen::Point<3> p (mip.GetPoint ()[0], mip.GetPoint ()[1], 0);
           return ngmesh.GetMesh ()->PointContainedIn2DElement (
-              p, &ip (0), elnr + 1, false);
+              p, &ip (0), IndexBASE<netgen::SurfaceElementIndex> () + elnr,
+              false);
         }
       case 3:
         {
-          netgen::Point3d p (mip.GetPoint ()[0], mip.GetPoint ()[1],
-                             mip.GetPoint ()[2]);
-          return ngmesh.GetMesh ()->PointContainedIn3DElement (p, &ip (0),
-                                                               elnr + 1);
+          netgen::Point<3> p (mip.GetPoint ()[0], mip.GetPoint ()[1],
+                              mip.GetPoint ()[2]);
+          return ngmesh.GetMesh ()->PointContainedIn3DElement (
+              p, &ip (0), IndexBASE<netgen::ElementIndex> () + elnr);
         }
       default:
         throw Exception ("wrong dimension");
