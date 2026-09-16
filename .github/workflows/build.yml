@@ -55,7 +55,10 @@ jobs:
           python3 -m pip install --break-system-packages numpy scipy matplotlib
           cd NGSTrefftz && python3 -m pip install --break-system-packages . -v
       - name: install ngstents for tent integration tests
-        run: cd $GITHUB_WORKSPACE/NGSTrefftz/external_dependencies/ngstents && python3 -m pip install --break-system-packages . -v
+        run: |
+          python3 -m pip install --break-system-packages scikit-build-core setuptools 'setuptools-scm>=8' toml
+          python3 -m pip install --break-system-packages --no-build-isolation --no-deps \
+            "$GITHUB_WORKSPACE/NGSTrefftz/external_dependencies/ngstents" -v
       - name: verify ngstents installation
         run: python3 -c "from ngstents import TentSlab; print(TentSlab)"
       - name: run test
@@ -70,12 +73,13 @@ jobs:
           submodules: true
           path: "NGSTrefftz"
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
       - uses: Bacondish2023/setup-googletest@v1
         with:
           tag: v1.15.2
+      # setup-googletest selects Python 3.x internally; restore our pinned version.
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
       - name: install ngsolve
         run: |
           cd NGSTrefftz
@@ -112,7 +116,10 @@ jobs:
           PY
           echo "link_dir=$NGSOLVE_BLAS_LINK_DIR" >> "$GITHUB_OUTPUT"
       - name: install ngstents for tent integration tests
-        run: python3 -m pip install $GITHUB_WORKSPACE/NGSTrefftz/external_dependencies/ngstents -v
+        run: |
+          python3 -m pip install scikit-build-core setuptools 'setuptools-scm>=8' toml
+          python3 -m pip install --no-build-isolation --no-deps \
+            "$GITHUB_WORKSPACE/NGSTrefftz/external_dependencies/ngstents" -v
       - name: verify ngstents installation
         run: python3 -c "from ngstents import TentSlab; print(TentSlab)"
       - name: Configure
