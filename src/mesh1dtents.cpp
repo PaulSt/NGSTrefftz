@@ -47,8 +47,10 @@ namespace
     return pi;
   }
 
-  int AddBoundaryEdgeDescriptor (netgen::Mesh &mesh, int edge_nr,
-                                 int face_descriptor_index, const string &name)
+  netgen::EdgeRegionIndex
+  AddBoundaryEdgeDescriptor (netgen::Mesh &mesh, int edge_nr,
+                             netgen::FaceRegionIndex face_descriptor_index,
+                             const string &name)
   {
     netgen::EdgeDescriptor ed;
     ed.SetEdgeNr (edge_nr);
@@ -82,30 +84,30 @@ namespace
     mesh->SetMaterial (domain_index, "mat");
 
     netgen::FaceDescriptor fd (1, 1, 0, 1);
-    mesh->AddFaceDescriptor (fd);
+    const netgen::FaceRegionIndex ind_fd = mesh->AddFaceDescriptor (fd);
 
     netgen::FaceDescriptor fdi (1, 1, 0, 1);
     fdi.SetBCName ("inflow");
-    const int ind_fdi = mesh->AddFaceDescriptor (fdi);
+    const netgen::FaceRegionIndex ind_fdi = mesh->AddFaceDescriptor (fdi);
 
     netgen::FaceDescriptor fdo (2, 1, 0, 2);
     fdo.SetBCName ("outflow");
-    const int ind_fdo = mesh->AddFaceDescriptor (fdo);
+    const netgen::FaceRegionIndex ind_fdo = mesh->AddFaceDescriptor (fdo);
 
     netgen::FaceDescriptor fdd (3, 1, 0, 3);
     fdd.SetBCName ("dirichlet");
-    const int ind_fdd = mesh->AddFaceDescriptor (fdd);
+    const netgen::FaceRegionIndex ind_fdd = mesh->AddFaceDescriptor (fdd);
 
-    const int ed_inflow
+    const netgen::EdgeRegionIndex ed_inflow
         = AddBoundaryEdgeDescriptor (*mesh, 1, ind_fdi, "inflow");
-    const int ed_outflow
+    const netgen::EdgeRegionIndex ed_outflow
         = AddBoundaryEdgeDescriptor (*mesh, 2, ind_fdo, "outflow");
-    const int ed_dirichlet
+    const netgen::EdgeRegionIndex ed_dirichlet
         = AddBoundaryEdgeDescriptor (*mesh, 3, ind_fdd, "dirichlet");
 
     auto AddBoundarySegment
         = [&mesh] (netgen::PointIndex p0, netgen::PointIndex p1,
-                   int edge_descriptor_index) {
+                   netgen::EdgeRegionIndex edge_descriptor_index) {
             netgen::Segment segment;
             segment[0] = p0;
             segment[1] = p1;
@@ -145,7 +147,7 @@ namespace
             netgen::Element2d element (netgen::TRIG);
             for (int j = 0; j < 3; j++)
               element[j] = vertices[j];
-            element.SetIndex (domain_index);
+            element.SetIndex (ind_fd);
             mesh->AddSurfaceElement (element);
           }
         else if (tent->nbv.Size () == 2)
@@ -153,7 +155,7 @@ namespace
             netgen::Element2d element (netgen::QUAD);
             for (int j = 0; j < 4; j++)
               element[j] = vertices[j];
-            element.SetIndex (domain_index);
+            element.SetIndex (ind_fd);
             mesh->AddSurfaceElement (element);
           }
 

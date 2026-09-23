@@ -251,7 +251,7 @@ namespace ngcomp
                 L2HighOrderFE<ET_TRIG> *hofe
                     = new (alloc) L2HighOrderFE<ET_TRIG> ();
                 hofe->SetVertexNumbers (ngel.vertices);
-                hofe->L2HighOrderFE<ET_TRIG>::SetOrder (order - 2);
+                hofe->L2HighOrderFE<ET_TRIG>::SetOrder (IVec<2> (order - 2));
                 hofe->L2HighOrderFE<ET_TRIG>::ComputeNDof ();
                 return *hofe;
                 break;
