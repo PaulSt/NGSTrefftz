@@ -36,10 +36,25 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_BINARY_DIR}/cmake_modules)
 
 set(addon_name ngstrefftz)
 project(ngstrefftz)
-include_directories(SYSTEM ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src) # SYSTEM to suppress warnings from headers
 include(${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
+set(NGSTREFFTZ_USE_NGSTENTS AUTO CACHE STRING "Build with ngstents support")
+set_property(CACHE NGSTREFFTZ_USE_NGSTENTS PROPERTY STRINGS AUTO ON OFF)
+if(NOT NGSTREFFTZ_USE_NGSTENTS STREQUAL "OFF")
+  if(NOT ngstents_DIR)
+    execute_process(COMMAND ${Python3_EXECUTABLE} -m ngstents.config
+      OUTPUT_VARIABLE ngstents_DIR OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  endif()
+  find_package(ngstents CONFIG QUIET)
+  if(ngstents_FOUND)
+    set(NGSTREFFTZ_USE_NGSTENTS ON)
+  elseif(NGSTREFFTZ_USE_NGSTENTS STREQUAL "ON")
+    message(FATAL_ERROR "NGSTREFFTZ_USE_NGSTENTS=ON but ngstents was not found")
+  else()
+    set(NGSTREFFTZ_USE_NGSTENTS OFF)
+    message(WARNING "ngstents not found, building without tent-pitching support")
+  endif()
+endif()
 add_ngsolve_addon(ngstrefftz
-    ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp
     src/python_trefftz.cpp
     src/diffopmapped.hpp
     src/scalarmappedfe.cpp
@@ -47,11 +62,9 @@ add_ngsolve_addon(ngstrefftz
     src/trefftzfespace.cpp
     src/specialcoefficientfunction.cpp
     src/specialintegrator.cpp
-    src/twavetents.cpp
     src/embtrefftz.cpp
     src/lapack_loader.cpp
     src/monomialfespace.cpp
-    src/mesh1dtents.cpp
     src/condensedg.cpp
     src/pufe.cpp
     src/pufespace.cpp
@@ -60,7 +73,12 @@ add_ngsolve_addon(ngstrefftz
     #src/airy.cpp #for testing, requires boost
   )
 target_compile_definitions(ngstrefftz PRIVATE NGSTREFFTZ_EXPORTS)
-target_compile_definitions(ngstrefftz PRIVATE NGSTENT_EXPORTS)
+if(NGSTREFFTZ_USE_NGSTENTS)
+  target_sources(ngstrefftz PRIVATE src/twavetents.cpp src/mesh1dtents.cpp)
+  target_compile_definitions(ngstrefftz PRIVATE NGSTREFFTZ_USE_NGSTENTS)
+  target_link_libraries(ngstrefftz PRIVATE ngstents::core)
+  ngsolve_addon_set_relative_rpath(ngstrefftz "../ngstents")
+endif()
 # add dynamic loader library to link libraries (on linux)
 if(CMAKE_DL_LIBS)
     target_link_libraries(ngstrefftz PRIVATE ${CMAKE_DL_LIBS})
@@ -74,10 +92,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         -Wpedantic
         -Wno-vla # ngsolve uses VLAs anyway
     )
-    set_source_files_properties( 
-        ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp 
-        PROPERTIES COMPILE_FLAGS "-w" #suppress all warnings
-    )
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(ngstrefftz PRIVATE
         -Wall
@@ -85,10 +99,6 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         -pedantic
         -Wtype-limits
         -Wuninitialized
-    )
-    set_source_files_properties( 
-        ${CMAKE_SOURCE_DIR}/external_dependencies/ngstents/src/tents.cpp 
-        PROPERTIES COMPILE_FLAGS "-w" #suppress all warnings
     )
 endif()
 
@@ -127,6 +137,7 @@ message("${BoldCyan}
   Enabled functionality:
     Doxygen: ........... ${NGSTREFFTZ_BUILD_DOC}
     GTest: ............. ${NGSTREFFTZ_USE_GTEST}
+    ngstents: .......... ${NGSTREFFTZ_USE_NGSTENTS}
 
 With 'make install' the package will be installed to: ${CMAKE_INSTALL_PREFIX}
 Make sure to add it to the python path:
@@ -148,10 +159,14 @@ file(COPY
 add_test(NAME embtrefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/embt.py)
 add_test(NAME conforming_trefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/conforming_trefftz.py)
 add_test(NAME trefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/trefftz.py)
-add_test(NAME tents COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/tents.py)
+set(tests_with_pythonpath embtrefftz trefftz)
+if(NGSTREFFTZ_USE_NGSTENTS)
+  add_test(NAME tents COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/tents.py)
+  list(APPEND tests_with_pythonpath tents)
+endif()
 add_test(NAME box COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/boxint.py)
 #WORKING_DIRECTORY ${ CMAKE_CURRENT_SOURCE_DIR }
-set_tests_properties(embtrefftz trefftz tents
+set_tests_properties(${tests_with_pythonpath}
     PROPERTIES ENVIRONMENT PYTHONPATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON}:$ENV{PYTHONPATH})
 
 if(NGSTREFFTZ_USE_GTEST)

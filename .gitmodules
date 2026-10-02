@@ -1,3 +1,0 @@
-[submodule "external_dependencies/ngstents"]
-	path = external_dependencies/ngstents
-	url = https://github.com/jayggg/ngstents.git

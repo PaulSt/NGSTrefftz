@@ -10,6 +10,7 @@ classifiers = [
 ]
 dependencies = [
   "ngsolve==6.2.2607",
+  "ngstents",
 ]
 
 [project.urls]
@@ -19,6 +20,7 @@ Repository = "https://github.com/PaulSt/ngstrefftz"
 [build-system]
 requires = [
   "ngsolve==6.2.2607",
+  "ngstents",
   "scikit-build-core>=0.9.0",
   "pybind11_stubgen",
   "setuptools>=45",

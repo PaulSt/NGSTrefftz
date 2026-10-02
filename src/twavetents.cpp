@@ -1,6 +1,6 @@
 #include "twavetents.hpp"
 #include <h1lofe.hpp>
-#include <paralleldepend.hpp>
+#include <ngstents/paralleldepend.hpp>
 #include <fem.hpp>
 #include "trefftzfespace.hpp"
 

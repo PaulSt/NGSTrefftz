@@ -46,8 +46,9 @@ def GetWave(self,U):
 dbox = BoxDifferentialSymbol()
 dball = dbox(boxtype=BOXTYPE.BALL)
 
-setattr(TWaveTents1, 'GetWave', GetWave)
-setattr(TWaveTents2, 'GetWave', GetWave)
-setattr(TWaveTents3, 'GetWave', GetWave)
-setattr(QTWaveTents1, 'GetWave', GetWave)
-setattr(QTWaveTents2, 'GetWave', GetWave)
+if "TWaveTents1" in globals():
+    setattr(TWaveTents1, 'GetWave', GetWave)
+    setattr(TWaveTents2, 'GetWave', GetWave)
+    setattr(TWaveTents3, 'GetWave', GetWave)
+    setattr(QTWaveTents1, 'GetWave', GetWave)
+    setattr(QTWaveTents2, 'GetWave', GetWave)
