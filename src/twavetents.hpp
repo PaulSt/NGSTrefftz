@@ -1,6 +1,6 @@
 #ifndef FILE_TESTPYTHON_HPP
 #define FILE_TESTPYTHON_HPP
-#include <tents.hpp>
+#include <ngstents/tents.hpp>
 #include "scalarmappedfe.hpp"
 #include "trefftzfespace.hpp"
 #include <unordered_map>

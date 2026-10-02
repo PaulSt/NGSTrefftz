@@ -1,4 +1,4 @@
-#include <tents.hpp>
+#include <ngstents/tents.hpp>
 #include "mesh1dtents.hpp"
 
 namespace
