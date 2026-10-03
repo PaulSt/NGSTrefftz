@@ -1,4 +1,11 @@
 import ngsolve
+
+try:
+    import ngstents as _ngstents
+except ModuleNotFoundError as _error:
+    if _error.name != "ngstents":
+        raise
+
 from ngsolve.fem import ET,IntegrationRule
 from ngsolve.comp import L2,BilinearForm,LinearForm,SymbolicBFI,SymbolicLFI,FESpace
 from ngsolve.fem import CoordCF
@@ -25,7 +32,6 @@ def GetWave(self,U):
         f += SymbolicLFI(ipfct*v).SetIntegrationRule(eltyp,intrule)
         f.Assemble()
         U.vec.data = a.mat.Inverse(inverse='sparsecholesky') * f.vec
-        # return gfu
     else:
         fes = L2(initmesh, order=order-1)**(D+1)
         u,v = fes.TnT()

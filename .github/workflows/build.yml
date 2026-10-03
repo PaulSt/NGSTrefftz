@@ -9,14 +9,16 @@ on:
         default: 'full'
         type: choice
         options:
-        - test_only
-        - quick
-        - full
+          - test_only
+          - quick
+          - full
   push:
     branches: [main, main-dev]
   release:
     types: [created]
-    
+
+permissions:
+  contents: read
 
 jobs:
   check_formatting:
@@ -26,7 +28,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           path: "NGSTrefftz"
-          fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
+          fetch-depth: 0
       - uses: RafikFarhad/clang-format-github-action@v4
         with:
           sources: "src/**/*.hpp,src/**/*.cpp,test/**/*.cpp"
@@ -42,18 +44,11 @@ jobs:
       - uses: actions/checkout@v6
         with:
           path: "NGSTrefftz"
-          fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
-      #- uses: actions/setup-python@v6
-        #with:
-          #python-version: "3.13"
+          fetch-depth: 0
       - name: install ngstrefftz
-        #env:
-        #NGSTREFFTZ_USE_GTEST: 'ON'
         run: |
           python3 -m pip install --break-system-packages numpy scipy matplotlib
           cd NGSTrefftz && python3 -m pip install --break-system-packages . -v
-      - name: verify ngstents installation
-        run: python3 -c "from ngstents import TentSlab; print(TentSlab)"
       - name: run test
         run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
 
@@ -64,7 +59,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           path: "NGSTrefftz"
-          fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
@@ -75,8 +70,6 @@ jobs:
         run: |
           cd NGSTrefftz
           pip install tomli numpy scipy matplotlib
-          # pip install mkl-devel==2025.* mkl==2025.*
-          # pip install ngsolve
           python3 <<'PY'
           import tomllib, pathlib, subprocess, sys
           deps = tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["dependencies"]
@@ -106,8 +99,6 @@ jobs:
                       link.symlink_to(library)
           PY
           echo "link_dir=$NGSOLVE_BLAS_LINK_DIR" >> "$GITHUB_OUTPUT"
-      - name: verify ngstents installation
-        run: python3 -c "from ngstents import TentSlab; print(TentSlab)"
       - name: Configure
         run: |
           cmake \
@@ -117,8 +108,7 @@ jobs:
             -DCMAKE_EXE_LINKER_FLAGS="-Wl,-rpath-link,${{ steps.ngsolve_blas.outputs.link_dir }}" \
             -DCMAKE_BUILD_TYPE=Release
       - name: Build
-        run: |
-          cmake --build "$GITHUB_WORKSPACE/NGSTrefftz/make" 
+        run: cmake --build "$GITHUB_WORKSPACE/NGSTrefftz/make"
       - name: Run tests
         run: |
           NGSOLVE_BLAS_LIBS="$(python - <<'PY'
@@ -181,16 +171,12 @@ jobs:
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
           df -h
-      - name: Build wheels
-        if: ${{ matrix.doit }}
+      - if: ${{ matrix.doit }}
         uses: pypa/cibuildwheel@v3.2.1
         env:
           CIBW_BUILD_VERBOSITY: 1
-      #- name: Setup tmate session
-        #if: ${{ failure() }}
-        #uses: mxschmitt/action-tmate@v3
-      - uses: actions/upload-artifact@v6
-        if: ${{ matrix.doit }}
+      - if: ${{ matrix.doit }}
+        uses: actions/upload-artifact@v7
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
@@ -208,7 +194,7 @@ jobs:
           fetch-depth: 0
       - name: Build sdist
         run: uv tool run --python 3.13 --from build pyproject-build --sdist
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: cibw-sdist
           path: dist/*.tar.gz
@@ -241,13 +227,9 @@ jobs:
     needs: [upload_pypi]
     runs-on: ubuntu-latest
     steps:
-      #- name: clear cache
-        #run: rm -rf /opt/hostedtoolcache
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
+      - uses: actions/checkout@v6
+      - id: meta
+        uses: docker/metadata-action@v6
         with:
           # list of Docker images to use as base name for tags
           images: paulstdocker/ngstrefftz
@@ -257,50 +239,17 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        if: github.event_name == 'release' && github.event.action == 'created'
+      - if: github.event_name == 'release' && github.event.action == 'created'
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push
-        uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: .
-          file: "Dockerfile"
+          file: Dockerfile
           push: ${{ github.event_name == 'release' && github.event.action == 'created' }}
           tags: ${{ steps.meta.outputs.tags }}
-          #labels: ${{ steps.meta.outputs.labels }}
-
-  pyodide:
-    #needs: [publish-pypi]
-    if: false
-    runs-on: ubuntu-latest
-    steps:
-      - name: clear cache
-        run: rm -rf /opt/hostedtoolcache
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
-          path: "NGSTrefftz"
-      - name: install pkgs
-        run: sudo apt-get update && DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install docker
-      - name: build docker
-        run: cd $GITHUB_WORKSPACE/NGSTrefftz && docker build -t ngstpyodide -f .github/workflows/pyodide/Dockerfile .
-      - name: retrieve tar
-        run: id=$(docker create ngstpyodide) && docker cp $id:/root/output/ngstrefftz_pyodide.tar.bz2 $GITHUB_WORKSPACE/
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-      - name: Build the JupyterLite site
-        run: |
-          cd $GITHUB_WORKSPACE/NGSTrefftz/.github/workflows/pyodide && python -m pip install -r requirements.txt
-          cd $GITHUB_WORKSPACE && jupyter lite build --pyodide ngstrefftz_pyodide.tar.bz2 --contents ./NGSTrefftz/docs/notebooks/ --output-dir ngst-pyodide
-      - name: Store the sdist
-        uses: actions/upload-artifact@v6
-        with:
-          name: ngst-pyodide
-          path: ./ngst-pyodide
 
   docs:
     needs: [build_wheels]
@@ -309,33 +258,22 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
+          fetch-depth: 0
           path: "NGSTrefftz"
       - name: pip install requirements
         run: |
           apt update -y && DEBIAN_FRONTEND="noninteractive" apt install -y build-essential git pandoc
           pip install -r $GITHUB_WORKSPACE/NGSTrefftz/docs/requirements.txt
-        # cd $GITHUB_WORKSPACE/NGSTrefftz && pip install .
       - uses: actions/download-artifact@v7
         with:
           pattern: cibw-wheels-ubuntu*
           path: wheels
           merge-multiple: true
-      #- name: Display structure of downloaded files
-        #run: ls -R $GITHUB_WORKSPACE/wheels
       - name: install ngstrefftz
         run: pip install $GITHUB_WORKSPACE/wheels/*-cp313-cp313-manylinux_2_28_x86_64.manylinux2014_x86_64.whl
       - name: Build Sphinx HTML
         run: sphinx-build -b html $GITHUB_WORKSPACE/NGSTrefftz/docs $GITHUB_WORKSPACE/NGSTrefftz/docs/_build/html
-      #- name: Download pyodide stuff
-        #if: false
-        #uses: actions/download-artifact@v7
-        #with:
-          #name: ngst-pyodide
-          #path: NGSTrefftz/ngst-pyodide
-      #- run: tree -d .
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: ${{ github.workspace }}/NGSTrefftz/docs/_build/html
 
@@ -348,27 +286,22 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    #if: github.event_name == 'release' && github.event.action == 'created'
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - id: deployment
+        uses: actions/deploy-pages@v5
 
   paper:
     runs-on: ubuntu-latest
     if: ${{ inputs.level == 'full' }}
     name: Paper Draft
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Build draft PDF
-        uses: openjournals/openjournals-draft-action@master
+      - uses: actions/checkout@v6
+      - uses: openjournals/openjournals-draft-action@master
         with:
           journal: joss
           paper-path: docs/paper/paper.md
-      - name: Upload
-        uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: joss_paper
           path: docs/paper/paper.pdf
