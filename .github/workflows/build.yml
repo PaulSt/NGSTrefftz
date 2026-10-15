@@ -3,6 +3,13 @@ name: build
 on:
   workflow_dispatch:
     inputs:
+      ngsolve_version:
+        description: NGSolve version (empty builds the current checkout)
+        type: string
+      dry_run:
+        description: Build and test without uploading to PyPI
+        type: boolean
+        default: true
       level:
         description: 'build level'
         required: true
@@ -20,7 +27,33 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      published: ${{ steps.release.outputs.published }}
+    steps:
+      - uses: actions/checkout@v6
+        if: inputs.ngsolve_version != ''
+        with:
+          fetch-depth: 0
+      - uses: PaulSt/ngsolve-release-watcher@main
+        id: release
+        with:
+          ngsolve_version: ${{ inputs.ngsolve_version }}
+          dry_run: ${{ inputs.dry_run }}
+      - uses: actions/upload-artifact@v7
+        if: inputs.ngsolve_version != ''
+        with:
+          name: release-pyproject
+          path: pyproject.toml
+
   check_formatting:
     name: Check Formatting with Clang Format
     runs-on: ubuntu-24.04
@@ -36,6 +69,7 @@ jobs:
 
   test_linux:
     name: Test on Linux
+    needs: prepare
     runs-on: ubuntu-latest
     container: archlinux:latest
     steps:
@@ -45,6 +79,11 @@ jobs:
         with:
           path: "NGSTrefftz"
           fetch-depth: 0
+      - uses: actions/download-artifact@v7
+        if: inputs.ngsolve_version != ''
+        with:
+          name: release-pyproject
+          path: NGSTrefftz
       - name: install ngstrefftz
         run: |
           python3 -m pip install --break-system-packages numpy scipy matplotlib
@@ -54,12 +93,18 @@ jobs:
 
   gtest_linux:
     name: Test GTest on Linux
+    needs: prepare
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
           path: "NGSTrefftz"
           fetch-depth: 0
+      - uses: actions/download-artifact@v7
+        if: inputs.ngsolve_version != ''
+        with:
+          name: release-pyproject
+          path: NGSTrefftz
       - uses: Bacondish2023/setup-googletest@v1
         with:
           tag: v1.15.2
@@ -129,7 +174,7 @@ jobs:
   build_wheels:
     if: ${{ inputs.level != 'test_only' }}
     name: Build wheels on ${{ matrix.os }}
-    needs: [test_linux, gtest_linux]
+    needs: [prepare, test_linux, gtest_linux]
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -164,6 +209,10 @@ jobs:
         with:
           fetch-tags: true
           fetch-depth: 0
+      - uses: actions/download-artifact@v7
+        if: ${{ matrix.doit && inputs.ngsolve_version != '' }}
+        with:
+          name: release-pyproject
       - name: Free disk space for Linux wheel build
         if: ${{ matrix.doit && matrix.os == 'ubuntu-latest' }}
         run: |
@@ -175,6 +224,8 @@ jobs:
       - if: ${{ matrix.doit }}
         uses: pypa/cibuildwheel@v3.2.1
         env:
+          SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NGSTREFFTZ: ${{ needs.prepare.outputs.version }}
+          CIBW_ENVIRONMENT_PASS_LINUX: SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NGSTREFFTZ
           CIBW_BUILD_VERBOSITY: 1
       - if: ${{ matrix.doit }}
         uses: actions/upload-artifact@v7
@@ -185,7 +236,7 @@ jobs:
   build_sdist:
     name: Build source distribution
     if: ${{ inputs.level != 'quick' }}
-    needs: [test_linux, gtest_linux]
+    needs: [prepare, test_linux, gtest_linux]
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
     steps:
@@ -193,7 +244,13 @@ jobs:
         with:
           fetch-tags: true
           fetch-depth: 0
+      - uses: actions/download-artifact@v7
+        if: inputs.ngsolve_version != ''
+        with:
+          name: release-pyproject
       - name: Build sdist
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NGSTREFFTZ: ${{ needs.prepare.outputs.version }}
         run: uv tool run --python 3.13 --from build pyproject-build --sdist
       - uses: actions/upload-artifact@v7
         with:
@@ -201,7 +258,8 @@ jobs:
           path: dist/*.tar.gz
 
   upload_pypi:
-    needs: [build_wheels, build_sdist]
+    if: ${{ !inputs.dry_run && needs.prepare.outputs.published != 'true' }}
+    needs: [prepare, build_wheels, build_sdist]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -213,18 +271,19 @@ jobs:
           path: dist
           merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@release/v1
-        if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+        if: github.ref == 'refs/heads/main' || github.event_name == 'release' || inputs.ngsolve_version != ''
         with:
           skip-existing: true
           password: ${{ secrets.PYPI_API_TOKEN }}
       - uses: pypa/gh-action-pypi-publish@release/v1
-        if: github.ref == 'refs/heads/main-dev'
+        if: github.ref == 'refs/heads/main-dev' && inputs.ngsolve_version == ''
         with:
           skip-existing: true
           password: ${{ secrets.PYPI_API_TOKEN }}
           repository-url: https://test.pypi.org/legacy/
 
   docker:
+    if: inputs.ngsolve_version == ''
     needs: [upload_pypi]
     runs-on: ubuntu-latest
     steps:
@@ -287,7 +346,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && !inputs.dry_run
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
