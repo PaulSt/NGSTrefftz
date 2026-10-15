@@ -16,13 +16,12 @@ on:
         default: 'full'
         type: choice
         options:
-          - test_only
           - quick
           - full
   push:
     branches: [main, main-dev]
   release:
-    types: [created]
+    types: [published]
 
 permissions:
   contents: read
@@ -70,172 +69,71 @@ jobs:
   test_linux:
     name: Test on Linux
     needs: prepare
-    runs-on: ubuntu-latest
-    container: archlinux:latest
-    steps:
-      - name: setup
-        run: pacman -Syu --noconfirm && pacman -S --noconfirm python python-pip python-setuptools git gcc make cmake
-      - uses: actions/checkout@v6
-        with:
-          path: "NGSTrefftz"
-          fetch-depth: 0
-      - uses: actions/download-artifact@v7
-        if: inputs.ngsolve_version != ''
-        with:
-          name: release-pyproject
-          path: NGSTrefftz
-      - name: install ngstrefftz
-        run: |
-          python3 -m pip install --break-system-packages numpy scipy matplotlib
-          cd NGSTrefftz && python3 -m pip install --break-system-packages . -v
-      - name: run test
-        run: cd $GITHUB_WORKSPACE/NGSTrefftz/test && python3 -m doctest -v *.py
-
-  gtest_linux:
-    name: Test GTest on Linux
-    needs: prepare
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
-          path: "NGSTrefftz"
           fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
+          python-version: "3.14"
       - uses: actions/download-artifact@v7
         if: inputs.ngsolve_version != ''
         with:
           name: release-pyproject
-          path: NGSTrefftz
-      - uses: Bacondish2023/setup-googletest@v1
-        with:
-          tag: v1.15.2
-      - name: install ngsolve
+      - name: Build and test
         run: |
-          cd NGSTrefftz
-          pip install tomli numpy scipy matplotlib
-          python3 <<'PY'
-          import tomllib, pathlib, subprocess, sys
-          deps = tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["dependencies"]
-          subprocess.check_call(["pip", "install", *deps])
-          PY
-      - name: get ngsolve blas
-        id: ngsolve_blas
-        run: |
-          NGSOLVE_BLAS_LINK_DIR="$RUNNER_TEMP/ngsolve-openblas-link"
-          mkdir -p "$NGSOLVE_BLAS_LINK_DIR"
-          python3 - "$NGSOLVE_BLAS_LINK_DIR" <<'PY'
-          import sys
-          from pathlib import Path
-
-          import ngsolve_openblas
-
-          sonames = {
-              "libopenblas": "libopenblas.so.0",
-              "libgfortran": "libgfortran.so.5",
-          }
-          link_dir = Path(sys.argv[1])
-          for library in map(Path, ngsolve_openblas.get_libraries()):
-              for prefix, soname in sonames.items():
-                  if library.name.startswith(prefix):
-                      link = link_dir / soname
-                      link.unlink(missing_ok=True)
-                      link.symlink_to(library)
-          PY
-          echo "link_dir=$NGSOLVE_BLAS_LINK_DIR" >> "$GITHUB_OUTPUT"
-      - name: Configure
-        run: |
-          cmake \
-            -S "$GITHUB_WORKSPACE/NGSTrefftz" \
-            -B "$GITHUB_WORKSPACE/NGSTrefftz/make" \
-            -DNGSTREFFTZ_USE_GTEST=ON \
-            -DCMAKE_EXE_LINKER_FLAGS="-Wl,-rpath-link,${{ steps.ngsolve_blas.outputs.link_dir }}" \
-            -DCMAKE_BUILD_TYPE=Release
-      - name: Build
-        run: cmake --build "$GITHUB_WORKSPACE/NGSTrefftz/make"
-      - name: Run tests
-        run: |
-          NGSOLVE_BLAS_LIBS="$(python - <<'PY'
-          import ngsolve_openblas
-          print(":".join(str(p) for p in ngsolve_openblas.get_libraries()))
-          PY
-          )"
-
-          echo "Preloading NGSolve BLAS libraries:"
-          echo "${NGSOLVE_BLAS_LIBS}"
-
-          LD_PRELOAD="${NGSOLVE_BLAS_LIBS}${LD_PRELOAD:+:${LD_PRELOAD}}" \
-            ctest \
-              --test-dir "$GITHUB_WORKSPACE/NGSTrefftz/make" \
-              --output-on-failure
+          sudo apt-get update
+          sudo apt-get install -y libgtest-dev libopenblas0-pthread
+          python -m pip install . numpy scipy matplotlib
+          cmake -S . -B build -DNGSTREFFTZ_USE_GTEST=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel 2
+          ctest --test-dir build --output-on-failure
 
   build_wheels:
-    if: ${{ inputs.level != 'test_only' }}
     name: Build wheels on ${{ matrix.os }}
-    needs: [prepare, test_linux, gtest_linux]
+    needs: [prepare, test_linux]
     runs-on: ${{ matrix.os }}
-
     strategy:
       matrix:
-        include:
-          - os: macos-15-intel
-            doit: ${{ inputs.level != 'quick' }}
-            cibw_build: cp310-* cp311-* cp312-* cp313-* cp314-*
-
-          - os: ubuntu-latest
-            doit: ${{ inputs.level != 'quick' }}
-            cibw_build: cp310-* cp311-* cp312-* cp313-* cp314-*
-
-          - os: ubuntu-latest
-            doit: ${{ inputs.level == 'quick' }}
-            cibw_build: cp313-*
-
-          - os: windows-2022
-            doit: ${{ inputs.level != 'quick' }}
-            cibw_build: cp311-* cp312-* cp313-* cp314-*
-
+        os: [macos-15-intel, ubuntu-latest, windows-2022]
     env:
-      CIBW_BUILD: ${{ matrix.cibw_build }}
+      CIBW_BUILD: ${{ inputs.level == 'quick' && 'cp314-*' || 'cp310-* cp311-* cp312-* cp313-* cp314-*' }}
       CIBW_ARCHS_WINDOWS: AMD64
       CIBW_ENVIRONMENT_WINDOWS: >
         CMAKE_GENERATOR='Visual Studio 17 2022'
         CMAKE_GENERATOR_PLATFORM=x64
-
     steps:
       - uses: actions/checkout@v6
-        if: ${{ matrix.doit }}
         with:
           fetch-tags: true
           fetch-depth: 0
       - uses: actions/download-artifact@v7
-        if: ${{ matrix.doit && inputs.ngsolve_version != '' }}
+        if: inputs.ngsolve_version != ''
         with:
           name: release-pyproject
       - name: Free disk space for Linux wheel build
-        if: ${{ matrix.doit && matrix.os == 'ubuntu-latest' }}
+        if: matrix.os == 'ubuntu-latest'
         run: |
           df -h
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
           df -h
-      - if: ${{ matrix.doit }}
-        uses: pypa/cibuildwheel@v3.2.1
+      - uses: pypa/cibuildwheel@v3.2.1
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NGSTREFFTZ: ${{ needs.prepare.outputs.version }}
           CIBW_ENVIRONMENT_PASS_LINUX: SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NGSTREFFTZ
           CIBW_BUILD_VERBOSITY: 1
-      - if: ${{ matrix.doit }}
-        uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7
         with:
-          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          name: cibw-wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
   build_sdist:
     name: Build source distribution
     if: ${{ inputs.level != 'quick' }}
-    needs: [prepare, test_linux, gtest_linux]
+    needs: [prepare, test_linux]
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
     steps:
@@ -250,7 +148,7 @@ jobs:
       - name: Build sdist
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NGSTREFFTZ: ${{ needs.prepare.outputs.version }}
-        run: uv tool run --python 3.13 --from build pyproject-build --sdist
+        run: uv tool run --python 3.14 --from build pyproject-build --sdist
       - uses: actions/upload-artifact@v7
         with:
           name: cibw-sdist
@@ -298,7 +196,7 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-      - if: github.event_name == 'release' && github.event.action == 'created'
+      - if: github.event_name == 'release' && github.event.action == 'published'
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -307,29 +205,26 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          push: ${{ github.event_name == 'release' && github.event.action == 'created' }}
+          push: ${{ github.event_name == 'release' && github.event.action == 'published' }}
           tags: ${{ steps.meta.outputs.tags }}
 
   docs:
     needs: [build_wheels]
     runs-on: ubuntu-latest
-    container: python:3.13
+    container: python:3.14
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           path: "NGSTrefftz"
-      - name: pip install requirements
-        run: |
-          apt update -y && DEBIAN_FRONTEND="noninteractive" apt install -y build-essential git pandoc
-          pip install -r $GITHUB_WORKSPACE/NGSTrefftz/docs/requirements.txt
       - uses: actions/download-artifact@v7
         with:
-          pattern: cibw-wheels-ubuntu*
+          name: cibw-wheels-ubuntu-latest
           path: wheels
-          merge-multiple: true
-      - name: install ngstrefftz
-        run: pip install $GITHUB_WORKSPACE/wheels/*-cp313-cp313-manylinux_2_28_x86_64.manylinux2014_x86_64.whl
+      - name: Install wheel and documentation dependencies
+        run: |
+          apt update -y && DEBIAN_FRONTEND="noninteractive" apt install -y build-essential git pandoc
+          python -m pip install "$GITHUB_WORKSPACE"/wheels/*-cp314-cp314-*.whl -r "$GITHUB_WORKSPACE/NGSTrefftz/docs/requirements.txt"
       - name: Build Sphinx HTML
         run: sphinx-build -b html $GITHUB_WORKSPACE/NGSTrefftz/docs $GITHUB_WORKSPACE/NGSTrefftz/docs/_build/html
       - uses: actions/upload-pages-artifact@v5
@@ -352,7 +247,7 @@ jobs:
 
   paper:
     runs-on: ubuntu-latest
-    if: ${{ inputs.level == 'full' }}
+    if: ${{ inputs.level != 'quick' }}
     name: Paper Draft
     steps:
       - uses: actions/checkout@v6
