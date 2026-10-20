@@ -32,6 +32,16 @@ namespace ngfem
       ;
     }
 
+    ScalarMappedElement<D> GetEnrichment (int vertex) const
+    {
+      return { npoly,
+               order,
+               localmat,
+               eltype,
+               elvertices[vertex],
+               Vec<D> (1.0 / elsizes[vertex]) };
+    }
+
     double GetWavespeed () const { return this->c; }
     void SetWavespeed (double wavespeed) { this->c = wavespeed; }
 

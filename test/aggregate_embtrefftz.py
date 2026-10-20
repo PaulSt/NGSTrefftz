@@ -1,7 +1,7 @@
 from ngsolve import *
 from ngsolve.meshes import MakeStructured2DMesh
 from xfem import ElementAggregation
-from ngstrefftz import AggregatedL2Space, TrefftzEmbedding, EmbeddedTrefftzFES
+from ngstrefftz import AggregatedL2Space, PUFESpace, TrefftzEmbedding, EmbeddedTrefftzFES
 from dg import Lap, dgell
 
 
@@ -33,6 +33,17 @@ def test_aggregate_helmholtz():
     assert helmholtz_error(fes, test, top, omega) < 1e-5
 
 
+def test_pufem_helmholtz():
+    mesh = MakeStructured2DMesh(nx=3, ny=3, quads=False)
+    order, omega = 4, 1
+    fes = PUFESpace(mesh, order=order, complex=True, dgjumps=True)
+    test = PUFESpace(mesh, order=order-2, complex=True)
+    u, v = fes.TrialFunction(), test.TestFunction()
+    top = (-Trace(u.Operator("enrichment_hesse"))
+           - omega**2*u.Operator("enrichment"))*v*dx(bonus_intorder=2)
+    assert helmholtz_error(fes, test, top, omega) < 1e-5
+
+
 def test_aggregate_complex_inner_product():
     from embt import _check_inner_product_embedding
 
@@ -46,4 +57,5 @@ def test_aggregate_complex_inner_product():
 
 if __name__ == "__main__":
     test_aggregate_helmholtz()
+    test_pufem_helmholtz()
     test_aggregate_complex_inner_product()

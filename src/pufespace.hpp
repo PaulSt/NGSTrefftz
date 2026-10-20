@@ -2,13 +2,14 @@
 #define FILE_PUFESPACE_HPP
 
 #include "scalarmappedfe.hpp"
+#include "dofpatches.hpp"
 
 #include <comp.hpp>
 
 namespace ngcomp
 {
 
-  class PUFESpace : public FESpace
+  class PUFESpace : public FESpace, public DofPatchProvider
   {
     int D;
     int order;
@@ -27,6 +28,7 @@ namespace ngcomp
     void Update () override;
 
     void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
+    DofPatches GetDofPatches () const override;
 
     virtual void UpdateCouplingDofArray () override;
 

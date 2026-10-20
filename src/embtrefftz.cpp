@@ -5,6 +5,7 @@
 #ifdef NGSTREFFTZ_USE_XFEM
 #include <xfem/aggregates.hpp>
 #endif
+#include <algorithm>
 #include <cfloat>
 #include <compressedfespace.hpp>
 #include <type_traits>
@@ -30,6 +31,22 @@ namespace
         return patches;
       }
     return nullptr;
+  }
+
+  bool SamePatchSupports (const DofPatches &trial, const DofPatches &test)
+  {
+    if (trial.elements.Size () != test.elements.Size ())
+      return false;
+    for (size_t p : Range (trial.elements.Size ()))
+      {
+        auto trial_elements = trial.elements[p];
+        auto test_elements = test.elements[p];
+        if (!std::is_permutation (
+                trial_elements.begin (), trial_elements.end (),
+                test_elements.begin (), test_elements.end ()))
+          return false;
+      }
+    return true;
   }
 
   /// @returns `max(a-b, 0)` without integer underflow risk, if `b > a`.
@@ -289,7 +306,7 @@ namespace
   void
   AssemblePatchEmbeddings (const Array<optional<Matrix<SCAL>>> &local_matrices,
                            FlatArray<LocalEmbeddingData> local_data,
-                           const DofPatches &patches, const FESpace &fes,
+                           const FESpace &fes,
                            shared_ptr<const FESpace> fes_conformity,
                            shared_ptr<const BitArray> ignoredofs,
                            Array<optional<Matrix<SCAL>>> &etmats,
@@ -302,35 +319,45 @@ namespace
       nt += data.ndof_trefftz;
     auto ignored_numbers = NumberIgnoredDofs (fes, ignoredofs, nc + nt);
 
+    TableCreator<size_t> incidence (fes.GetNDof ());
+    for (; !incidence.Done (); incidence++)
+      for (size_t p : Range (local_data))
+        if (local_data[p].active)
+          for (DofId d : local_data[p].trial_dofs)
+            incidence.Add (d, p);
+    auto dof_patches = incidence.MoveTable ();
+
     auto ma = fes.GetMeshAccess ();
     VorB vb = ma->GetNE (VOL) ? VOL : BND;
-    Array<int> element_patch (ma->GetNE (vb));
-    element_patch = -1;
-    for (size_t p : Range (local_data))
-      if (local_data[p].active && local_data[p].trial_dofs.Size ())
-        for (size_t el : patches.elements[p])
-          element_patch[el] = p;
-
     TableCreator<DofId> cols (ma->GetNE (vb));
     for (; !cols.Done (); cols++)
       for (auto ei : ma->Elements (vb))
         {
-          Array<DofId> dofs;
+          Array<DofId> dofs, tdofs;
+          Array<size_t> contributing;
           fes.GetDofNrs (ei, dofs);
-          if (!dofs.Size ())
-            continue;
-          int p = element_patch[ei.Nr ()];
-          if (p >= 0)
+          for (DofId d : dofs)
+            if (IsRegularDof (d))
+              {
+                for (size_t p : dof_patches[d])
+                  if (!contributing.Contains (p))
+                    contributing.Append (p);
+                if (IsIgnoredRegularDof (ignoredofs, d)
+                    && !tdofs.Contains (ignored_numbers[d]))
+                  tdofs.Append (ignored_numbers[d]);
+              }
+          for (size_t p : contributing)
             {
               const auto &data = local_data[p];
               for (DofId d : data.conformity_dofs)
-                cols.Add (ei.Nr (), d);
+                if (!tdofs.Contains (d))
+                  tdofs.Append (d);
               for (size_t j : Range (data.ndof_trefftz))
-                cols.Add (ei.Nr (), nc + data.trefftz_dof_offset + j);
+                tdofs.Append (nc + data.trefftz_dof_offset + j);
             }
-          for (DofId d : dofs)
-            if (IsIgnoredRegularDof (ignoredofs, d))
-              cols.Add (ei.Nr (), ignored_numbers[d]);
+          QuickSort (tdofs);
+          for (DofId t : tdofs)
+            cols.Add (ei.Nr (), t);
         }
     tdof_nrs = cols.MoveTable ();
     etmats.SetSize (ma->GetNE (vb));
@@ -344,22 +371,28 @@ namespace
           auto tdofs = tdof_nrs[ei.Nr ()];
           auto &elmat = etmats[ei.Nr ()].emplace (dofs.Size (), tdofs.Size ());
           elmat = SCAL (0.0);
-          int p = element_patch[ei.Nr ()];
-          if (p >= 0)
-            {
-              const auto &data = local_data[p];
-              const auto &matrix = *local_matrices[p];
-              for (size_t i : Range (dofs))
-                {
-                  size_t row = data.trial_dofs.Pos (dofs[i]);
-                  if (row != Array<DofId>::ILLEGAL_POSITION)
-                    elmat.Row (i).Range (matrix.Width ()) = matrix.Row (row);
-                }
-              local_ndofs_trefftz[ei.Nr ()] = data.ndof_trefftz;
-            }
           for (size_t i : Range (dofs))
-            if (IsIgnoredRegularDof (ignoredofs, dofs[i]))
-              elmat (i, tdofs.Pos (ignored_numbers[dofs[i]])) = SCAL (1.0);
+            if (IsRegularDof (dofs[i]))
+              {
+                for (size_t p : dof_patches[dofs[i]])
+                  {
+                    const auto &data = local_data[p];
+                    const auto &matrix = *local_matrices[p];
+                    size_t row = data.trial_dofs.Pos (dofs[i]);
+                    size_t nconf = data.conformity_dofs.Size ();
+                    for (size_t j : Range (nconf))
+                      elmat (i, tdofs.Pos (data.conformity_dofs[j]))
+                          += matrix (row, j);
+                    for (size_t j : Range (data.ndof_trefftz))
+                      elmat (i, tdofs.Pos (nc + data.trefftz_dof_offset + j))
+                          += matrix (row, nconf + j);
+                  }
+                if (IsIgnoredRegularDof (ignoredofs, dofs[i]))
+                  elmat (i, tdofs.Pos (ignored_numbers[dofs[i]])) = SCAL (1.0);
+              }
+          for (DofId t : tdofs)
+            if (size_t (t) >= nc && size_t (t) < nc + nt)
+              local_ndofs_trefftz[ei.Nr ()]++;
         }
   }
 
@@ -814,6 +847,7 @@ namespace ngcomp
         cop_lhs_integrators[4], cop_rhs_integrators[4], fes_ip_integrators[4];
     Array<shared_ptr<LinearFormIntegrator>> lfis[4];
     Array<optional<Matrix<SCAL>>> local_matrices, inverses;
+    Table<DofId> test_patch_dofs;
     shared_ptr<VVector<SCAL>> particular_solution;
     bool any_fes_has_inactive_dofs = false;
     bool test_has_inactive_dofs = false;
@@ -852,6 +886,8 @@ namespace ngcomp
       get_dofs (*fes, dofs);
     if (fes_test == fes)
       dofs_test = dofs;
+    else if (work.patchwise && work.test_patch_dofs.Size ())
+      dofs_test = work.test_patch_dofs[nr];
     else
       get_dofs (*fes_test, dofs_test);
     if (fes_conformity)
@@ -1117,6 +1153,12 @@ namespace ngcomp
       patch_facets = GetInnerPatchFacets (*ma, patches->elements);
 #endif
     work.patchwise = bool (patches);
+    if (work.patchwise && fes_test != fes)
+      {
+        auto test_patches = GetDofPatches (*fes_test);
+        if (test_patches && SamePatchSupports (*patches, *test_patches))
+          work.test_patch_dofs = std::move (test_patches->dofs);
+      }
     size_t num_local
         = work.patchwise ? patches->elements.Size () : num_elements;
     if (work.patchwise)
@@ -1250,9 +1292,9 @@ namespace ngcomp
     if (work.patchwise)
       {
         Array<optional<Matrix<SCAL>>> element_matrices;
-        AssemblePatchEmbeddings (
-            work.local_matrices, local_data, *patches, *fes, fes_conformity,
-            ignoredofs, element_matrices, tdof_nrs, local_ndofs_trefftz);
+        AssemblePatchEmbeddings (work.local_matrices, local_data, *fes,
+                                 fes_conformity, ignoredofs, element_matrices,
+                                 tdof_nrs, local_ndofs_trefftz);
         work.local_matrices = std::move (element_matrices);
       }
     else
@@ -1903,8 +1945,8 @@ void ExportEmbTrefftz (py::module m)
                 (with respect to the threshold `eps`).
 
                 Spaces may supply independent trial-DOF groups and their element supports.
-                The same DOFs select test rows when fes_test is fes; otherwise test rows
-                are collected over the patch elements. ignoredofs only removes trial columns.
+                Matching trial and test patches select corresponding DOF groups; otherwise test
+                rows are collected over the trial patch elements. ignoredofs only removes trial columns.
             )mydelimiter")
       .def (
           // could be py::init<..,optional<py::dict>>() but we translate to map

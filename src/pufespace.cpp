@@ -7,7 +7,34 @@
 
 namespace ngcomp
 {
-  PUFESpace ::PUFESpace (shared_ptr<MeshAccess> ama, const Flags &flags, bool)
+  template <int D, typename OP>
+  class DiffOpPUEnrichment : public DiffOp<DiffOpPUEnrichment<D, OP>>
+  {
+  public:
+    enum
+    {
+      DIM = OP::DIM,
+      DIM_SPACE = D,
+      DIM_ELEMENT = D,
+      DIM_DMAT = OP::DIM_DMAT,
+      DIFFORDER = OP::DIFFORDER
+    };
+    static auto GetDimensions () { return OP::GetDimensions (); }
+    static string Name () { return "enrichment_" + OP::Name (); }
+
+    template <typename MIP, typename MAT>
+    static void GenerateMatrix (const FiniteElement &fel, const MIP &mip,
+                                MAT &&mat, LocalHeap &lh)
+    {
+      auto &pu = static_cast<const PUFElement<D> &> (fel);
+      int n = fel.GetNDof () / (D + 1);
+      for (int vertex = 0; vertex < D + 1; vertex++)
+        OP::GenerateMatrix (pu.GetEnrichment (vertex), mip,
+                            mat.Cols (vertex * n, (vertex + 1) * n), lh);
+    }
+  };
+
+  PUFESpace::PUFESpace (shared_ptr<MeshAccess> ama, const Flags &flags, bool)
       : FESpace (ama, flags)
   {
     type = "pufespace";
@@ -35,6 +62,13 @@ namespace ngcomp
               = make_shared<T_DifferentialOperator<DiffOpMapped<2>>> ();
           flux_evaluator[VOL] = make_shared<
               T_DifferentialOperator<DiffOpMappedGradient<2>>> ();
+          additional_evaluators.Set (
+              "enrichment", make_shared<T_DifferentialOperator<
+                                DiffOpPUEnrichment<2, DiffOpMapped<2>>>> ());
+          additional_evaluators.Set (
+              "enrichment_hesse",
+              make_shared<T_DifferentialOperator<
+                  DiffOpPUEnrichment<2, DiffOpMappedHesse<2>>>> ());
           basismat = MonomialBasis<2> (order);
           break;
         }
@@ -50,7 +84,7 @@ namespace ngcomp
       }
   }
 
-  void PUFESpace ::Update ()
+  void PUFESpace::Update ()
   {
     this->local_ndof = BinCoeff (D + order, order);
     int nvert = ma->GetNV ();
@@ -62,7 +96,7 @@ namespace ngcomp
     UpdateCouplingDofArray ();
   }
 
-  void PUFESpace ::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
+  void PUFESpace::GetDofNrs (ElementId ei, Array<DofId> &dnums) const
   {
     dnums.SetSize0 ();
     if (!DefinedOn (ei)) // || ei.VB () != VOL)
@@ -74,7 +108,23 @@ namespace ngcomp
         dnums.Append (v * local_ndof + j);
   }
 
-  void PUFESpace ::UpdateCouplingDofArray ()
+  DofPatches PUFESpace::GetDofPatches () const
+  {
+    TableCreator<size_t> elements (ma->GetNV ());
+    for (; !elements.Done (); elements++)
+      for (size_t vertex : Range (ma->GetNV ()))
+        for (size_t el : ma->GetVertexElements (vertex))
+          if (DefinedOn (ElementId (VOL, el)))
+            elements.Add (vertex, el);
+    DofPatches patches{ elements.MoveTable (),
+                        Table<DofId> (ma->GetNV (), local_ndof) };
+    auto dofs = patches.dofs.AsArray ();
+    for (size_t d : Range (dofs))
+      dofs[d] = d;
+    return patches;
+  }
+
+  void PUFESpace::UpdateCouplingDofArray ()
   {
     ctofdof.SetSize (ndof);
     for (auto i : Range (ma->GetNE ()))
@@ -87,7 +137,7 @@ namespace ngcomp
       }
   }
 
-  FiniteElement &PUFESpace ::GetFE (ElementId ei, Allocator &alloc) const
+  FiniteElement &PUFESpace::GetFE (ElementId ei, Allocator &alloc) const
   {
     Ngs_Element ngel = ma->GetElement (ei);
     ELEMENT_TYPE eltype = ngel.GetType ();
@@ -136,7 +186,7 @@ namespace ngcomp
     //}
   }
 
-  DocInfo PUFESpace ::GetDocu ()
+  DocInfo PUFESpace::GetDocu ()
   {
     auto docu = FESpace::GetDocu ();
     docu.Arg ("useshift") = "bool = True\n"
