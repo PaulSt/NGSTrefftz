@@ -475,6 +475,60 @@ def testembtrefftzfes(mesh,order):
 
 
 
+def _check_inner_product_embedding(fes, test, complex_weight=False):
+    u, v = fes.TnT()
+    top = (Trace(u.Operator("hesse")) + u)*test.TestFunction()*dx
+    rhs = test.TestFunction()*dx
+    weight = (u*v + grad(u)*grad(v))*dx
+    if complex_weight:
+        weight += 0.25j*(grad(u)[0]*grad(v)[1]
+                        - grad(u)[1]*grad(v)[0])*dx
+
+    gram = BilinearForm(fes)
+    gram += weight
+    gram.Assemble()
+    w = gram.mat.ToDense().NumPy().copy()
+    operator = BilinearForm(trialspace=fes, testspace=test)
+    operator += top
+    operator.Assemble()
+    a = operator.mat.ToDense().NumPy().copy()
+    load = LinearForm(test)
+    load += rhs
+    load.Assemble()
+
+    embedding = TrefftzEmbedding(top=top, trhs=rhs, fes_ip=weight, eps=1e-9)
+    p = embedding.GetEmbedding().ToDense().NumPy().copy()
+    particular = embedding.GetParticularSolution().FV().NumPy()
+    assert np.linalg.norm(p.conj().T @ w @ p - np.eye(p.shape[1]), np.inf) < 1e-9
+    assert np.linalg.norm(a @ p, np.inf) < 1e-9
+    assert np.linalg.norm(a @ particular - load.vec.FV().NumPy(), np.inf) < 1e-9
+    if complex_weight:
+        assert np.max(np.abs(w.imag)) > 1e-4
+        assert np.linalg.norm(w - w.conj().T, np.inf) < 1e-10
+
+
+def testembtrefftz_inner_product(complex_space, complex_weight=False, hidden=False):
+    """
+    Weighted embeddings preserve the kernel and use an orthonormal basis,
+    including complex Hermitian weights and hidden DOFs.
+
+    >>> testembtrefftz_inner_product(False)
+    >>> testembtrefftz_inner_product(True)
+    >>> testembtrefftz_inner_product(True, complex_weight=True)
+    >>> testembtrefftz_inner_product(True, complex_weight=True, hidden=True)
+    """
+    from ngsolve.meshes import MakeStructured2DMesh
+
+    mesh = MakeStructured2DMesh(nx=2, ny=2, quads=False)
+    fes = L2(mesh, order=4, complex=complex_space)
+    test = L2(mesh, order=2, complex=complex_space)
+    if hidden:
+        for el in fes.Elements(VOL):
+            fes.SetCouplingType(el.dofs[-1], COUPLING_TYPE.HIDDEN_DOF)
+        fes.FinalizeUpdate()
+    _check_inner_product_embedding(fes, test, complex_weight)
+
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

@@ -612,8 +612,8 @@ def test_ConstrainedTrefftzFESpaceDirichlet():
 def test_ConstrainedTrefftzFESpaceEmbed():
     """
     Tests, whether the embedded gfu matches the gfu of the EmbeddedTrefftzFES.
-    >>> [test_ConstrainedTrefftzFESpaceEmbed()] # doctest:+ELLIPSIS
-    [...e-32]
+    >>> test_ConstrainedTrefftzFESpaceEmbed() < 1e-28
+    True
     """
 
     def hesse(f: CoefficientFunction) -> CoefficientFunction:

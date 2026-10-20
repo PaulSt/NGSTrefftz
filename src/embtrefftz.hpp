@@ -10,6 +10,14 @@
 
 namespace ngcomp
 {
+  /// Independent trial-DOF groups and their element supports, indexed by
+  /// patch.
+  struct DofPatches
+  {
+    Table<size_t> elements;
+    Table<DofId> dofs;
+  };
+
   void copyBitArray (const shared_ptr<BitArray> target,
                      const shared_ptr<const BitArray> source);
 
@@ -32,6 +40,7 @@ namespace ngcomp
     const shared_ptr<SumOfIntegrals> fes_ip;
     shared_ptr<MeshAccess> ma;
     shared_ptr<BitArray> ignoredofs;
+    shared_ptr<DofPatches> patches;
 
     /// contains the mapping of Element Number to the associated dofs
     /// of the conforming Trefftz space
@@ -39,8 +48,6 @@ namespace ngcomp
 
     // trefftz embedding only in the volume or only on the boundary (surface)
     VorB vb = VOL;
-
-    bool compute_elmat_T_inv = true;
 
     std::variant<size_t, double> ndof_trefftz;
 
@@ -50,23 +57,34 @@ namespace ngcomp
     Array<optional<Matrix<double>>> etmats;
     Array<optional<Matrix<Complex>>> etmatsc;
 
-    /// (pseudo-)inverse matrices of the Trefftz part of etmats
-    Array<optional<Matrix<double>>> etmats_trefftz_inv;
-    /// (pseudo-)inverse matrices of the Trefftz part of etmatsc
-    Array<optional<Matrix<Complex>>> etmatsc_trefftz_inv;
+    /// Particular-solution maps, indexed by local problem.
+    Array<optional<Matrix<double>>> local_inverses;
+    Array<optional<Matrix<Complex>>> local_inverses_c;
 
-    /// elmat_trefftz.width == local_ndof_trefftz
-    /// elmat_conforming.width == elmat.width - local_ndof_trefftz
-    ///                        == local_ndof_conforming
+    /// Number of Trefftz columns seen by each element.
     Array<size_t> local_ndofs_trefftz;
 
     shared_ptr<const BaseVector> psol;
+
+    template <typename SCAL> struct EmbeddingWork;
+    template <typename SCAL, typename GETDOFS, typename ADDMATRIX,
+              typename ADDVECTOR>
+    INLINE void
+    ComputeLocalEmbedding (size_t nr, EmbeddingWork<SCAL> &work,
+                           const GETDOFS &get_dofs,
+                           const ADDMATRIX &add_matrix,
+                           const ADDVECTOR &add_vector, LocalHeap &lh);
 
     /// Executes the embedded Trefftz procedure
     /// and stores the results in this class.
     ///
     /// @tparam SCAL either `double` or `Complex`
     template <typename SCAL> void EmbTrefftz ();
+    template <typename SCAL>
+    shared_ptr<const BaseVector>
+    ComputeParticularSolution (shared_ptr<const BaseVector> rhsvec,
+                               const Array<optional<Matrix<SCAL>>> &inverses,
+                               const SumOfIntegrals *rhsform = nullptr) const;
 
   public:
     TrefftzEmbedding (shared_ptr<SumOfIntegrals> _top,
@@ -92,9 +110,13 @@ namespace ngcomp
     GetParticularSolution (shared_ptr<const BaseVector> _trhsvec) const;
     shared_ptr<const BaseMatrix> GetEmbedding () const;
     shared_ptr<FESpace> GetFES () const noexcept { return fes; }
-    shared_ptr<FESpace> GetFEStest () const noexcept { return fes_test; }
-    shared_ptr<FESpace> GetFESconf () const noexcept { return fes_conformity; }
+    shared_ptr<FESpace> GetTestSpace () const noexcept { return fes_test; }
+    shared_ptr<FESpace> GetConfSpace () const noexcept
+    {
+      return fes_conformity;
+    }
     shared_ptr<const BitArray> GetIgnoredDofs () const { return ignoredofs; }
+    size_t GetNDofTrefftz () const noexcept;
     const Array<optional<Matrix<double>>> &GetEtmats () const noexcept
     {
       return etmats;
@@ -111,7 +133,7 @@ namespace ngcomp
     {
       return etmatsc[i];
     }
-    const Array<size_t> &GetLocalNodfsTrefftz () const noexcept
+    const Array<size_t> &GetLocalNDofsTrefftz () const noexcept
     {
       return local_ndofs_trefftz;
     }
