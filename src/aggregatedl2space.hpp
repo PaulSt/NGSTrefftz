@@ -2,11 +2,12 @@
 #define FILE_AGGREGATEDL2SPACE_HPP
 
 #include "monomialfespace.hpp"
+#include "dofpatches.hpp"
 #include <xfem/aggregates.hpp>
 
 namespace ngcomp
 {
-  class AggregatedL2Space : public MonomialFESpace
+  class AggregatedL2Space : public MonomialFESpace, public DofPatchProvider
   {
     shared_ptr<ElementAggregation> aggregation;
     Array<int> element_to_patch;
@@ -22,6 +23,7 @@ namespace ngcomp
     void UpdateCouplingDofArray () override;
     void GetDofNrs (ElementId ei, Array<DofId> &dnums) const override;
     FiniteElement &GetFE (ElementId ei, Allocator &alloc) const override;
+    DofPatches GetDofPatches () const override;
 
     string GetClassName () const override { return "AggregatedL2Space"; }
     shared_ptr<ElementAggregation> GetAggregation () const

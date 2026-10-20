@@ -65,6 +65,26 @@ namespace ngcomp
       dnums.Append (first + j);
   }
 
+  DofPatches AggregatedL2Space::GetDofPatches () const
+  {
+    size_t npatches = aggregation->GetNPatches (true);
+    TableCreator<size_t> elements (npatches);
+    Array<size_t> els;
+    for (; !elements.Done (); elements++)
+      for (size_t p : Range (npatches))
+        {
+          aggregation->GetPatch (p, els);
+          for (size_t el : els)
+            elements.Add (p, el);
+        }
+    DofPatches patches{ elements.MoveTable (),
+                        Table<DofId> (npatches, local_ndof) };
+    auto dofs = patches.dofs.AsArray ();
+    for (size_t d : Range (dofs))
+      dofs[d] = d;
+    return patches;
+  }
+
   FiniteElement &
   AggregatedL2Space::GetFE (ElementId ei, Allocator &alloc) const
   {

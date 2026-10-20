@@ -179,6 +179,7 @@ file(COPY
     ${CMAKE_SOURCE_DIR}/test/tents.py
     ${CMAKE_SOURCE_DIR}/test/conforming_trefftz.py
     ${CMAKE_SOURCE_DIR}/test/boxint.py
+    ${CMAKE_SOURCE_DIR}/test/aggregate_embtrefftz.py
     DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing)
 add_test(NAME embtrefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/embt.py)
 add_test(NAME conforming_trefftz COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/conforming_trefftz.py)
@@ -189,6 +190,10 @@ if(NGSTREFFTZ_USE_NGSTENTS)
   list(APPEND tests_with_pythonpath tents)
 endif()
 add_test(NAME box COMMAND python3 -m doctest ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/boxint.py)
+if(NGSTREFFTZ_USE_XFEM)
+  add_test(NAME aggregate_embtrefftz COMMAND python3 ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/Testing/aggregate_embtrefftz.py)
+  list(APPEND tests_with_pythonpath aggregate_embtrefftz)
+endif()
 #WORKING_DIRECTORY ${ CMAKE_CURRENT_SOURCE_DIR }
 set_tests_properties(${tests_with_pythonpath}
     PROPERTIES ENVIRONMENT PYTHONPATH=${CMAKE_LIBRARY_OUTPUT_DIRECTORY}:${NGSOLVE_INSTALL_DIR}/${NGSOLVE_INSTALL_DIR_PYTHON}:$ENV{PYTHONPATH})

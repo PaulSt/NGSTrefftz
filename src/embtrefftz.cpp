@@ -2,6 +2,9 @@
 #include "monomialfespace.hpp"
 #include "trefftzfespace.hpp"
 #include "lapack_loader.hpp"
+#ifdef NGSTREFFTZ_USE_XFEM
+#include <xfem/aggregates.hpp>
+#endif
 #include <cfloat>
 #include <compressedfespace.hpp>
 #include <type_traits>
@@ -11,6 +14,24 @@ using namespace ngcomp;
 
 namespace
 {
+  shared_ptr<DofPatches> GetDofPatches (const FESpace &space)
+  {
+    if (auto provider = dynamic_cast<const DofPatchProvider *> (&space))
+      return make_shared<DofPatches> (provider->GetDofPatches ());
+    if (auto compressed = dynamic_cast<const CompressedFESpace *> (&space))
+      {
+        auto patches = GetDofPatches (*compressed->GetBaseSpace ());
+        if (patches)
+          {
+            auto flat_dofs = patches->dofs.AsArray ();
+            Array<DofId> dofs (flat_dofs.Size (), flat_dofs.Data ());
+            compressed->WrapDofs (dofs);
+          }
+        return patches;
+      }
+    return nullptr;
+  }
+
   /// @returns `max(a-b, 0)` without integer underflow risk, if `b > a`.
   INLINE size_t max_a_minus_b_or_0 (const size_t a, const size_t b) noexcept
   {
@@ -264,12 +285,90 @@ namespace
     return cols.MoveTable ();
   }
 
+  template <typename SCAL>
+  void
+  AssemblePatchEmbeddings (const Array<optional<Matrix<SCAL>>> &local_matrices,
+                           FlatArray<LocalEmbeddingData> local_data,
+                           const DofPatches &patches, const FESpace &fes,
+                           shared_ptr<const FESpace> fes_conformity,
+                           shared_ptr<const BitArray> ignoredofs,
+                           Array<optional<Matrix<SCAL>>> &etmats,
+                           Table<DofId> &tdof_nrs,
+                           Array<size_t> &local_ndofs_trefftz)
+  {
+    size_t nc = fes_conformity ? fes_conformity->GetNDof () : 0;
+    size_t nt = 0;
+    for (const auto &data : local_data)
+      nt += data.ndof_trefftz;
+    auto ignored_numbers = NumberIgnoredDofs (fes, ignoredofs, nc + nt);
+
+    auto ma = fes.GetMeshAccess ();
+    VorB vb = ma->GetNE (VOL) ? VOL : BND;
+    Array<int> element_patch (ma->GetNE (vb));
+    element_patch = -1;
+    for (size_t p : Range (local_data))
+      if (local_data[p].active && local_data[p].trial_dofs.Size ())
+        for (size_t el : patches.elements[p])
+          element_patch[el] = p;
+
+    TableCreator<DofId> cols (ma->GetNE (vb));
+    for (; !cols.Done (); cols++)
+      for (auto ei : ma->Elements (vb))
+        {
+          Array<DofId> dofs;
+          fes.GetDofNrs (ei, dofs);
+          if (!dofs.Size ())
+            continue;
+          int p = element_patch[ei.Nr ()];
+          if (p >= 0)
+            {
+              const auto &data = local_data[p];
+              for (DofId d : data.conformity_dofs)
+                cols.Add (ei.Nr (), d);
+              for (size_t j : Range (data.ndof_trefftz))
+                cols.Add (ei.Nr (), nc + data.trefftz_dof_offset + j);
+            }
+          for (DofId d : dofs)
+            if (IsIgnoredRegularDof (ignoredofs, d))
+              cols.Add (ei.Nr (), ignored_numbers[d]);
+        }
+    tdof_nrs = cols.MoveTable ();
+    etmats.SetSize (ma->GetNE (vb));
+    local_ndofs_trefftz.SetSize (ma->GetNE (vb));
+    local_ndofs_trefftz = 0;
+    for (auto ei : ma->Elements (vb))
+      if (tdof_nrs[ei.Nr ()].Size ())
+        {
+          Array<DofId> dofs;
+          fes.GetDofNrs (ei, dofs);
+          auto tdofs = tdof_nrs[ei.Nr ()];
+          auto &elmat = etmats[ei.Nr ()].emplace (dofs.Size (), tdofs.Size ());
+          elmat = SCAL (0.0);
+          int p = element_patch[ei.Nr ()];
+          if (p >= 0)
+            {
+              const auto &data = local_data[p];
+              const auto &matrix = *local_matrices[p];
+              for (size_t i : Range (dofs))
+                {
+                  size_t row = data.trial_dofs.Pos (dofs[i]);
+                  if (row != Array<DofId>::ILLEGAL_POSITION)
+                    elmat.Row (i).Range (matrix.Width ()) = matrix.Row (row);
+                }
+              local_ndofs_trefftz[ei.Nr ()] = data.ndof_trefftz;
+            }
+          for (size_t i : Range (dofs))
+            if (IsIgnoredRegularDof (ignoredofs, dofs[i]))
+              elmat (i, tdofs.Pos (ignored_numbers[dofs[i]])) = SCAL (1.0);
+        }
+  }
+
   /// The sparse matrix is an optional view of the stored element matrices.
   template <typename SCAL>
   shared_ptr<BaseMatrix>
   Elmats2Sparse (const Array<optional<Matrix<SCAL>>> &etmats,
                  const Table<DofId> &tdof_nrs, const FESpace &fes, size_t ndof,
-                 shared_ptr<const BitArray> ignoredofs)
+                 shared_ptr<const BitArray> ignoredofs, bool patchwise)
   {
     auto ma = fes.GetMeshAccess ();
     VorB vb = ma->GetNE (VOL) ? VOL : BND;
@@ -300,7 +399,10 @@ namespace
             if (IsRegularDof (dofs[i]))
               {
                 for (size_t j : Range (cols))
-                  (*matrix) (dofs[i], cols[j]) += elmat (i, j);
+                  if (patchwise)
+                    (*matrix) (dofs[i], cols[j]) = elmat (i, j);
+                  else
+                    (*matrix) (dofs[i], cols[j]) += elmat (i, j);
               }
         }
     if (ignoredofs)
@@ -339,14 +441,16 @@ namespace
       }
   }
 
-  void calculateLinearFormIntegrators (
+  void CalculateLinearFormIntegrators (
       const SumOfIntegrals &trhs,
       Array<shared_ptr<LinearFormIntegrator>> lfis[4],
-      shared_ptr<MeshAccess> ma)
+      shared_ptr<MeshAccess> ma, bool volume_only = false)
   {
     for (auto icf : trhs.icfs)
       {
         DifferentialSymbol &dx = icf->dx;
+        if (volume_only && dx.vb != VOL)
+          throw Exception ("Patch right-hand sides require volume integrals");
         shared_ptr<LinearFormIntegrator> lfi
             = icf->MakeLinearFormIntegrator ();
 
@@ -738,8 +842,14 @@ namespace ngcomp
     // E_T.shape == (ndof, ndof_trefftz),
     // f.shape == (ndof_test), u_p.shape == (ndof)
 
-    Array<DofId> dofs, dofs_test, dofs_conforming;
-    get_dofs (*fes, dofs);
+    LocalEmbeddingData data;
+    auto &dofs = data.trial_dofs;
+    auto &dofs_test = data.test_dofs;
+    auto &dofs_conforming = data.conformity_dofs;
+    if (work.patchwise)
+      dofs = patches->dofs[nr];
+    else
+      get_dofs (*fes, dofs);
     if (fes_test == fes)
       dofs_test = dofs;
     else
@@ -945,10 +1055,20 @@ namespace ngcomp
         rhs = SCAL (0.0);
         add_vector (rhs, dofs_test, lh);
         sol = *work.inverses[nr] * rhs;
-        work.particular_solution->SetIndirect (dofs, sol);
+        if (work.patchwise)
+          work.particular_solution->AddIndirect (dofs, sol, true);
+        else
+          work.particular_solution->SetIndirect (dofs, sol);
       }
 
-    if (!work.patchwise)
+    if (work.patchwise)
+      {
+        data.active = true;
+        data.ndof_trefftz = ndof_trefftz_i;
+        data.shared = local_data[nr].shared;
+        local_data[nr] = std::move (data);
+      }
+    else
       {
         local_ndofs_trefftz[nr] = ndof_trefftz_i;
         // Restore hidden rows and ignored identity columns only when needed.
@@ -990,6 +1110,21 @@ namespace ngcomp
 
     vb = ma->GetNE (VOL) > 0 ? VOL : BND;
     const size_t num_elements = ma->GetNE (vb);
+    // The space supplies its partition; ordinary spaces stay elementwise.
+#ifdef NGSTREFFTZ_USE_XFEM
+    Table<size_t> patch_facets;
+    if (patches)
+      patch_facets = GetInnerPatchFacets (*ma, patches->elements);
+#endif
+    work.patchwise = bool (patches);
+    size_t num_local
+        = work.patchwise ? patches->elements.Size () : num_elements;
+    if (work.patchwise)
+      {
+        local_data.SetSize (num_local);
+        for (size_t p : Range (num_local))
+          local_data[p].shared = patches->elements[p].Size () > 1;
+      }
     local_ndofs_trefftz.SetSize (num_elements);
     local_ndofs_trefftz = 0;
 
@@ -1009,12 +1144,12 @@ namespace ngcomp
     if (fes_ip)
       calculateBilinearFormIntegrators (*fes_ip, work.fes_ip_integrators, ma);
 
-    work.local_matrices.SetSize (num_elements);
-    work.inverses.SetSize (num_elements);
+    work.local_matrices.SetSize (num_local);
+    work.inverses.SetSize (num_local);
     work.particular_solution = make_shared<VVector<SCAL>> (fes->GetNDof ());
     *work.particular_solution = SCAL (0.0);
     if (trhs)
-      calculateLinearFormIntegrators (*trhs, work.lfis, ma);
+      CalculateLinearFormIntegrators (*trhs, work.lfis, ma, bool (patches));
 
     work.test_has_inactive_dofs = fesHasInactiveDofs (*fes_test);
     work.any_fes_has_inactive_dofs
@@ -1049,6 +1184,55 @@ namespace ngcomp
           ComputeLocalEmbedding<SCAL> (el.Nr (), work, get_dofs, add_matrix,
                                        add_vector, lh);
       });
+    else
+      {
+#ifdef NGSTREFFTZ_USE_XFEM
+        ParallelForRange (Range (num_local), [&] (IntRange range) {
+          LocalHeap lh = clh.Split ();
+          for (size_t nr : range)
+            {
+              HeapReset reset (lh);
+              PatchAssembly local{ *ma, patches->elements[nr],
+                                   patch_facets[nr] };
+              bool defined = false;
+              for (size_t el : local.elements)
+                if (defined_on (ma->GetElement (ElementId (vb, el))))
+                  {
+                    defined = true;
+                    break;
+                  }
+              if (!defined)
+                continue;
+              auto get_dofs = [&] (const FESpace &space, Array<DofId> &dofs) {
+                local.GetDofNrs (space, dofs);
+              };
+              auto add_matrix =
+                  [&] (auto mat, const auto &integrators, const FESpace &trial,
+                       const FESpace &test, FlatArray<DofId> dofs,
+                       FlatArray<DofId> test_dofs, LocalHeap &lh) {
+                    local.AddMatrix<SCAL> (mat, integrators, trial, test, dofs,
+                                           test_dofs, lh);
+                  };
+              auto add_vector
+                  = [&] (FlatVector<SCAL> vec, FlatArray<DofId> test_dofs,
+                         LocalHeap &lh) {
+                      local.AddVector (vec, work.lfis[VOL], *fes_test,
+                                       test_dofs, lh);
+                    };
+              ComputeLocalEmbedding<SCAL> (nr, work, get_dofs, add_matrix,
+                                           add_vector, lh);
+            }
+        });
+#else
+        throw Exception ("Patch embedding requires xfem support");
+#endif
+      }
+    size_t offset = 0;
+    for (auto &data : local_data)
+      {
+        data.trefftz_dof_offset = offset;
+        offset += data.ndof_trefftz;
+      }
 
     if (stats)
       {
@@ -1063,8 +1247,18 @@ namespace ngcomp
             = Vector<double> ({ work.trefftz_residual });
       }
 
-    tdof_nrs = ElementEmbeddingDofs (work.local_matrices, local_ndofs_trefftz,
-                                     *fes, fes_conformity, ignoredofs);
+    if (work.patchwise)
+      {
+        Array<optional<Matrix<SCAL>>> element_matrices;
+        AssemblePatchEmbeddings (
+            work.local_matrices, local_data, *patches, *fes, fes_conformity,
+            ignoredofs, element_matrices, tdof_nrs, local_ndofs_trefftz);
+        work.local_matrices = std::move (element_matrices);
+      }
+    else
+      tdof_nrs
+          = ElementEmbeddingDofs (work.local_matrices, local_ndofs_trefftz,
+                                  *fes, fes_conformity, ignoredofs);
 
     if constexpr (std::is_same_v<double, SCAL>)
       {
@@ -1113,6 +1307,7 @@ namespace ngcomp
       throw Exception ("TrefftzEmbedding: no fespace found");
 
     ma = fes->GetMeshAccess ();
+    patches = GetDofPatches (*fes);
     if (fes->IsComplex ())
       EmbTrefftz<Complex> ();
     else
@@ -1122,8 +1317,12 @@ namespace ngcomp
   size_t TrefftzEmbedding::GetNDofTrefftz () const noexcept
   {
     size_t ndof = 0;
-    for (size_t n : local_ndofs_trefftz)
-      ndof += n;
+    if (patches)
+      for (const auto &data : local_data)
+        ndof += data.ndof_trefftz;
+    else
+      for (size_t n : local_ndofs_trefftz)
+        ndof += n;
     return ndof;
   }
 
@@ -1140,7 +1339,7 @@ namespace ngcomp
     LocalHeap lh (100 * 1000 * 1000, "embt_psol", true);
     Array<shared_ptr<LinearFormIntegrator>> lfis[4];
     if (rhsform)
-      calculateLinearFormIntegrators (*rhsform, lfis, ma);
+      CalculateLinearFormIntegrators (*rhsform, lfis, ma, bool (patches));
     const bool test_has_inactive_dofs
         = rhsform && fesHasInactiveDofs (*fes_test);
     auto apply = [&] (size_t nr, FlatArray<DofId> dofs,
@@ -1153,7 +1352,10 @@ namespace ngcomp
       else
         add_vector (rhs, test_dofs, lh);
       sol = *inverses[nr] * rhs;
-      solution->SetIndirect (dofs, sol);
+      if (patches)
+        solution->AddIndirect (dofs, sol, true);
+      else
+        solution->SetIndirect (dofs, sol);
     };
     if (!patches)
       ma->IterateElements (vb, lh, [&] (Ngs_Element el, LocalHeap &lh) {
@@ -1181,6 +1383,28 @@ namespace ngcomp
               };
         apply (ei.Nr (), dofs, test_dofs, add_vector, lh);
       });
+    else
+      {
+#ifdef NGSTREFFTZ_USE_XFEM
+        ParallelForRange (Range (local_data.Size ()), [&] (IntRange range) {
+          LocalHeap local_heap = lh.Split ();
+          for (size_t nr : range)
+            if (local_data[nr].active)
+              {
+                HeapReset reset (local_heap);
+                const auto &data = local_data[nr];
+                PatchAssembly local{ *ma, patches->elements[nr], {} };
+                auto add_vector = [&] (FlatVector<SCAL> rhs,
+                                       FlatArray<DofId> test_dofs,
+                                       LocalHeap &lh) {
+                  local.AddVector (rhs, lfis[VOL], *fes_test, test_dofs, lh);
+                };
+                apply (nr, data.trial_dofs, data.test_dofs, add_vector,
+                       local_heap);
+              }
+        });
+#endif
+      }
     return solution;
   }
 
@@ -1215,8 +1439,10 @@ namespace ngcomp
     if (ignoredofs)
       ndof += ignoredofs->NumSet ();
     if (fes->IsComplex ())
-      return Elmats2Sparse (etmatsc, tdof_nrs, *fes, ndof, ignoredofs);
-    return Elmats2Sparse (etmats, tdof_nrs, *fes, ndof, ignoredofs);
+      return Elmats2Sparse (etmatsc, tdof_nrs, *fes, ndof, ignoredofs,
+                            bool (patches));
+    return Elmats2Sparse (etmats, tdof_nrs, *fes, ndof, ignoredofs,
+                          bool (patches));
   }
 
   template <typename SCAL>
@@ -1259,7 +1485,7 @@ namespace ngcomp
   shared_ptr<BaseVector>
   TrefftzEmbedding::Embed (const shared_ptr<const BaseVector> tvec) const
   {
-    bool add_contributions = bool (fes_conformity);
+    bool add_contributions = bool (fes_conformity) && !patches;
     if (fes->IsComplex ())
       return EmbedElementMatrices (*tvec, etmatsc, tdof_nrs, *fes, vb,
                                    add_contributions, ignoredofs);
@@ -1430,7 +1656,7 @@ namespace ngcomp
     const size_t new_ndof = ignored_dofs + ndof_conformity + ndof_trefftz;
     this->SetNDof (new_ndof);
     this->ctofdof.SetSize (new_ndof);
-    // Global dof ordering (consistent with ElementEmbeddingDofs):
+    // Global dof ordering (consistent with AssemblePatchEmbeddings):
     //   [0 .. ndof_conformity-1]                                  conforming
     //   dofs [ndof_conformity .. ndof_conformity+ndof_trefftz-1] element-wise
     //   Trefftz dofs [ndof_conformity+ndof_trefftz .. end] ignored base dofs
@@ -1441,6 +1667,10 @@ namespace ngcomp
     // 2) Trefftz block (ordinary element modes are local).
     this->ctofdof.Range (ndof_conformity, ndof_conformity + ndof_trefftz)
         = LOCAL_DOF;
+    for (const auto &data : emb->GetLocalData ())
+      for (size_t j : Range (data.ndof_trefftz))
+        this->ctofdof[ndof_conformity + data.trefftz_dof_offset + j]
+            = data.shared ? WIREBASKET_DOF : LOCAL_DOF;
     // 3) Ignored block (preserve base coupling types)
     if (ignoredofs)
       {
@@ -1459,6 +1689,13 @@ namespace ngcomp
     const FlatArray<DofId> tdofnrs = this->emb->GetTDofNrs (ei.Nr ());
 
     basefes->GetDofNrs (ei, dnums);
+    const size_t base_ndof = dnums.Size ();
+    if (tdofnrs.Size () > base_ndof)
+      {
+        dnums.SetSize (tdofnrs.Size ());
+        for (size_t i = base_ndof; i < tdofnrs.Size (); i++)
+          dnums[i] = tdofnrs[i];
+      }
     for (size_t i = 0; i < dnums.Size (); i++)
       dnums[i] = i < tdofnrs.Size () ? tdofnrs[i] : NO_DOF_NR_CONDENSE;
   }
@@ -1664,6 +1901,10 @@ void ExportEmbTrefftz (py::module m)
                 If a different test space is used, the dimension of the local Trefftz space is
                 at best dim(fes)-dim(fes_test) and may increase by zero singular values of `top`
                 (with respect to the threshold `eps`).
+
+                Spaces may supply independent trial-DOF groups and their element supports.
+                The same DOFs select test rows when fes_test is fes; otherwise test rows
+                are collected over the patch elements. ignoredofs only removes trial columns.
             )mydelimiter")
       .def (
           // could be py::init<..,optional<py::dict>>() but we translate to map
@@ -1699,9 +1940,9 @@ void ExportEmbTrefftz (py::module m)
                  :param eps: cutoff for singular values from the SVD of the local operator.
                         values below eps are considered zero and therefore in the kernel of `top`.
                         (default: 0.0)
-                 :param ndof_trefftz: fixes the number of degrees of freedom per element
+                 :param ndof_trefftz: fixes the number of degrees of freedom per element or patch
                      that are to be considered in the Trefftz space generated by `top`
-                     (i.e. the local dimension of the kernel of `top` on one element)
+                     (i.e. the local dimension of the kernel of `top` on one element or patch)
                      cannot be used together with `eps` (default: 0)
                  :param fes: the finite element space of `top` (optional, determined
                      from `top` if not given)
@@ -1719,7 +1960,7 @@ void ExportEmbTrefftz (py::module m)
           py::arg ("eps") = 0.0, py::arg ("fes") = nullptr,
           py::arg ("fes_test") = nullptr, py::arg ("fes_conformity") = nullptr,
           py::arg ("fes_ip") = nullptr, py::arg ("ignoredofs") = nullptr,
-          py::arg ("stats") = nullopt) // py::none ())
+          py::arg ("stats") = nullopt)
       .def ("Embed",
             static_cast<shared_ptr<BaseVector> (ngcomp::TrefftzEmbedding::*) (
                 const shared_ptr<const BaseVector>) const> (

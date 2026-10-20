@@ -1,5 +1,6 @@
 #ifndef FILE_SVDTREFFTZ_HPP
 #define FILE_SVDTREFFTZ_HPP
+#include "dofpatches.hpp"
 #include <comp.hpp>
 #include <python_comp.hpp>
 
@@ -10,12 +11,14 @@
 
 namespace ngcomp
 {
-  /// Independent trial-DOF groups and their element supports, indexed by
-  /// patch.
-  struct DofPatches
+  /// DOF maps and numbering for one independent patch problem.
+  struct LocalEmbeddingData
   {
-    Table<size_t> elements;
-    Table<DofId> dofs;
+    Array<DofId> trial_dofs, test_dofs, conformity_dofs;
+    size_t trefftz_dof_offset = 0;
+    size_t ndof_trefftz = 0;
+    bool active = false;
+    bool shared = false;
   };
 
   void copyBitArray (const shared_ptr<BitArray> target,
@@ -40,6 +43,8 @@ namespace ngcomp
     const shared_ptr<SumOfIntegrals> fes_ip;
     shared_ptr<MeshAccess> ma;
     shared_ptr<BitArray> ignoredofs;
+    /// Extra DOF maps are needed only for patches.
+    Array<LocalEmbeddingData> local_data;
     shared_ptr<DofPatches> patches;
 
     /// contains the mapping of Element Number to the associated dofs
@@ -116,6 +121,10 @@ namespace ngcomp
       return fes_conformity;
     }
     shared_ptr<const BitArray> GetIgnoredDofs () const { return ignoredofs; }
+    const Array<LocalEmbeddingData> &GetLocalData () const noexcept
+    {
+      return local_data;
+    }
     size_t GetNDofTrefftz () const noexcept;
     const Array<optional<Matrix<double>>> &GetEtmats () const noexcept
     {
