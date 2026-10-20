@@ -1,4 +1,13 @@
 import ngsolve
+import sys
+
+# xfem registers its DLL directory before loading our extension on Windows.
+if sys.platform == "win32":
+    try:
+        import xfem as _xfem
+    except ModuleNotFoundError as _error:
+        if _error.name != "xfem":
+            raise
 
 try:
     import ngstents as _ngstents

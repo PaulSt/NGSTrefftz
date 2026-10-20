@@ -11,6 +11,9 @@
 #include "mesh1dtents.hpp"
 #endif
 #include "embtrefftz.hpp"
+#ifdef NGSTREFFTZ_USE_XFEM
+#include "aggregatedl2space.hpp"
+#endif
 #include "monomialfespace.hpp"
 #include "pufespace.hpp"
 #include "condensedg.hpp"
@@ -32,6 +35,9 @@ PYBIND11_MODULE (ngstrefftz, m)
   ExportMesh1dTents (m);
 #endif
   ExportEmbTrefftz (m);
+#ifdef NGSTREFFTZ_USE_XFEM
+  ExportAggregatedL2Space (m);
+#endif
   ExportMonomialFESpace (m);
   ExportPUFESpace (m);
   ExportCondenseDG (m);

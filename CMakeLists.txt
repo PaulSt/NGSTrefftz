@@ -37,6 +37,24 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_BINARY_DIR}/cmake_modules)
 set(addon_name ngstrefftz)
 project(ngstrefftz)
 include(${CMAKE_BINARY_DIR}/cmake_modules/ngsolve_addon.cmake)
+set(NGSTREFFTZ_USE_XFEM AUTO CACHE STRING "Build with xfem support")
+set_property(CACHE NGSTREFFTZ_USE_XFEM PROPERTY STRINGS AUTO ON OFF)
+if(NOT NGSTREFFTZ_USE_XFEM STREQUAL "OFF")
+  if(NOT xfem_DIR)
+    execute_process(COMMAND ${Python3_EXECUTABLE} -c
+      "import importlib.util; from pathlib import Path; print(Path(importlib.util.find_spec('xfem').origin).parent / 'cmake')"
+      OUTPUT_VARIABLE xfem_DIR OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  endif()
+  find_package(xfem CONFIG QUIET)
+  if(xfem_FOUND)
+    set(NGSTREFFTZ_USE_XFEM ON)
+  elseif(NGSTREFFTZ_USE_XFEM STREQUAL "ON")
+    message(FATAL_ERROR "NGSTREFFTZ_USE_XFEM=ON but xfem was not found")
+  else()
+    set(NGSTREFFTZ_USE_XFEM OFF)
+    message(WARNING "xfem not found, building without aggregation support")
+  endif()
+endif()
 set(NGSTREFFTZ_USE_NGSTENTS AUTO CACHE STRING "Build with ngstents support")
 set_property(CACHE NGSTREFFTZ_USE_NGSTENTS PROPERTY STRINGS AUTO ON OFF)
 if(NOT NGSTREFFTZ_USE_NGSTENTS STREQUAL "OFF")
@@ -73,12 +91,17 @@ add_ngsolve_addon(ngstrefftz
     #src/airy.cpp #for testing, requires boost
   )
 target_compile_definitions(ngstrefftz PRIVATE NGSTREFFTZ_EXPORTS)
+if(NGSTREFFTZ_USE_XFEM)
+  target_sources(ngstrefftz PRIVATE src/aggregatedl2space.cpp)
+  target_compile_definitions(ngstrefftz PRIVATE NGSTREFFTZ_USE_XFEM)
+  target_link_libraries(ngstrefftz PRIVATE xfem::core)
+endif()
 if(NGSTREFFTZ_USE_NGSTENTS)
   target_sources(ngstrefftz PRIVATE src/twavetents.cpp src/mesh1dtents.cpp)
   target_compile_definitions(ngstrefftz PRIVATE NGSTREFFTZ_USE_NGSTENTS)
   target_link_libraries(ngstrefftz PRIVATE ngstents::core)
-  ngsolve_addon_set_relative_rpath(ngstrefftz "../ngstents")
 endif()
+ngsolve_addon_set_relative_rpath(ngstrefftz "../ngstents" "../xfem")
 # add dynamic loader library to link libraries (on linux)
 if(CMAKE_DL_LIBS)
     target_link_libraries(ngstrefftz PRIVATE ${CMAKE_DL_LIBS})
@@ -138,6 +161,7 @@ message("${BoldCyan}
     Doxygen: ........... ${NGSTREFFTZ_BUILD_DOC}
     GTest: ............. ${NGSTREFFTZ_USE_GTEST}
     ngstents: .......... ${NGSTREFFTZ_USE_NGSTENTS}
+    xfem: .............. ${NGSTREFFTZ_USE_XFEM}
 
 With 'make install' the package will be installed to: ${CMAKE_INSTALL_PREFIX}
 Make sure to add it to the python path:

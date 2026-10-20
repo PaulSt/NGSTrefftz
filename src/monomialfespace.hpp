@@ -10,6 +10,7 @@ namespace ngcomp
 
   class MonomialFESpace : public FESpace
   {
+  protected:
     int D;
     int order;
     int nel;
