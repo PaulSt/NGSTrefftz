@@ -21,6 +21,20 @@
 #include "tp0fespace.hpp"
 // #include "airy.cpp"
 
+#ifdef WIN32
+// NGSolve 6.2.2608 declares these extern templates but does not export this
+// member from its Windows DLL. Instantiate the header-defined member locally.
+namespace ngfem
+{
+  template void MappedIntegrationPoint<1, 1>::IntegrationRuleFromPoint (
+      std::function<void (const BaseMappedIntegrationRule &)>) const;
+  template void MappedIntegrationPoint<2, 2>::IntegrationRuleFromPoint (
+      std::function<void (const BaseMappedIntegrationRule &)>) const;
+  template void MappedIntegrationPoint<3, 3>::IntegrationRuleFromPoint (
+      std::function<void (const BaseMappedIntegrationRule &)>) const;
+}
+#endif
+
 PYBIND11_MODULE (ngstrefftz, m)
 {
   py::module::import ("ngsolve");
