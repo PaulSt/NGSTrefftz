@@ -106,15 +106,15 @@ namespace ngcomp
                                                  Vec<3> (scales[patch])));
   }
 
-  template <int D>
+  template <int DIM>
   void AggregatedL2Space::UpdateGeometry (size_t patch, FlatArray<size_t> els)
   {
-    Vec<D> center = 0.0;
+    Vec<DIM> center = 0.0;
     size_t npoints = 0;
     for (size_t el : els)
       for (int vertex : ma->GetElVertices (ElementId (VOL, el)))
         {
-          center += ma->GetPoint<D> (vertex);
+          center += ma->GetPoint<DIM> (vertex);
           npoints++;
         }
     center *= 1.0 / npoints;
@@ -122,9 +122,10 @@ namespace ngcomp
     double diameter = 0.0;
     for (size_t el : els)
       for (int vertex : ma->GetElVertices (ElementId (VOL, el)))
-        diameter = max (diameter, L2Norm (ma->GetPoint<D> (vertex) - center));
+        diameter
+            = max (diameter, L2Norm (ma->GetPoint<DIM> (vertex) - center));
 
-    if (D == 2)
+    if constexpr (DIM == 2)
       centers2[patch] = center;
     else
       centers3[patch] = center;

@@ -32,7 +32,8 @@ namespace ngcomp
     }
 
   private:
-    template <int D> void UpdateGeometry (size_t patch, FlatArray<size_t> els);
+    template <int DIM>
+    void UpdateGeometry (size_t patch, FlatArray<size_t> els);
   };
 }
 
