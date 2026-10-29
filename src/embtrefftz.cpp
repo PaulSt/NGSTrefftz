@@ -1799,7 +1799,7 @@ namespace ngcomp
 
     if (type == TRANSFORM_MAT_LEFT)
       {
-        temp_mat.Rows (0, tndof) = Trans (elmat) * mat;
+        temp_mat.Rows (0, tndof) = Trans (Conj (elmat)) * mat;
         mat = temp_mat;
       }
     else if (type == TRANSFORM_MAT_RIGHT)
@@ -1813,7 +1813,7 @@ namespace ngcomp
         mat_times_elmat = mat * elmat;
 
         auto mat_upleft = mat.Cols (0, tndof).Rows (0, tndof);
-        mat_upleft = Trans (elmat) * mat_times_elmat;
+        mat_upleft = Trans (Conj (elmat)) * mat_times_elmat;
       }
     else
       {
@@ -1856,7 +1856,7 @@ namespace ngcomp
     if (type == TRANSFORM_RHS)
       {
         Vector<SCAL> new_vec (ndof);
-        new_vec = Trans (elmat) * vec;
+        new_vec = Trans (Conj (elmat)) * vec;
         vec.Range (ndof) = new_vec;
       }
     else if (type == TRANSFORM_SOL)
